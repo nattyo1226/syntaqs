@@ -9,12 +9,22 @@ use qmb_core::{
 };
 
 /// Single-mode occupation states, in the order `Empty, Occupied`.
+/// Display writes `0` or `1`; state expressions add ket markers and indices.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum FermionState {
     /// Zero occupation, with even parity.
     Empty,
     /// One occupied mode, with odd parity.
     Occupied,
+}
+
+impl core::fmt::Display for FermionState {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::Empty => "0",
+            Self::Occupied => "1",
+        })
+    }
 }
 
 impl Dimension for FermionState {

@@ -30,6 +30,19 @@ pub enum SpinHalfOperator {
     Sm,
 }
 
+impl core::fmt::Display for SpinHalfOperator {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::I => "I",
+            Self::Sx => "Sx",
+            Self::Sy => "Sy",
+            Self::Sz => "Sz",
+            Self::Sp => "Sp",
+            Self::Sm => "Sm",
+        })
+    }
+}
+
 impl<C> Product<C> for SpinHalfOperator
 where
     C: One + Add<Output = C> + Div<Output = C> + Neg<Output = C> + ImaginaryUnit,

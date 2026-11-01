@@ -26,6 +26,7 @@ pub enum ExpressionError {
 }
 
 /// A composite state with primitive types S and O and an immutable factor space.
+/// See [`crate::expr`] for mathematical Display and structural Debug formats.
 ///
 /// Tensor products require the same primitive types even though their spaces
 /// carry only index structure:
@@ -68,12 +69,14 @@ pub enum ExpressionError {
 /// fn needs_send<T: Send>() {}
 /// needs_send::<State<Rc<()>, (), (), ()>>();
 /// ```
+#[derive(Debug)]
 pub struct State<I, S, O, C> {
     pub(crate) expression: StateExpr<I, S, O, C>,
     pub(crate) space: HilbertSpace<I>,
 }
 
 /// A placed operator with an optional ambient-space binding.
+/// See [`crate::expr`] for mathematical Display and structural Debug formats.
 ///
 /// Bindings are held only by this outer handle. Combining operators shares
 /// their syntax without retaining old bindings inside child nodes.
@@ -82,25 +85,30 @@ pub struct State<I, S, O, C> {
 /// Scaling and adjoints are lazy and preserve an existing binding. Evaluation
 /// of an unbound operator requires an explicit space, except that action can
 /// use the state's space. See [`State::act`] and [`Operator::trace_in`].
+#[derive(Debug)]
 pub struct Operator<I, O, C> {
     pub(crate) expression: OpExpr<I, O, C>,
     pub(crate) ambient: Option<HilbertSpace<I>>,
 }
 
+#[derive(Debug)]
 pub(crate) struct StateExpr<I, S, O, C> {
     root: Option<Arc<StateNode<I, S, O, C>>>,
     pub(crate) pending_action: bool,
 }
+#[derive(Debug)]
 pub(crate) struct OpExpr<I, O, C> {
     root: Option<Arc<OpNode<I, O, C>>>,
 }
 
+#[derive(Debug)]
 pub(crate) struct StateAction<I, S, O, C> {
     pub(crate) state: StateExpr<I, S, O, C>,
     pub(crate) operator: OpExpr<I, O, C>,
     pub(crate) space: HilbertSpace<I>,
 }
 
+#[derive(Debug)]
 pub(crate) enum StateNode<I, S, O, C> {
     Local(HilbertSpace<I>, LocalState<S, O, C>),
     Unit,
@@ -109,6 +117,7 @@ pub(crate) enum StateNode<I, S, O, C> {
     Tensor(SumExpr<StateExpr<I, S, O, C>>),
     Act(StateAction<I, S, O, C>),
 }
+#[derive(Debug)]
 pub(crate) enum OpNode<I, O, C> {
     Local(HilbertSpace<I>, LocalOperator<O, C>),
     Identity,

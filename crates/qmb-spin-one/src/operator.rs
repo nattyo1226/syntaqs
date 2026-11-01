@@ -47,6 +47,28 @@ pub enum SpinOneOperator {
     Q2m,
 }
 
+impl core::fmt::Display for SpinOneOperator {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::I => "I",
+            Self::Sx => "Sx",
+            Self::Sy => "Sy",
+            Self::Sz => "Sz",
+            Self::Sp => "Sp",
+            Self::Sm => "Sm",
+            Self::Dxy => "Dxy",
+            Self::Q0 => "Q0",
+            Self::Qxy => "Qxy",
+            Self::Qyz => "Qyz",
+            Self::Qzx => "Qzx",
+            Self::Q1p => "Q1p",
+            Self::Q1m => "Q1m",
+            Self::Q2p => "Q2p",
+            Self::Q2m => "Q2m",
+        })
+    }
+}
+
 impl<R: Float> Product<Complex<R>> for SpinOneOperator {
     type Term = Self;
     fn product(&self, rhs: &Self) -> LinearCombination<Self, Complex<R>> {

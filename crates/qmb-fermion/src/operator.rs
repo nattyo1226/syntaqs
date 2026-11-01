@@ -31,6 +31,20 @@ pub enum FermionOperator {
     Mz,
 }
 
+impl core::fmt::Display for FermionOperator {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::I => "I",
+            Self::Annihilate => "a",
+            Self::Create => "a†",
+            Self::Number => "n",
+            Self::Mx => "Mx",
+            Self::My => "My",
+            Self::Mz => "Mz",
+        })
+    }
+}
+
 impl<C> Product<C> for FermionOperator
 where
     C: One + Add<Output = C> + Neg<Output = C> + ImaginaryUnit,

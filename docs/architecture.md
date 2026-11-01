@@ -32,7 +32,7 @@ Chain はサイト数と境界条件だけを保持する。`qmb-geometry` は�
 
 代数系の共通処理は `qmb-core` に集約する。抽象契約・有限線型結合に加え、局所・複合式木、Index・自由度・Hilbert 空間、局所式の配置・束縛、評価、基底展開・座標取得を同じ crate が所有する。写像の表現係数は将来の同 crate の担当とする。本文書と詳細設計でいう「代数 core」は `qmb-core` を指す。
 
-具体的代数は専用 crate とし、`qmb-spin-half`・`qmb-spin-one`・`qmb-fermion` は primitive・局所規則・具体的基底を実装し、core の共通型を直接利用できる。UUID による具体的 Index と発行は `qmb-basic`、Site・近接関係と外部列への借用接続は `qmb-geometry`、外部数値コンテナへの変換は `qmb-export`、Heisenberg・Neel の構築 utility は `qmb-spin-half`、spin-1 の XYZ・Heisenberg・BLBQ の構築は `qmb-spin-one`、標準 Hubbard・symmetric Hubbard の構築は `qmb-fermion`、norm・状態の正規化・正規化期待値は `qmb-normalize` が担当する。workspace は8つのライブラリ crate と [examples パッケージ](../examples/README.md)で構成する。basic・geometry・spin-half・spin-one・fermion・export・normalize は core に依存し、spin-half・spin-one・fermion のモデル構築は geometry の公開契約を利用する。normalize と spin-one は std を利用できる。core と geometry は `no_std + alloc` を維持し、core は basic・UUID・乱数源・具体的代数・geometry・normalize・数値 backend に依存しない。
+具体的代数は専用 crate とし、`qmb-spin-half`・`qmb-spin-one`・`qmb-fermion` は primitive・局所規則・具体的基底を実装し、core の共通型を直接利用できる。UUID による Id128 と、文字列で名前を付ける Tag は `qmb-basic`、Site・近接関係と外部列への借用接続は `qmb-geometry`、外部数値コンテナへの変換は `qmb-export`、Heisenberg・Neel の構築 utility は `qmb-spin-half`、spin-1 の XYZ・Heisenberg・BLBQ の構築は `qmb-spin-one`、標準 Hubbard・symmetric Hubbard の構築は `qmb-fermion`、norm・状態の正規化・正規化期待値は `qmb-normalize` が担当する。workspace は8つのライブラリ crate と [examples パッケージ](../examples/README.md)で構成する。basic・geometry・spin-half・spin-one・fermion・export・normalize は core に依存し、spin-half・spin-one・fermion のモデル構築は geometry の公開契約を利用する。normalize と spin-one は std を利用できる。core と geometry は `no_std + alloc` を維持し、core は basic・UUID・乱数源・具体的代数・geometry・normalize・数値 backend に依存しない。
 
 core 内では局所契約、式、空間、評価、基底処理を module で分離する。共通表現と基本操作・名前付きメソッドを同じ crate で設計し、具体的代数ごとに別の式木や evaluator を作らない。式の内容を保持する `ScaleExpr`・`SumExpr`・`ProductExpr`・`ActExpr`・`AdjointExpr` を共通パーツとし、局所式・複合式で再利用する。`LinearCombination<P, C>` は薄い有限線型結合型として維持し、共通パーツで保持する。局所規則・局所基底展開は線型結合を返し、式木側が `map` で要素を変換して共通 constructor で取り込む。Step 2 で core・spin-half・テストの演算 trait を関連型に揃え、式木との接続を実装した。将来の追加 crate は、独立した機能・依存関係・実行基盤の境界が必要になった段階で検討する。
 
@@ -88,9 +88,9 @@ Grouping は空間の木の括り方で表し、そのための独立した Grou
 
 Index は局所構造を指定せずに独立に発行し、自由度はあらかじめ発行した Index と局所構造から構築する。局所状態・演算子には発行済みの Index を明示的に付与する。自由度の構築や局所式への付与で Index を自動発行する経路は設けない。
 
-core は Index 型をジェネリックに扱い、同じ Index であることを照合できることを契約とする。具体的な表現・発行・一意性の確保は Index の提供側が担い、標準の具体実装は `qmb-basic` に UUID と seed 指定を要求しない発行 API を置く。同一ランタイム内および複数ランタイム間で、独立に発行した Index の一意性を仮定する。Index と局所構造の対応を全体で登録・固定する機構は設けず、合成・埋め込み・評価に必要な整合性は、その操作の対象から検証する。
+core は Index 型をジェネリックに扱い、同じ Index であることを照合できることを契約とする。具体的な表現・発行・一意性の確保は Index の提供側が担い、標準具体型は `qmb-basic` の Id128 と Tag とする。Id128 は seed 指定不要の UUID を生成する。Tag は文字列自体を同一性とし、独立した因子の名前は利用側が管理する。Index と局所構造の対応を全体で登録・固定する機構は設けず、合成・埋め込み・評価に必要な整合性は、その操作の対象から検証する。
 
-詳細は [Index の契約](design/index.md)に定める。同一性の照合は標準の `Eq` で行う。Step 4 では UUID v4 の具体型を `qmb_basic::Id128` とし、`new()` と `Default` による seed 指定不要の新規発行を提供する。発行が必要な箇所だけ `I: Default` を要求し、専用の Index trait は設けない。
+詳細は [Index の契約](design/index.md)に定める。同一性の照合は標準の `Eq` で行う。Step 4 では UUID v4 の具体型を `qmb_basic::Id128` とし、`new()` と `Default` による seed 指定不要の新規発行を提供する。自分で名前を付ける場合は `qmb_basic::Tag::new(name)` を利用できる。発行が必要な箇所だけ `I: Default` を要求し、専用の Index trait は設けない。
 
 保存・復元と複数ランタイムの契約は以下のとおりとする。詳細は [Index の契約の 7 節](design/index.md#7-保存復元と複数ランタイム)に定める。
 
@@ -114,7 +114,7 @@ Core の共通の式木は、加算・scalar multiplication・zero と、積・�
 
 評価器は状態評価・演算子の作用・演算子項の走査を分担し、必要な範囲を処理する。評価と、最後の所有者になった式節点の破棄は明示的な作業スタックで反復的に行う。式同士の二項演算子は所有値・借用値の4通りに対応し、所有ハンドルを移動、借用ハンドルは共有参照を複製する。名前付きメソッドは共有借用を基本とする。
 
-Primitive の線型独立性は要求せず、数学的に同じ対象を表す結果の式構造が一致することも要求しない。指定基底への座標取得は別の接続として扱う。式の操作は入力を変更しない。評価前の source の自動保持、式の構造比較・表示は後続へ延期し、初期版の必須機能にしない。詳細は [局所 primitive・式木の数学的能力](design/primitive-expression.md)に定める。ここで定めた公開範囲・能力分離・評価経路は採用済みとし、非公開の作業領域や補助関数は実装時に定める。局所式・評価と API の移行は Step 2、空間・配置・束縛・複合作用・内積・full trace は Step 3 で実装済みである。
+Primitive の線型独立性は要求せず、数学的に同じ対象を表す結果の式構造が一致することも要求しない。指定基底への座標取得は別の接続として扱う。式の操作は入力を変更しない。評価前の source の自動保持と式の構造比較は後続へ延期し、初期版の必須機能にしない。Display・Debug は[式木の表示](design/expression-formatting.md)に従って実装済みである。詳細は [局所 primitive・式木の数学的能力](design/primitive-expression.md)に定める。ここで定めた公開範囲・能力分離・評価経路は採用済みとし、非公開の作業領域や補助関数は実装時に定める。局所式・評価と API の移行は Step 2、空間・配置・束縛・複合作用・内積・full trace は Step 3 で実装済みである。
 
 ## 6. 基底の数学的能力
 
@@ -168,7 +168,7 @@ Index は引き続き Eq だけで照合し、共有に Clone・再発行を要�
 
 2026-10-27に、partial trace と写像の表現行列・表現係数を future work とし、Step 5 の担当範囲と初期版の必須機能・検証項目から外した。基底処理と数値接続の実装は、これらの機能を前提条件にしない。
 
-初期版の標準の状態 primitive・基底は `up,down`、演算子 primitive は `I,Sx,Sy,Sz,Sp,Sm`、演算子基底は `{I,Sx,Sy,Sz}` と `{I,Sp,Sm,Sz}` とする。初期版から延期した fermion は第2.4節のとおり実装済みである。異種局所構造の混在・合成、source の自動保持・式の構造比較・表示、保存・復元、個別の簡約ルール、キャッシュ、並列化、追加の ML・tensor network 接続は引き続き後続とする。
+初期版の標準の状態 primitive・基底は `up,down`、演算子 primitive は `I,Sx,Sy,Sz,Sp,Sm`、演算子基底は `{I,Sx,Sy,Sz}` と `{I,Sp,Sm,Sz}` とする。初期版から延期した fermion は第2.4節のとおり実装済みである。異種局所構造の混在・合成、source の自動保持・式の構造比較、保存・復元、個別の簡約ルール、キャッシュ、並列化、追加の ML・tensor network 接続は引き続き後続とする。
 
 完成条件は、Heisenberg chain と Neel 状態の代表シナリオ、独立な小規模行列との一致、基底展開・再展開と座標取得の一貫性、別の局所代数を独立した系で使う抽象化と非正規直交基底の検証、lazy 評価・共有、および実行可能な利用例と不正入力の検証とする。数値 export の API・backend・依存指定は[数値 export の設計](design/export.md)として実装済みである。後続へ延期した機能は[今後の課題](future-work.md)にまとめる。
 

@@ -25,6 +25,7 @@ pub enum SpaceError {
     MixedTensorKinds,
 }
 
+#[derive(Debug)]
 enum Node<I> {
     Factor(I),
     Tensor(TensorKind, SumExpr<HilbertSpace<I>>),
@@ -45,6 +46,7 @@ enum Node<I> {
 /// assert!(a.is_subsystem_of(&h));
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
+#[derive(Debug)]
 pub struct HilbertSpace<I> {
     root: Option<Arc<Node<I>>>,
     // Saturated leaf count: 0 (unit), 1 (factor), 2 (multiple leaves).

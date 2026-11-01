@@ -25,7 +25,7 @@ Grading の情報保持と共通評価 API は実装済み。空間が kind、pr
 - **局所代数と基底の拡張**：一つの系で異種局所構造を混在・合成する機能と、そのための型消去・保持方式を延期する。実行時の局所構造パラメータや異なる実装型間の定義照合も後続の検討事項である。初期版の複合基底は一つの局所基底を全因子へ適用するため、因子ごとに異なる基底の指定は扱わない。
 - **Fermion の追加機能**：単一 mode の局所代数・Majorana 系・graded 接続と標準／symmetric Hubbard は `qmb-fermion` に実装した。汎用 spinful 構築 utility、粒子数 sector、任意格子・可変結合などは後続とする。[局所代数と検証の記録](design/local-structure.md#9-fermion-の局所代数)・[Hubbard モデルの設計](design/geometry.md#6-fermion-の-hubbard-モデル)を参照する。
 - **式と空間の操作**：bra 型・構築 API、内部ラベル、部分空間・射影・制約付き部分空間、積和から和積への因数分解、因子の permutation、個別の簡約ルールを選択して適用する操作、および任意の式型を分解結果から組み立て直す汎用機構を延期する。braket は内積で計算し、grouping は既存の HilbertSpace を用いる。通常の評価・基底展開に必要な分配・局所積・係数処理や、共通式の構築は引き続き提供する。延期した機構の詳細は[要件第9.2節](requirements.md#92-未決延期した機構と操作)に記録する。
-- **式の管理**：source の自動保持、式の構造比較・表示 API、保存・復元を延期する。入力の不変性と不変実体の共有は維持する。
+- **式の管理**：source の自動保持、式の構造比較、保存・復元を延期する。[式木の Display・Debug](design/expression-formatting.md) は実装済み。入力の不変性と不変実体の共有は維持する。
 - **キャッシュと並列化**：評価結果のキャッシュ、並列評価・スレッド間共有は未決である。キャッシュの導入可否・対象・保持先・再利用条件・破棄・資源管理と、スレッド間共有の条件・並列実行方式を検討する。初期版は要求時の計算と単一スレッドの評価でよい。
 - **追加の代数・幾何と外部接続**：spin-1/2・spin-1・fermion 以外の builtin algebra、1D Chain 以外の Geometry、ML・自動微分 module、tensor network・MPS・MPO、GPU・分散計算などへの接続を延期する。spin-1 の XYZ・Heisenberg・BLBQ は[モデル構築](design/geometry.md#7-spinone-のモデル構築)として実装済みである。追加基底・一般 spin-S は[Spin-one の後続範囲](design/local-structure.md#107-後続の範囲)を参照する。追加候補の詳細は[要件第9.3節](requirements.md#93-追加の機能候補)に記録する。
 

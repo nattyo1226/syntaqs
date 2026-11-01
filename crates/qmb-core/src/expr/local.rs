@@ -7,6 +7,7 @@ use crate::{ExpressionError, Identity, Term};
 ///
 /// Cloning shares immutable nodes without cloning primitives or coefficients.
 /// Construction requests no algebra or numeric capabilities.
+/// See [`crate::expr`] for mathematical Display and structural Debug formats.
 ///
 /// Different state primitives cannot be added implicitly:
 ///
@@ -34,6 +35,7 @@ use crate::{ExpressionError, Identity, Term};
 /// fn needs_send<T: Send>() {}
 /// needs_send::<LocalState<Rc<()>, (), ()>>();
 /// ```
+#[derive(Debug)]
 pub struct LocalState<S, O, C> {
     pub(crate) root: Option<Arc<StateNode<S, O, C>>>,
     // A structural property, not an evaluation cache. It permits O(1) reuse of
@@ -42,6 +44,7 @@ pub struct LocalState<S, O, C> {
 }
 
 /// A shared local operator over primitive O and coefficient C.
+/// See [`crate::expr`] for mathematical Display and structural Debug formats.
 ///
 /// Its primitive type must match the state's delayed action:
 ///
@@ -51,10 +54,12 @@ pub struct LocalState<S, O, C> {
 /// let other = LocalOperator::<u16, ()>::primitive(0);
 /// let _ = state.act(&other);
 /// ```
+#[derive(Debug)]
 pub struct LocalOperator<O, C> {
     pub(crate) root: Option<Arc<OperatorNode<O, C>>>,
 }
 
+#[derive(Debug)]
 pub(crate) enum StateNode<S, O, C> {
     Primitive(S),
     Scale(ScaleExpr<LocalState<S, O, C>, C>),
@@ -62,6 +67,7 @@ pub(crate) enum StateNode<S, O, C> {
     Act(ActExpr<LocalState<S, O, C>, LocalOperator<O, C>>),
 }
 
+#[derive(Debug)]
 pub(crate) enum OperatorNode<O, C> {
     Primitive(O),
     Scale(ScaleExpr<LocalOperator<O, C>, C>),

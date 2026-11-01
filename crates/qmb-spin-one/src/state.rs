@@ -9,6 +9,7 @@ use num_traits::{Float, One, Zero};
 use qmb_core::{Act, Dimension, DimensionOverflow, InnerProduct, LinearCombination};
 
 /// The Sz eigenstates in the order `Plus, Zero, Minus`.
+/// Display writes `+1`, `0` or `-1`; state expressions add ket markers and indices.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SpinOneState {
     /// Magnetic quantum number +1.
@@ -17,6 +18,16 @@ pub enum SpinOneState {
     Zero,
     /// Magnetic quantum number -1.
     Minus,
+}
+
+impl core::fmt::Display for SpinOneState {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::Plus => "+1",
+            Self::Zero => "0",
+            Self::Minus => "-1",
+        })
+    }
 }
 
 impl<C: Zero + One> InnerProduct<C> for SpinOneState {
