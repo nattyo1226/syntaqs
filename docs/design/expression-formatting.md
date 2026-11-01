@@ -2,7 +2,7 @@
 
 更新日: 2026-11-01
 
-局所・複合の状態式と演算子式の Display・Debug、および標準 Index の表示契約を定める。利用例は [expression_formatting](../../examples/src/bin/expression_formatting.rs)、公開 API の説明は `qmb_core::expr` と `qmb_basic::Tag` の rustdoc を参照する。
+局所・複合の状態式と演算子式の Display・Debug、および標準 Index の表示契約を定める。状態と4 Site の Hamiltonian の Display 利用例は [expression_formatting](../../examples/src/bin/expression_formatting.rs)、公開 API の説明は `qmb_core::expr` と `qmb_basic::Tag` の rustdoc を参照する。
 
 ## 1. 対象と型制約
 
@@ -108,18 +108,18 @@ Sx[a] |up[a]>
 
 ### 複数行表示
 
-`{:#}` は1段4スペース。和は項ごとに改行し、2項目以降の行頭に `+` を置く。ket はカンマの後で改行し、後続因子を1段深くする。`|` は最初の因子、`>` は最後の因子と同じ行に置き、単一因子は1行に保つ。
+`{:#}` は1段4スペース。和と `⊗` 表記の tensor は operand ごとに改行し、2つ目以降の行頭に `+ `・`⊗ ` を置く。演算記号は operand の開始位置より2桁左へ出し、先頭と後続の operand を揃える。最上位の和・`⊗` 表記の tensor は先頭に2スペースを確保する。括弧や ket の継続行のインデントは、演算記号を除いた operand の開始位置を基準とする。ket は `| ` で始め、カンマの後で改行して各因子のラベルを同じ列に揃える。係数や作用の演算子が前にある場合も、実際に出力した `| ` の直後の列を基準とする。最後の因子と同じ行の ` >` で閉じ、単一因子も `| up[a] >` と1行で表示する。列は Rust の char 単位で数え、端末の表示幅は取得しない。
 
 括弧で囲んだ複合的な operand は内側をインデントする。積・作用の単純な部分では過剰に改行しない。和・`⊗` 表記の tensor を括弧で囲む場合は開き括弧の後と閉じ括弧の前で改行し、他の括弧はインラインに保つ。
 
 ```text
 (
     A
-    + B
-    + C
-) |up[a],
+  + B
+  + C
+) | up[a],
     down[b],
-    up[c]>
+    up[c] >
 ```
 
 係数・Index・順序は通常表示と共通。alternate・width・precision を葉へ一括転送せず、width を折り返し幅、precision を係数精度や式の切り詰めへ転用しない。端末幅取得・自動折り返しは行わない。

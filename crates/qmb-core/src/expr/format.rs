@@ -329,10 +329,36 @@ enum Task<'a, I, S, O, C> {
     Ket(KetLeaves<'a, I, S, O, C>, bool, usize),
 }
 
-fn line(f: &mut fmt::Formatter<'_>, indent: usize) -> fmt::Result {
+// Track scalar-value columns only for pretty output, including text written by
+// leaf formatters. Ket continuations can then align after an inline operator or
+// coefficient without buffering or formatting those leaves a second time.
+struct ColumnWriter<'a, W: ?Sized> {
+    out: &'a mut W,
+    column: usize,
+    track_column: bool,
+}
+
+impl<W: fmt::Write + ?Sized> fmt::Write for ColumnWriter<'_, W> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.out.write_str(s)?;
+        if self.track_column {
+            if let Some((_, tail)) = s.rsplit_once('\n') {
+                self.column = tail.chars().count();
+            } else {
+                self.column += s.chars().count();
+            }
+        }
+        Ok(())
+    }
+}
+
+fn line(f: &mut impl fmt::Write, indent: usize) -> fmt::Result {
     f.write_char('\n')?;
-    for _ in 0..indent {
+    for _ in 0..indent / 4 {
         f.write_str("    ")?;
+    }
+    for _ in 0..indent % 4 {
+        f.write_char(' ')?;
     }
     Ok(())
 }
@@ -342,8 +368,22 @@ fn display<I: fmt::Display, S: fmt::Display, O: fmt::Display, C: fmt::Display>(
     f: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
     let pretty = f.alternate();
+    let mut output = ColumnWriter {
+        out: f,
+        column: 0,
+        track_column: pretty,
+    };
+    let f = &mut output;
     let mut pure = PureTensors::new();
-    let mut pending = vec![Task::Expr(root, Context::Root, 0)];
+    // Indents are measured in spaces. At the root, reserve room for leading
+    // operators; nested sequences already have a four-space bracket indent.
+    let indent = if pretty && matches!(view(root, &mut pure).kind(), Kind::Sum | Kind::Tensor) {
+        f.write_str("  ")?;
+        2
+    } else {
+        0
+    };
+    let mut pending = vec![Task::Expr(root, Context::Root, indent)];
     while let Some(task) = pending.pop() {
         match task {
             Task::Text(text) => f.write_str(text)?,
@@ -373,7 +413,9 @@ fn display<I: fmt::Display, S: fmt::Display, O: fmt::Display, C: fmt::Display>(
                     if !first {
                         if pretty {
                             pending.push(Task::Text(if tensor { "⊗ " } else { "+ " }));
-                            pending.push(Task::Line(indent));
+                            // Hang the operator to the left so every operand,
+                            // including its continuation lines, shares a base.
+                            pending.push(Task::Line(indent - 2));
                         } else {
                             pending.push(Task::Text(if tensor { " ⊗ " } else { " + " }));
                         }
@@ -389,7 +431,7 @@ fn display<I: fmt::Display, S: fmt::Display, O: fmt::Display, C: fmt::Display>(
                     pending.push(Task::Value(state));
                     if !first {
                         if pretty {
-                            pending.push(Task::Line(indent + 1));
+                            pending.push(Task::Line(indent));
                         }
                         pending.push(Task::Text(","));
                     }
@@ -402,8 +444,8 @@ fn display<I: fmt::Display, S: fmt::Display, O: fmt::Display, C: fmt::Display>(
                     pending.push(Task::Text(")"));
                     if pretty && matches!(node.kind(), Kind::Sum | Kind::Tensor) {
                         pending.push(Task::Line(indent));
-                        pending.push(Task::Expr(expr, Context::Root, indent + 1));
-                        line(f, indent + 1)?;
+                        pending.push(Task::Expr(expr, Context::Root, indent + 4));
+                        line(f, indent + 4)?;
                     } else {
                         pending.push(Task::Expr(expr, Context::Root, indent));
                     }
@@ -415,8 +457,8 @@ fn display<I: fmt::Display, S: fmt::Display, O: fmt::Display, C: fmt::Display>(
                     View::Unit => f.write_str("unit")?,
                     View::Primitive(p) => pending.push(Task::Value(p)),
                     View::Ket(state, index) => {
-                        f.write_str("|")?;
-                        pending.push(Task::Text(">"));
+                        f.write_str(if pretty { "| " } else { "|" })?;
+                        pending.push(Task::Text(if pretty { " >" } else { ">" }));
                         if let Some(index) = index {
                             pending.push(Task::Text("]"));
                             pending.push(Task::Index(index));
@@ -466,9 +508,9 @@ fn display<I: fmt::Display, S: fmt::Display, O: fmt::Display, C: fmt::Display>(
                         ));
                     }
                     View::TensorKet(root) => {
-                        f.write_str("|")?;
-                        pending.push(Task::Text(">"));
-                        pending.push(Task::Ket(KetLeaves::new(root), true, indent));
+                        f.write_str(if pretty { "| " } else { "|" })?;
+                        pending.push(Task::Text(if pretty { " >" } else { ">" }));
+                        pending.push(Task::Ket(KetLeaves::new(root), true, f.column));
                     }
                 }
             }

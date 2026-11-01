@@ -19,7 +19,7 @@ cargo run -p examples --bin geometry_relations
 cargo run -p examples --bin pauli_strings
 ```
 
-`expression_formatting` は Tag と Id128、通常の Display・`{:#}` の複数行表示・Debug を示す。積状態の ket、複合的な局所状態の配置、係数・作用・随伴、式木内だけの Index の8文字制限を扱う。追加 feature は不要で、`--no-default-features` でも実行できる。表示契約は[式木の表示](../docs/design/expression-formatting.md)を参照する。
+`expression_formatting` は Tag と Id128、通常の Display・`{:#}` の複数行表示を示す。積状態の ket、局所重ね合わせを含む tensor、3因子の GHZ 状態 `(|up,up,up> + |down,down,down>)/√2` とそれへの遅延作用を出力し、係数・作用・随伴、式木内だけの Index の8文字制限を扱う。さらに `s0`〜`s3` の Tag を持つ4 Site の開いた Heisenberg 鎖に横磁場を加えた Hamiltonian `H = -(1/4) Σ⟨i,j⟩ S_i·S_j - 0.2 Σᵢ Sx_i` を構築し、同じ式の通常表示と複数行表示を比較する。ここで Sx・Sy・Sz は Pauli 行列である。Debug 出力は含めない。追加 feature は不要で、`--no-default-features` でも実行できる。表示契約は[式木の表示](../docs/design/expression-formatting.md)を参照する。
 
 `two_spins` は `Spin::product_state`・`Spin::operator_product_at`・`Spin::try_operator_sum` から2スピンの一重項・三重項と交換 Hamiltonian `H = J_a · J_b = (S_a · S_b)/4` を手で組み立てる。norm squared、エネルギー期待値（一重項 −0.75、三重項 0.25）、固有状態の残差、状態間の内積を計算・検証する。追加 feature は不要で、`--no-default-features` でも実行できる。
 

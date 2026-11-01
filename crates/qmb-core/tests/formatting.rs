@@ -251,7 +251,9 @@ fn pretty_layout_and_outer_flags_do_not_change_leaf_content() {
     )
     .unwrap();
     let op = LO::sum([LO::primitive("A"), LO::primitive("B"), LO::primitive("C")]);
-    assert_eq!(format!("{op:#}"), "A\n+ B\n+ C");
+    assert_eq!(format!("{state:#}"), "| up[a],\n  down[b],\n  up[c] >");
+    assert_eq!(format!("{:#}", LS::primitive("up")), "| up >");
+    assert_eq!(format!("{op:#}"), "  A\n+ B\n+ C");
     let placed = O::sum([
         LO::primitive("A").at(&a).unwrap(),
         LO::primitive("B").at(&b).unwrap(),
@@ -260,15 +262,15 @@ fn pretty_layout_and_outer_flags_do_not_change_leaf_content() {
     .unwrap();
     assert_eq!(
         format!("{:#}", state.act(&placed).unwrap()),
-        "(\n    A[a]\n    + B[b]\n    + C[c]\n) |up[a],\n    down[b],\n    up[c]>"
+        "(\n    A[a]\n  + B[b]\n  + C[c]\n) | up[a],\n    down[b],\n    up[c] >"
     );
     assert_eq!(
         format!("{:#}", op.at(&a).unwrap()),
-        "(\n    A\n    + B\n    + C\n)[a]"
+        "(\n    A\n  + B\n  + C\n)[a]"
     );
     assert_eq!(
         format!("{:#}", LS::primitive("up").at(&a).unwrap()),
-        "|up[a]>"
+        "| up[a] >"
     );
     assert_eq!(format!("{:#}", S::zero(&h)), "0");
     assert_eq!(format!("{:#}", S::unit()), "unit");
@@ -276,7 +278,68 @@ fn pretty_layout_and_outer_flags_do_not_change_leaf_content() {
     let mixed = S::tensor_in(&a, [S::unit(), sum.at(&a).unwrap()]).unwrap();
     assert_eq!(
         format!("{:#}", mixed.scaled("2")),
-        "(2) * (\n    unit\n    ⊗ (\n        |up[a]>\n        + |down[a]>\n    )\n)"
+        "(2) * (\n    unit\n  ⊗ (\n        | up[a] >\n      + | down[a] >\n    )\n)"
+    );
+}
+
+#[test]
+fn leading_operators_align_nested_brackets_and_multiline_operands() {
+    let a = LO::primitive("A");
+    let b = LO::primitive("B");
+    let c = LO::primitive("C");
+    let left = LO::sum([LO::sum([a.clone(), b.clone()]), c.clone()]);
+    let right = LO::sum([a.clone(), LO::sum([b, c])]);
+    assert_eq!(format!("{left:#}"), "  (\n      A\n    + B\n  )\n+ C");
+    assert_eq!(format!("{right:#}"), "  A\n+ (\n      B\n    + C\n  )");
+    assert_eq!(format!("{:#}", LO::sum([a])), "A");
+
+    let a = HilbertSpace::factor("a");
+    let b = HilbertSpace::factor("b");
+    let space = a.tensor(&b).unwrap();
+    let ket = S::tensor_in(
+        &space,
+        [
+            LS::primitive("up").at(&a).unwrap(),
+            LS::primitive("down").at(&b).unwrap(),
+        ],
+    )
+    .unwrap();
+    let sum = S::sum(&space, [ket.clone(), ket.clone()]).unwrap();
+    assert_eq!(
+        format!("{sum:#}"),
+        "  | up[a],\n    down[b] >\n+ | up[a],\n    down[b] >"
+    );
+    let tensor = S::tensor_in(&space, [S::unit(), ket]).unwrap();
+    assert_eq!(format!("{tensor:#}"), "  unit\n⊗ | up[a],\n    down[b] >");
+}
+
+#[test]
+fn ket_continuations_follow_the_actual_column_after_actions_and_scales() {
+    let a = HilbertSpace::factor("a");
+    let b = HilbertSpace::factor("b");
+    let space = a.tensor(&b).unwrap();
+    let ket = S::tensor_in(
+        &space,
+        [
+            LS::primitive("up").at(&a).unwrap(),
+            LS::primitive("down").at(&b).unwrap(),
+        ],
+    )
+    .unwrap();
+    for (label, indent) in [
+        ("A", "       "),
+        ("LongOp", "            "),
+        ("Ω", "       "),
+    ] {
+        let op = LO::primitive(label).at(&a).unwrap();
+        assert_eq!(
+            format!("{:#}", ket.act(&op).unwrap()),
+            format!("{label}[a] | up[a],\n{indent}down[b] >")
+        );
+    }
+    assert_eq!(
+        format!("{:#}", ket.scaled("2")),
+        "(2) * | up[a],\n        down[b] >"
     );
 }
 
@@ -328,7 +391,7 @@ fn display_only_nonclone_leaves_and_index_support_streaming_unicode_prefixes() {
             .unwrap();
         assert_eq!(
             format!("{expr:#30.2}"),
-            format!("(c) * (Sx[{prefix}] |up[{prefix}]>)")
+            format!("(c) * (Sx[{prefix}] | up[{prefix}] >)")
         );
         assert_eq!(calls.get(), 5); // coefficient, operator, state, and two index appearances
         assert_eq!(local.to_string(), "|up>");

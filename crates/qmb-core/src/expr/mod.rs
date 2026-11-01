@@ -9,8 +9,12 @@
 //! are needed. Ordinary and graded expressions keep their stored order.
 //!
 //! `{}` writes mathematical notation without inserting newlines; `{:#}` breaks
-//! sums and tensor kets across lines with four-space indentation. Coefficients
-//! always appear as `(c) * E`, action as `A psi`, and adjoints as `(A)†`.
+//! sums and tensor kets across lines. Bracketed multiline operands use four-space
+//! indentation. Leading `+ `
+//! and `⊗ ` hang two columns left of aligned operands; root sequences reserve
+//! two initial spaces. Pretty kets use `| up[a],` followed by aligned factors
+//! and close with ` >`; a single factor is `| up[a] >`. Coefficients always
+//! appear as `(c) * E`, action as `A psi`, and adjoints as `(A)†`.
 //! Primitive state Display supplies a label; the expression adds ket markers.
 //! Placed labels include their index, as in `|up[a],down[b]>`. Tensor subtrees
 //! containing sums, scales, actions or explicit units use `⊗` instead.
@@ -24,7 +28,7 @@
 //! let down = LocalState::<_, &str, i32>::primitive("down");
 //! let state = State::tensor_in(&h, [up.at(&a)?, down.at(&b)?])?;
 //! assert_eq!(state.to_string(), "|up[a],down[b]>");
-//! assert_eq!(format!("{state:#}"), "|up[a],\n    down[b]>");
+//! assert_eq!(format!("{state:#}"), "| up[a],\n  down[b] >");
 //! # Ok::<(), qmb_core::ExpressionError>(())
 //! ```
 //!
