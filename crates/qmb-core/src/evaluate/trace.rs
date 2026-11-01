@@ -17,10 +17,21 @@ impl<O, C> LocalOperator<O, C> {
         O: Identity,
         O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
     {
+        self.trace_with(|value| value)
+    }
+
+    // Normalize primitive traces before multiplying stored coefficients or
+    // adding terms, so a representable normalized trace need not pass through
+    // an overflowing unnormalized intermediate.
+    fn trace_with(&self, primitive_trace: impl Fn(C) -> C) -> C
+    where
+        C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
+        O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
+    {
         let evaluated = self.evaluate();
         let mut result = zero();
         for (coefficient, primitive) in LinearTerms::new(&evaluated, operator_view) {
-            let mut value = primitive.trace();
+            let mut value = primitive_trace(primitive.trace());
             if let Some(c) = coefficient {
                 value = multiply(c, value);
             }
@@ -39,7 +50,8 @@ impl<O, C> LocalOperator<O, C> {
         O: Identity,
         O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
     {
-        (self.adjoint() * rhs).trace().divide(O::identity().trace())
+        let dimension = O::identity().trace();
+        (self.adjoint() * rhs).trace_with(|value| value.divide(dimension.clone()))
     }
 }
 
@@ -76,7 +88,7 @@ impl<I: Eq, O, C> Operator<I, O, C> {
         O: Identity + crate::HomogeneousParity + crate::ParityOperator,
         O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
     {
-        self.trace_on_with(ambient, |value| value)
+        self.trace_on_with(ambient, |local| local.trace())
     }
 
     // Both contractions use ordinary local traces after grading has been
@@ -85,7 +97,7 @@ impl<I: Eq, O, C> Operator<I, O, C> {
     fn trace_on_with(
         &self,
         ambient: &HilbertSpace<I>,
-        local_trace: impl Fn(C) -> C,
+        local_trace: impl Fn(&LocalOperator<O, C>) -> C,
     ) -> Result<C, ExpressionError>
     where
         C: Clone + Zero + One + Conjugate<Output = C>,
@@ -100,10 +112,10 @@ impl<I: Eq, O, C> Operator<I, O, C> {
                     .iter()
                     .find(|(factor, _)| factor.factor_index() == Some(index))
                 {
-                    Some((_, local)) => local.trace(),
-                    None => LocalOperator::<O, C>::identity().trace(),
+                    Some((_, local)) => local_trace(local),
+                    None => local_trace(&LocalOperator::<O, C>::identity()),
                 };
-                value = multiply(value, local_trace(local_trace_value));
+                value = multiply(value, local_trace_value);
             }
             if let Some(c) = coefficient {
                 value = multiply(c, value);
@@ -120,7 +132,9 @@ impl<I: Eq, O, C> Operator<I, O, C> {
         O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
     {
         let dimension = O::identity().trace();
-        self.trace_on_with(ambient, |value| value.divide(dimension.clone()))
+        self.trace_on_with(ambient, |local| {
+            local.trace_with(|value| value.divide(dimension.clone()))
+        })
     }
 
     /// Computes the normalized Hilbert–Schmidt inner product `Tr(self† rhs)/D`.

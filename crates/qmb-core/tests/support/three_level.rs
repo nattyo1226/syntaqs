@@ -11,7 +11,7 @@ use qmb_core::{
 };
 
 pub(super) trait Real:
-    Num + Copy + Neg<Output = Self> + Debug + FromPrimitive + ToPrimitive
+    Num + Copy + PartialOrd + Neg<Output = Self> + Debug + FromPrimitive + ToPrimitive
 {
     const TOLERANCE: f64;
 }

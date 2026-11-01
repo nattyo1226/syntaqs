@@ -1,7 +1,6 @@
 //! A test-owned complex coefficient with only the explicitly exercised abilities.
 #![allow(dead_code)]
 use core::ops::{Add, Div, Mul, Neg, Sub};
-use num_complex::Complex;
 use num_traits::{One, Zero};
 use qmb_core::{Conjugate, Divide, ImaginaryUnit, RealPart};
 
@@ -71,9 +70,15 @@ impl<T: Clone + Zero + Sub<Output = T> + Mul<Output = T> + Div<Output = T>> Divi
 {
     type Output = Self;
     fn divide(self, rhs: Self) -> Self {
-        let a = Complex::new(self.re, self.im);
-        let b = Complex::new(rhs.re, rhs.im);
-        let c = a.divide(b);
-        Self::new(c.re, c.im)
+        // Test-owned coefficients keep their unordered arithmetic contract;
+        // they need not use the standard Complex floating-point algorithm.
+        if rhs.im.is_zero() {
+            return Self::new(self.re / rhs.re.clone(), self.im / rhs.re);
+        }
+        let norm = rhs.re.clone() * rhs.re.clone() + rhs.im.clone() * rhs.im.clone();
+        Self::new(
+            (self.re.clone() * rhs.re.clone() + self.im.clone() * rhs.im.clone()) / norm.clone(),
+            (self.im * rhs.re - self.re * rhs.im) / norm,
+        )
     }
 }

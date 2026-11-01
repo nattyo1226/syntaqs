@@ -41,6 +41,12 @@ pub trait ImaginaryUnit {
 /// algorithm. In particular, complex division by a real self-inner-product must
 /// not unnecessarily square that denominator. Implementations for ordinary real
 /// scalars can forward to [`Div`]. The caller checks for an exactly zero divisor.
+///
+/// The [`Complex<T>`] implementation additionally requires `T: PartialOrd` to
+/// scale finite divisors before squaring. It needs no `Float`, `Copy`, `One`, or
+/// math backend. Custom coefficients can implement this trait independently
+/// without ordering. Truncating scalar arithmetic retains
+/// the direct numerator/conjugate formula instead of fractional scaling.
 pub trait Divide<Rhs = Self> {
     /// Result of division.
     type Output;
@@ -67,19 +73,78 @@ impl<T: Zero + One> ImaginaryUnit for Complex<T> {
 }
 impl<T> Divide for Complex<T>
 where
-    T: Clone + Zero + Sub<Output = T> + Mul<Output = T> + Div<Output = T>,
+    T: Clone + Zero + PartialOrd + Sub<Output = T> + Mul<Output = T> + Div<Output = T>,
 {
     type Output = Self;
     fn divide(self, rhs: Self) -> Self {
         if rhs.im.is_zero() {
             return Self::new(self.re / rhs.re.clone(), self.im / rhs.re);
         }
-        let denominator = rhs.re.clone() * rhs.re.clone() + rhs.im.clone() * rhs.im.clone();
-        Self::new(
-            (self.re.clone() * rhs.re.clone() + self.im.clone() * rhs.im.clone())
-                / denominator.clone(),
-            (self.im * rhs.re - self.re * rhs.im) / denominator,
-        )
+        // Normalize the divisor before squaring: its largest component becomes
+        // +/-1 and its squared norm lies in [1, 2]. No Float or math backend is
+        // needed, including for exact ordered scalar implementations.
+        let magnitude = |value: &T| {
+            if *value < T::zero() {
+                T::zero() - value.clone()
+            } else {
+                value.clone()
+            }
+        };
+        let real_magnitude = magnitude(&rhs.re);
+        let imaginary_magnitude = magnitude(&rhs.im);
+        let scale = if real_magnitude >= imaginary_magnitude {
+            real_magnitude
+        } else {
+            imaginary_magnitude
+        };
+        let one = scale.clone() / scale.clone();
+        let two = one.clone() + one.clone();
+        if (one.clone() / two.clone()).is_zero() {
+            // Preserve the original rule for truncating scalar arithmetic;
+            // normalization by scale requires mathematical fractions.
+            let norm = rhs.re.clone() * rhs.re.clone() + rhs.im.clone() * rhs.im.clone();
+            return Self::new(
+                (self.re.clone() * rhs.re.clone() + self.im.clone() * rhs.im.clone())
+                    / norm.clone(),
+                (self.im * rhs.re - self.re * rhs.im) / norm,
+            );
+        }
+        let real = rhs.re / scale.clone();
+        let imaginary = rhs.im / scale.clone();
+        let norm = real.clone() * real.clone() + imaginary.clone() * imaginary.clone();
+        let mut a = self.re.clone() / scale.clone();
+        let mut b = self.im.clone() / scale.clone();
+
+        // For finite scalars x-x is zero. If normalization overflowed, halve
+        // the dividend first and restore that factor only after recombination.
+        // This also handles a finite quotient with components near MAX whose
+        // unrotated dividend/scale is temporarily larger than MAX.
+        let halved = !(a.clone() - a.clone()).is_zero() || !(b.clone() - b.clone()).is_zero();
+        if halved {
+            a = (self.re / two.clone()) / scale.clone();
+            b = (self.im / two.clone()) / scale;
+        }
+
+        let mut result = if magnitude(&a) <= one && magnitude(&b) <= one {
+            // Sum small components before dividing, retaining subnormal sums.
+            Self::new(
+                (a.clone() * real.clone() + b.clone() * imaginary.clone()) / norm.clone(),
+                (b * real - a * imaginary) / norm,
+            )
+        } else {
+            // Divide large components first, avoiding overflow in their sum.
+            let a = a / norm.clone();
+            let b = b / norm;
+            Self::new(
+                a.clone() * real.clone() + b.clone() * imaginary.clone(),
+                b * real - a * imaginary,
+            )
+        };
+        if halved {
+            result.re = result.re * two.clone();
+            result.im = result.im * two;
+        }
+        result
     }
 }
 

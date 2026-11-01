@@ -127,3 +127,48 @@ fn scalar_unit_spaces_and_dimensions_beyond_usize_and_float_ranges() {
         close(identity.hs_inner_product(&zero).unwrap(), c(0.0, 0.0));
     }
 }
+
+macro_rules! scaled_trace_regression {
+    ($name:ident, $real:ty) => {
+        #[test]
+        fn $name() {
+            type C = Complex<$real>;
+            type Local = LocalOperator<Primitive, C>;
+            let identity = Local::identity();
+            for scale in [<$real>::MAX * 0.75, <$real>::from_bits(1)] {
+                for coefficient in [C::new(scale, 0.0), C::new(0.0, scale)] {
+                    let scaled = identity.scaled(coefficient);
+                    assert_eq!(scaled.hs_inner_product(&identity), coefficient.conj());
+                    assert_eq!(identity.hs_inner_product(&scaled), coefficient);
+                    for kind in [TensorKind::Ordinary, TensorKind::Graded] {
+                        let factors = [HilbertSpace::factor(0u8), HilbertSpace::factor(1)];
+                        let space = HilbertSpace::tensor_all_with(kind, factors.clone()).unwrap();
+                        let placed_identity =
+                            identity.at(&factors[1]).unwrap().bind(&space).unwrap();
+                        let local_scale = scaled.at(&factors[1]).unwrap().bind(&space).unwrap();
+                        let composite_scale = placed_identity.scaled(coefficient);
+                        for operator in [local_scale, composite_scale] {
+                            assert_eq!(
+                                operator.hs_inner_product(&placed_identity).unwrap(),
+                                coefficient.conj(),
+                            );
+                            assert_eq!(
+                                placed_identity.hs_inner_product(&operator).unwrap(),
+                                coefficient,
+                            );
+                            assert_eq!(
+                                operator
+                                    .hs_inner_product_in(&placed_identity, &space)
+                                    .unwrap(),
+                                coefficient.conj(),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
+
+scaled_trace_regression!(normalized_local_traces_preserve_extreme_scales_f32, f32);
+scaled_trace_regression!(normalized_local_traces_preserve_extreme_scales_f64, f64);

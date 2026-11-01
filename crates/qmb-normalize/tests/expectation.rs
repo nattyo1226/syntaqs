@@ -144,3 +144,28 @@ complex_regressions!(
     1e-100_f64,
     1e-12
 );
+
+#[test]
+fn large_superposition_with_a_roundoff_imaginary_norm_has_finite_expectations() {
+    type C = Complex<f64>;
+    let state = LocalState::sum([(5.0, 7.0), (5.0, 2.0), (7.0, 1.0)].map(|(re, im)| {
+        LocalState::<Primitive, Primitive, C>::primitive(Primitive)
+            .scaled(C::new(re * 1e100, im * 1e100))
+    }));
+    let norm = state.inner_product(&state);
+    assert!(norm.re.is_finite() && norm.re > 0.0);
+    assert_ne!(norm.im, 0.0); // Exercise complex division, not its real shortcut.
+    let op = LocalOperator::primitive(Primitive);
+    let close = |value: C| {
+        assert!(
+            (value.re - 1.0).abs() < 1e-12 && value.im.abs() < 1e-12,
+            "{value:?}"
+        );
+    };
+    close(state.normalized_expectation(&op).unwrap());
+    let space = HilbertSpace::factor(0u8);
+    let state = state.at(&space).unwrap();
+    let op = op.at(&space).unwrap();
+    close(state.normalized_expectation(&op).unwrap());
+    close(state.normalized_expectation_in(&op, &space).unwrap());
+}

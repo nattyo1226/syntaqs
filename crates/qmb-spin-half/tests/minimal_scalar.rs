@@ -2,11 +2,10 @@
 
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
-use num_complex::Complex;
 use num_traits::{One, Zero};
 use qmb_core::{
-    Act, Adjoint, Basis, Dimension, Divide, Identity, ImaginaryUnit, InnerProduct,
-    LinearCombination as Lc, Product, Trace,
+    Act, Adjoint, Basis, Dimension, Identity, ImaginaryUnit, InnerProduct, LinearCombination as Lc,
+    Product, Trace,
 };
 use qmb_spin_half::{
     CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as State, SzBasis,
@@ -360,8 +359,12 @@ impl<T: Zero + One> ImaginaryUnit for Coefficient<T> {
 impl<T: Clone + Zero + Sub<Output = T> + Mul<Output = T> + Div<Output = T>> Div for Coefficient<T> {
     type Output = Self;
     fn div(self, rhs: Self) -> Self {
-        let c = Complex::new(self.re, self.im).divide(Complex::new(rhs.re, rhs.im));
-        Self::new(c.re, c.im)
+        // Exact test fractions do not need ordering for mathematical division.
+        let norm = rhs.re.clone() * rhs.re.clone() + rhs.im.clone() * rhs.im.clone();
+        Self::new(
+            (self.re.clone() * rhs.re.clone() + self.im.clone() * rhs.im.clone()) / norm.clone(),
+            (self.im * rhs.re - self.re * rhs.im) / norm,
+        )
     }
 }
 impl Sub for Signed {

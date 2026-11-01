@@ -207,6 +207,114 @@ complex_regressions!(
     1e-12
 );
 
+macro_rules! scaled_complex_division {
+    ($name:ident, $real:ty, $large:expr, $small:expr, $tol:expr) => {
+        #[test]
+        fn $name() {
+            type C = Complex<$real>;
+            let close = |actual: C, expected: C| {
+                assert!(
+                    (actual.re - expected.re).abs() <= $tol * expected.re.abs().max(1.0),
+                    "{actual:?} != {expected:?}"
+                );
+                assert!(
+                    (actual.im - expected.im).abs() <= $tol * expected.im.abs().max(1.0),
+                    "{actual:?} != {expected:?}"
+                );
+            };
+            for scale in [
+                $large,
+                $small,
+                <$real>::MAX,
+                <$real>::MIN_POSITIVE,
+                <$real>::from_bits(1),
+            ] {
+                for sign in [-1.0, 1.0] {
+                    let divisor = C::new(scale, sign * scale);
+                    close(divisor.divide(divisor), C::new(1.0, 0.0));
+                    close(
+                        C::new(-sign * scale, scale).divide(divisor),
+                        C::new(0.0, 1.0),
+                    );
+                }
+            }
+            close(
+                C::new(<$real>::MAX, <$real>::MAX).divide(C::new(1.0, 1.0)),
+                C::new(<$real>::MAX, 0.0),
+            );
+            close(
+                C::new(<$real>::MAX, 0.0).divide(C::new(0.75, 0.75)),
+                C::new(<$real>::MAX / 1.5, -(<$real>::MAX / 1.5)),
+            );
+            let tiny = <$real>::from_bits(1);
+            assert_eq!(
+                C::new(tiny, tiny).divide(C::new(1.0, 1.0)),
+                C::new(tiny, 0.0)
+            );
+            close(
+                C::new(tiny * 3.0, 0.0).divide(C::new(tiny * 2.0, tiny)),
+                C::new(1.2, -0.6),
+            );
+            for divisor in [
+                C::new(1.0, 2.0),
+                C::new(2.0, 1.0),
+                C::new(-2.0, 1.0),
+                C::new(0.0, -2.0),
+            ] {
+                let expected = C::new(3.0, 4.0) / divisor;
+                close(C::new(3.0, 4.0).divide(divisor), expected);
+            }
+        }
+    };
+}
+
+scaled_complex_division!(complex_division_scales_f32, f32, 1e20_f32, 1e-20_f32, 2e-6);
+scaled_complex_division!(
+    complex_division_scales_f64,
+    f64,
+    1e200_f64,
+    1e-200_f64,
+    2e-15
+);
+
+#[test]
+fn complex_division_keeps_truncating_integer_arithmetic() {
+    assert_eq!(
+        Complex::new(3i64, 4).divide(Complex::new(1, 2)),
+        Complex::new(2, 0),
+    );
+}
+
+#[test]
+fn complex_division_needs_no_float_copy_one_or_negation() {
+    #[derive(Clone, PartialEq, PartialOrd)]
+    struct Ordered(f64);
+    macro_rules! arithmetic {
+        ($trait:ident, $method:ident, $op:tt) => {
+            impl core::ops::$trait for Ordered {
+                type Output = Self;
+                fn $method(self, rhs: Self) -> Self { Self(self.0 $op rhs.0) }
+            }
+        };
+    }
+    arithmetic!(Add, add, +);
+    arithmetic!(Sub, sub, -);
+    arithmetic!(Mul, mul, *);
+    arithmetic!(Div, div, /);
+    impl Zero for Ordered {
+        fn zero() -> Self {
+            Self(0.0)
+        }
+        fn is_zero(&self) -> bool {
+            self.0 == 0.0
+        }
+    }
+    let quotient =
+        Complex::new(Ordered(3.0), Ordered(4.0)).divide(Complex::new(Ordered(1.0), Ordered(2.0)));
+    assert!((quotient.re.0 - 2.2).abs() < 1e-15);
+    assert!((quotient.im.0 + 0.4).abs() < 1e-15);
+}
+
 #[test]
 fn every_scaled_entry_converts_a_non_clone_source_exactly_once() {
     use core::cell::Cell;

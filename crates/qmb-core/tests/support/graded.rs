@@ -6,7 +6,14 @@ use qmb_core::*;
 use std::{fmt::Debug, num::NonZeroUsize};
 
 pub trait Real:
-    Num + Copy + core::ops::Neg<Output = Self> + FromPrimitive + ToPrimitive + Debug + 'static
+    Num
+    + Copy
+    + PartialOrd
+    + core::ops::Neg<Output = Self>
+    + FromPrimitive
+    + ToPrimitive
+    + Debug
+    + 'static
 {
     const TOL: f64;
 }

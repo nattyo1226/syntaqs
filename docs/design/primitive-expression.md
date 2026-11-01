@@ -123,7 +123,7 @@ norm squared は自己内積の実部、norm はその平方根とする。`norm
 
 正規化と正規化期待値は、自己内積全体の `Zero::is_zero()` による厳密なゼロを `NormalizationError::ZeroNorm` として拒否する。明示的な zero に加え、非独立な primitive や項の相殺による zero も対象とする。`norm(zero)` は0を返す。負値の補正・近似ゼロ判定は導入せず、NaN・infinity などは数値型に委ねる。複合式の空間・評価エラーは `NormalizationError::Expression(ExpressionError)` に変換し、元のエラーを source として保持する。
 
-正規化期待値は期待値を自己内積全体で除し、`Divide` を要求する。平方根・実部取得・実数の埋め込みは要求しない。標準 Complex の除算では、純実の分母を不要に二乗しない。明示空間を渡す複合式では、その空間を演算子の既存束縛より優先する。
+正規化期待値は期待値を自己内積全体で除し、`Divide` を要求する。平方根・実部取得・実数の埋め込みは要求しない。標準 `Complex<T>` の `Divide` は成分 T に `PartialOrd` を要求する。純実の分母は直接除算し、虚部が非零の場合は分母の最大成分の絶対値で正規化してから二乗する。分子の正規化が overflow する場合は分子を半分にして計算し、結果で倍率を戻す。小さい成分は加算後、大きい成分は加算前に正規化した分母のノルム二乗で割る。これにより丸め誤差による分母の微小な虚部でも不要な二乗の overflow / underflow を避ける。Float・Copy・One・数学関数 backend は追加せず、独自係数型 C の `Divide` や式メソッドには順序の制約を追加しない。整数のような切り捨て除算では元の直接計算を維持する。明示空間を渡す複合式では、その空間を演算子の既存束縛より優先する。
 
 拡張 trait とエラーは `qmb-normalize` から直接利用する。core の libm feature は設けず、core の代数 API・norm squared・スカラー除算は正規化 crate がなくても利用できる。非零の自己内積による商を明示的に計算でき、平方根を使わない正規化期待値の拡張 trait も `qmb-normalize` に属する。
 
@@ -145,7 +145,7 @@ norm squared は自己内積の実部、norm はその平方根とする。`norm
 
 `Trace` は通常の非正規化 trace のまま、`Tr(I)=D` とする。期待値・密度行列の純度に使う trace、状態内積・norm・状態正規化も既存の意味を維持する。任意の独自代数や Basis に正規直交性を要求しない。
 
-`LocalOperator::hs_inner_product` は局所の `Tr(A†B)` を `O::identity()` の trace で割る。`Operator::hs_inner_product`・`hs_inner_product_in` は[通常表現の局所 trace の走査](composite-expression.md#124-intrinsic-な項と通常表現)で各 trace を規格化してから縮約する。各局所次元は係数型 C の非零の値として表せ、数学的な除算ができることを要求する。除算には既存の `Divide` を使い、通常の `trace` / `trace_in` に除算能力を追加しない。
+`LocalOperator::hs_inner_product` は局所の `Tr(A†B)` を `O::identity()` の trace で割る。実装では評価後の各 primitive の trace を先に規格化し、その後で係数を掛けて加算する。`Operator::hs_inner_product`・`hs_inner_product_in` も[通常表現の局所 trace の走査](composite-expression.md#124-intrinsic-な項と通常表現)で同じ処理を用いてから縮約する。局所式に係数を付けてから配置した場合も、配置後に付けた場合も、不要な非正規化 trace の中間値を作らない。各局所次元は係数型 C の非零の値として表せ、数学的な除算ができることを要求する。除算には既存の `Divide` を使い、通常の `trace` / `trace_in` に除算能力を追加しない。
 
 この計算には状態型・Dimension・総次元の整数化・整数から C への変換を要求しない。空の tensor 空間は D=1 とする。総次元の `usize` overflow と、identity spectator の次元を掛け重ねることによる中間値の増大を避けるが、一般の係数の桁あふれや丸め誤差を防ぐ保証はしない。実装は [evaluate/trace.rs](../../crates/qmb-core/src/evaluate/trace.rs)、回帰テストは [hs_inner_product.rs](../../crates/qmb-core/tests/hs_inner_product.rs)を参照する。
 

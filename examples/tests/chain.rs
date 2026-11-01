@@ -10,7 +10,7 @@ use qmb_normalize::{Norm, Normalize, NormalizedExpectation};
 use qmb_spin_half::{SpinHalf, SpinHalfState};
 use std::{fmt::Debug, ops::Neg};
 
-trait Real: Num + Copy + Neg<Output = Self> + FromPrimitive + ToPrimitive + Debug {
+trait Real: Num + Copy + PartialOrd + Neg<Output = Self> + FromPrimitive + ToPrimitive + Debug {
     const ATOL: f64;
     const RTOL: f64;
 }

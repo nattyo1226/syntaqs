@@ -18,7 +18,7 @@ use State::{Down, Up};
 const OPS: [Op; 6] = [I, Sx, Sy, Sz, Sp, Sm];
 const STATES: [State; 2] = [Up, Down];
 
-trait Real: Num + Copy + Neg<Output = Self> + Debug + FromPrimitive + ToPrimitive {
+trait Real: Num + Copy + PartialOrd + Neg<Output = Self> + Debug + FromPrimitive + ToPrimitive {
     const ATOL: f64;
     const RTOL: f64;
 }
