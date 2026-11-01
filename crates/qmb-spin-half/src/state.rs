@@ -8,12 +8,22 @@ use qmb_core::{Act, Dimension, DimensionOverflow, ImaginaryUnit, InnerProduct, L
 use crate::{SpinHalfOperator, coefficient::imaginary};
 
 /// The eigenstates of `Sz`, independent of coefficient precision.
+/// Display writes `up` or `down`; state expressions add ket markers and indices.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SpinHalfState {
     /// The state with `Sz` eigenvalue `+1/2`, first in the state basis.
     Up,
     /// The state with `Sz` eigenvalue `-1/2`, second in the state basis.
     Down,
+}
+
+impl core::fmt::Display for SpinHalfState {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::Up => "up",
+            Self::Down => "down",
+        })
+    }
 }
 
 impl<C: Zero + One> InnerProduct<C> for SpinHalfState {

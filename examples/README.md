@@ -5,6 +5,7 @@ qmb-rs の利用例を、workspace に属する Cargo パッケージの bin と
 リポジトリ直下から実行する。
 
 ```sh
+cargo run -p examples --bin expression_formatting
 cargo run -p examples --bin two_spins
 cargo run -p examples --bin tensor_products
 cargo run -p examples --bin basis_expansion
@@ -17,6 +18,8 @@ cargo run -p examples --bin spin_one --features export
 cargo run -p examples --bin geometry_relations
 cargo run -p examples --bin pauli_strings
 ```
+
+`expression_formatting` は Tag と Id128、通常の Display・`{:#}` の複数行表示・Debug を示す。積状態の ket、複合的な局所状態の配置、係数・作用・随伴、式木内だけの Index の8文字制限を扱う。追加 feature は不要で、`--no-default-features` でも実行できる。表示契約は[式木の表示](../docs/design/expression-formatting.md)を参照する。
 
 `two_spins` は `Spin::product_state`・`Spin::operator_product_at`・`Spin::try_operator_sum` から2スピンの一重項・三重項と交換 Hamiltonian `H = J_a · J_b = (S_a · S_b)/4` を手で組み立てる。norm squared、エネルギー期待値（一重項 −0.75、三重項 0.25）、固有状態の残差、状態間の内積を計算・検証する。追加 feature は不要で、`--no-default-features` でも実行できる。
 

@@ -15,7 +15,7 @@ primitive の一覧・規格化は[局所 primitive の設計](../../design/loca
 
 ## 式木表示のカスタムフォーマット
 
-**実装方針合意済み・未実装。** 対象、表示仕様、実装箇所と検証項目は[一時実装計画](expression-formatting-draft.md)に集約する。
+**実装・検証済み（2026-11-01）。** Display・複数行表示・Debug、Index の8文字制限、Tag と builtin primitive の表示を提供する。契約と検証結果は[式木の表示](../../design/expression-formatting.md)、利用例は [expression_formatting](../../../examples/src/bin/expression_formatting.rs)、一時文書は[実装記録](expression-formatting-draft.md)を参照する。
 
 ## プロジェクトルートの README とライセンスファイル
 
