@@ -3,9 +3,8 @@
 use num_complex::Complex;
 use qmb_core::{Basis, BasisError, Coordinates, HilbertSpace, LocalOperator, LocalState};
 
-#[path = "support/three_level.rs"]
-mod fixture;
 use fixture::*;
+use qmb_tests::three_level as fixture;
 
 type Ls<T> = LocalState<Ket, Operator, Complex<T>>;
 type Lo<T> = LocalOperator<Operator, Complex<T>>;

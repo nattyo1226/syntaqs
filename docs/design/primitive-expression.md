@@ -147,7 +147,7 @@ norm squared は自己内積の実部、norm はその平方根とする。`norm
 
 `LocalOperator::hs_inner_product` は局所の `Tr(A†B)` を `O::identity()` の trace で割る。実装では評価後の各 primitive の trace を先に規格化し、その後で係数を掛けて加算する。`Operator::hs_inner_product`・`hs_inner_product_in` も[通常表現の局所 trace の走査](composite-expression.md#124-intrinsic-な項と通常表現)で同じ処理を用いてから縮約する。局所式に係数を付けてから配置した場合も、配置後に付けた場合も、不要な非正規化 trace の中間値を作らない。各局所次元は係数型 C の非零の値として表せ、数学的な除算ができることを要求する。除算には既存の `Divide` を使い、通常の `trace` / `trace_in` に除算能力を追加しない。
 
-この計算には状態型・Dimension・総次元の整数化・整数から C への変換を要求しない。空の tensor 空間は D=1 とする。総次元の `usize` overflow と、identity spectator の次元を掛け重ねることによる中間値の増大を避けるが、一般の係数の桁あふれや丸め誤差を防ぐ保証はしない。実装は [evaluate/trace.rs](../../crates/qmb-core/src/evaluate/trace.rs)、回帰テストは [hs_inner_product.rs](../../crates/qmb-core/tests/hs_inner_product.rs)を参照する。
+この計算には状態型・Dimension・総次元の整数化・整数から C への変換を要求しない。空の tensor 空間は D=1 とする。総次元の `usize` overflow と、identity spectator の次元を掛け重ねることによる中間値の増大を避けるが、一般の係数の桁あふれや丸め誤差を防ぐ保証はしない。実装は [evaluate/trace.rs](../../crates/qmb-core/src/evaluate/trace.rs)、回帰テストは [hs_inner_product.rs](../../tests/tests/core_hs_inner_product.rs)を参照する。
 
 ## 5. 線型従属性と基底との接続
 

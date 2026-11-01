@@ -353,7 +353,7 @@ qmb-export は単独でも `cargo test -p qmb-export --no-default-features --off
 
 - 各代数の全 primitive の積・作用・随伴・通常 trace、両演算子基底の変換と座標を、独立行列と f32 / f64 で照合した。spin-one の全225積・45作用、結合則・作用との整合性も検証した。
 - 局所の正規化 HS Gram 行列に加え、spin-one の Cartesian / Ladder tensor 基底と fermion の graded Majorana tensor 基底の Gram 行列を検証した。graded 評価の符号・CAR と通常作用行列も照合した。
-- [HS 内積の回帰テスト](../../crates/qmb-core/tests/hs_inner_product.rs)で、明示行列による `Tr(A†B)/D`、空空間、spectator の追加、明示空間による束縛の上書き、および2048因子での `⟨I,I⟩=1` を確認した。状態型・Dimension・整数変換を要求しないこと、Divide だけを持つ係数でも計算できること、通常 trace に除算能力を要求しないことも検証した。
+- [HS 内積の回帰テスト](../../tests/tests/core_hs_inner_product.rs)で、明示行列による `Tr(A†B)/D`、空空間、spectator の追加、明示空間による束縛の上書き、および2048因子での `⟨I,I⟩=1` を確認した。状態型・Dimension・整数変換を要求しないこと、Divide だけを持つ係数でも計算できること、通常 trace に除算能力を要求しないことも検証した。
 - 物理的なモデルの独立参照行列とエネルギー・定数シフトを維持した。微小係数の保存と厳密な相殺、解析的に零の局所規則の空性も確認した。暗黙の近似的な切り捨ては追加していない。
 
 examples の全8バイナリを `cargo run -p examples --bin <name> --offline --quiet` により、既定 feature・`--all-features`・`--no-default-features` の3構成で実行した。一重項・三重項のエネルギー −0.75 / 0.25、symmetric Hubbard のエネルギー −2、spin-one BLBQ の期待値0.5、Pauli string の37項と密疎 export の一致が保たれた。

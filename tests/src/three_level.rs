@@ -1,5 +1,4 @@
 //! Shared three-level algebra and independent matrix reference for tests.
-#![allow(dead_code, unused_imports)]
 
 use std::{fmt::Debug, num::NonZeroUsize, ops::Neg};
 
@@ -7,10 +6,10 @@ use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use qmb_core::{
     Act, Adjoint, Basis, Dimension, DimensionOverflow, Identity, InnerProduct, LinearCombination,
-    Product, Term, Trace, dim_op, dim_state,
+    Product, Term, Trace,
 };
 
-pub(super) trait Real:
+pub trait Real:
     Num + Copy + PartialOrd + Neg<Output = Self> + Debug + FromPrimitive + ToPrimitive
 {
     const TOLERANCE: f64;
@@ -22,19 +21,19 @@ impl Real for f64 {
     const TOLERANCE: f64 = 1e-12;
 }
 
-pub(super) fn c<T: Real>(re: f64, im: f64) -> Complex<T> {
+pub fn c<T: Real>(re: f64, im: f64) -> Complex<T> {
     Complex::new(T::from_f64(re).unwrap(), T::from_f64(im).unwrap())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) enum Axis {
+pub enum Axis {
     A,
     B,
     C,
 }
-pub(super) const AXES: [Axis; 3] = [Axis::A, Axis::B, Axis::C];
+pub const AXES: [Axis; 3] = [Axis::A, Axis::B, Axis::C];
 impl Axis {
-    pub(super) fn index(self) -> usize {
+    pub fn index(self) -> usize {
         match self {
             Self::A => 0,
             Self::B => 1,
@@ -44,13 +43,13 @@ impl Axis {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) enum Ket {
+pub enum Ket {
     Unit(Axis),
     Sum,   // |0> + |1>, dependent on the canonical primitives
     Phase, // |0> + i|1>
 }
 
-pub(super) const KETS: [Ket; 5] = [
+pub const KETS: [Ket; 5] = [
     Ket::Unit(Axis::A),
     Ket::Unit(Axis::B),
     Ket::Unit(Axis::C),
@@ -59,7 +58,7 @@ pub(super) const KETS: [Ket; 5] = [
 ];
 
 impl Ket {
-    pub(super) fn coordinates<T: Real>(self) -> [Complex<T>; 3] {
+    pub fn coordinates<T: Real>(self) -> [Complex<T>; 3] {
         let mut result = [c(0.0, 0.0); 3];
         match self {
             Self::Unit(axis) => result[axis.index()] = c(1.0, 0.0),
@@ -83,7 +82,7 @@ impl<T: Real> InnerProduct<Complex<T>> for Ket {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) enum Operator {
+pub enum Operator {
     Unit(Axis, Axis),
     Identity, // A dependent primitive, outside the matrix-unit basis.
 }
@@ -139,7 +138,7 @@ impl Identity for Operator {
     }
 }
 
-pub(super) struct Canonical;
+pub struct Canonical;
 impl<T: Real> Basis<Ket, Complex<T>> for Canonical {
     fn expand(&self, primitive: &Ket) -> LinearCombination<Ket, Complex<T>> {
         LinearCombination::from_terms(primitive.coordinates::<T>().into_iter().zip(AXES).map(
@@ -160,7 +159,7 @@ impl<T: Real> Basis<Ket, Complex<T>> for Canonical {
     }
 }
 
-pub(super) struct NonOrthogonal;
+pub struct NonOrthogonal;
 impl<T: Real> Basis<Ket, Complex<T>> for NonOrthogonal {
     fn expand(&self, primitive: &Ket) -> LinearCombination<Ket, Complex<T>> {
         let [a, b, d] = primitive.coordinates::<T>();
@@ -192,7 +191,7 @@ impl<T: Real> Basis<Ket, Complex<T>> for NonOrthogonal {
     }
 }
 
-pub(super) struct MatrixUnits;
+pub struct MatrixUnits;
 impl<T: Real> Basis<Operator, Complex<T>> for MatrixUnits {
     fn expand(&self, primitive: &Operator) -> LinearCombination<Operator, Complex<T>> {
         match primitive {
@@ -215,17 +214,17 @@ impl<T: Real> Basis<Operator, Complex<T>> for MatrixUnits {
     }
 }
 
-pub(super) type Vector<T> = [Complex<T>; 3];
-pub(super) type Matrix<T> = [[Complex<T>; 3]; 3];
+pub type Vector<T> = [Complex<T>; 3];
+pub type Matrix<T> = [[Complex<T>; 3]; 3];
 
-pub(super) fn dot<T: Real>(x: Vector<T>, y: Vector<T>) -> Complex<T> {
+pub fn dot<T: Real>(x: Vector<T>, y: Vector<T>) -> Complex<T> {
     x.into_iter()
         .zip(y)
         .fold(c(0.0, 0.0), |sum, (a, b)| sum + a.conj() * b)
 }
 
 // Matrix reference computations are independent of the delta-based local rules.
-pub(super) fn matrix<T: Real>(op: Operator) -> Matrix<T> {
+pub fn matrix<T: Real>(op: Operator) -> Matrix<T> {
     let mut result = [[c(0.0, 0.0); 3]; 3];
     match op {
         Operator::Unit(i, j) => result[i.index()][j.index()] = c(1.0, 0.0),
@@ -238,13 +237,13 @@ pub(super) fn matrix<T: Real>(op: Operator) -> Matrix<T> {
     result
 }
 
-pub(super) fn matmul<T: Real>(a: Matrix<T>, b: Matrix<T>) -> Matrix<T> {
+pub fn matmul<T: Real>(a: Matrix<T>, b: Matrix<T>) -> Matrix<T> {
     std::array::from_fn(|i| {
         std::array::from_fn(|j| (0..3).fold(c(0.0, 0.0), |sum, k| sum + a[i][k] * b[k][j]))
     })
 }
 
-pub(super) fn matvec<T: Real>(a: Matrix<T>, x: Vector<T>) -> Vector<T> {
+pub fn matvec<T: Real>(a: Matrix<T>, x: Vector<T>) -> Vector<T> {
     a.map(|row| {
         row.into_iter()
             .zip(x)
@@ -252,7 +251,7 @@ pub(super) fn matvec<T: Real>(a: Matrix<T>, x: Vector<T>) -> Vector<T> {
     })
 }
 
-pub(super) fn operator_value<T: Real>(sum: &LinearCombination<Operator, Complex<T>>) -> Matrix<T> {
+pub fn operator_value<T: Real>(sum: &LinearCombination<Operator, Complex<T>>) -> Matrix<T> {
     let mut result = [[c(0.0, 0.0); 3]; 3];
     for term in sum {
         let m = matrix(term.operand);
@@ -265,7 +264,7 @@ pub(super) fn operator_value<T: Real>(sum: &LinearCombination<Operator, Complex<
     result
 }
 
-pub(super) fn state_value<T: Real>(sum: &LinearCombination<Ket, Complex<T>>) -> Vector<T> {
+pub fn state_value<T: Real>(sum: &LinearCombination<Ket, Complex<T>>) -> Vector<T> {
     let mut result = [c(0.0, 0.0); 3];
     for term in sum {
         for (i, value) in term.operand.coordinates::<T>().into_iter().enumerate() {
@@ -275,7 +274,7 @@ pub(super) fn state_value<T: Real>(sum: &LinearCombination<Ket, Complex<T>>) -> 
     result
 }
 
-pub(super) fn product<T: Real>(
+pub fn product<T: Real>(
     a: &LinearCombination<Operator, Complex<T>>,
     b: &LinearCombination<Operator, Complex<T>>,
 ) -> LinearCombination<Operator, Complex<T>> {
@@ -291,24 +290,21 @@ pub(super) fn product<T: Real>(
     }))
 }
 
-pub(super) fn action<T: Real>(
-    a: &LinearCombination<Operator, Complex<T>>,
-    state: &Ket,
-) -> Vector<T> {
+pub fn action<T: Real>(a: &LinearCombination<Operator, Complex<T>>, state: &Ket) -> Vector<T> {
     state_value(&LinearCombination::from_terms(a.terms().flat_map(|t| {
         state.act(&t.operand).scaled(t.coefficient).into_iter()
     })))
 }
 
 // Evaluation requests action explicitly, independently of metadata.
-pub(super) fn act_primitive<S, O, T>(state: &S, operator: &O) -> LinearCombination<S, Complex<T>>
+pub fn act_primitive<S, O, T>(state: &S, operator: &O) -> LinearCombination<S, Complex<T>>
 where
     S: Act<Complex<T>, Operator = O, Term = S>,
 {
     state.act(operator)
 }
 
-pub(super) fn inner<T: Real>(
+pub fn inner<T: Real>(
     a: &LinearCombination<Ket, Complex<T>>,
     b: &LinearCombination<Ket, Complex<T>>,
 ) -> Complex<T> {
@@ -322,7 +318,7 @@ pub(super) fn inner<T: Real>(
     result
 }
 
-pub(super) fn assert_complex<T: Real>(actual: Complex<T>, expected: Complex<T>) {
+pub fn assert_complex<T: Real>(actual: Complex<T>, expected: Complex<T>) {
     for (actual, expected) in [(actual.re, expected.re), (actual.im, expected.im)] {
         let actual = actual.to_f64().unwrap();
         let expected = expected.to_f64().unwrap();
@@ -332,12 +328,12 @@ pub(super) fn assert_complex<T: Real>(actual: Complex<T>, expected: Complex<T>) 
         );
     }
 }
-pub(super) fn assert_vector<T: Real>(actual: Vector<T>, expected: Vector<T>) {
+pub fn assert_vector<T: Real>(actual: Vector<T>, expected: Vector<T>) {
     for (a, b) in actual.into_iter().zip(expected) {
         assert_complex(a, b);
     }
 }
-pub(super) fn assert_matrix<T: Real>(actual: Matrix<T>, expected: Matrix<T>) {
+pub fn assert_matrix<T: Real>(actual: Matrix<T>, expected: Matrix<T>) {
     for (a, b) in actual.into_iter().zip(expected) {
         assert_vector(a, b);
     }

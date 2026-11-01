@@ -125,8 +125,7 @@ fn singleton_fallible_collections_need_no_temporary_allocation() {
     });
 }
 
-#[path = "support/graded.rs"]
-mod graded;
+use qmb_tests::graded;
 #[test]
 fn graded_contractions_and_trace_do_not_materialize_a_global_basis() {
     use graded::*;

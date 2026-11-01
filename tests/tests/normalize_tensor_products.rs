@@ -1,8 +1,7 @@
-#[path = "../../qmb-core/tests/support/graded.rs"]
-mod graded;
 use graded::*;
 use qmb_core::{HilbertSpace, TensorKind};
 use qmb_normalize::{Norm, Normalize, NormalizedExpectation, NormalizedExpectationIn};
+use qmb_tests::graded;
 fn check<T: Real + num_traits::Float>() {
     let factors = [
         HilbertSpace::factor(0),

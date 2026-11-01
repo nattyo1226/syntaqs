@@ -1,5 +1,4 @@
 //! Test-only homogeneous two-level algebra and independent dense reference.
-#![allow(dead_code)]
 use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use qmb_core::*;

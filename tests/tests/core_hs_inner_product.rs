@@ -1,6 +1,5 @@
 //! Normalized HS contractions preserve ambient-space and grading semantics.
-#[path = "support/graded.rs"]
-mod support;
+use qmb_tests::graded as support;
 
 use num_complex::Complex;
 use qmb_core::{

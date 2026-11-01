@@ -8,9 +8,8 @@ use qmb_core::{
     Product, Trace, dim_op, dim_state,
 };
 
-#[path = "support/three_level.rs"]
-mod fixture;
 use fixture::*;
+use qmb_tests::three_level as fixture;
 
 fn check_rules<T: Real>() {
     let operators: Vec<_> = <MatrixUnits as Basis<Operator, Complex<T>>>::elements(&MatrixUnits)

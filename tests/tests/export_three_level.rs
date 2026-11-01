@@ -1,9 +1,8 @@
+use fixture::*;
 use num_complex::Complex;
 use qmb_core::{Basis, HilbertSpace, LocalOperator, LocalState};
 use qmb_export::{Export, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
-#[path = "../../qmb-core/tests/support/three_level.rs"]
-mod fixture;
-use fixture::*;
+use qmb_tests::three_level as fixture;
 
 // Follow the required complex-magnitude atol/rtol comparison, independently of
 // the fixture's component-wise assertions used by older core tests.

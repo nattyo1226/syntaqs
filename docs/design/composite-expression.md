@@ -363,12 +363,12 @@ Ordinary / graded の共通機構の実装時に行った受入確認を記録�
 
 | 対象 | 実装時の検証根拠 |
 | --- | --- |
-| kind・同一視・混在拒否・部分系・構築入口・fallible 優先順位 | [qmb-core/tests/tensor_products.rs](../../crates/qmb-core/tests/tensor_products.rs)、既存の spaces / fallible_construction / systems テスト |
+| kind・同一視・混在拒否・部分系・構築入口・fallible 優先順位 | [tests/tests/core_tensor_products.rs](../../tests/tests/core_tensor_products.rs)、既存の spaces / fallible_construction / systems テスト |
 | 符号・CAR・作用・随伴・内積・trace・Hilbert–Schmidt 内積 | テスト専用二状態代数と独立 Kronecker 行列による二・三因子の照合（f32 / f64、ordinary / graded） |
 | Act scope・local embedding の準同型性・三つの odd 成分 | 同テストの scope / local expression / three odd factor ケース |
-| intrinsic 座標と通常行列・再展開・列挙・空の基底 | 同テストと [qmb-core/tests/basis_expansion.rs](../../crates/qmb-core/tests/basis_expansion.rs)。非正規直交な三状態基底も両種類で検証 |
-| 密疎 export と metadata | [qmb-export/tests/tensor_products.rs](../../crates/qmb-export/tests/tensor_products.rs) の Vec / ndarray / sprs、両精度の行列・遅延作用 vector |
-| 正規化・期待値 | [qmb-normalize/tests/tensor_products.rs](../../crates/qmb-normalize/tests/tensor_products.rs) の独立行列との照合（両精度） |
+| intrinsic 座標と通常行列・再展開・列挙・空の基底 | 同テストと [tests/tests/core_basis_expansion.rs](../../tests/tests/core_basis_expansion.rs)。非正規直交な三状態基底も両種類で検証 |
+| 密疎 export と metadata | [tests/tests/export_tensor_products.rs](../../tests/tests/export_tensor_products.rs) の Vec / ndarray / sprs、両精度の行列・遅延作用 vector |
+| 正規化・期待値 | [tests/tests/normalize_tensor_products.rs](../../tests/tests/normalize_tensor_products.rs) の独立行列との照合（両精度） |
 | 最小能力・借用・共有・疎性 | 既存 capability / contract テストの移行、Product / 係数演算なしの graded 作用、80因子の分離状態と局所 trace、32因子の割り当て上限 |
 | 深い木 | 既存 ordinary 回帰と graded の2万段 wrapper の構築・比較・評価・破棄（128 KiB stack） |
 | spin-half・利用例 | 全 primitive が even、P=I、両種類での作用と trace の一致。[tensor_products.rs](../../examples/src/bin/tensor_products.rs) を実行 |

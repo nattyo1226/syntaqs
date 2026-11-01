@@ -1,12 +1,11 @@
+use fixture::*;
 use num_complex::Complex;
 use num_traits::Float;
 use qmb_core::{Basis, HilbertSpace};
 use qmb_normalize::{
     Norm, NormalizationError, Normalize, NormalizedExpectation, NormalizedExpectationIn,
 };
-#[path = "../../qmb-core/tests/support/three_level.rs"]
-mod fixture;
-use fixture::*;
+use qmb_tests::three_level as fixture;
 type CompositeSpace = HilbertSpace<u8>;
 type CompositeOperator<T> = qmb_core::Operator<u8, Operator, Complex<T>>;
 

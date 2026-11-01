@@ -1,8 +1,7 @@
-#[path = "support/graded.rs"]
-mod graded;
 use graded::OperatorOf;
 use graded::*;
 use qmb_core::{HilbertSpace as H, *};
+use qmb_tests::graded;
 
 #[test]
 fn normalized_kinds_grouping_subsystems_and_errors() {

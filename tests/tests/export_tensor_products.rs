@@ -1,8 +1,7 @@
-#[path = "../../qmb-core/tests/support/graded.rs"]
-mod graded;
 use graded::*;
 use qmb_core::{HilbertSpace, TensorKind};
 use qmb_export::{Export, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
+use qmb_tests::graded;
 fn check<T: Real>() {
     for kind in [TensorKind::Ordinary, TensorKind::Graded] {
         let factors = [
