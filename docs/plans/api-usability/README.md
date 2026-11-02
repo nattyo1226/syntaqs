@@ -63,7 +63,7 @@
 [examples](../../../examples/README.md) には手作業の式構築、基底展開、Chain モデル、数値 export の実行例がある。一方、次の説明の配置・充実は引き続き検討する。
 
 - 典型的な用途の依存設定・feature・trait import を最初に確認できる案内。trait の import 不足と feature 不足によるエラーを区別できるか。
-- crate root の案内と各 rustdoc・設計文書・実行例のつなぎ方。リポジトリ直下の README は未作成。
+- crate root の案内と各 rustdoc・設計文書・実行例のつなぎ方。リポジトリ直下と各ライブラリ crate の README は整備済み。
 - テスト内の [3準位系](../../../tests/src/three_level.rs) を、独自の ExpressionFactory の型エイリアス・能力 trait・Basis を定義する利用者向けの最小例へ整理すること。
 - 因子・基底・コンテナの順序、メタデータの共有・借用、非正規直交基底での内積の解釈を、数値出力の利用者へどう案内するか。
 

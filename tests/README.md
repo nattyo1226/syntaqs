@@ -1,5 +1,7 @@
 # syntaqs workspace tests
 
+See the [project README](../README.md) for an overview and development commands.
+
 `syntaqs-tests` is a workspace package containing shared test algebras, independent numerical reference calculations, and public API and integration tests that use them. Like `examples`, it inherits version, edition, and rust-version from the workspace and sets `publish = false`.
 
 `src/graded.rs` provides a two-state algebra with parity; `src/three_level.rs` provides a three-state algebra with support for non-orthonormal bases. Tests under `tests/` import this library to exercise the public APIs of core, normalize, and export. Filename prefixes `core_`, `normalize_`, and `export_` identify the main component under test. Tests of library internals and fixtures specific to a crate remain in that crate.

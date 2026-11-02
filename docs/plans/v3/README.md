@@ -19,12 +19,12 @@ primitive の一覧・規格化は[局所 primitive の設計](../../design/loca
 
 ## プロジェクトルートの README とライセンスファイル
 
-プロジェクトルートに `README.md` とライセンスファイルを整備する。
+プロジェクトルートに `README.md` と MIT の `LICENSE` を配置し、8つのライブラリ crate に担当責任を説明する英語の README を整備した。決定事項と作業状況は[作業メモ](readme-license-notes.md)に記録する。
 
 - `README.md` には、プロジェクトの目的・提供機能、crate の構成、依存設定と feature、最小の利用例、examples・設計文書へのリンク、開発時のビルド・検証方法をまとめる。
 - 実装済みの機能と将来の計画を区別し、利用例やコマンドは現行の公開 API・リポジトリ構成と一致させる。
-- 採用ライセンス、著作権者表記、適用範囲を確定したうえで、対応するライセンスファイルを配置する。採用ライセンスは現時点では未定とする。
-- ライセンス確定後、README の案内と workspace・各 crate の Cargo メタデータを整合させる。
+- 採用ライセンスは MIT、著作権表示は `Copyright (c) 2026 Haruki SAITO`、適用範囲はリポジトリ全体とする。
+- README の案内と workspace・各 crate のライセンス・README・repository メタデータを整合させる。
 
 検証では、README 内のリンク・利用例・コマンドと、ライセンスファイル・Cargo メタデータの対応を確認する。
 

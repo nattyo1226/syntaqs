@@ -3,6 +3,10 @@ name = "syntaqs-geometry"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
+license-file.workspace = true
+repository.workspace = true
+readme = "README.md"
 description = "Immutable site geometries and geometric relations"
 
 [dependencies]

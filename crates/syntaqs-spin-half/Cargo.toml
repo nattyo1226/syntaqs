@@ -3,6 +3,10 @@ name = "syntaqs-spin-half"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
+license-file.workspace = true
+repository.workspace = true
+readme = "README.md"
 description = "Spin-1/2 primitives, local rules, and bases for syntaqs"
 
 [dependencies]

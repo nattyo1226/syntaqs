@@ -1,5 +1,7 @@
 # syntaqs examples
 
+See the [project README](../README.md) for an overview and Git dependency setup.
+
 This workspace package contains runnable examples as Cargo binaries. Each example uses crates such as `syntaqs-core`, `syntaqs-basic`, `syntaqs-geometry`, and `syntaqs-spin-half` directly, inheriting dependency settings from the workspace.
 
 Run these commands from the repository root:

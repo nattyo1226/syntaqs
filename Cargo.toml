@@ -17,6 +17,9 @@ members = [
 edition = "2024"
 version = "0.2.0"
 rust-version = "1.85"
+license = "MIT"
+license-file = "LICENSE"
+repository = "https://github.com/nattyo1226/syntaqs"
 
 [workspace.dependencies]
 syntaqs-basic = { path = "crates/syntaqs-basic" }
