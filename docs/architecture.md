@@ -52,7 +52,7 @@ geometry は `boundary`・`geometry`・`relation`・`group`・`connection` に�
 
 疎表現は core の Coordinates から sprs の疎ベクトル・CSC 行列を構築する。行列の列は状態基底への作用と座標取得から生成し、密・疎で共有する。空間・基底・因子順序・係数型の解釈を保持し、通常の式木に backend や基底識別情報を追加しない。
 
-syntaqs-export は既定 feature なしで Vec 出力を提供し、ndarray・sprs は個別の feature で有効化する。examples の任意の export feature は両方を有効にする。公開 API・所有権・エラー・依存指定・未実施の検証は[数値 export の設計](design/export.md)に定める。Step 6 の実装と Rust 1.98.0 での受入確認は完了した。MSRV の実ビルドは利用者の依頼により省略している。
+syntaqs-export は既定 feature なしで Vec 出力を提供し、ndarray・sprs は個別の feature で有効化する。examples の任意の export feature は両方を有効にする。公開 API・所有権・エラー・依存指定・検証状況は[数値 export の設計](design/export.md)に定める。Step 6 の実装と Rust 1.98.0 での受入確認は完了した。MSRV `1.85.0` でのビルド・テストは、現在は `main` への push・PR 時に [CI workflow](../.github/workflows/ci.yml) で検証する。
 
 ### 2.4. Fermion（実装済み）
 
@@ -160,7 +160,7 @@ Index は引き続き Eq だけで照合し、共有に Clone・再発行を要�
 
 ## 9. 初期版の提供範囲と完成条件
 
-**段階1〜6完了（2026-10-27）**。初期版の機能実装と受入確認を完了した。数値 export の検証結果は[数値 export の設計](design/export.md#7-受入確認)、MSRV・専用 no_std target・性能ベンチマークの未実施事項は[今後の課題](future-work.md#3-未実施の検証と性能)に記録する。
+**段階1〜6完了（2026-10-27）**。初期版の機能実装と受入確認を完了した。数値 export の検証結果は[数値 export の設計](design/export.md#7-受入確認)に記録する。現在の MSRV 検証は `main` への push・PR 時に CI で実行し、専用 no_std target・性能ベンチマークの未実施事項は[今後の課題](future-work.md#3-未実施の検証と性能)に記録する。
 
 各設計文書の Step または段階は、1 が局所契約と具体例、2 が局所式と評価、3 が空間と複合評価、4 が Chain と導出操作、5 が基底展開と座標取得、6 が数値 export と受入確認を指す。
 

@@ -1,10 +1,10 @@
 # 数値 export の設計
 
-更新日: 2026-10-29
+更新日: 2026-11-02
 
 ## 1. 状態と責任分担
 
-**完了（2026-10-27）**。Step 6 として、採用した型・API・feature・依存指定を syntaqs-export に実装した。Rust 1.98.0 で受入確認を実施した。現在は `syntaqs-export` を直接利用する。MSRV 1.85 の実ビルド・テストは利用者の依頼により省略しており、対応を実証したものではない。
+**完了（2026-10-27）**。Step 6 として、採用した型・API・feature・依存指定を syntaqs-export に実装した。Rust 1.98.0 で受入確認を実施した。現在は `syntaqs-export` を直接利用する。MSRV `1.85.0` でのビルド・テストは、現在は `main` への push・PR 時に [CI workflow](../../.github/workflows/ci.yml) で検証する。
 
 数学的契約は[要件第6節](../requirements.md#6-基底export)、既存の基底列挙・座標取得 API は[基底の設計](basis.md)、初期版の完成条件は[アーキテクチャ第9節](../architecture.md#9-初期版の提供範囲と完成条件)に従う。
 
@@ -157,7 +157,7 @@ MSRV 1.85 を維持する。sprs 0.11.4 の公開 manifest は Rust 1.85.0 と n
 
 参照: [sprs 0.11.4 manifest](https://docs.rs/crate/sprs/0.11.4/source/Cargo.toml)、[sprs 0.11.5 manifest](https://docs.rs/crate/sprs/0.11.5/source/Cargo.toml.orig)、[ndarray 0.17.2 manifest](https://github.com/rust-ndarray/ndarray/blob/0.17.2/Cargo.toml)、[sprs の feature](https://docs.rs/crate/sprs/0.11.4/features)。
 
-workspace と syntaqs-export の Cargo.toml に採用指定を反映し、依存を解決した。直接依存と sprs の ndarray はどちらも 0.17.2 で統一されていることを cargo tree で確認した。Cargo.lock は既存のリポジトリ方針で Git 管理対象外である。MSRV 1.85 のビルド・テストは利用者の依頼により省略した。
+workspace と syntaqs-export の Cargo.toml に採用指定を反映し、依存を解決した。直接依存と sprs の ndarray はどちらも 0.17.2 で統一されていることを cargo tree で確認した。Cargo.lock は既存のリポジトリ方針で Git 管理対象外である。現在の MSRV 検証は `main` への push・PR 時に CI で実行する。
 
 ## 7. 受入確認
 
@@ -172,7 +172,7 @@ workspace と syntaqs-export の Cargo.toml に採用指定を反映し、依存
 - 比較式は要件第5.6節に従い、f32 の atol・rtol は初期値を各 `2e-5`、f64 は各 `1e-12` とする。調整する場合は計算規模と誤差の根拠を記録する。
 - 暗黙の精度変更の拒否と、取り出した数値データの明示的な精度変換を検証する。保持・移動に不要な係数・Index・primitive の制約を追加していないことも確認する。
 - 疎ベクトルは、非零成分の少ない大きな空間で密領域を確保しないことを確認する。疎行列は列ごとに処理し、密変換・全列の一括保持を行わないことを対象テストと実装レビューで確認する。
-- backend 無効・ndarray のみ・sprs のみ・両方、および当時の包括 crate での export 有効・無効を確認した。workspace の test・format・Clippy・警告をエラーとするドキュメント生成、core 単独チェックも成功した。MSRV 1.85 の実確認は利用者の依頼で省略した。
+- backend 無効・ndarray のみ・sprs のみ・両方、および当時の包括 crate での export 有効・無効を確認した。workspace の test・format・Clippy・警告をエラーとするドキュメント生成、core 単独チェックも成功した。
 
 2026-10-27 の受入確認では、依存取得後に以下を実行し、すべて成功した。
 
@@ -182,7 +182,7 @@ workspace と syntaqs-export の Cargo.toml に採用指定を反映し、依存
 - `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --all-features --offline -j 2 -- -D warnings`、`RUSTDOCFLAGS='-D warnings' cargo doc --workspace --all-features --no-deps --offline -j 2`、および syntaqs-export の default feature 無効でのドキュメント生成。
 - `cargo check -p syntaqs-core --no-default-features --offline -j 2` と heisenberg の `--all-features`、`--no-default-features --features export`、`--no-default-features` の各構成での実行。
 
-6-site open chain の代数・密・疎の期待値はいずれも 1.25 であり、CSC 行列の shape は `(64, 64)`、非零成分は224だった。MSRV・専用 no_std target・性能ベンチマークの未実施事項は[今後の課題](../future-work.md#3-未実施の検証と性能)に記録する。
+6-site open chain の代数・密・疎の期待値はいずれも 1.25 であり、CSC 行列の shape は `(64, 64)`、非零成分は224だった。現在の MSRV 検証は `main` への push・PR 時に CI で実行する。専用 no_std target・性能ベンチマークの未実施事項は[今後の課題](../future-work.md#3-未実施の検証と性能)に記録する。
 
 ## 8. 実装した型と構成・延期範囲
 

@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test (${{ matrix.toolchain }}, ${{ matrix.configuration.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: ["1.85.0", stable]
+        configuration:
+          - name: default
+            args: ""
+          - name: all-features
+            args: --all-features
+          - name: no-default-features
+            args: --no-default-features
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: test-${{ matrix.configuration.name }}
+      # Keep doctests, including compile_fail cases, in the test suite.
+      - name: Test workspace
+        run: cargo test --workspace ${{ matrix.configuration.args }}
+
+  export:
+    name: Export (${{ matrix.backend.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        backend:
+          - name: vec
+            args: ""
+          - name: ndarray
+            args: --features ndarray
+          - name: sprs
+            args: --features sprs
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: export-${{ matrix.backend.name }}
+      # Test packages separately to avoid workspace feature unification.
+      - name: Test export backend
+        run: cargo test -p syntaqs-export --no-default-features ${{ matrix.backend.args }}
+      - name: Test shared integration tests
+        run: cargo test -p syntaqs-tests --no-default-features ${{ matrix.backend.args }}
+
+  quality:
+    name: Format and Clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RUSTDOCFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build documentation
+        run: cargo doc --workspace --all-features --no-deps
