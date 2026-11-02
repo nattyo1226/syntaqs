@@ -23,4 +23,4 @@ Hubbard helpers use [syntaqs-geometry](../syntaqs-geometry/README.md) and expect
 
 This crate uses `no_std + alloc`; local numeric requirements are operation-specific.
 
-See the [crate API overview](src/lib.rs), [fermion design](../../docs/design/local-structure.md#9-fermion-の局所代数), and [Hubbard example](../../examples/src/bin/hubbard.rs). Installation is covered by the [project README](../../README.md).
+See the [crate API overview](src/lib.rs), [fermion design](../../docs/design/local-structure.md#8-fermion-の局所代数), and [Hubbard example](../../examples/src/bin/hubbard.rs). Installation is covered by the [project README](../../README.md).

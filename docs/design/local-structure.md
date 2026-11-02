@@ -1,14 +1,14 @@
-# 局所 primitive の設計
+# 局所代数と primitive
 
 更新日: 2026-11-02
 
-## 1. 対象と検討状況
+## 1. 対象と型の責任
 
-本書は局所状態・演算子 primitive の能力と整合性を定める。LocalStructure と追加の定義ラベルを廃止し、全 crate の式・空間・幾何・利用例を S・O の直接指定へ移行した。採用理由と契約は第7節に記録する。移行時には primitive 型の混在拒否、同じ空間の異なる primitive 型の式による共有、深い式の評価・破棄、および両精度と独自代数を検証した。
+状態・演算子 primitive の意味・次元・局所規則・規格化・基底・grading を定める。S・O と個別の能力実装が局所代数を定め、追加の LocalStructure 型・定義ラベル・定義 ID は持たない。
 
-局所式は `LocalState<S, O, C>`・`LocalOperator<O, C>`、複合式は `State<I, S, O, C>`・`Operator<I, O, C>` とする。演算子式に状態型を要求しない。状態式は遅延した作用節点を保持するため O も指定する。保持・共有・係数計算を伴わない遅延構築に演算能力や primitive の Clone を要求しない。
+局所式は `LocalState<S,O,C>`・`LocalOperator<O,C>`、複合式は `State<I,S,O,C>`・`Operator<I,O,C>` とする。状態式は遅延作用を保持するため O も指定し、演算子式には状態型を要求しない。同じ O が複数の S に作用する場合は各 S の Act 実装で対応する。
 
-同じ O が異なる S に作用する場合は、各 S の Act 実装で対応する。状態の構築時に O を推論できなければ、型注釈・型別名や後続の利用箇所から指定する。借用を含む primitive を保持でき、保持のために一律の Send・Sync・'static 制約を課さない。スレッド間の移動・共有の可否は保持する型と Arc の制約に従う。
+保持・共有・遅延構築に評価能力や primitive の Clone は要求しない。借用を持つ primitive も保持でき、一律の Send・Sync・'static 制約を課さない。共有と評価は[局所式](primitive-expression.md)・[複合式](composite-expression.md)に定める。
 
 ## 2. 空間の情報と能力の関連付け
 
@@ -23,7 +23,7 @@
 | 基底 | `Basis<S, C>`・`Basis<O, C>`。列挙数は対象 primitive の span の次元と一致する |
 | 因子構造・幾何 | `HilbertSpace<I>` が因子順序・grouping、Chain がサイト数と境界条件だけを保持する。配置は外部の局所空間列で指定する |
 
-Dimension は `fn dim() -> Result<NonZeroUsize, DimensionOverflow>` として実装した。次元を整数化できない場合は取得時にエラーを返す。`dim_state<S>()`・`dim_op<O>()` は対象の次元をそのまま返す。Operator の d² を再度二乗しない。能力は次元を使う操作だけが要求する。
+Dimension は `fn dim() -> Result<NonZeroUsize, DimensionOverflow>` を提供する。次元を整数化できない場合は取得時にエラーを返す。`dim_state<S>()`・`dim_op<O>()` は対象の次元をそのまま返す。Operator の d² を再度二乗しない。能力は次元を使う操作だけが要求する。
 
 恒等元は primitive の値として表せることを要求するが、選択基底の要素である必要はない。基底に含まれなければ Basis が展開する。線型従属な primitive を許容するため、恒等元用の値を追加しても基底の次元は増えない。局所式の恒等元は `Primitive(O::identity())` として保持し、作用・積・随伴・trace・基底展開を通常の primitive と同じ経路で処理する。`LocalOperator::identity()` と空の `product` は `O: Identity` を要求するが、係数の数値能力は要求しない。複合式の記号的な `OpNode::Identity` は、未束縛の空の積や全作用空間の恒等演算子として維持する。
 
@@ -39,9 +39,9 @@ Dimension は `fn dim() -> Result<NonZeroUsize, DimensionOverflow>` として実
 
 状態空間の次元は順に2・2・3、演算子空間の次元は4・4・9とする。variant 数や選択基底の要素数とは区別する。zero は空の線型結合・式で表す。
 
-spin-half の CartesianBasis、fermion の MajoranaBasis、spin-one の CartesianBasis は、状態空間の次元 d で割った [HS 内積](primitive-expression.md#42-hilbertschmidt-内積の次元規格化)に関して正規直交とする。この条件を全 primitive や任意の独自 Basis に要求しない。昇降演算子は Cartesian 成分との接続を基準に定義する。
+spin-half の CartesianBasis、fermion の MajoranaBasis、spin-one の CartesianBasis は、状態空間の次元 d で割った [HS 内積](primitive-expression.md#41-hilbertschmidt-内積の次元規格化)に関して正規直交とする。この条件を全 primitive や任意の独自 Basis に要求しない。昇降演算子は Cartesian 成分との接続を基準に定義する。
 
-spin-half は [Pauli 行列の規約](../requirements.md#23-spin-12-の規約)に従い、`Sp=(Sx+iSy)/2`、`Sm=(Sx−iSy)/2` とする。物理的なスピン J は spin-half では `J=S/2`、spin-one では `J=√(2/3) S` であり、既存のスカラー倍で表す。物理的なスピンを構築する補助 API は設けない。fermion・spin-one の詳細は第9・10節、モデルの結合定数は[モデル構築の設計](geometry.md)に従う。
+Spin-half は[Pauli 行列の規約](#6-spin-12-の規約)に従い、`Sp=(Sx+iSy)/2`、`Sm=(Sx−iSy)/2` とする。物理的なスピン J は spin-half では `J=S/2`、spin-one では `J=√(2/3) S` であり、既存のスカラー倍で表す。物理的なスピンを構築する補助 API は設けない。Fermion・spin-one の詳細はそれぞれの節、モデルの結合定数は[モデル構築の設計](models.md)に従う。
 
 ## 3. 数学的能力の整合性
 
@@ -61,15 +61,15 @@ spin-half は [Pauli 行列の規約](../requirements.md#23-spin-12-の規約)�
 \langle\phi,A\psi\rangle=\langle A^\dagger\phi,\psi\rangle.
 ```
 
-これらは局所実装が満たす数学的な契約と検証対象である。任意の実装に対して結合則などを実行時に自動証明する機構は要求しない。初期版では S・O の型と能力実装が意味・規則を定め、追加の定義ラベルは設けない。実行時パラメータを持つ構造への拡張は後続へ延期する。
+これらは局所実装が満たす数学的な契約と検証対象である。任意の実装に対して結合則などを実行時に自動証明する機構は要求しない。現在は S・O の型と能力実装が意味・規則を定め、追加の定義ラベルは設けない。実行時パラメータを持つ構造は扱わない。
 
-等式は数学的な意味について要求し、浮動小数点計算のビット単位の一致とは区別する。数値精度、特殊値、および近似比較は要件の 4.1 節・5.6 節に従う。
+等式は数学的な意味について要求し、浮動小数点計算のビット単位の一致とは区別する。数値精度・特殊値・近似比較は[数値規約](numerics.md)に従う。
 
 局所 Product・Act は数学的に整理した最終係数を直接返し、解析的に零の結果は空の線型結合とする。単位係数は One を使い、定数の生成式は private helper で揃える。旧規格化への数値変換と逆変換を実行時に繰り返さない。
 
 ## 4. 局所構造の一致条件
 
-S・O の型と個別の能力実装が primitive の意味と数学的規約を定める。同じ S・O を、別の L や定義 ID を付けて区別しない。異なる規則や表現が必要なら primitive の型と能力実装に反映する。既存の同じ primitive 型を別のラベルだけで隔離する契約は廃止した。
+S・O の型と個別の能力実装が primitive の意味と数学的規約を定める。同じ S・O を、別の L や定義 ID を付けて区別しない。異なる規則や表現が必要なら primitive の型と能力実装に反映する。同じ primitive 型を別の定義ラベルだけで隔離する機構はない。
 
 状態式の tensor・和・内積は同じ S・O・C、演算子式の和・積は同じ O・C の入力を受け取る。作用は対応する O を持つ状態式と演算子式を組み合わせ、評価時に Act の対応を要求する。型の一致は数学的な法則の証明ではなく、具体的代数の実装・検証がその責任を担う。
 
@@ -81,17 +81,52 @@ Index・Site・表示名・選択基底とその列挙順序・メモリ上の o
 
 空間の次元は `space.dim::<P>()` で指定した primitive の span を各因子に適用するか、`space.dim_with(dim_local)` で明示する。S を指定すると状態空間、O を指定すると演算子空間の次元を取得する。この取得操作は空間に primitive の定義を登録しない。空の tensor は次元1とし、通常の作用・内積・trace に総次元の整数化を要求しない。
 
-## 6. 後続事項
+## 6. Spin-1/2 の規約
 
-一般の U→V の写像と State／Operator の型の統合は後続課題とする。Grading の情報保持・API は実装済みであり、局所契約を第8節、共通評価を[複合式の設計](composite-expression.md#12-ordinary--graded-の共通評価と移行)に記録する。ordinary な空間の責任分離は実装済みである。Chain はサイト数と境界条件だけを保持し、外部の局所空間列を借用する構成へ2026-10-28に移行した。契約は[Chain の設計](geometry.md)に従う。異種代数の型消去や実行時の表現パラメータを今回の移行には追加しない。
+`hbar = 1` とし、primitive は Pauli 行列、物理的な角運動量は `J = S/2` とする。Pauli 行列との関係を
 
-## 7. LocalStructure 廃止の採用方針（2026-10-26）
+```math
+S^\alpha = \sigma^\alpha
+```
 
-S・O の直接指定、primitive の span の次元と恒等元、追加の定義ラベルを設けない方針を採用し、実装へ反映した。API は第1〜2節、型と Index の責任分担は第4〜5節を現在の契約とする。旧 LocalStructure・Identity<C> と SpinHalf の定義用 marker は公開しない。
+と定める。ladder operator は
 
-局所規則は S・O・C と個別の能力実装で決まり、定義用の L は規則を切り替える引数ではなかった。次元と恒等元を primitive 側へ移したため、型の組だけを保持する LocalStructure や空間側の定義ラベルは不要とした。Act の関連型から保持型の O を導く構成は、保持・遅延構築に評価能力を要求するため採用しない。全能力をまとめた StatePrimitive・OperatorPrimitive trait、必須の FactorLayout 層、実行時の Definition／provider も導入しない。
+```math
+S^+ = (S^x + iS^y)/2, \qquad
+S^- = (S^x - iS^y)/2
+```
 
-## 8. Grading の局所能力と移行
+とする。
+
+既定の局所基底の順序は
+
+```math
+(|\uparrow\rangle, |\downarrow\rangle)
+```
+
+とし、それぞれ `Sz` の固有値 `+1` および `-1`、物理的な `Jz` の磁気量子数 `+1/2` および `-1/2` に対応させる。この基底における局所行列表現は次のとおりとする。
+
+```math
+S^x =
+\begin{pmatrix}0&1\\1&0\end{pmatrix}, \qquad
+S^y =
+\begin{pmatrix}0&-i\\i&0\end{pmatrix}, \qquad
+S^z =
+\begin{pmatrix}1&0\\0&-1\end{pmatrix}
+```
+
+```math
+S^+ =
+\begin{pmatrix}0&1\\0&0\end{pmatrix}, \qquad
+S^- =
+\begin{pmatrix}0&0\\1&0\end{pmatrix}
+```
+
+状態基底 `SzBasis` は `[Up,Down]`、演算子基底 `CartesianBasis` は `[I,Sx,Sy,Sz]`、`LadderBasis` は `[I,Sp,Sm,Sz]` の順とする。状態空間の次元は2、演算子空間は4である。CartesianBasis は `Tr(A†B)/2` に関して正規直交であり、LadderBasis の昇降要素は同じ単位ノルムを持つとは限らない。
+
+全 primitive は even、parity 演算子は I とする。局所規則と基底は [spin-half のソース](../../crates/syntaqs-spin-half/src/lib.rs)、全局所規則・代数法則・基底の独立な行列参照は [contracts.rs](../../crates/syntaqs-spin-half/tests/contracts.rs)を参照する。局所規則は数学的に整理した係数を直接返し、式の構築・保持に評価能力を要求しない。
+
+## 7. Grading の局所能力
 
 `syntaqs_core::ops` と crate root から、係数型に依存しない次の能力を公開する。
 
@@ -125,15 +160,15 @@ impl ParityOperator for MyOperator {
 }
 ```
 
-Spin-half はこの自明な grading を明示実装する。既存モデルの空間は ordinary を維持し、graded 空間でも同じ数値結果となる。局所だけで完結する評価や、構築・配置・束縛には grading 能力を一律に要求しない。具体的な操作の bound は[複合式の設計](composite-expression.md#12-ordinary--graded-の共通評価と移行)を参照。
+Spin-half はこの自明な grading を明示実装する。既存モデルの空間は ordinary を維持し、graded 空間でも同じ数値結果となる。局所だけで完結する評価や、構築・配置・束縛には grading 能力を一律に要求しない。具体的な操作の bound は[複合式の設計](composite-expression.md#11-ordinary--graded-の共通評価)を参照。
 
-## 9. Fermion の局所代数
+## 8. Fermion の局所代数
 
-`syntaqs-fermion` は `no_std + alloc`、unsafe 禁止とし、係数型から独立した `FermionState`・`FermionOperator` を提供する。状態は `Empty/Occupied`、演算子は `I/Annihilate/Create/Number/Mx/My/Mz` の7 variant とする。旧 `MajoranaX/Y/Z` と独立した `Parity` variant は公開しない。状態空間の次元は2、演算子空間の次元は4である。
+`syntaqs-fermion` は `no_std + alloc`、unsafe 禁止とし、係数型から独立した `FermionState`・`FermionOperator` を提供する。状態は `Empty/Occupied`、演算子は `I/Annihilate/Create/Number/Mx/My/Mz` の7 variant とする。状態空間の次元は2、演算子空間の次元は4である。
 
-`Fermion<C>` は `ExpressionFactory<FermionState,FermionOperator,C>` の型エイリアスである。公開入口は [lib.rs](../../crates/syntaqs-fermion/src/lib.rs)、局所規則は [state.rs](../../crates/syntaqs-fermion/src/state.rs)・[operator.rs](../../crates/syntaqs-fermion/src/operator.rs)、基底は [basis.rs](../../crates/syntaqs-fermion/src/basis.rs) に実装する。モデルは [Hubbard モデルの設計](geometry.md#6-fermion-の-hubbard-モデル)に従う。
+`Fermion<C>` は `ExpressionFactory<FermionState,FermionOperator,C>` の型エイリアスである。公開入口は [lib.rs](../../crates/syntaqs-fermion/src/lib.rs)、局所規則は [state.rs](../../crates/syntaqs-fermion/src/state.rs)・[operator.rs](../../crates/syntaqs-fermion/src/operator.rs)、基底は [basis.rs](../../crates/syntaqs-fermion/src/basis.rs) に実装する。モデルは [Hubbard モデルの設計](models.md#3-fermion-の-hubbard-モデル)に従う。
 
-### 9.1. 規約・次元・parity
+### 8.1. 規約・次元・parity
 
 状態順を `(|0>,|1>)=(Empty,Occupied)`、内積を Kronecker delta とする。`a=Annihilate`、`a†=Create`、`n=Number` と書く。
 
@@ -156,11 +191,11 @@ Mx・My は [Kitaev の式 (1)–(2)](https://arxiv.org/pdf/cond-mat/0010440) �
 M_\alpha^2=I,\quad \sum_\alpha M_\alpha^2=3I.
 ```
 
-Empty は even、Occupied は odd。a・a†・Mx・My は odd、I・n・Mz は even とする。`ParityOperator::parity_operator()` は Mz を返し、P の契約は第8節に従う。同一 mode 内の通常の局所積と、異なる mode 間の graded 合成則を区別する。
+Empty は even、Occupied は odd。a・a†・Mx・My は odd、I・n・Mz は even とする。`ParityOperator::parity_operator()` は Mz を返し、P の契約は第7節に従う。同一 mode 内の通常の局所積と、異なる mode 間の graded 合成則を区別する。
 
-### 9.2. 局所能力
+### 8.2. 局所能力
 
-#### 9.2.1. Product の全規則
+#### 8.2.1. Product の全規則
 
 行を左 operand、列を右 operand とし、右端が先に作用する。
 
@@ -176,7 +211,7 @@ Empty は even、Occupied は odd。a・a†・Mx・My は odd、I・n・Mz は 
 
 49組を直接の match で返し、数学的に零の積は空の線型結合、恒等元との積は相手一項とする。局所の `a²=(a†)²=0`、`{a,a†}=I`、`n=a†a` と parity の法則を満たす。行列・基底変換を実行時の局所積に使わない。
 
-#### 9.2.2. Act・内積
+#### 8.2.2. Act・内積
 
 | 演算子 | Empty への作用 | Occupied への作用 |
 | --- | --- | --- |
@@ -190,11 +225,11 @@ Empty は even、Occupied は odd。a・a†・Mx・My は odd、I・n・Mz は 
 
 状態式の線型性・半双線型性は core が提供する。
 
-#### 9.2.3. Adjoint・Trace
+#### 8.2.3. Adjoint・Trace
 
 随伴は a・a† を交換し、残る5要素を保存する。通常の非正規化 trace は I が2、n が1、他は0とする。HS 内積だけが `Tr(A†B)/2` による次元規格化を行う。
 
-### 9.3. 基底と展開
+### 8.3. 基底と展開
 
 | 基底 | 列挙順 |
 | --- | --- |
@@ -208,29 +243,35 @@ MajoranaBasis は `Tr(A†B)/2` に関して正規直交である。LadderBasis 
 a=(M_x+iM_y)/2,\qquad a^\dagger=(M_x-iM_y)/2,\qquad n=(I-M_z)/2.
 ```
 
-逆変換は第9.1節の定義を使う。index は選択基底のメンバーだけに列挙順の番号を返し、Mz は MajoranaBasis では3、LadderBasis では None とする。両基底間の再展開・座標・作用行列を照合する。
+逆変換は第8.1節の定義を使う。index は選択基底のメンバーだけに列挙順の番号を返し、Mz は MajoranaBasis では3、LadderBasis では None とする。両基底間の再展開・座標・作用行列を照合する。
 
-### 9.4. 係数型と能力
+### 8.4. 係数型と能力
 
 Identity・Dimension・parity と式の構築には数値制約を要求しない。InnerProduct・Trace は Zero + One、随伴・OccupationBasis は One。Product は One + Add + Neg + ImaginaryUnit、Act は One + Neg + ImaginaryUnit、LadderBasis は One + Add + Neg + ImaginaryUnit を要求する。MajoranaBasis はさらに Div を使う。算術の Output は C とする。
 
 分数を使う操作では数学的な1/2を表せることを要求する。局所規則に Float・C の Clone / Copy を要求せず、共通式の評価・HS 内積・export に必要な能力は各操作で別途要求する。HS 内積は既存の Divide で `Tr(I)` による除算を行う。
 
-### 9.5. Graded 合成・spinful への接続
+### 8.5. Graded 合成・spinful への接続
 
 mode の順序・交換符号・先行区間の parity string は core に委ね、primitive に Index・Site・mode 番号を保持しない。spinful の内部順序は `(up,down)`、二重占有の位相は `|up down>=f_up† f_down†|0>` とする。`f_up|up down>=|down>`、`f_down|up down>=−|up>`、総 parity `diag(1,−1,−1,1)` を検証する。
 
+```math
+\{f_\sigma,f_\tau\}=0,\qquad
+\{f_\sigma,f_\tau^\dagger\}=\delta_{\sigma\tau}I,\qquad
+P_i=(-1)^{n_{i,\mathrm{up}}+n_{i,\mathrm{down}}}.
+```
+
 表示順 `[empty,up,down,double]` は二 mode の mixed-radix 順 `[empty,down,up,double]` と区別する。通常 tensor に配置するだけでは異なる mode の CAR は得られないため、fermion 多体系では graded 空間を使う。
 
-### 9.6. 実装時の検証記録
+### 8.6. 検証対象とテスト
 
-名前・規格化の移行時の受入結果は[第11節](#11-規格化変更の検証記録)に記録する。局所規則・基底の独立2×2行列との照合は [contracts.rs](../../crates/syntaqs-fermion/tests/contracts.rs)、非 Clone / Copy / Float の係数能力は [minimal_scalar.rs](../../crates/syntaqs-fermion/tests/minimal_scalar.rs)、式・全 backend は [local_expressions.rs](../../crates/syntaqs-fermion/tests/local_expressions.rs)、graded 接続・CAR・両 Hubbard の独立 Fock 空間参照は [models.rs](../../crates/syntaqs-fermion/tests/models.rs)で検証する。数値試験は f32 / f64 の両方を対象とする。
+局所規則・基底の独立2×2行列との照合は [contracts.rs](../../crates/syntaqs-fermion/tests/contracts.rs)、非 Clone / Copy / Float の係数能力は [minimal_scalar.rs](../../crates/syntaqs-fermion/tests/minimal_scalar.rs)、式・全 backend は [local_expressions.rs](../../crates/syntaqs-fermion/tests/local_expressions.rs)、graded 接続・CAR・両 Hubbard の独立 Fock 空間参照は [models.rs](../../crates/syntaqs-fermion/tests/models.rs)で検証する。数値試験は f32 / f64 の両方を対象とする。
 
-## 10. Spin-one の局所代数
+## 9. Spin-one の局所代数
 
-`syntaqs-spin-one` は三状態の spin-1、15個の演算子 primitive、2種類の演算子基底と XYZ・Heisenberg・BLBQ を提供する。std を許可し、unsafe を禁止する。モデルの定義は [SpinOne のモデル構築](geometry.md#7-spinone-のモデル構築)に従う。
+`syntaqs-spin-one` は三状態の spin-1、15個の演算子 primitive、2種類の演算子基底と XYZ・Heisenberg・BLBQ を提供する。std を許可し、unsafe を禁止する。モデルの定義は [SpinOne のモデル構築](models.md#4-spinone-のモデル構築)に従う。
 
-### 10.1. Primitive と規約
+### 9.1. Primitive と規約
 
 ```rust
 enum SpinOneState { Plus, Zero, Minus }
@@ -263,7 +304,7 @@ S_z=c\operatorname{diag}(1,0,-1).
 
 Hermite な9要素の通常の HS ノルム二乗はすべて3で、`Tr(A†B)/3` に関して正規直交である。スピン3成分と四重極5成分の回転に関する部分空間は維持する。物理的なスピン J を得るには既存のスカラー倍で `√(2/3) S` を使い、補助 API は追加しない。
 
-### 10.2. 基底と展開
+### 9.2. 基底と展開
 
 | 基底 | 列挙順 |
 | --- | --- |
@@ -275,7 +316,7 @@ CartesianBasis は次元規格化した HS 内積に関して正規直交、Ladd
 
 各対の変換は `L_±=A±iB`、`A=(L_++L_-)/2`、`B=(L_+−L_-)/(2i)` とする。I・Sz・Q0 は両基底で共有し、非メンバーの index は None。9個の演算子座標と状態基底上の3×3作用行列は区別する。
 
-### 10.3. 局所規則と返却表現
+### 9.3. 局所規則と返却表現
 
 全225積・45作用を有限線型結合として直接返す。数学的に零の項は生成せず、恒等元との積は相手一項を返す。通常の評価は基底を要求しない。
 
@@ -300,7 +341,7 @@ S_\pm^2=cQ_{2\pm},\quad \{S_z,S_\pm\}=cQ_{1\pm},\quad S_\pm^3=0.
 
 Sp・Sm の非零な遷移振幅は √3、Sx の隣接状態への振幅は √3/2。Sz の固有値は `c,0,−c` で、状態名の磁気量子数は物理的 Jz に対応する。随伴は Sp/Sm、Q1p/Q1m、Q2p/Q2m を交換し、他の9要素を保存する。通常 trace は I が3、他の14要素が0である。
 
-### 10.4. 係数能力と共通 API
+### 9.4. 係数能力と共通 API
 
 | 能力 | 係数に必要な能力 |
 | --- | --- |
@@ -313,49 +354,16 @@ Sp・Sm の非零な遷移振幅は √3、Sx の隣接状態への振幅は √
 
 算術の Output は C とする。Product にも平方根係数が必要なので、当面は Float を用い、厳密な代数的係数のための新しい trait は追加しない。基底変換は有理係数と i だけを使い、保持・遅延構築・随伴・trace に Float を要求しない。平方根は R の One・算術・sqrt から生成し、f64 経由のキャストやパースは行わない。
 
-共通の局所式・複合式・HS 内積・正規化・export に接続する。HS 内積は通常表現の局所 trace を Tr(I) で割ってから縮約し、総次元の整数化を要求しない。通常 trace と状態内積の意味は維持する。Float・std の既存 feature 条件は変えない。
+共通の局所式・複合式・HS 内積・正規化・export に接続する。HS 内積は通常表現の局所 trace を Tr(I) で割ってから縮約し、総次元の整数化を要求しない。通常 trace と状態内積の意味は維持する。この接続によって局所規則の Float・std の条件は変わらない。
 
-### 10.5. 合成・export と grading
+### 9.5. 合成・export と grading
 
 全状態・演算子は even、parity 演算子は I とする。ordinary / graded の両方で同じ値となり、磁気量子数の偶奇を fermion parity と解釈しない。二因子では9状態・81演算子基底、右端最速の mixed-radix 順を使う。作用行列は既存 export の列ごとの作用で生成し、primitive に backend 固有の行列化を実装しない。
 
-### 10.6. 実装時の検証記録
+### 9.6. 検証対象とテスト
 
-規格化の移行時の受入結果は[第11節](#11-規格化変更の検証記録)にまとめる。独立な物理的 J の行列と採用倍率から参照値を作り、[contracts.rs](../../crates/syntaqs-spin-one/tests/contracts.rs) で全225積・45作用・随伴・trace・結合則・作用整合性・両基底と Gram 行列を f32 / f64 で検証する。
+独立な物理的 J の行列と採用倍率から参照値を作り、[contracts.rs](../../crates/syntaqs-spin-one/tests/contracts.rs) で全225積・45作用・随伴・trace・結合則・作用整合性・両基底と Gram 行列を f32 / f64 で検証する。
 
 [minimal_scalar.rs](../../crates/syntaqs-spin-one/tests/minimal_scalar.rs) は平方根を必要としない能力の最小 bound、[local_expressions.rs](../../crates/syntaqs-spin-one/tests/local_expressions.rs) は局所式と全 backend、[tensor_products.rs](../../crates/syntaqs-spin-one/tests/tensor_products.rs) は複合基底・ordinary / graded・全 backend、[models.rs](../../crates/syntaqs-spin-one/tests/models.rs) は物理的な3モデルとエネルギー・構築能力を検証する。
 
 数値比較は複素数の絶対値による `|a−b| <= atol + rtol max(|a|,|b|)` とし、現在の小規模試験では f32 は atol=rtol=2e-5、f64 は atol=rtol=1e-12 を使う。検証用の閾値を通常評価の項削除に流用しない。局所規則の厳密な零と、一般の式の相殺残差は区別する。
-
-### 10.7. 後続の範囲
-
-公開の MatrixUnitBasis、標準的な球面テンソル位相を付けた基底、一般 spin-S、異種局所代数の混在は後続とする。Float を満たさない厳密係数による局所 Product / Act、専用 no_std target の検証状況は別途扱う。MSRV の検証は `main` への push・PR 時に CI で実行する。
-
-## 11. 規格化変更の検証記録
-
-2026-11-01、Rust 1.99.1 の direnv devShell で実装と受入検証を行った。本節は実装時の記録であり、今回の文書整理でテストを再実行したものではない。以下のコマンドはリポジトリ直下で `direnv exec .` を付けて実行し、すべて成功した。
-
-```sh
-cargo test --workspace --all-features --no-fail-fast --quiet
-cargo test --workspace --no-default-features --offline --no-fail-fast --quiet
-cargo test -p syntaqs-spin-one -p syntaqs-fermion --all-features --offline --quiet
-cargo test -p syntaqs-spin-one --test tensor_products -p syntaqs-fermion --test models --offline --quiet
-cargo check -p syntaqs-core -p syntaqs-geometry --no-default-features --offline
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features --offline -- -D warnings
-cargo clippy --workspace --all-targets --no-default-features --offline -- -D warnings
-sh -c 'RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --offline'
-```
-
-syntaqs-export は単独でも `cargo test -p syntaqs-export --no-default-features --offline --quiet` を実行し、追加 feature なし・`--features ndarray`・`--features sprs` の3構成を確認した。両 backend 有効の構成は workspace の全 feature テストで確認した。
-
-確認した内容は次のとおり。
-
-- 各代数の全 primitive の積・作用・随伴・通常 trace、両演算子基底の変換と座標を、独立行列と f32 / f64 で照合した。spin-one の全225積・45作用、結合則・作用との整合性も検証した。
-- 局所の正規化 HS Gram 行列に加え、spin-one の Cartesian / Ladder tensor 基底と fermion の graded Majorana tensor 基底の Gram 行列を検証した。graded 評価の符号・CAR と通常作用行列も照合した。
-- [HS 内積の回帰テスト](../../tests/tests/core_hs_inner_product.rs)で、明示行列による `Tr(A†B)/D`、空空間、spectator の追加、明示空間による束縛の上書き、および2048因子での `⟨I,I⟩=1` を確認した。状態型・Dimension・整数変換を要求しないこと、Divide だけを持つ係数でも計算できること、通常 trace に除算能力を要求しないことも検証した。
-- 物理的なモデルの独立参照行列とエネルギー・定数シフトを維持した。微小係数の保存と厳密な相殺、解析的に零の局所規則の空性も確認した。暗黙の近似的な切り捨ては追加していない。
-
-examples の全8バイナリを `cargo run -p examples --bin <name> --offline --quiet` により、既定 feature・`--all-features`・`--no-default-features` の3構成で実行した。一重項・三重項のエネルギー −0.75 / 0.25、symmetric Hubbard のエネルギー −2、spin-one BLBQ の期待値0.5、Pauli string の37項と密疎 export の一致が保たれた。
-
-依存関係と feature 要件は変更していない。MSRV `1.85.0` でのビルド・テストは、現在は `main` への push・PR 時に [CI workflow](../../.github/workflows/ci.yml) で検証する。専用 no_std target での実ビルドは、[未実施の検証](../future-work.md#3-未実施の検証と性能)として引き続き扱う。

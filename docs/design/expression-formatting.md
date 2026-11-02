@@ -25,28 +25,15 @@
 - ordinary / graded とも保存順に従い、並べ替え・符号計算・parity string の挿入をしない。未束縛演算子も表示できる。
 - Display は数式本体のみとし、空間・ambient・元の grouping は Debug で確認する。表示文字列は同一性判定や保存形式に使わない。
 - Debug は内部の共有構文・節点・作用保持型・HilbertSpace にも derive する。管理用フィールドを含め、葉の Debug に委譲する。内部型の公開や Debug 文字列の互換性保証は不要。
-- Display がない型への Debug フォールバック、任意ラベル callback、LaTeX・ASCII 専用モードは今回の対象外。
+- Display がない型への Debug フォールバック、任意ラベル callback、LaTeX・ASCII 専用モードはこの対象外。
 
 ## 2. Index
 
-### 標準具体型
+### 2.1. 標準具体型
 
-`syntaqs-basic::Id128` は現行の UUID を維持する。単体の Display・Debug は完全な UUID を表示し、Copy・16 byte・UUID 全体による同一性を変えない。空間には `syntaqs_core::HilbertSpace<Id128>` を利用する。
+標準 Index の Id128・Tag の構築・同一性・型能力は[Index](index.md)に定める。単体の Display は完全な UUID または名前を出力し、Debug も完全な識別値を保持する。以下の切り詰めは式の Display 内だけに適用する。
 
-`syntaqs-basic` は以下の標準 Index を提供する。Tag は `syntaqs_core::HilbertSpace<Tag>` で利用し、core は標準具体型に依存しない。
-
-```rust
-pub struct Tag {
-    raw: String,
-}
-```
-
-- raw は非公開。`Tag::new(impl Into<String>)`、`as_str()`、`From<String>`、`From<&str>` を提供する。改名 API は追加しない。
-- Clone・Debug・PartialEq・Eq・Hash・PartialOrd・Ord を提供し、Copy は提供しない。同一性・Hash・Ord は文字列に従い、隠れた UUID や自動採番は持たせない。
-- Display は raw をそのまま表示する。引用符・接頭辞・エスケープ・Unicode 正規化を加えず、空文字列も許容する。Debug は `Tag { raw: "a" }` の形。
-- 同名 Tag は別々に構築しても等しい。同じ tensor 空間へ独立な因子として追加した場合は既存の重複検証で拒否する。名前管理は利用側の責任とする。
-
-### 式木内の8文字制限
+### 2.2. 式木内の8文字制限
 
 任意の Index の Display 出力を、式木の Display 内でのみ先頭8文字に制限する。文字数は Rust の `char` 単位とし、省略記号・衝突検出・自動伸長を加えない。Index 単体の Display と式木の Debug は切り詰めない。
 
@@ -71,7 +58,7 @@ pub struct Tag {
 | 単純な積状態 | `\|up[a],down[b],up[c]>` |
 | 複合的な因子の tensor | `(\|up[a]> + \|down[a]>) ⊗ \|up[b]>` |
 
-### 係数・符号・括弧
+### 3.1. 係数・符号・括弧
 
 係数は常に括弧で囲み、`A + (-1+0i) * B` を減算へ変換しない。`Operator::scalar(c)` は `(c) * I`。局所 identity は保持 primitive の表示に委譲し、表示用の identity は生成しない。
 
@@ -90,7 +77,7 @@ pub struct Tag {
 
 例: `A * B * C`、`A * (B * C)`、`A + (B + C)`、`(2) * ((3) * A)`、`A * ((2) * B)`、`((A)†)†`、`(A * B) |up[a]>`、`A (B |up[a]>)`。
 
-### 状態の配置と tensor
+### 3.2. 状態の配置と tensor
 
 局所状態の Index は、和・係数倍・作用の内側でも各 primitive の ket 内へ引き継ぐ。局所の作用内の演算子にも同じ Index を演算子配置の書式で付ける。新たな節点の生成や分配はしない。
 
@@ -106,7 +93,7 @@ Sx[a] |up[a]>
 - 和・係数倍・作用・明示的な Unit を含む部分木全体はまとめず、`⊗` を使う。その子にある単純な積状態はまとめられる。和の展開・係数の移動はしない。
 - 空の和は配置後も `0`。空間は Debug で確認する。状態 primitive の文字列から ket 記号を取り除く処理や追加の必須 trait は導入しない。
 
-### 複数行表示
+### 3.3. 複数行表示
 
 `{:#}` は1段4スペース。和と `⊗` 表記の tensor は operand ごとに改行し、2つ目以降の行頭に `+ `・`⊗ ` を置く。演算記号は operand の開始位置より2桁左へ出し、先頭と後続の operand を揃える。最上位の和・`⊗` 表記の tensor は先頭に2スペースを確保する。括弧や ket の継続行のインデントは、演算記号を除いた operand の開始位置を基準とする。ket は `| ` で始め、カンマの後で改行して各因子のラベルを同じ列に揃える。係数や作用の演算子が前にある場合も、実際に出力した `| ` の直後の列を基準とする。最後の因子と同じ行の ` >` で閉じ、単一因子も `| up[a] >` と1行で表示する。列は Rust の char 単位で数え、端末の表示幅は取得しない。
 
@@ -145,7 +132,7 @@ SpinOneState::Zero と FermionState::Empty は零ベクトルではない。`|0>
 
 ket にまとめられる tensor の判定は反復的な後順走査で行う。表示呼び出し内だけの `BTreeMap` に、共有された構文節点のアドレスをキーとして可否の両方を記録する。キーを参照外しせず、Index の同一性判定にも使わない。このため I に Eq・Hash・Ord は不要。判定対象の一意な節点数を U、辺数を E とすると、分類は O((U + E) log(U + 1))、記録は O(U)。深い混合 tensor を祖先ごとに再走査する二乗化を避ける。
 
-表示作業スタックと ket の葉走査は深さに比例する領域を使う。共有部分式は各出現箇所へ表示するため、出力は共有節点数より長くなり得る。Index 以外の自動省略はせず、深い複数行表示のインデントも出力長に含まれる。core の `no_std + alloc`・unsafe 禁止を維持し、新しい依存は追加しない。
+表示作業スタックと ket の葉走査は深さに比例する領域を使う。共有部分式は各出現箇所へ表示するため、出力は共有節点数より長くなり得る。Index 以外の自動省略はせず、深い複数行表示のインデントも出力長に含まれる。core の `no_std + alloc`・unsafe 禁止を維持し、表示のための追加依存はない。
 
 derive(Debug) は再帰的なので非常に深い木での成功は保証しない。Display および既存の評価・破棄の深さ耐性と区別する。
 
@@ -163,17 +150,4 @@ derive(Debug) は再帰的なので非常に深い木での成功は保証しな
 | 深さ | 小さいスタックで深さ20,000の Display。深い tensor の判定が二乗にならないこと。Debug は通常の深さで構造・空間・完全な Index を確認 |
 | 出力失敗 | 実際の `fmt::Error` を伝播し、以降の葉を表示しないこと |
 
-2026-11-01、Rust 1.99.1 / aarch64-apple-darwin、direnv の devShell で確認した。関連5 crate のテスト・doc test と、以下の workspace 検証は成功した。
-
-```sh
-direnv exec . cargo test --workspace --all-features --offline --quiet
-direnv exec . cargo check --workspace --all-targets --no-default-features --offline
-direnv exec . cargo clippy --workspace --all-targets --all-features --offline -- -D warnings
-direnv exec . cargo fmt --all -- --check
-direnv exec . cargo doc --workspace --all-features --no-deps --offline
-direnv exec . cargo run -p examples --no-default-features --bin expression_formatting --offline
-```
-
-書式・型制約・エラー・深さの回帰テストは [core の formatting.rs](../../crates/syntaqs-core/tests/formatting.rs)、Tag と Id128 は [basic の indices.rs](../../crates/syntaqs-basic/tests/indices.rs)、primitive 全 variant は各 builtin crate の `tests/formatting.rs` で確認する。深さ20,000の局所／複合の作用・和・係数倍・積・随伴と混合 tensor を128 KiBのスタックで表示・破棄できた。内部テストでは深い単純 tensor の ket 化と共有部分式の分類も確認した。最後に追加した深さ・Debug・分類のテストは対象を絞って再実行した。
-
-上記の受入確認では、no_std 対応はホスト上の確認であり、専用 target でのビルドは未実施（環境にはホスト target のライブラリのみ導入済み）。MSRV `1.85.0` でのビルド・テストは、現在は `main` への push・PR 時に [CI workflow](../../.github/workflows/ci.yml) で検証する。専用 no_std target・性能ベンチマーク・速度比較の未実施事項は[今後の課題](../future-work.md#3-未実施の検証と性能)を参照する。
+書式・型制約・エラー・深さの回帰テストは [core の formatting.rs](../../crates/syntaqs-core/tests/formatting.rs)、標準 Index は [basic の indices.rs](../../crates/syntaqs-basic/tests/indices.rs)、primitive のラベルは各 builtin crate の `tests/formatting.rs` に置く。深さ20,000の局所／複合構文の表示と破棄、共有部分式の分類も対象とする。検証方法と限界は[verification](verification.md)を参照する。

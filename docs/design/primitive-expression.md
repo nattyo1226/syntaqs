@@ -1,20 +1,12 @@
-# 局所 primitive・式木の数学的能力
+# 局所式と代数的評価
 
-更新日: 2026-11-01
+更新日: 2026-11-02
 
-## 1. 対象と責任分担
+## 1. 対象と責任
 
-本書は、状態・演算子の primitive と、それらを葉とする局所式の数学的能力を定める。[要件](../requirements.md)と[アーキテクチャ概要](../architecture.md)に基づく詳細設計であり、[局所構造](local-structure.md)が対応する primitive と能力を関連付け、その整合性を要求する。
+`syntaqs-core` の局所状態式 `LocalState<S,O,C>`・演算子式 `LocalOperator<O,C>` と、primitive の能力を式へ拡張する規則を定める。具体的な primitive・規格化は[局所代数](local-structure.md)、型選択・係数入力は[式の構築](expression-construction.md)、数値能力は[数値規約](numerics.md)に分ける。
 
-具体的代数の crate が primitive の局所的な演算規則を実装し、`syntaqs-core` の共通の式木・評価機構が線型結合、積、作用、随伴などへ拡張する。独自の局所代数を追加する際は、primitive と規則を実装し、core の共通型を直接利用する。具体的な Rust の型、trait シグネチャ、および内部表現は本書では定めない。Product と Act は能力を区別する設計上の名前として用いる。
-
-本書の局所式は、一つの局所構造の上の式を扱う。Index の付与と全作用空間への束縛は、[Index の契約](index.md)および要件の 5.1 節に従う。複合空間の tensor product、因子間の grading、partial trace は共通の合成・埋め込み・評価機構が担当する。
-
-初期版では、複合式へ配置した後も式の primitive 型 S・O を揃える。独自代数は独自の S・O と各能力実装により別の系で単独利用できるが、一つの系への異種局所構造の混在・合成は後続へ延期する。局所式の取り込みに異種構造の型消去を要求しない。
-
-複合空間は [Hilbert 空間の再帰構造](hilbert-space.md)で表す。局所複合代数の数学的能力は、この空間構成に沿って子の局所規則と共通の合成・評価機構から処理する。空間の木の構築・基本因子の列挙によって、状態・演算子の式を全展開することは要求しない。
-
-局所式と Index の組を複合式の葉とし、複合 Hilbert 空間が子の局所契約を保存する能力の合成と整合性を担う。具体的な合成則・埋め込み・縮約の契約は、[埋め込み・複合空間の式と数学的能力](composite-expression.md)に定める。
+Product・Act・随伴の局所規則は primitive の有限線型結合を返し、共通式が遅延した構文と評価を提供する。局所式は Index を持たず、因子への配置と全作用空間での評価は[複合式](composite-expression.md)に定める。
 
 ## 2. Primitive の数学的能力
 
@@ -33,7 +25,7 @@ Product は演算子 primitive 側、Act は状態 primitive 側の能力とす�
 
 Rust API は状態式を S・O・C、演算子式を O・C で指定する。恒等元は O が Identity として生成し、次元は S・O が Dimension で提供する。演算能力と入出力の対応は必要な評価メソッドで要求し、保持型に全演算能力を要求しない。LocalStructure と追加の定義ラベルは導入しない。
 
-Product・Act・随伴の結果は、同じ局所構造の primitive の有限線型結合を表す薄い `LinearCombination` とする。単一 primitive への閉性は要求しない。演算 trait は係数全体 C を型引数、返却要素を関連型 `Term` で指定し、局所式や局所構造には依存しない。局所規則では `Term` を対応する primitive 型とする。式木側は `map` で要素を変換し、和・スカラー倍として取り込む。恒等元は `O: Identity` の値として生成し、選択基底への展開は Basis が担う。未評価の作用・積・随伴を返して局所計算を先送りしない。加算、scalar multiplication、および zero は共通処理で提供する。演算 trait の関連型への移行と式木への接続は Step 2 で行う。
+Product・Act・随伴の結果は、同じ局所構造の primitive の有限線型結合を表す薄い `LinearCombination` とする。単一 primitive への閉性は要求しない。演算 trait は係数全体 C を型引数、返却要素を関連型 `Term` で指定し、局所式や局所構造には依存しない。局所規則では `Term` を対応する primitive 型とする。式木側は `map` で要素を変換し、和・スカラー倍として取り込む。恒等元は `O: Identity` の値として生成し、選択基底への展開は Basis が担う。未評価の作用・積・随伴を返して局所計算を先送りしない。加算、scalar multiplication、および zero は共通処理で提供する。
 
 trace は局所 Hilbert 空間上の通常の非正規化 trace を返す。正規直交基底、作用、内積から数学的に導出できるが、通常の評価経路では primitive の trace を直接利用できるようにし、基底展開や数値行列の生成を必須としない。
 
@@ -81,7 +73,7 @@ A(aB+bC)=a(AB)+b(AC),
 
 状態式の `state.act(&operator)` は `Act` 節点で作用を表す遅延式を返し、`state.evaluate()` は状態式に含まれる作用を評価して通常の状態式を返す。primitive の Act はその局所計算を担当する。`ψ.act(&b).act(&a)` は `A(Bψ)` を表す。`evaluate` は基底を指定せず、局所規則と線型性・合成則だけで処理し、選択基底への展開や座標化・行列化は行わない。
 
-初期版では局所規則による `evaluate` と、指定基底への展開・係数取得を提供する。分配・局所積などの特定の簡約ルールのみを適用する独立した操作は future work とする。評価や基底展開に必要な内部処理として、分配・局所積・係数の結合を行うことは維持する。
+局所規則による `evaluate` と指定基底への展開・係数取得を提供する。個別の簡約規則を選ぶ操作は提供しない。評価や基底展開に必要な内部処理として、分配・局所積・係数の結合を行うことは維持する。
 
 局所式は `ScaleExpr`・`SumExpr`・`ProductExpr`・`ActExpr`・`AdjointExpr` を各節点の内容を保持する共通パーツとして用いる。zero は空の和で表す。`LinearCombination<P, C>` は `SumExpr<ScaleExpr<P, C>>` で保持する薄い有限線型結合型として維持する。局所規則や局所基底展開の結果を、式木側が所有権付きの `map` と共通 constructor で取り込む。係数・項順序・重複・零係数を保ち、この変換自体に要素や係数の `Clone` は要求しない。
 
@@ -91,7 +83,7 @@ A(aB+bC)=a(AB)+b(AC),
 
 評価と最後の所有者になった式節点の破棄は明示的な作業スタックで反復的に行い、式の深さに比例した関数再帰を避ける。長い積・作用のチェーンと、共有先が残る部分式を検証する。性能上の合格条件は共有、不要な primitive 複製の抑制、空・単一項のコンテナ無確保とし、map 全般の無確保や特定の実行時間は保証しない。
 
-式ハンドルは `Arc` で不変な節点を共有し、節点内の primitive もその共有に含まれる。同じ式ハンドルを複数箇所で利用しても木全体や primitive を複製しない。別々に構築した同形の式を自動検出して共有する機構は要求しない。操作は入力を変更せず、共通の完全展開形や評価結果のキャッシュを要求しない。source の自動保持と式の構造比較は後続へ延期する。表示は[式木の表示](expression-formatting.md)に従い、構築・評価とは独立した Display・Debug の条件で提供する。局所式のために局所代数ごとの独自式木を導入しない。
+式ハンドルは `Arc` で不変な節点を共有し、節点内の primitive もその共有に含まれる。同じ式ハンドルを複数箇所で利用しても木全体や primitive を複製しない。別々に構築した同形の式を自動検出して共有する機構は要求しない。操作は入力を変更せず、共通の完全展開形や評価結果のキャッシュを要求しない。Source の自動保持と式の構造比較は提供しない。表示は[式木の表示](expression-formatting.md)に従い、構築・評価とは独立した Display・Debug の条件で提供する。局所式のために局所代数ごとの独自式木を導入しない。
 
 ## 4. 共通機構から導出する操作
 
@@ -99,35 +91,14 @@ A(aB+bC)=a(AB)+b(AC),
 | --- | --- | --- |
 | 状態式 | norm | 内積から `sqrt(⟨ψ,ψ⟩)` を計算する |
 | 状態式 | 正規化 | norm と scalar multiplication を用いる。zero-norm state の正規化は拒否する |
-| 状態式（後続） | bra | Hilbert 空間の内積により ket の随伴として得る。ket から bra への対応は共役線型とする |
 | 演算子式 | commutator / anticommutator | 積と加算から `AB−BA` / `AB+BA` を構築する |
 | 演算子式 | Hilbert–Schmidt 内積 | `Tr(A†B)/d` を計算する。局所次元 d は `Tr(I)` から取得し、既存の Divide で除算する。Trace 自体は非正規化のまま |
 | 演算子式・状態式 | 期待値 | 作用と内積から `⟨ψ,Aψ⟩` を計算する |
 | 演算子式・状態式 | 正規化期待値 | 期待値を `⟨ψ,ψ⟩` で割る。zero-norm state では拒否する |
 
-bra 型・構築 API は後続へ延期し、初期版の braket は内積で計算する。Norm・正規化・正規化期待値は共通機構から提供し、局所代数ごとの実装を必須としない。局所恒等演算子は `Primitive(O::identity())` で保持し、他の primitive と同じ評価・展開経路を使う。複合式の `OpNode::Identity` は維持する。
+Braket は内積で計算する。ノルム・状態正規化・正規化期待値の API とエラーは[正規化](normalization.md)に定める。局所恒等演算子は `Primitive(O::identity())` で保持し、他の primitive と同じ評価・展開経路を使う。複合式の `OpNode::Identity` は維持する。
 
-### 4.1. Norm・正規化の API と feature
-
-係数全体を C、`C: RealPart` の実数型を R とする。内積・期待値・norm squared・スカラー除算は `syntaqs-core`、以下の拡張 trait と `NormalizationError` は std を利用する `syntaqs-normalize` が提供する。
-
-| 操作 | 提供元 | 局所状態の返り値 | 複合状態の返り値 |
-| --- | --- | --- | --- |
-| `norm_squared()` | core の状態式 | R | `Result<R, ExpressionError>` |
-| `norm()` | `Norm` | R | `Result<R, ExpressionError>` |
-| `normalized()` | `Normalize` | `Result<Self, NormalizationError>` | 同左 |
-| `normalized_expectation(&operator)` | `NormalizedExpectation` | `Result<C, NormalizationError>` | 同左 |
-| `normalized_expectation_in(&operator, &ambient)` | `NormalizedExpectationIn` | 提供しない | `Result<C, NormalizationError>` |
-
-norm squared は自己内積の実部、norm はその平方根とする。`norm()`・`normalized()` だけが R に `num_traits::Float` を要求し、正規化には実数を C に埋め込む `From<R>` も要求する。正規化は入力を変更せず、位相を保つ実数の逆ノルムで式をスカラー倍する。通常の作用・内積と同じ評価経路を使い、基底展開・行列化は要求しない。
-
-正規化と正規化期待値は、自己内積全体の `Zero::is_zero()` による厳密なゼロを `NormalizationError::ZeroNorm` として拒否する。明示的な zero に加え、非独立な primitive や項の相殺による zero も対象とする。`norm(zero)` は0を返す。負値の補正・近似ゼロ判定は導入せず、NaN・infinity などは数値型に委ねる。複合式の空間・評価エラーは `NormalizationError::Expression(ExpressionError)` に変換し、元のエラーを source として保持する。
-
-正規化期待値は期待値を自己内積全体で除し、`Divide` を要求する。平方根・実部取得・実数の埋め込みは要求しない。標準 `Complex<T>` の `Divide` は成分 T に `PartialOrd` を要求する。純実の分母は直接除算し、虚部が非零の場合は分母の最大成分の絶対値で正規化してから二乗する。分子の正規化が overflow する場合は分子を半分にして計算し、結果で倍率を戻す。小さい成分は加算後、大きい成分は加算前に正規化した分母のノルム二乗で割る。これにより丸め誤差による分母の微小な虚部でも不要な二乗の overflow / underflow を避ける。Float・Copy・One・数学関数 backend は追加せず、独自係数型 C の `Divide` や式メソッドには順序の制約を追加しない。整数のような切り捨て除算では元の直接計算を維持する。明示空間を渡す複合式では、その空間を演算子の既存束縛より優先する。
-
-拡張 trait とエラーは `syntaqs-normalize` から直接利用する。core の libm feature は設けず、core の代数 API・norm squared・スカラー除算は正規化 crate がなくても利用できる。非零の自己内積による商を明示的に計算でき、平方根を使わない正規化期待値の拡張 trait も `syntaqs-normalize` に属する。
-
-### 4.2. Hilbert–Schmidt 内積の次元規格化
+### 4.1. Hilbert–Schmidt 内積の次元規格化
 
 局所では状態空間の次元 d、複合系では全作用空間の次元 D を用い、演算子の内積とそのノルムを次で定義する。演算子空間の次元 d² や primitive の variant 数で割らない。
 
@@ -145,7 +116,7 @@ norm squared は自己内積の実部、norm はその平方根とする。`norm
 
 `Trace` は通常の非正規化 trace のまま、`Tr(I)=D` とする。期待値・密度行列の純度に使う trace、状態内積・norm・状態正規化も既存の意味を維持する。任意の独自代数や Basis に正規直交性を要求しない。
 
-`LocalOperator::hs_inner_product` は局所の `Tr(A†B)` を `O::identity()` の trace で割る。実装では評価後の各 primitive の trace を先に規格化し、その後で係数を掛けて加算する。`Operator::hs_inner_product`・`hs_inner_product_in` も[通常表現の局所 trace の走査](composite-expression.md#124-intrinsic-な項と通常表現)で同じ処理を用いてから縮約する。局所式に係数を付けてから配置した場合も、配置後に付けた場合も、不要な非正規化 trace の中間値を作らない。各局所次元は係数型 C の非零の値として表せ、数学的な除算ができることを要求する。除算には既存の `Divide` を使い、通常の `trace` / `trace_in` に除算能力を追加しない。
+`LocalOperator::hs_inner_product` は局所の `Tr(A†B)` を `O::identity()` の trace で割る。実装では評価後の各 primitive の trace を先に規格化し、その後で係数を掛けて加算する。`Operator::hs_inner_product`・`hs_inner_product_in` も[通常表現の局所 trace の走査](composite-expression.md#114-intrinsic-な項と通常表現)で同じ処理を用いてから縮約する。局所式に係数を付けてから配置した場合も、配置後に付けた場合も、不要な非正規化 trace の中間値を作らない。各局所次元は係数型 C の非零の値として表せ、数学的な除算ができることを要求する。除算には既存の `Divide` を使い、通常の `trace` / `trace_in` に除算能力を追加しない。
 
 この計算には状態型・Dimension・総次元の整数化・整数から C への変換を要求しない。空の tensor 空間は D=1 とする。総次元の `usize` overflow と、identity spectator の次元を掛け重ねることによる中間値の増大を避けるが、一般の係数の桁あふれや丸め誤差を防ぐ保証はしない。実装は [evaluate/trace.rs](../../crates/syntaqs-core/src/evaluate/trace.rs)、回帰テストは [hs_inner_product.rs](../../tests/tests/core_hs_inner_product.rs)を参照する。
 
@@ -155,36 +126,16 @@ Primitive が線型独立でないため、同じ数学的対象に複数の式�
 
 評価に primitive や式の構造比較を必須としない。指定基底への展開では、その基底の順序番号を用いて同じ基底要素の係数をまとめる。局所構造や Index の整合性を検証する契約は、式の構造比較を延期しても維持する。
 
-指定基底への正確な展開と座標取得は、式を整理する明示的な操作と、基底との接続として提供する。そこでは primitive 間の線型関係も正しく扱い、同じ基底要素の係数をまとめる。基底選択を primitive に固定せず、通常の作用・内積・trace に基底展開を必須としない。数値的近似比較と作用としての等価性は、要件の 5.6 節に従う。
+指定基底への正確な展開と座標取得は、式を整理する明示的な操作と、基底との接続として提供する。そこでは primitive 間の線型関係も正しく扱い、同じ基底要素の係数をまとめる。基底選択を primitive に固定せず、通常の作用・内積・trace に基底展開を必須としない。数値的近似比較と作用としての等価性は[数値規約](numerics.md)に従う。
 
-基底の定義を表す struct が対象の要素型を指定した `Basis<P, C>` を実装し、primitive の基底展開、基底要素の順序番号の取得、および基底順序での列挙を提供する。状態 primitive の展開は `LinearCombination<S, C>`、演算子 primitive の展開は `LinearCombination<O, C>` を返し、各要素を選択した基底の primitive に限る。式木側で `map` して通常の式へ取り込む接続も Step 2 に含める。基底要素は primitive の部分集合とし、要素数は対応する局所構造と対象種別から導出する。共通機構が線型性によって式全体へ拡張する。詳細は [基底の数学的能力](basis.md)に定める。
+基底の定義を表す struct が対象の要素型を指定した `Basis<P, C>` を実装し、primitive の基底展開、基底要素の順序番号の取得、および基底順序での列挙を提供する。状態 primitive の展開は `LinearCombination<S, C>`、演算子 primitive の展開は `LinearCombination<O, C>` を返し、各要素を選択した基底の primitive に限る。式木側で `map` して通常の式へ取り込む。基底要素は primitive の部分集合とし、要素数は対応する局所構造と対象種別から導出する。共通機構が線型性によって式全体へ拡張する。詳細は [基底の数学的能力](basis.md)に定める。
 
 基底は展開操作への入力であり、結果は基底識別情報や特別な展開済み状態を要求しない通常の式木とする。入力の式は変更せず、結果は局所構造などを保持し、通常の演算と別基底への再展開を適用できる。式木のための独立した基底変更機構は設けない。
 
-## 6. 整合性の検証対象と未決事項
+## 6. 整合性の検証対象
 
 各局所実装では、Product の結合則、Product と Act の整合性、恒等演算子、内積と随伴、通常の trace、および primitive の線型関係の保存を検証対象とする。数学的な契約は[局所構造の設計](local-structure.md)に定める。式側では、線型性・半双線型性・共役線型性の拡張、右側からの作用、随伴の積順序反転、および lazy 評価を検証する。
 
-これらの等式は数学的な意味について要求し、浮動小数点計算のビット単位の一致とは区別する。数値精度、特殊値、および近似比較は既存要件の規約に従う。
+これらの等式は数学的な意味について要求し、浮動小数点計算のビット単位の一致とは区別する。数値精度、特殊値、および近似比較は[数値規約](numerics.md)に従う。
 
-局所構造と演算能力の分離、共通パーツの公開と項型の統合、薄い `LinearCombination` と関連型 `Term` による規則の出力、Step 2 での `map` と式木への接続は確定事項とする。`StateBasis`・`OperatorBasis` の削除と、利用側での `Basis<S, C>`・`Basis<O, C>` の直接指定、メソッドごとの制約、所有権、反復的な評価・破棄、および `Arc` による不変共有と `act`・`evaluate` の役割も採用済みとする。非公開の作業領域・補助関数と、具体的な数値演算の呼び出し位置に必要な制約は実装時に定める。線型結合の保持・変換と選択基底の条件、共有によって deep copy が生じないことも検証対象に含める。局所構造の一致契約は、[局所構造の一致条件](local-structure.md#4-局所構造の一致条件)に定める。
-
-## 7. 式構築の入口と係数変換（2026-10-28）
-
-構築・集約の基本の入口は syntaqs_core::ExpressionFactory とし、構築済みの式の操作・計算はインスタンスメソッドで行う。LocalStateOf・LocalOperatorOf・StateOf・OperatorOf は主に型注釈で使う。状態のテンソル構築は既存空間を明示する tensor_in・try_tensor_in に移行し、ExpressionFactory の同名 inherent method も基礎 API へ委譲する。primitive の葉順の配置には product_state を使う。具体的な配置・合成の契約は[複合式の設計](composite-expression.md#11-expressionfactory-の構築入口と-fallible-集約2026-10-28)に記録する。
-
-局所・複合の4式型と LinearCombination の scaled は `impl Into<C>` を受け取り、入口で一度だけ C に変換する。式型は係数を保持するだけで数値能力・Clone を要求せず、LinearCombination は従来の `C: Clone + Mul<Output=C>` を維持する。変換元の Clone は不要で、空の LinearCombination でも変換は一度行う。C の精度は維持し、新たなキャストや精度変換は導入しない。Mul・scalar・term の引数は広げない。
-
-旧 scaled(C) の期待型に依存していたコードでは、構築入口の係数型や Default の入力型を明示し、不要な into() を外す。推論の完全互換は条件とせず、選択済みの C と最小能力の契約を維持する。移行方法は次のとおりである。
-
-| 旧引数型に依存していた箇所 | 現在の書き方 |
-| --- | --- |
-| scaled の引数から式の C を推論 | ExpressionFactory で先に C を選ぶか、`LocalOperator::<Op, Complex<f64>>` などで明示する |
-| `.scaled(value.into())` の内側の変換先 | `.scaled(value)` と入力を直接渡す |
-| `.scaled(Default::default())` の生成型 | `.scaled(Complex::<f64>::default())` など入力型を明示する |
-
-係数型を選択済みなら `.scaled(0.5)` と同じ精度の実数を渡せる。標準の `Complex<f32>` へ明示的な f64 を渡すなど、既存の Into が提供しない変換は受け入れない。利用例は[基底展開](../../examples/src/bin/basis_expansion.rs)と[2スピンの計算](../../examples/src/bin/two_spins.rs)を参照する。
-
-LocalState::try_sum・LocalOperator::try_sum は `Result<式,ExpressionError>` の列を集約し、最初の入力 Err 以降を取り出さずに、そのまま返す。全成功時は既存 sum と同じ項順・重複・零係数・空／単項の扱いを保ち、primitive を評価しない。ExpressionFactory の局所式用転送メソッドは後続候補であり、今回追加していない。
-
-名前付きの和・積の構築は式型の列版 `sum` / `product` に絞り、二項は標準の `+` / `*` を使う。primitive の `Product::product` は局所規則として維持する。局所式の係数付き構築は `from_terms(impl IntoIterator<Item=Term<Self,C>>)` とし、配列・iterator・既存の LinearCombination を受け取る。数値演算・Clone・評価を要求せず、入力順・重複・ゼロ係数を保つ。
+保持・構築に必要な能力と評価能力を分離し、有限線型結合の保持・map・式への取り込み、非 Clone primitive の共有、反復的な評価・破棄を検証する。局所代数の一致条件は[primitive の型契約](local-structure.md#4-局所構造の一致条件)に従う。
