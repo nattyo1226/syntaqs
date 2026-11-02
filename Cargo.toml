@@ -2,13 +2,13 @@
 resolver = "3"
 members = [
     "crates/syntaqs-core",
-    "crates/syntaqs-spin-half",
-    "crates/syntaqs-spin-one",
-    "crates/syntaqs-fermion",
     "crates/syntaqs-basic",
     "crates/syntaqs-geometry",
     "crates/syntaqs-normalize",
     "crates/syntaqs-export",
+    "crates/syntaqs-spin-half",
+    "crates/syntaqs-spin-one",
+    "crates/syntaqs-fermion",
     "examples",
     "tests",
 ]
@@ -22,20 +22,23 @@ license-file = "LICENSE"
 repository = "https://github.com/nattyo1226/syntaqs"
 
 [workspace.dependencies]
-syntaqs-basic = { path = "crates/syntaqs-basic" }
 syntaqs-core = { path = "crates/syntaqs-core" }
-syntaqs-export = { path = "crates/syntaqs-export" }
+syntaqs-basic = { path = "crates/syntaqs-basic" }
 syntaqs-geometry = { path = "crates/syntaqs-geometry" }
-
-syntaqs-fermion = { path = "crates/syntaqs-fermion" }
 syntaqs-normalize = { path = "crates/syntaqs-normalize" }
+syntaqs-export = { path = "crates/syntaqs-export" }
 syntaqs-spin-half = { path = "crates/syntaqs-spin-half" }
 syntaqs-spin-one = { path = "crates/syntaqs-spin-one" }
+syntaqs-fermion = { path = "crates/syntaqs-fermion" }
 
-num-complex = { version = "0.4.6", default-features = false }
+# Identifiers and error handling.
+uuid = { version = "1.18.1", features = ["v4"] }
+thiserror = { version = "2.0.21", default-features = false }
+
+# Numeric traits and coefficients.
 num-traits = { version = "0.2.19", default-features = false }
+num-complex = { version = "0.4.6", default-features = false }
+
+# Dense and sparse numerical containers.
 ndarray = { version = "0.17.2", default-features = false, features = ["std"] }
 sprs = { version = "=0.11.4", default-features = false }
-
-thiserror = { version = "2.0.21", default-features = false }
-uuid = { version = "1.18.1", features = ["v4"] }

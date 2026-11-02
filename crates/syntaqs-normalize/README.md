@@ -19,4 +19,4 @@ This crate builds on the public state and operator APIs of [syntaqs-core](../syn
 
 The crate uses the standard library. Square-root-based norms and normalization require `Float` on the associated real type. Normalized expectations use scalar division and need neither square roots nor real-part extraction.
 
-See the [crate API overview](src/lib.rs), [normalization design](../../docs/design/primitive-expression.md#41-norm正規化の-api-と-feature), and [Heisenberg example](../../examples/src/bin/heisenberg.rs). Installation is covered by the [project README](../../README.md).
+See the [crate API overview](src/lib.rs), [normalization design](../../docs/design/normalization.md#1-norm-and-normalization-apis-and-features), and [Heisenberg example](../../examples/src/bin/heisenberg.rs). Installation is covered by the [project README](../../README.md).

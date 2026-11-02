@@ -21,9 +21,10 @@ The workspace declares Rust **1.85** as its minimum version and uses edition **2
 
 ```toml
 [dependencies]
-num-complex = "0.4.6"
 syntaqs-core = { git = "https://github.com/nattyo1226/syntaqs" }
 syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs" }
+
+num-complex = "0.4.6"
 ```
 
 These dependencies follow the repository's default branch. To use a fixed revision, add the same `rev` value to each syntaqs Git dependency. Publishing to crates.io is planned; the setup above uses Git.
@@ -74,15 +75,15 @@ The coefficient type is selected once through `Spin`. The spin-1/2 Cartesian pri
 | Crate | Responsibility |
 | --- | --- |
 | [syntaqs-core](crates/syntaqs-core/README.md) | Algebra traits, shared expressions, tensor spaces, evaluation, and basis coordinates. |
-| [syntaqs-spin-half](crates/syntaqs-spin-half/README.md) | Spin-1/2 primitives, bases, and spin-chain models. |
-| [syntaqs-spin-one](crates/syntaqs-spin-one/README.md) | Spin-1 dipoles and quadrupoles, bases, and spin-chain models. |
-| [syntaqs-fermion](crates/syntaqs-fermion/README.md) | Single-mode fermions, Majorana bases, and Hubbard chains. |
 | [syntaqs-basic](crates/syntaqs-basic/README.md) | UUID and named indices for identifying factors. |
 | [syntaqs-geometry](crates/syntaqs-geometry/README.md) | Site geometries, relations, and connections to caller-owned data. |
 | [syntaqs-normalize](crates/syntaqs-normalize/README.md) | Norms, state normalization, and normalized expectations. |
 | [syntaqs-export](crates/syntaqs-export/README.md) | Numerical containers and the metadata needed to interpret them. |
+| [syntaqs-spin-half](crates/syntaqs-spin-half/README.md) | Spin-1/2 primitives, bases, and spin-chain models. |
+| [syntaqs-spin-one](crates/syntaqs-spin-one/README.md) | Spin-1 dipoles and quadrupoles, bases, and spin-chain models. |
+| [syntaqs-fermion](crates/syntaqs-fermion/README.md) | Single-mode fermions, Majorana bases, and Hubbard chains. |
 
-`syntaqs-core`, `syntaqs-geometry`, `syntaqs-spin-half`, and `syntaqs-fermion` use `no_std + alloc`. Other crates use the standard library. Verification limits, including the declared minimum Rust version and dedicated no_std targets, are documented in [future work](docs/future-work.md#3-未実施の検証と性能).
+`syntaqs-core`, `syntaqs-geometry`, `syntaqs-spin-half`, and `syntaqs-fermion` use `no_std + alloc`. Other crates use the standard library. Verification limits, including the declared minimum Rust version and dedicated no_std targets, are documented in [future work](docs/future-work.md#3-outstanding-verification-and-performance).
 
 ## Examples and documentation
 
@@ -102,7 +103,7 @@ The [examples README](examples/README.md) covers basis expansion, expression for
 - [Future work](docs/future-work.md): planned extensions and verification limits.
 - [Workspace tests](tests/README.md): shared test algebras and integration checks.
 
-The design documents are currently in Japanese. Generate the English API documentation locally with `cargo doc --workspace --all-features --no-deps`.
+The design documents are in English. Generate the API documentation locally with `cargo doc --workspace --all-features --no-deps`.
 
 ## Development
 

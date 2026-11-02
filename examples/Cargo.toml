@@ -16,14 +16,15 @@ export = ["dep:syntaqs-export"]
 libm = ["normalize"]
 
 [dependencies]
-syntaqs-basic.workspace = true
 syntaqs-core.workspace = true
+syntaqs-basic.workspace = true
 syntaqs-geometry.workspace = true
+syntaqs-normalize = { workspace = true, optional = true }
+syntaqs-export = { workspace = true, optional = true, features = ["ndarray", "sprs"] }
 syntaqs-spin-half.workspace = true
 syntaqs-spin-one.workspace = true
 syntaqs-fermion.workspace = true
-syntaqs-normalize = { workspace = true, optional = true }
-syntaqs-export = { workspace = true, optional = true, features = ["ndarray", "sprs"] }
+
 num-complex.workspace = true
 
 [dev-dependencies]

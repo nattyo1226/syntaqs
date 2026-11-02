@@ -1,43 +1,54 @@
-# 今後の課題
+# Future work
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-初期版の機能実装と受入確認を完了した時点で、後続へ延期した機能、設計上の課題、および未実施の検証をまとめる。具体的な実施日と優先順位は未定である。必須の設計見直しと、実装するかどうかも含めて検討する機能候補は区別する。
+This document collects future features, required design reviews, and candidates not yet adopted. Current specifications belong in [architecture](architecture.md) and [design](README.md#2-feature-details); ongoing release preparation belongs in the [v3 plan](plans/v3/README.md).
 
-各機能の数学的契約と詳細な検証条件は、[要件](requirements.md)と `docs/design/` の各文書に保持する。延期した機能を前提とせずに提供している操作と、Index の一意性・同一性、不変な実体の共有は維持する。
+## 1. Required design review
 
-## 1. 必須の設計見直し
+Revisit ownership, sharing, and associations among State, Operator, Structure, and Space, and the boundary between Geometry and spaces. Consider whether states and operators can be understood as special cases of general operators, and document the mathematical objects, API correspondence, shared responsibilities, and distinctions with reasons. See [design review topics](future-work/state-and-operator.md) for questions and completion criteria.
 
-State・Operator・Structure・Space の管理方法は、所有・共有・関連付け、および Geometry と空間の依存関係を含めて再検討し、より適切な設計へリファクタリングする。具体的な設計と実施時期は未定である。[アーキテクチャの将来の必須課題](architecture.md#10-将来の必須課題)に経緯を記録する。
+## 2. Unimplemented features and proposals
 
-- **Operator と State の整理**：操作的量子論の枠組みで両者を一般の演算子の特別な形として整理できるかを検討し、数学的対象と API の対応、共通化する範囲と別に維持する範囲を理由とともに記録する。公開型や評価器を統合するかどうかも検討対象とする。論点と完了条件は[アーキテクチャ第10.1節](architecture.md#101-operator-と-state-の整理)に定める。
+These features or candidates have not started; public APIs, schedules, and priorities are undecided. Create a concrete plan in `plans/` when implementation starts and reflect the resulting specifications in `design/`.
 
-Grading の情報保持と共通評価 API は実装済み。空間が kind、primitive が parity / P、core が符号を担う。API と移行は[複合式の共通評価](design/composite-expression.md#12-ordinary--graded-の共通評価と移行)、局所契約は[grading 能力](design/local-structure.md#8-grading-の局所能力と移行)に記録する。
+| Area | Future scope |
+| --- | --- |
+| [Partial trace](future-work/partial-trace.md) | Ambient/contracted spaces, delayed nodes, remaining spaces, ordinary-action contraction for graded inputs, evaluation, and verification. |
+| [Map representation coefficients](future-work/representation-matrix.md) | General linear, conjugate-linear, and multiple-input maps; different input/output bases; retained, reusable coefficients. |
+| [API usability](future-work/api-usability.md) | Construction helpers, factor lookup, inference, diagnostics, onboarding, and custom-algebra guidance. |
+| [Storage and restoration](future-work/identity-and-storage.md) | Restoration preserving indices, independent copies with consistent fresh indices, and storage formats. |
+| [External connections](future-work/external-connections.md) | Automatic differentiation, ML modules, tensor-network conventions, and parameter dependencies. |
 
-係数型・数値能力の整理、LocalStructure の廃止、ordinary な HilbertSpace の責任分離、および純粋な Chain と外部局所空間列への移行、QuantumSystem と SpinHalf<C> の構築 API は実装済みである。
+### 2.1. Local algebra and basis extensions
 
-## 2. 延期した機能と検討事項
+Consider heterogeneous local algebras within one system, type erasure and storage for them, runtime representation parameters, and definition matching between implementation types. Per-factor bases, subspace bases, projections, constrained subspaces, conserved quantities, and particle-number sectors remain future work.
 
-構築入口の補助、エラー診断、利用開始の導線など、API の使いやすさに関する候補は[専用の検討文書](plans/api-usability/README.md)にまとめる。
+Spin-1/2, spin-1, single-mode fermions, and their current models are already provided. Further candidates include general spin-S, qudits, bosons and truncation; spin-one MatrixUnitBasis, spherical-tensor phase conventions, and exact Product/Act without Float; and generic spinful-fermion helpers, arbitrary lattices, and variable couplings.
 
-- **Partial trace**：公開 API、遅延節点、残存空間の構築、評価器への接続、および検証を延期する。残存因子の Index・局所構造・順序を保持する数学的契約は[要件第5.4節](requirements.md#54-full-trace-と-partial-trace)と[複合式の設計](design/composite-expression.md#7-full-tracepartial-trace-と埋め込み)に保持する。実施時期は未定である。
-- **写像の表現行列・表現係数**：共通 API、複数入力、入力ごとの共役指定、係数データの保持・再利用と対応する検証を延期する。表現係数の生成は将来の `syntaqs-core` の担当とし、数学的契約は[写像の表現行列の設計](design/representation-matrix.md)に保持する。状態・演算子の座標取得と密・疎 export はこの機能に依存しない。実施時期は未定である。
-- **局所代数と基底の拡張**：一つの系で異種局所構造を混在・合成する機能と、そのための型消去・保持方式を延期する。実行時の局所構造パラメータや異なる実装型間の定義照合も後続の検討事項である。初期版の複合基底は一つの局所基底を全因子へ適用するため、因子ごとに異なる基底の指定は扱わない。
-- **Fermion の追加機能**：単一 mode の局所代数・Majorana 系・graded 接続と標準／symmetric Hubbard は `syntaqs-fermion` に実装した。汎用 spinful 構築 utility、粒子数 sector、任意格子・可変結合などは後続とする。[局所代数と検証の記録](design/local-structure.md#9-fermion-の局所代数)・[Hubbard モデルの設計](design/geometry.md#6-fermion-の-hubbard-モデル)を参照する。
-- **式と空間の操作**：bra 型・構築 API、内部ラベル、部分空間・射影・制約付き部分空間、積和から和積への因数分解、因子の permutation、個別の簡約ルールを選択して適用する操作、および任意の式型を分解結果から組み立て直す汎用機構を延期する。braket は内積で計算し、grouping は既存の HilbertSpace を用いる。通常の評価・基底展開に必要な分配・局所積・係数処理や、共通式の構築は引き続き提供する。延期した機構の詳細は[要件第9.2節](requirements.md#92-未決延期した機構と操作)に記録する。
-- **式の管理**：source の自動保持、式の構造比較、保存・復元を延期する。[式木の Display・Debug](design/expression-formatting.md) は実装済み。入力の不変性と不変実体の共有は維持する。
-- **キャッシュと並列化**：評価結果のキャッシュ、並列評価・スレッド間共有は未決である。キャッシュの導入可否・対象・保持先・再利用条件・破棄・資源管理と、スレッド間共有の条件・並列実行方式を検討する。初期版は要求時の計算と単一スレッドの評価でよい。
-- **追加の代数・幾何と外部接続**：spin-1/2・spin-1・fermion 以外の builtin algebra、1D Chain 以外の Geometry、ML・自動微分 module、tensor network・MPS・MPO、GPU・分散計算などへの接続を延期する。spin-1 の XYZ・Heisenberg・BLBQ は[モデル構築](design/geometry.md#7-spinone-のモデル構築)として実装済みである。追加基底・一般 spin-S は[Spin-one の後続範囲](design/local-structure.md#107-後続の範囲)を参照する。追加候補の詳細は[要件第9.3節](requirements.md#93-追加の機能候補)に記録する。
+### 2.2. Expression and space operations
 
-後続機能のための crate は先に作らず、必要な責任と依存関係が具体化した段階で検討する。
+Consider bra types and constructors, general U→V maps, internal labels, subsystem extraction by factor selection, regrouping/permutation, and effective mixtures of ordinary and graded products.
 
-## 3. 未実施の検証と性能
+Other candidates are factoring sums of products into products of sums, selecting individual simplification rules, general expression transformations, advanced simplification strategies, decomposition/reconstruction of arbitrary expression types, and connections to custom expression trees. Distribution, local multiplication, and coefficient handling needed by ordinary evaluate and basis expansion already exist and are separate from these additional operations.
 
-MSRV（Rust `1.85.0`）でのビルド・テストは、2026-11-02 に整備した [CI workflow](../.github/workflows/ci.yml) で、`main` への push・PR 時に継続的に検証する。workspace 全体の既定 feature・全 feature 有効・既定 feature 無効の3構成を対象とし、doc test と `compile_fail` の検証も含む。
+Automatic source retention, structural expression comparison, and general action-equivalence checking are unimplemented. Automatic sharing of independently constructed equal-shaped expressions, result caches, parallel evaluation, and cross-thread sharing require decisions on whether to add them. Caches need scope, reuse criteria, ownership, invalidation, and resource management; parallelism needs stored-type requirements and an execution model.
 
-引き続き、次の検証は実施していない。
+Consider approximate component pruning as explicit postprocessing with a caller-selected basis, tolerance, and application point. In a dimension-normalized HS orthonormal basis, discarded `δA=Σμ δaμ Bμ` has squared error `||δA||²=Σμ |δaμ|²`. This formula does not apply unchanged to non-orthonormal bases. Current evaluation, coordinates, and export must not silently prune components.
 
-- 専用 no_std target での実ビルド。`syntaqs-core`・`syntaqs-geometry`・`syntaqs-fermion` の `no_std + alloc` は、ソース、依存 feature、およびホスト上の単独ビルドによる確認にとどまる。
-- 性能ベンチマーク、速度比較、および追加の割り当て最適化の検証。
+### 2.3. Geometry, numerical backends, and additional quantum features
 
-演算子式の積に含まれる和は既存の走査で分配されるため、結果が疎でも項数が増大する場合がある。式の構造を利用し、先に局所的な和をまとめる最適化は後続の検討対象とする。
+- Standard geometries beyond one-dimensional chains: arbitrary graphs, coordinates, distances, plaquettes, and hyperedges. Square lattices currently exist only in examples.
+- CSR/CSC selection during sparse matrix export, other index integer types, and additional backends.
+- Density operators, mixed and reduced states, thermal states, eigensolvers and ground-state searches, time evolution, measurement, and probability sampling.
+- Parameterized operators, symbolic coefficients, and large symbolic computations.
+- MPS/MPO conversion, MPO generation/minimization, and tensor-network truncation, gauges, and canonical forms.
+- GPU, distributed, and large-scale numerical backends.
+
+Do not create crates solely for prospective features before their independent responsibilities, dependencies, and execution boundaries are concrete. Supertrace differs from ordinary trace and is not currently provided.
+
+## 3. Outstanding verification and performance
+
+Dedicated no_std target builds, benchmarks, speed comparisons, and further allocation optimization remain unverified. See [verification](design/verification.md) for current checks and limits.
+
+Distributing sums inside operator products can increase term counts even when the result is sparse. Future investigations include combining local sums earlier, comparing caching with recomputation, and retaining interval parity as unevaluated structure.

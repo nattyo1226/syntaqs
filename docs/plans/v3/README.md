@@ -1,50 +1,51 @@
-# v3 に向けた実装案
+# v3 release preparation: plans and progress
 
-作成日: 2026-10-30
-更新日: 2026-11-02
+Last updated: 2026-11-02
 
-v3 への更新の対象は以下の5項目とする。未実装の項目は本書とリンク先の修正案で検討し、実装済みの項目は現行の設計文書・使用例を参照する。
+## 1. Current work and remaining items
 
-## 演算子 primitive の名前と規格化
+This document records plans and progress for ongoing v3 release preparation. Implemented specifications belong in `design/`; additional features without a scheduled start belong in [future work](../../future-work.md).
 
-**名前・規格化・昇降演算子・HS 内積の変更を実装・検証済み（2026-11-01）。**
+| Item | Status and next steps |
+| --- | --- |
+| Document responsibilities | Reorganized requirements, overview, feature specifications, future features, and ongoing plans. |
+| English documentation in `docs/` | Translated all documents, including `plans/`, and updated links to translated headings. |
+| Crate order in README and Cargo.toml | Completed responsibility-based ordering, including external dependencies, each package's dependency lists, and workspace members. |
 
-primitive の一覧・規格化は[局所 primitive の設計](../../design/local-structure.md#21-提供する-primitive-と規格化)、HS 内積の定義は[次元規格化の契約](../../design/primitive-expression.md#42-hilbertschmidt-内積の次元規格化)、モデルの物理的な結合定数は[モデル構築の設計](../../design/geometry.md)にまとめる。
+[Documentation final adjustments](documentation.md) records agreed policies and completion of all three documentation adjustments above.
 
-数値的な相殺の扱いは[数値比較の要件](../../requirements.md#56-数値的近似等価性と検証の規約)、実装時の受入確認は[規格化変更の検証記録](../../design/local-structure.md#11-規格化変更の検証記録)を参照する。
+## 2. Release preparation progress
 
-## 式木表示のカスタムフォーマット
+### 2.1. Primitive naming and normalization
 
-**実装・検証済み（2026-11-01）。** Display・複数行表示・Debug、Index の8文字制限、Tag と builtin primitive の表示を提供する。契約と検証結果は[式木の表示](../../design/expression-formatting.md)、利用例は [expression_formatting](../../../examples/src/bin/expression_formatting.rs)を参照する。
+Implementation and verification completed on 2026-11-01. Current primitives and normalization are specified in [local algebras](../../design/local-structure.md), dimension-normalized HS inner products in [local expressions](../../design/primitive-expression.md), and physical coupling corrections in [model construction](../../design/models.md). Executed checks are recorded in the [verification history](verification.md).
 
-## プロジェクトルートの README とライセンスファイル
+### 2.2. Expression-tree formatting
 
-**整備・検証済み（2026-11-02）。** プロジェクトの説明・導入方法は[トップの README](../../../README.md)、各 crate の担当責任は[crate 一覧](../../../README.md#crates)から各 README を参照する。ライセンス本文はルートの [LICENSE](../../../LICENSE) に配置した。
+Implementation and verification completed on 2026-11-01. Features include ordinary and multiline Display, Debug, the eight-character Index limit, and Tag and builtin primitive labels. See [expression formatting](../../design/expression-formatting.md) for current contracts and [expression_formatting](../../../examples/src/bin/expression_formatting.rs) for usage.
 
-- `README.md` には、プロジェクトの目的・提供機能、crate の構成、依存設定と feature、最小の利用例、examples・設計文書へのリンク、開発時のビルド・検証方法をまとめる。
-- 実装済みの機能と将来の計画を区別し、利用例やコマンドは現行の公開 API・リポジトリ構成と一致させる。
-- 採用ライセンスは MIT、著作権表示は `Copyright (c) 2026 Haruki SAITO`、適用範囲はリポジトリ全体とする。
-- README の案内と workspace・各 crate のライセンス・README・repository メタデータを整合させる。
+### 2.3. README and license
 
-README 内のローカルリンク・利用例、ドキュメント生成とフォーマット確認のコマンド、ライセンスファイル・Cargo メタデータの対応を確認した。利用例の Git 依存は手元のリポジトリへ対応付けて検証しており、改名済みコードの GitHub 反映後の導入確認は未実施である。
+On 2026-11-02, installation instructions, crate READMEs, and the MIT license were prepared. Checks covered local links, examples, and consistency between license and Cargo metadata. Current instructions are in the [root README](../../../README.md) and license text in [LICENSE](../../../LICENSE). Copyright is `Copyright (c) 2026 Haruki SAITO`, covering the entire repository.
 
-## GitHub Actions の workflow 整備
+Example Git dependencies were verified by mapping them to the local repository. Installation after the renamed code reaches GitHub has not been checked. README crate ordering was subsequently completed as recorded in section 2.7.
 
-**整備・GitHub Actions 上でのテスト実行確認済み（2026-11-02）。** 定義は [CI workflow](../../../.github/workflows/ci.yml) を参照する。
+### 2.4. GitHub Actions
 
-- `main` への push、pull request、手動実行を契機とし、Linux の64 bit 環境で検証する。
-- MSRV `1.85.0` と最新 `stable` のそれぞれで、workspace 全体の既定 feature・全 feature 有効・既定 feature 無効の3構成をテストする。doc test と `compile_fail` の検証も含む。
-- 最新 `stable` で `syntaqs-export` と `syntaqs-tests` を個別にテストし、backend なし・`ndarray` のみ・`sprs` のみを確認する。両 backend 有効の構成は workspace の全 feature テストで確認する。
-- format・Clippy と、警告をエラーにする API ドキュメント生成を別ジョブで実行する。依存キャッシュと、同じ PR・ブランチの古い実行のキャンセルを設定する。
+On 2026-11-02, workflows were prepared. The user temporarily added `feat/workflow` to push triggers and confirmed successful execution on GitHub Actions. Push triggers were then restricted to `main`.
 
-利用者が push 対象に `feat/workflow` を一時的に追加し、GitHub Actions 上でテストが正常に実行されることを確認した。確認後の push 対象は `main` のみとする。
+[Verification](../../design/verification.md) defines current workflow structure, commands, and verification limits. Dedicated no_std targets are not included in workflows.
 
-`no_std + alloc` 対応 crate の専用 target でのビルドは今回の workflow に含めておらず、引き続き未実施である。
+### 2.5. Many-body relation enumeration
 
-## 3体以上の相互作用に対応する関係の列挙
+Implementation and acceptance checks completed on 2026-10-31. See [geometry](../../design/geometry.md) for current Relation, Group, SiteMapper, and many-body leaf selection; [examples](../../../examples/README.md) for usage; and [verification history](verification.md) for checks performed at the time.
 
-**実装・受入確認済み（2026-10-31）**。
+### 2.6. Document responsibilities
 
-幾何に基づく多体の Site 配置を列挙し、外部の HilbertSpace 列へ借用接続する。
+Implementation details and migration history were separated from requirements; architecture became an overall structural overview. Design documents now describe current features, with separate construction, normalization, numeric-convention, model-construction, and verification documents. Unimplemented feature details and API candidates moved to `future-work/`; earlier verification records moved into this plan's history.
 
-API 契約と検証記録は[Chain・Site と自由度の配置](../../design/geometry.md)、使い方は [examples の README](../../../examples/README.md)にまとめる。
+Repository Markdown links were updated for moved documents and headings. During reorganization on 2026-11-02, 38 files, 340 local links, and code fences were checked, with no broken links or unclosed fences. `git diff --check` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` passed. Implementation code and dependency settings were unchanged; workspace tests were not rerun for that reorganization.
+
+### 2.7. Presentation order
+
+On 2026-11-02, the root README crate list, workspace members, and dependency sections were aligned with the agreed core-to-concrete-algebra order. External dependencies use the role order defined in the [documentation adjustments](documentation.md#application-to-cargotoml). All 11 manifests and 19 dependency sections were checked for ordering and preserved settings. Locked offline Cargo metadata and `git diff --check` passed. Source code, dependency settings, and Cargo.lock were unchanged; builds and tests were not rerun for this ordering-only change.
