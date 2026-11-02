@@ -1,47 +1,47 @@
-# v3 公開準備の計画と経過
+# v3 release preparation: plans and progress
 
-更新日: 2026-11-02
+Last updated: 2026-11-02
 
-## 1. 現在の作業と残る項目
+## 1. Current work and remaining items
 
-現在進行中の v3 公開準備の計画・経過を記録する。提供済みの仕様は `design/`、着手時期を決めていない追加機能は [future-work](../../future-work.md)で管理する。
+This document records plans and progress for ongoing v3 release preparation. Implemented specifications belong in `design/`; additional features without a scheduled start belong in [future work](../../future-work.md).
 
-| 項目 | 状態・次の作業 |
+| Item | Status and next steps |
 | --- | --- |
-| 文書間の責任分離 | 再構成を実施。要件・概要・機能別仕様・将来機能・進行中の計画を整理した。 |
-| `docs/` の英語化 | 未着手。`plans/` を含む全ドキュメントを英語に統一する。 |
-| README・Cargo.toml の crate 順序 | 未着手。責任に基づく順序を、外部依存と各パッケージの依存一覧にも適用する。 |
+| Document responsibilities | Reorganized requirements, overview, feature specifications, future features, and ongoing plans. |
+| English documentation in `docs/` | Translated all documents, including `plans/`, and updated links to translated headings. |
+| Crate order in README and Cargo.toml | Not started. Apply responsibility-based ordering to external dependencies and each package's dependency lists as well. |
 
-確定した方針と個別の修正項目は[ドキュメントの最終調整](documentation.md)に記録する。英語化と依存一覧の並べ替えは、責任分離の再構成とは別の作業として残る。
+[Documentation final adjustments](documentation.md) records agreed policies and individual items. README and dependency-list ordering remains a separate task.
 
-## 2. 公開準備の経過
+## 2. Release preparation progress
 
-### 2.1. Primitive の命名・規格化
+### 2.1. Primitive naming and normalization
 
-2026-11-01 に実装・検証を完了した。現在の primitive と規格化は[局所代数](../../design/local-structure.md)、次元規格化した HS 内積は[局所式](../../design/primitive-expression.md)、物理的な結合定数の補正は[モデル構築](../../design/models.md)に定める。実行した検証は[経過の記録](verification.md)にまとめる。
+Implementation and verification completed on 2026-11-01. Current primitives and normalization are specified in [local algebras](../../design/local-structure.md), dimension-normalized HS inner products in [local expressions](../../design/primitive-expression.md), and physical coupling corrections in [model construction](../../design/models.md). Executed checks are recorded in the [verification history](verification.md).
 
-### 2.2. 式木表示
+### 2.2. Expression-tree formatting
 
-2026-11-01 に実装・検証を完了した。通常・複数行表示、Debug、Index の8文字制限、Tag と builtin primitive のラベルを提供する。現在の契約は[式木の表示](../../design/expression-formatting.md)、利用例は [expression_formatting](../../../examples/src/bin/expression_formatting.rs)を参照する。
+Implementation and verification completed on 2026-11-01. Features include ordinary and multiline Display, Debug, the eight-character Index limit, and Tag and builtin primitive labels. See [expression formatting](../../design/expression-formatting.md) for current contracts and [expression_formatting](../../../examples/src/bin/expression_formatting.rs) for usage.
 
-### 2.3. README とライセンス
+### 2.3. README and license
 
-2026-11-02 に導入案内・crate README・MIT ライセンスを整備し、ローカルリンク・利用例・ライセンスと Cargo メタデータの対応を確認した。現在の案内は[ルート README](../../../README.md)、ライセンス本文は [LICENSE](../../../LICENSE)に置く。著作権表示は `Copyright (c) 2026 Haruki SAITO`、適用範囲はリポジトリ全体である。
+On 2026-11-02, installation instructions, crate READMEs, and the MIT license were prepared. Checks covered local links, examples, and consistency between license and Cargo metadata. Current instructions are in the [root README](../../../README.md) and license text in [LICENSE](../../../LICENSE). Copyright is `Copyright (c) 2026 Haruki SAITO`, covering the entire repository.
 
-利用例の Git 依存は手元のリポジトリへ対応付けて検証しており、改名済みコードの GitHub 反映後の導入確認は未実施である。README の crate 順序は最終調整の対象として残る。
+Example Git dependencies were verified by mapping them to the local repository. Installation after the renamed code reaches GitHub has not been checked. README crate ordering remains a final-adjustment item.
 
 ### 2.4. GitHub Actions
 
-2026-11-02 に workflow を整備し、利用者が一時的に `feat/workflow` を push 対象へ追加して、GitHub Actions 上で正常に実行されることを確認した。確認後の push 対象は `main` のみとした。
+On 2026-11-02, workflows were prepared. The user temporarily added `feat/workflow` to push triggers and confirmed successful execution on GitHub Actions. Push triggers were then restricted to `main`.
 
-現在の workflow の構成・実行方法・検証限界は[verification](../../design/verification.md)に定める。専用 no_std target は workflow の対象に含めていない。
+[Verification](../../design/verification.md) defines current workflow structure, commands, and verification limits. Dedicated no_std targets are not included in workflows.
 
-### 2.5. 多体関係の列挙
+### 2.5. Many-body relation enumeration
 
-2026-10-31 に実装・受入確認を完了した。現在の Relation・Group・SiteMapper と多体の葉選択は[幾何](../../design/geometry.md)、利用例は[examples](../../../examples/README.md)、当時の確認は[検証の経過](verification.md)を参照する。
+Implementation and acceptance checks completed on 2026-10-31. See [geometry](../../design/geometry.md) for current Relation, Group, SiteMapper, and many-body leaf selection; [examples](../../../examples/README.md) for usage; and [verification history](verification.md) for checks performed at the time.
 
-### 2.6. 文書間の責任分離
+### 2.6. Document responsibilities
 
-要件から実装詳細・移行履歴を分け、architecture を全体構造の概要に整理した。設計文書は現在の機能別仕様とし、構築入口・正規化・数値規約・モデル構築・検証構成を独立させた。未実装機能の詳細と API 候補を `future-work/`、先行検証の記録を本計画の経過へ移した。
+Implementation details and migration history were separated from requirements; architecture became an overall structural overview. Design documents now describe current features, with separate construction, normalization, numeric-convention, model-construction, and verification documents. Unimplemented feature details and API candidates moved to `future-work/`; earlier verification records moved into this plan's history.
 
-文書・見出しの移動に合わせ、リポジトリ内の Markdown リンクを更新した。2026-11-02 の再編時に38ファイル・340件のローカルリンクとコードフェンスを確認し、リンク切れと未閉鎖のフェンスはなかった。`git diff --check` と、`RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` が成功した。実装コード・依存設定の変更はなく、workspace テストは今回再実行していない。
+Repository Markdown links were updated for moved documents and headings. During reorganization on 2026-11-02, 38 files, 340 local links, and code fences were checked, with no broken links or unclosed fences. `git diff --check` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` passed. Implementation code and dependency settings were unchanged; workspace tests were not rerun for that reorganization.

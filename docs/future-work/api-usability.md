@@ -1,78 +1,78 @@
-# API の使いやすさに関する候補
+# API usability candidates
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-未採用・未着手の補助 API と説明改善の候補をまとめる。追加を決めた機能の一覧ではなく、公開名・シグネチャ・実施時期は未確定である。具体的な実装を開始するときに `plans/` へ計画を作る。
+These are unadopted, unstarted candidates for helper APIs and clearer explanations, not a list of approved additions. Names, signatures, and timing are undecided. Create a plan in `plans/` when concrete implementation starts.
 
-現在の API は[式の構築](../design/expression-construction.md)、[複合評価](../design/composite-expression.md)、[幾何](../design/geometry.md)、[export](../design/export.md)に定める。
+Current APIs are described in [construction](../design/expression-construction.md), [composite evaluation](../design/composite-expression.md), [geometry](../design/geometry.md), and [export](../design/export.md).
 
-## 1. ExpressionFactory の追加補助
+## 1. Additional ExpressionFactory helpers
 
-次は初回の実装範囲から外した候補である。既存 constructor と式メソッドで同じ構築ができるため、実際の利用例で繰り返しが目立つ場合に追加を検討する。
+These candidates were excluded from the initial implementation. Existing constructors and expression methods already perform the same operations; consider helpers when real examples show substantial repetition.
 
-| 候補 | 役割 |
+| Candidate | Role |
 | --- | --- |
-| `state_at(primitive, &factor)` | 単独の状態 primitive の配置 |
-| `operator_at(primitive, &factor)` | 単独の演算子 primitive の配置 |
-| `state_zero(&space)` | 指定空間上の零状態 |
-| `state_unit()` | 単位空間上の単位状態 |
-| `operator_zero()` | 未束縛の零演算子 |
-| `operator_identity()` | 未束縛の恒等演算子 |
-| `local_state_zero()` | 局所零状態 |
-| `local_operator_zero()` | 局所零演算子 |
-| `local_operator_identity()` | 局所恒等演算子 |
-| `local_state_sum` / `try_local_state_sum` | 構築済みの局所状態の集約 |
-| `local_operator_sum` / `try_local_operator_sum` | 構築済みの局所演算子の集約 |
-| `local_operator_product` / `try_local_operator_product` | 構築済みの局所演算子の積 |
+| `state_at(primitive, &factor)` | Place one state primitive. |
+| `operator_at(primitive, &factor)` | Place one operator primitive. |
+| `state_zero(&space)` | Zero state on an explicit space. |
+| `state_unit()` | Unit state on the unit space. |
+| `operator_zero()` | Unbound zero operator. |
+| `operator_identity()` | Unbound identity operator. |
+| `local_state_zero()` | Local zero state. |
+| `local_operator_zero()` | Local zero operator. |
+| `local_operator_identity()` | Local identity operator. |
+| `local_state_sum` / `try_local_state_sum` | Collect existing local states. |
+| `local_operator_sum` / `try_local_operator_sum` | Collect existing local operators. |
+| `local_operator_product` / `try_local_operator_product` | Multiply existing local operators. |
 
-局所式の集約用メソッドは ExpressionFactory からの入口の候補であり、既にある式型の sum・try_sum・product と区別する。追加する場合も、既存 constructor の空入力・単項・順序・遅延構築の契約を維持し、必要な能力だけを各メソッドに課す。零・単位元の構築に数値演算を要求せず、空間入力のない複合式では Index 型を注釈などで指定する。
+Local-expression collection methods would be factory entry points, distinct from existing expression sum, try_sum, and product methods. Preserve empty/singleton input, ordering, and delayed construction, requesting only required capabilities. Zero/unit construction must not require numeric arithmetic; composite expressions without a space argument may need an index-type annotation.
 
-## 2. 空間の読み取りと数値出力の型推論
+## 2. Space inspection and output type inference
 
-### 2.1. Index から実際の葉を探す補助
+### 2.1. Finding an actual leaf by index
 
-`HilbertSpace::find_factor(&index)` 相当は未追加である。現在は leaves() から検索できるため、呼び出しの繰り返しを減らす価値があるか検討する。追加するなら Eq で実際の葉への参照を返し、Index の Clone・発行、因子順序の変更、新しい部分系の構築を行わない。
+There is no `HilbertSpace::find_factor(&index)` equivalent. Leaves can currently be searched through `leaves()`, so assess the value of reducing repeated calls. Such a helper should require Eq and return a reference to the actual leaf without cloning/issuing indices, reordering factors, or constructing a subsystem.
 
-### 2.2. 状態から MatrixArgs の型を推論する補助
+### 2.2. Inferring MatrixArgs from a state
 
-行列 export では、係数型とは別に `MatrixArgs::<SpinHalfState, _>` などの状態 primitive 型の指定が残る。`MatrixArgs::for_state(&psi, &basis)` 相当でこの指定を省く候補がある。
+Matrix export still specifies a state primitive, such as `MatrixArgs::<SpinHalfState, _>`, independently of the coefficient type. A `MatrixArgs::for_state(&psi, &basis)` equivalent could remove that annotation.
 
-- 状態を型推論だけに使い、作用空間は従来の束縛・明示指定に従わせるか。
-- 状態から作用空間も取得するなら、その選択と寿命をどう明示するか。
-- 局所状態にも提供するか、状態が存在しない行列出力では何を案内するか。
-- 戻り値で選ぶ出力コンテナと、状態型の推論補助をどう説明するか。
-- 戻り値型によるコンテナ選択に加え、名前付きの出力補助が必要か。
+- Should the state supply only type inference, leaving ambient-space selection to existing bindings and explicit arguments?
+- If it also supplies the space, how should selection and lifetimes be explicit?
+- Should local states be supported, and what guidance applies when no state exists?
+- How should state-type inference be explained alongside result-type container selection?
+- Are named output helpers needed in addition to selecting the container through the return type?
 
-実装は syntaqs-export 側で検討し、この補助のために spin-half から export への依存を追加しない。既存の export 契約は [数値 export の設計](../design/export.md)に従う。
+Consider this in syntaqs-export without adding a spin-half dependency on export. Preserve the [export contract](../design/export.md).
 
-## 3. 作用空間・評価の案内
+## 3. Ambient-space and evaluation guidance
 
-配置先と spectator を含む全作用空間、bind、明示空間の優先、合成時に未束縛になる条件は、計算結果の解釈に関わる。現在の単一 Operator 型と説明で十分に理解できるか、利用例を通じて確認する。束縛状態を型で区別する案を採用するかは未決である。
+Placement, the full ambient space including spectators, binding, explicit-space precedence, and when composition becomes unbound affect interpretation. Use examples to assess whether one Operator type and its documentation are sufficient. Distinguishing binding states in types is undecided.
 
-明示的な evaluate が必要な場面と、内積・期待値へそのまま渡せる場面、通常の評価と基底展開による集約の違いを、利用者向けの説明で整理する余地がある。これは評価器の変更を決めるものではない。式の Display・Debug は[式木の表示](../design/expression-formatting.md)として実装済み。計算量・メモリ使用の診断を追加する場合は、[延期した式の管理・性能の課題](../future-work.md)との範囲を整理する。
+Explain when explicit evaluate is necessary, when an expression can be passed directly to inner products/expectations, and how evaluation differs from aggregation by basis expansion. This does not approve evaluator changes. Display and Debug already follow [expression formatting](../design/expression-formatting.md). Any complexity or memory diagnostics should have a clear boundary with [deferred expression management and performance](../future-work.md).
 
-## 4. エラーの診断情報
+## 4. Error diagnostics
 
-`ExpressionError::MissingIndex`・`IncompatibleSpaces` は対象の Index や期待する順序を保持しない。修正箇所を特定しやすくする情報を、Index に一律の Debug・Display・Clone を課さずに提供できるか検討する。
+`ExpressionError::MissingIndex` and `IncompatibleSpaces` do not store the offending index or expected order. Consider actionable diagnostics without imposing Debug, Display, or Clone on every index.
 
-エラーを `?` で扱う基本経路を保ちつつ、必要な場合に不正な配置・空間の過不足・順序の不一致を診断できることを目指す。既存の try_ 集約のエラー型・優先順位・短絡契約は、診断改善のために暗黙に変更しない。
+Preserve ordinary `?` error handling while helping users find invalid placement, missing/excess factors, and order mismatches. Diagnostic improvements must not silently change try_ error types, precedence, or short-circuit behavior.
 
-## 5. 利用開始と独自代数への導線
+## 5. Onboarding and custom-algebra guidance
 
-[examples](../../examples/README.md) には手作業の式構築、基底展開、Chain モデル、数値 export の実行例がある。一方、次の説明の配置・充実は引き続き検討する。
+[Examples](../../examples/README.md) cover manual construction, expansion, chain models, and numerical export. Further documentation candidates are:
 
-- 典型的な用途の依存設定・feature・trait import を最初に確認できる案内。trait の import 不足と feature 不足によるエラーを区別できるか。
-- crate root の案内と各 rustdoc・設計文書・実行例のつなぎ方。リポジトリ直下と各ライブラリ crate の README は整備済み。
-- テスト内の [3準位系](../../tests/src/three_level.rs) を、独自の ExpressionFactory の型エイリアス・能力 trait・Basis を定義する利用者向けの最小例へ整理すること。
-- 因子・基底・コンテナの順序、メタデータの共有・借用、非正規直交基底での内積の解釈を、数値出力の利用者へどう案内するか。
+- Dependencies, features, and trait imports for common uses, distinguishing missing imports from disabled features.
+- Connections between crate-root guidance, rustdoc, designs, and runnable examples. Repository and library READMEs already exist.
+- A minimal user-facing custom ExpressionFactory alias, capability traits, and Basis derived from the test [three-level system](../../tests/src/three_level.rs).
+- Factor/basis/container order, metadata sharing and borrowing, and inner products in non-orthonormal coordinates.
 
-import の行数削減自体は優先課題とせず、prelude や統合窓口の追加は採用しない。共通の構築入口と、能力ごとに拡張する API の関係を説明する。
+Reducing import line counts is not itself a priority; no prelude or unified entry crate is adopted. Explain the relationship between common construction and capability-specific extension APIs.
 
-## 6. 保留中の構文補助
+## 6. Deferred syntax helpers
 
-- **macro**：通常の関連関数を基本 API とする。必要になった段階で、同じ構築処理へ展開する構文補助を検討する。
-- **Mul の入力拡張**：任意の `Into<C>` を受け取る blanket 実装は、演算子積・状態への作用の Mul と重複する。標準の複素係数に対応する実数入力の個別実装も含め、拡張は保留とする。変換可能な入力には既存の `scaled(impl Into<C>)` を使う。
+- **Macros:** ordinary associated functions remain the basic API. Consider syntax expanding to the same constructors only when needed.
+- **Broader Mul inputs:** a blanket `Into<C>` implementation overlaps operator multiplication and state action. Extensions, including concrete real-input implementations for standard complex coefficients, remain deferred. Convertible inputs can use `scaled(impl Into<C>)`.
 
-## 7. 候補を具体化する際の確認
+## 7. Criteria for adopting candidates
 
-利用例の変更前後で、記述量だけでなく意図の読み取りやすさとエラー時の修正方法を比較する。Index の同一性・因子順序・作用空間・係数精度を保ち、独自代数・非 Clone 型・no_std の能力を必要以上に制限しない。採用時には公開名と契約を設計文書へ反映し、未解決事項としての記載を整理する。
+Compare intent, error recovery, and amount of code before and after changes to examples. Preserve index identity, factor order, ambient spaces, and coefficient precision without unnecessarily restricting custom algebras, non-Clone types, or no_std. Upon adoption, document public names/contracts in designs and remove resolved proposals from this backlog.

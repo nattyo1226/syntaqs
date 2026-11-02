@@ -82,7 +82,7 @@ The coefficient type is selected once through `Spin`. The spin-1/2 Cartesian pri
 | [syntaqs-normalize](crates/syntaqs-normalize/README.md) | Norms, state normalization, and normalized expectations. |
 | [syntaqs-export](crates/syntaqs-export/README.md) | Numerical containers and the metadata needed to interpret them. |
 
-`syntaqs-core`, `syntaqs-geometry`, `syntaqs-spin-half`, and `syntaqs-fermion` use `no_std + alloc`. Other crates use the standard library. Verification limits, including the declared minimum Rust version and dedicated no_std targets, are documented in [future work](docs/future-work.md#3-未実施の検証と性能).
+`syntaqs-core`, `syntaqs-geometry`, `syntaqs-spin-half`, and `syntaqs-fermion` use `no_std + alloc`. Other crates use the standard library. Verification limits, including the declared minimum Rust version and dedicated no_std targets, are documented in [future work](docs/future-work.md#3-outstanding-verification-and-performance).
 
 ## Examples and documentation
 
@@ -102,7 +102,7 @@ The [examples README](examples/README.md) covers basis expansion, expression for
 - [Future work](docs/future-work.md): planned extensions and verification limits.
 - [Workspace tests](tests/README.md): shared test algebras and integration checks.
 
-The design documents are currently in Japanese. Generate the English API documentation locally with `cargo doc --workspace --all-features --no-deps`.
+The design documents are in English. Generate the API documentation locally with `cargo doc --workspace --all-features --no-deps`.
 
 ## Development
 

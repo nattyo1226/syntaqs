@@ -1,18 +1,18 @@
-# 写像の表現行列・表現係数の検討事項
+# Proposed map representation matrices and coefficients
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-## 1. 対象と責任
+## 1. Scope and responsibilities
 
-未実装の機能として、入力・出力基底を指定した写像の表現係数、複数入力、入力ごとの共役指定、および係数データの保持・再利用を検討する。実施時期・公開 API・内部設計は未定である。
+Consider representation coefficients with explicit input/output bases, multiple inputs, conjugation per input, and retained/reusable coefficient data as an unimplemented feature. Timing, public APIs, and internal design are undecided.
 
-生成と解釈は代数 core、外部数値コンテナへの格納は export を想定する。基底列挙・通常の演算・指定基底への展開と座標取得を組み合わせる共通操作とし、局所代数ごとの専用 trait を必須にしない。現在の状態・演算子の座標取得と作用行列の export は、この汎用機構とは別に提供されている。
+Generation and interpretation would belong to the algebra core, with numerical storage in export. Combine basis enumeration, ordinary operations, expansion, and coordinates without requiring a dedicated trait per local algebra. Current state/operator coordinates and action-matrix export exist independently of this general mechanism.
 
-各系の基本因子は同じ primitive 型 S・O とし、各入力・出力の内部では一つの局所基底を全因子に適用する。入力・出力ごとには異なる基底を選べる想定とする。異種局所構造を接続する写像は別途検討する。
+Assume each system uses one pair of primitive types S/O, with one local basis per input or output applied to all its factors. Different inputs and outputs may choose different bases. Maps connecting heterogeneous local structures require separate consideration.
 
-## 2. 線型写像の表現行列
+## 2. Representation matrices of linear maps
 
-有限次元の状態空間・演算子空間などの間の複素線型写像 `T: V→W` を対象とする。入力基底を `{B_μ}`、出力基底を `{F_ρ}` としたとき、表現行列 `M` は次を満たす。
+For a complex-linear map `T: V→W` between finite-dimensional state/operator spaces, let `{B_μ}` be the input basis and `{F_ρ}` the output basis. Its matrix M satisfies:
 
 ```math
 T(B_\mu)=\sum_\rho M_{\rho\mu}F_\rho,
@@ -22,22 +22,22 @@ X=\sum_\mu x_\mu B_\mu
 [T(X)]_F=Mx.
 ```
 
-第 `μ` 列は入力基底要素 `B_μ` への作用を出力基底で展開した座標とする。入力・出力基底は異なってよいが、それぞれの全対象空間に完全なものとする。複合系の基底は、基本因子ごとの局所基底の tensor product に限定する。
+Column μ contains the output coordinates of `T(B_μ)`. Input and output bases may differ, but each must span its full target space. Composite bases are tensor products of local bases on basic factors.
 
-例えば、通常の演算子 `A` を一つ選んだ上での `T(ψ)=Aψ` は状態空間上の写像、`T(X)=AX`・`XA`・`AX−XA` は演算子空間上の写像である。「固定した演算子」は、表現行列を求める際に変数として扱わない `A` を意味し、特別な演算子の種類を導入しない。固定状態 `ψ` に対する `T(A)=Aψ` も同じ枠組みで扱う。
+For example, fixing an ordinary operator A gives the state-space map `T(ψ)=Aψ` and operator-space maps `T(X)=AX`, `XA`, and `AX−XA`. Fixed means A is not a variable input to this representation; it introduces no special operator kind. A fixed state's `T(A)=Aψ` uses the same framework.
 
-## 3. 共役線型・複数入力への拡張
+## 3. Conjugate-linear and multiple-input maps
 
-各入力引数について線型または共役線型である写像を扱う。入力順序と、各入力を共役するかどうかを明示する。この性質は演算を与える側の数学的な契約とし、基底への作用結果だけから自動判別しない。一般の非線型写像をこの枠組みに含めない。
+Treat maps linear or conjugate-linear in each input separately. Specify input order and conjugation explicitly as a mathematical contract of the supplied operation; do not infer them from its action on basis elements. General nonlinear maps are outside this framework.
 
-`k` 入力の写像 `T` の係数を、次で定義する。
+For a k-input map T, define coefficients by:
 
 ```math
 T(B^{(1)}_{\mu_1},\ldots,B^{(k)}_{\mu_k})
 =\sum_\rho C_{\rho,\mu_1,\ldots,\mu_k}F_\rho.
 ```
 
-第 `j` 入力の係数列を `x^(j)` とし、その引数について線型なら `q^(j)=x^(j)`、共役線型なら `q^(j)=overline(x^(j))` とする。入力側の複合 index を一つの列番号にまとめると、以下の表現行列を得る。
+For coefficient vector `x^(j)`, take `q^(j)=x^(j)` for a linear input and `q^(j)=overline(x^(j))` for a conjugate-linear input. Combining input indices into one column gives:
 
 ```math
 M_{\rho,\operatorname{index}(\mu_1,\ldots,\mu_k)}
@@ -46,46 +46,46 @@ M_{\rho,\operatorname{index}(\mu_1,\ldots,\mu_k)}
 z=M\left(q^{(1)}\otimes\cdots\otimes q^{(k)}\right).
 ```
 
-列番号は、入力引数の指定順序に沿う mixed-radix とし、最後の入力の基底 index が最も速く変化する。各入力の内部の基底順序も既存の規約に従う。ここでの入力係数列の tensor product は数値座標の組み合わせであり、graded な物理演算の符号は元の演算の評価に含める。係数の縮約時にその符号を再度適用しない。
+Columns use mixed-radix order in the specified argument order, with the last input's basis index varying fastest. Each input retains its ordinary basis order. Tensor products here combine numerical coordinates; signs from graded physical operations are already part of evaluating the operation and must not be reapplied during coefficient contraction.
 
-| 種類 | 係数による作用 |
+| Kind | Action on coefficients |
 | --- | --- |
-| 一入力の線型写像 | `z = Mx` |
-| 一入力の共役線型写像 | `z = K overline(x)` |
-| 二入力の双線型写像 | `z = M(x ⊗ y)`。展開前の係数は `C_{ρμν}` |
-| 第一入力が共役線型、第二入力が線型 | `z = M(overline(x) ⊗ y)` |
+| One linear input | `z = Mx` |
+| One conjugate-linear input | `z = K overline(x)` |
+| Two bilinear inputs | `z = M(x ⊗ y)`; unflattened coefficients are `C_{ρμν}`. |
+| First input conjugate-linear, second linear | `z = M(overline(x) ⊗ y)` |
 
-Scalar 出力は一次元の出力空間 `C` と基底 `{1}` として扱う。Scalar を返す双線型写像は `xᵀCy`、半双線型写像は `x†Gy` とも書ける。行ベクトルにするだけでは共役は入らないため、転置 `xᵀ` と共役転置 `x†` を区別する。共役線型写像の `z = K overline(x)` は `zᵀ = x†Kᵀ` とも書けるが、行・列の向きだけに共役の指定を委ねない。
+Scalar output uses the one-dimensional space C with basis `{1}`. Bilinear scalar maps may be written `xᵀCy`, and sesquilinear ones `x†Gy`. Turning a column into a row does not conjugate it: distinguish transpose `xᵀ` from adjoint `x†`. Although `z = K overline(x)` can also be written `zᵀ = x†Kᵀ`, row/column orientation alone must not specify conjugation.
 
-## 4. 既存能力からの構成
+## 4. Construction from existing capabilities
 
-共通操作は、次の手順から構成する。
+Build the common operation as follows:
 
-1. 入力基底要素、または複数の入力基底要素の組を、指定順序で列挙する。
-2. 各入力に、対象の通常の演算を適用する。
-3. 結果を指定した出力基底へ展開し、係数を取得する。Scalar 出力ではその値を用いる。
-4. 各係数を出力の行番号と入力の列番号へ対応付ける。
+1. Enumerate input basis elements, or tuples of them, in the specified order.
+2. Apply the ordinary operation to each input.
+3. Expand the result in the output basis and obtain its coordinates, or use its scalar value.
+4. Associate coefficients with output rows and input columns.
 
-ユーザ定義の局所構造・primitive・規則も既存の演算と基底の契約を満たすことで利用でき、表現行列のための別の数学的能力は要求しない。基底上の計算は共役する入力についても係数 `1` の基底要素を用い、一般の入力係数に適用する際に指定どおりの共役を行う。
+Custom local structures, primitives, and rules can use this mechanism through existing operation/basis contracts without another mathematical capability. Evaluate basis elements with coefficient 1 even for conjugated inputs; apply the specified conjugation to general input coefficients later.
 
-必要な列・成分だけを計算できるものとし、巨大な行列や全演算子基底の積テーブルの一括生成は要求しない。入力の tensor product 座標も、常に一括生成することは要求しない。
+Allow computation of only needed columns/components. Do not require complete large matrices, operator multiplication tables, or input tensor-product coordinates to be materialized together.
 
-専用 trait は現時点で要求しない。係数の直接計算、疎性・因子分解などを使う独自の最適化経路を差し替える仕組みは、必要になった時点で検討する。算出した行列を再利用することは、core 内部で評価結果を自動保存・再利用するキャッシュ機構を初期版に追加することを意味しない。
+No dedicated trait is currently required. Consider replaceable direct, sparse, or factorized computation paths if needed. Reusing an explicitly computed matrix does not imply adding automatic evaluation-result caching in core.
 
-## 5. 座標・空間・数値表現の契約
+## 5. Coordinate, space, and numerical contracts
 
-- 係数から再構成した作用は、元の演算を直接適用した結果と数学的に一致する。射影・成分の切り捨ては行わない。
-- 非正規直交基底でも、行列の成分は出力基底に対する展開座標とする。基底要素との内積値をそのまま座標として使用しない。
-- 内積の係数は `G_{μν}=⟨B_μ,B_ν⟩` であり、一般には単位行列ではない。対応する作用は `x†Gy` とする。
-- 入力・出力の対象空間、基底と順序、入力引数の順序、各入力の共役指定、および数値精度を、係数の意味を解釈できるよう対応付ける。具体的な保持・受け渡し方法は未決とする。
-- 数値精度・特殊値・近似比較・空間選択は既存要件に従う。浮動小数点計算のビット単位の一致は要求しない。
+- Reconstructed coefficient actions must mathematically match direct operations, without projection or component pruning.
+- Even in non-orthonormal bases, matrix entries are output expansion coordinates, not raw inner products with basis elements.
+- Inner-product coefficients are `G_{μν}=⟨B_μ,B_ν⟩`, generally not identity; the corresponding contraction is `x†Gy`.
+- Retain enough information to interpret input/output spaces, bases/orders, argument order, conjugation, and precision. Concrete storage and transfer remain undecided.
+- Preserve existing precision, special-value, approximate-comparison, and space-selection contracts. Bitwise floating-point equality is not required.
 
-通常の式木は基底情報を保持しない。一方、係数列・行列を利用する際は、それがどの基底の座標かを確定する必要がある。この数値表現の契約を、展開済みの式木に基底識別情報を持たせる要求へ拡張しない。密・疎の具体的な行列表現は外部数値ライブラリとの境界で扱う。
+Ordinary expression trees do not retain basis metadata. Numerical coefficient vectors/matrices must nevertheless identify their basis. This does not require basis labels on expanded expression trees. Concrete dense/sparse storage belongs at the external numerical-library boundary.
 
-## 6. 検証対象と未決事項
+## 6. Verification and open questions
 
-状態への作用、演算子の左積・右積・交換子について、表現行列からの結果と直接の演算を比較する。さらに、随伴の共役線型性、二つの可変演算子の積の双線型性、内積の半双線型性を、虚部を持つ入力係数を含めて検証する。転置だけでは共役の代用にならないことも確認する。
+Compare representation-based and direct state action, left/right operator multiplication, and commutators. Verify conjugate-linearity of adjoints, bilinearity of two variable operators, and sesquilinearity of inner products with complex input coefficients. Confirm that transpose alone cannot replace conjugation.
 
-非正規直交基底での出力座標と Gram 行列、異なる入力・出力基底、複合基底の順序と複数入力の列番号、graded な演算の符号、および通常の式木が基底情報なしで利用できることを検証する。既存の数値検証規約に従い、許容誤差を明示する。
+Cover non-orthonormal output coordinates and Gram matrices, different input/output bases, composite order, multi-input column numbering, graded signs, and ordinary expression reuse without basis metadata. State tolerances under existing numeric verification conventions.
 
-具体的な操作のシグネチャ、写像・入力種別・共役指定の表し方、成分の列挙・export、および最適化経路は未決とする。これらの選択では、既存能力の組み合わせで表現行列を構成する方針を維持する。線型・共役線型・双線型・半双線型な作用の共通操作と上記の検証は[今後の課題](../future-work.md#2-未実装の機能と検討事項)として管理する。
+Signatures, map/input/conjugation descriptors, component enumeration/export, and optimization paths remain undecided. Preserve construction from existing capabilities when making these decisions. Track the common linear, conjugate-linear, bilinear, and sesquilinear operations and their verification in [future work](../future-work.md#2-unimplemented-features-and-proposals).

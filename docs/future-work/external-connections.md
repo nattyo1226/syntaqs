@@ -1,15 +1,15 @@
-# 自動微分・tensor network との接続
+# Automatic differentiation and tensor-network connections
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-## 1. 外部ライブラリと自動微分との境界
+## 1. Boundary with external libraries and automatic differentiation
 
-自動微分・ML module・tensor network への接続は未実装であり、現在の座標取得・密疎 export の前提条件にはしない。
+Automatic differentiation, ML modules, and tensor-network connections are unimplemented and are not prerequisites for current coordinates or dense/sparse export.
 
-代数 core は、空間・基底・式の構造、埋め込み、代数計算、および再利用可能な係数データの生成を担当する。係数の数値表現、自動微分、および export 先の数値表現は外部ライブラリに委ねる。接続時には、始域・終域、因子順序、基底、精度、およびパラメータ依存性を保存する。
+The algebra core would handle spaces, bases, expression structure, embedding, algebraic computation, and reusable coefficient generation. External libraries handle numeric coefficient representations, differentiation, and output containers. Connections must preserve domain/codomain, factor order, basis, precision, and parameter dependencies.
 
-将来の tensor network export でも、backend の縮約規約との違いを処理し、[現行の複合評価](../design/composite-expression.md)に定める Hilbert 空間の内積・norm、および通常の trace と作用を保存する。
+Future tensor-network export must reconcile backend contraction conventions while preserving Hilbert-space inner products/norms, ordinary traces, and actions specified by [current composite evaluation](../design/composite-expression.md).
 
-シンボリックに簡単に計算できることと、自動微分可能であることは別の要件である。ライブラリはパラメータ非依存の代数計算と再利用可能な係数データを構築し、外部ライブラリへ接続できるようにする。core 自体の自動微分機構は要求しない。
+Symbolic tractability and differentiability are separate requirements. The library should construct parameter-independent algebra and reusable coefficients for external connections without requiring an automatic differentiation engine in core.
 
-将来の微分可能 module 生成では、外部ライブラリのパラメータ依存性を保持し、通常の数値への変換で計算グラフを切らない。現在値が zero であってもパラメータ依存の項を無条件に削除しない。
+Future differentiable modules must preserve external parameter dependencies without cutting the computation graph through conversion to ordinary numbers. A parameter-dependent term must not be discarded solely because its current value is zero.

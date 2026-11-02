@@ -1,34 +1,34 @@
-# ドキュメントの案内
+# Documentation guide
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-## 1. 文書の責任
+## 1. Document responsibilities
 
-| 文書 | 記述する内容 |
+| Document | Contents |
 | --- | --- |
-| [requirements](requirements.md) | 目的・責任範囲・機能要件など、何を作っているか。 |
-| [architecture](architecture.md) | 全体構造と責任の配置など、何を提供しているかの概要。 |
-| [future-work](future-work.md) | 今後実装する機能と未採用の候補。詳細は `future-work/` に置く。 |
-| `design/` | 現在提供している各機能の API・数学的契約・制約・実装方式。 |
-| [plans/v3](plans/v3/README.md) | 現在進行中の v3 公開準備の計画と経過。 |
+| [requirements](requirements.md) | What the project builds: its purpose, scope, and functional requirements. |
+| [architecture](architecture.md) | An overview of what it provides: the overall structure and allocation of responsibilities. |
+| [future-work](future-work.md) | Features to implement and candidates not yet adopted. Details belong in `future-work/`. |
+| `design/` | The API, mathematical contracts, constraints, and implementation of each feature currently provided. |
+| [plans/v3](plans/v3/README.md) | Plans and progress for the ongoing v3 release preparation. |
 
-現行仕様の詳細は対応する設計文書に集約し、要件と概要から参照する。未実装機能の検討内容は現行仕様と分け、実装を開始した段階で `plans/` に計画を置く。進行中の計画で完了した作業はその経過として記録し、提供する仕様は `design/` に反映する。
+Keep detailed current specifications in the corresponding design documents and link to them from requirements and architecture. Separate proposals for unimplemented features from current specifications, and create a plan in `plans/` when implementation starts. Completed steps within an active plan remain part of its progress record; the resulting specifications belong in `design/`.
 
-## 2. 機能別の詳細
+## 2. Feature details
 
-| 機能 | 文書 |
+| Feature | Document |
 | --- | --- |
-| 局所代数・primitive・grading 能力 | [local-structure](design/local-structure.md) |
-| 係数型・数値能力・零と近似比較 | [numerics](design/numerics.md) |
-| 因子の識別と標準 Index | [index](design/index.md) |
-| 空間・因子順序・grouping・互換性 | [hilbert-space](design/hilbert-space.md) |
-| 型選択・式の構築・fallible 集約 | [expression-construction](design/expression-construction.md) |
-| 局所式とその評価 | [primitive-expression](design/primitive-expression.md) |
-| 複合式・配置・束縛・ordinary / graded 評価 | [composite-expression](design/composite-expression.md) |
-| ノルム・正規化・正規化期待値 | [normalization](design/normalization.md) |
-| 基底展開・座標・基底列挙 | [basis](design/basis.md) |
-| 式の表示 | [expression-formatting](design/expression-formatting.md) |
-| 幾何・関係・Site への接続 | [geometry](design/geometry.md) |
-| Spin・Hubbard モデルの構築 | [models](design/models.md) |
-| 数値コンテナへの出力 | [export](design/export.md) |
-| 検証の構成と実行方法 | [verification](design/verification.md) |
+| Local algebras, primitives, and grading capabilities | [local-structure](design/local-structure.md) |
+| Coefficient types, numeric capabilities, zero, and approximate comparison | [numerics](design/numerics.md) |
+| Factor identity and standard indices | [index](design/index.md) |
+| Spaces, factor order, grouping, and compatibility | [hilbert-space](design/hilbert-space.md) |
+| Type selection, expression construction, and fallible collection | [expression-construction](design/expression-construction.md) |
+| Local expressions and evaluation | [primitive-expression](design/primitive-expression.md) |
+| Composite expressions, placement, binding, and ordinary/graded evaluation | [composite-expression](design/composite-expression.md) |
+| Norms, normalization, and normalized expectations | [normalization](design/normalization.md) |
+| Basis expansion, coordinates, and enumeration | [basis](design/basis.md) |
+| Expression formatting | [expression-formatting](design/expression-formatting.md) |
+| Geometry, relations, and site connections | [geometry](design/geometry.md) |
+| Spin and Hubbard model construction | [models](design/models.md) |
+| Export to numerical containers | [export](design/export.md) |
+| Verification structure and commands | [verification](design/verification.md) |

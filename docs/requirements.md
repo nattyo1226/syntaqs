@@ -1,98 +1,98 @@
-# syntaqs 要件
+# syntaqs requirements
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-## 1. 目的
+## 1. Purpose
 
-syntaqs は、量子系の Hilbert 空間・状態・演算子を代数的に構築・合成・評価し、必要に応じて数値計算へ接続する Rust ライブラリである。数値行列を生成する前に局所代数と式の構造を利用し、必要な作用・内積・期待値・trace を計算できることを目指す。
+syntaqs is a Rust library for constructing, composing, and evaluating quantum Hilbert spaces, states, and operators algebraically, with numerical output when needed. Its goal is to use local algebra and expression structure to compute actions, inner products, expectations, and traces before constructing numerical matrices.
 
-本書は「何を作るか」を定める。提供する crate と全体構造は[アーキテクチャ](architecture.md)、具体的な型・公開 API・数学的規約は[機能別設計](README.md#2-機能別の詳細)、今後実装する機能は[future-work](future-work.md)、進行中の作業は[plans](plans/v3/README.md)で管理する。
+This document defines what the project builds. See [architecture](architecture.md) for crates and overall structure, [feature designs](README.md#2-feature-details) for concrete types, public APIs, and mathematical conventions, [future work](future-work.md) for features to implement, and [plans](plans/v3/README.md) for ongoing work.
 
-## 2. 責任範囲
+## 2. Scope
 
-- 有限次元の局所量子系と、その ordinary / graded tensor product を扱う。
-- 幾何・自由度の同一性・因子順序・局所代数・選択基底を区別し、幾何を使わずに式と空間を構築できるようにする。
-- 具体的な局所代数の規則を共通の式・評価機構へ接続できるようにする。独自代数に独自の式木・評価器の実装を要求しない。
-- 代数計算と数値コンテナへの変換を分離し、行列を生成しない計算と密・疎の数値計算を同じ規約で利用できるようにする。
-- 数値型の算術・丸め・特殊値の扱いはその型に委ねる。自動微分・固有値問題・時間発展などは現在の責任範囲に含めない。
+- Support finite-dimensional local quantum systems and their ordinary or graded tensor products.
+- Distinguish geometry, factor identity, factor order, local algebra, and the selected basis. Allow spaces and expressions to be constructed without geometry.
+- Connect concrete local rules to shared expression and evaluation machinery. Custom algebras must not need their own expression trees or evaluators.
+- Separate algebraic computation from numerical containers so matrix-free, dense, and sparse calculations use consistent conventions.
+- Delegate arithmetic, rounding, and special values to the numeric type. Automatic differentiation, eigensolvers, and time evolution are outside the current scope.
 
-現在の一つの系では、全因子に同じ状態・演算子 primitive 型を用いる。複合基底には一つの局所基底を全因子へ適用する。空・単因子の同一視後にも残る ordinary / graded の混在、因子の暗黙の並べ替え、部分空間への暗黙の射影は扱わない。
+Within one system, every factor currently uses the same state and operator primitive types. A composite basis applies one local basis to all factors. Effective mixtures of ordinary and graded products after removing unit and singleton wrappers, implicit factor reordering, and implicit projection onto subspaces are unsupported.
 
-## 3. 機能要件
+## 3. Functional requirements
 
-### 3.1. 局所代数と拡張性
+### 3.1. Local algebras and extensibility
 
-- Spin-1/2、spin-1、単一 mode fermion の状態・演算子・局所規則・基底を提供する。
-- 局所積・作用・随伴の結果を有限線型結合として扱い、primitive 全体の線型独立性を要求しない。
-- 状態内積、通常の trace、恒等元、状態・演算子空間の次元を取得できるようにする。
-- Graded な局所代数では homogeneous な primitive の parity と parity 演算子を提供し、混合 parity は式の和として扱う。
-- 必要な数値能力は操作ごとに要求し、保持・共有・遅延構築に不要な演算能力を要求しない。
+- Provide states, operators, local rules, and bases for spin-1/2, spin-1, and single-mode fermions.
+- Return finite linear combinations from local products, actions, and adjoints; do not require all primitives to be linearly independent.
+- Provide state inner products, ordinary traces, identity operators, and state/operator space dimensions.
+- For graded local algebras, provide homogeneous primitive parity and a parity operator; represent mixed parity by expression sums.
+- Request numeric capabilities per operation without imposing evaluation requirements on storage, sharing, or delayed construction.
 
-詳細は[局所代数](design/local-structure.md)と[局所式](design/primitive-expression.md)に定める。
+See [local algebras](design/local-structure.md) and [local expressions](design/primitive-expression.md).
 
-### 3.2. 自由度と Hilbert 空間
+### 3.2. Degrees of freedom and Hilbert spaces
 
-- 発行済みの識別子で基本因子を区別し、同一性の照合と識別子の生成を分離する。
-- 順序付きの再帰的な空間構造を構築し、構成要素・葉・識別子を順序を保って読み取れるようにする。
-- Tensor の因子重複と積の種類の不整合を拒否する。括り方の違いだけでは数学的な互換性を変えない。
-- 空間の互換性と、相対順序を保つ部分系の判定を提供する。
-- 空の tensor 空間を一次元の単位空間とし、Index を持つ一次元の因子と区別する。
-- 総次元の整数化ができないことだけで空間構築を拒否せず、次元取得時に overflow を検出する。
+- Identify basic factors with existing identifiers, separating identity comparison from identifier generation.
+- Construct ordered recursive spaces and enumerate children, leaves, and identifiers without changing their order.
+- Reject duplicate tensor factors and incompatible product kinds. Grouping alone must not change mathematical compatibility.
+- Provide space compatibility and subsystem checks that preserve relative factor order.
+- Treat the empty tensor space as a one-dimensional unit, distinct from an indexed one-dimensional factor.
+- Do not reject space construction merely because its total dimension is unrepresentable; detect overflow when dimensions are requested.
 
-詳細は[Index](design/index.md)と[Hilbert 空間](design/hilbert-space.md)に定める。
+See [indices](design/index.md) and [Hilbert spaces](design/hilbert-space.md).
 
-### 3.3. 式の構築・配置・評価
+### 3.3. Expression construction, placement, and evaluation
 
-- 局所・複合の状態式と演算子式について、有限和・スカラー倍・零、演算子の積・随伴、状態への作用、状態の tensor 合成を提供する。
-- 局所式の因子への配置と、spectator を含む全作用空間への束縛を区別する。
-- 状態は所属空間を保持し、演算子は作用空間を明示または束縛から確定できるようにする。明示空間は既存の束縛に優先する。
-- 不正な配置・因子参照・空間の不整合を、判定に必要な情報が揃った時点でエラーとして返す。零係数や恒等元でも検証を省略しない。
-- 構築は遅延し、作用・内積・期待値・通常の full trace・次元規格化した Hilbert–Schmidt 内積を、基底や全行列を必須とせず評価する。
-- 内積は左に共役線型、積は右側から作用する規約を保つ。Graded な交換・作用・随伴は因子順序と parity に従い、通常の正定値内積と通常の trace を維持する。
-- 評価・展開後も選択した空間を保持し、入力の式を変更しない。
-- 状態のノルム・正規化・正規化期待値を提供し、正規化と正規化期待値では厳密な zero norm を拒否する。
-- 式を評価せずに通常・複数行表示と構造の Debug 表示を利用できるようにする。
+- For local and composite state/operator expressions, provide finite sums, scaling, and zero; operator products and adjoints; operator action; and tensor composition of states.
+- Distinguish placing a local expression on a factor from binding it to a full ambient space, including spectators.
+- Retain a state's space and resolve an operator's ambient space explicitly or from its binding. Explicit spaces take precedence over existing bindings.
+- Return errors for invalid placement, factor references, and incompatible spaces when the required information becomes available. Do not skip validation for zero coefficients or identities.
+- Construct delayed expressions and evaluate actions, inner products, expectations, ordinary full traces, and dimension-normalized Hilbert–Schmidt inner products without requiring a basis or full matrices.
+- Use conjugate-linearity on the left of inner products and right-first operator action. Graded exchange, action, and adjoint rules follow factor order and parity while preserving the ordinary positive-definite inner product and ordinary trace.
+- Preserve the selected space after evaluation or expansion without modifying input expressions.
+- Provide state norms, normalization, and normalized expectations; reject exactly zero norms for normalization and normalized expectations.
+- Support ordinary and multiline mathematical formatting and structural Debug output without evaluating expressions.
 
-詳細は[式の構築](design/expression-construction.md)、[複合式](design/composite-expression.md)、[正規化](design/normalization.md)、[表示](design/expression-formatting.md)に定める。
+See [construction](design/expression-construction.md), [composite expressions](design/composite-expression.md), [normalization](design/normalization.md), and [formatting](design/expression-formatting.md).
 
-### 3.4. 基底と数値出力
+### 3.4. Bases and numerical output
 
-- 完全で線型独立な状態基底・演算子基底を扱い、正規直交性は必須としない。
-- 基底の展開規則・順序番号・遅延列挙を提供し、共通機構で式全体と tensor product 基底へ拡張する。
-- 基底展開の結果を通常の式として返し、別基底への再展開と集約済みの疎座標の取得を提供する。
-- 座標の集約では厳密な零だけを除去し、微小な非零成分を黙って捨てない。
-- 状態の密・疎ベクトル、演算子の密・疎作用行列を出力する。演算子基底の座標と状態基底上の作用行列を区別する。
-- 同じ基底と因子順序を密・疎で共有し、基底・空間・shape・格納順序・係数精度を解釈できるようにする。
-- 疎出力では密ベクトル・密行列を中間生成しない。非正規直交基底でも内積値と展開座標を混同しない。
+- Support complete, linearly independent state and operator bases without requiring orthonormality.
+- Provide basis expansion rules, indices, and lazy enumeration, extending them to whole expressions and tensor-product bases through shared machinery.
+- Return ordinary expressions from basis expansion, support re-expansion in another basis, and provide aggregated sparse coordinates.
+- Remove only exact zeros during coordinate aggregation; preserve small nonzero components.
+- Export states as dense/sparse vectors and operators as dense/sparse action matrices. Distinguish operator-basis coordinates from action matrices in a state basis.
+- Use consistent bases and factor order for dense and sparse output, retaining the information needed to interpret basis, space, shape, layout, and coefficient precision.
+- Avoid dense vector/matrix intermediates for sparse output. Distinguish expansion coordinates from inner products in non-orthonormal bases.
 
-詳細は[基底](design/basis.md)と[export](design/export.md)に定める。
+See [bases](design/basis.md) and [export](design/export.md).
 
-### 3.5. 幾何とモデル構築
+### 3.5. Geometry and model construction
 
-- Site 数・順序・境界条件を持つ一次元 Chain、最近接辺、順序付きの多体関係を扱う。
-- 幾何と Site 順の外部データ列を借用して接続し、列長と参照範囲を検証する。
-- Site 上の複数葉・入れ子・空空間を扱い、Site 順序と全空間の因子順序を区別する。
-- Spin-1/2 の XYZ・Heisenberg・Neel、spin-1 の XYZ・Heisenberg・BLBQ、fermion の標準・symmetric Hubbard を一般の式として構築する。
-- モデルの結合定数の物理的な意味を保ち、primitive の規格化に応じて補正する。定数シフトを暗黙に捨てない。
-- 0・1・2 Site を含む境界規約を明示し、結合や辺がなくても配置入力を検証する。
+- Support one-dimensional chains with site count, order, and boundary conditions, nearest-neighbor edges, and ordered many-site relations.
+- Borrow caller-owned site-ordered data to connect it to geometry, validating lengths and referenced positions.
+- Support multiple leaves, nesting, and empty spaces at sites; distinguish site order from the full space's factor order.
+- Construct spin-1/2 XYZ, Heisenberg, and Neel states; spin-1 XYZ, Heisenberg, and BLBQ models; and standard/symmetric fermionic Hubbard models as ordinary expressions.
+- Preserve the physical meaning of couplings by compensating for primitive normalization. Do not silently discard constant shifts.
+- Specify boundary conventions for zero, one, and two sites, and validate assignments even without edges or nonzero couplings.
 
-詳細は[幾何](design/geometry.md)と[モデル](design/models.md)に定める。
+See [geometry](design/geometry.md) and [models](design/models.md).
 
-## 4. 非機能要件
+## 4. Non-functional requirements
 
-- 単精度・倍精度の複素係数を扱い、暗黙の精度混在や昇格を行わない。独自係数は必要な能力の実装によって接続する。
-- 不変な式・空間を共有し、合成やハンドルの複製で operand 全体を deep copy しない。
-- 明示的な密出力まで、全 Hilbert 空間の次元に比例する密領域を必須としない。一般の式の項数増大や最適な計算量までは保証しない。
-- 深い式・空間の走査・評価・破棄は深さに比例した関数再帰に依存しない。利用者定義の formatter と再帰的な Debug は別に扱う。
-- 代数 core は幾何・乱数源・具体的代数・正規化・数値 backend への依存を持たず、`no_std + alloc` を維持する。
-- Rust 1.85・edition 2024 を基準とし、unsafe を使わない。
+- Support single- and double-precision complex coefficients without implicit precision mixing or promotion. Connect custom coefficients through the required capabilities.
+- Share immutable expressions and spaces; do not deep-copy entire operands when composing or cloning handles.
+- Do not require dense storage proportional to the full Hilbert-space dimension before explicit dense export. No general bound on expression growth or optimal complexity is guaranteed.
+- Traverse, evaluate, and destroy deep expressions/spaces without recursion proportional to depth. User-defined formatters and recursive Debug output have separate limitations.
+- Keep the algebra core independent of geometry, randomness, concrete algebras, normalization, and numerical backends, maintaining `no_std + alloc`.
+- Target Rust 1.85 and edition 2024 without unsafe code.
 
-数値計算の具体的な契約は[数値規約](design/numerics.md)、検証の実行方法と環境上の限界は[検証](design/verification.md)に定める。
+See [numeric conventions](design/numerics.md) for numerical contracts and [verification](design/verification.md) for commands and environment limitations.
 
-## 5. 受入条件
+## 5. Acceptance criteria
 
-代表的な縦断シナリオでは、一次元 spin-1/2 Chain と因子空間を構築し、Heisenberg Hamiltonian と Neel 積状態を作り、行列を生成せずエネルギー期待値を計算する。同じ状態と演算子を密・疎に出力し、小規模系で代数計算・独立した参照行列・各数値 backend の値が指定した許容誤差内で一致することを確認する。
+The representative end-to-end scenario constructs a one-dimensional spin-1/2 chain and factor spaces, builds its Heisenberg Hamiltonian and a Neel product state, and evaluates the energy without generating a matrix. It then exports the same state and operator to dense and sparse forms and compares algebraic results, independent small-system reference matrices, and numerical backends within explicit tolerances.
 
-物理スピンを `J_i=S_i/2`、結合定数を実数 `g` とすると、`H=-g Σ⟨i,j⟩ J_i·J_j=-(g/4) Σ⟨i,j⟩ S_i·S_j` である。長さ L≥1 の open chain の Neel 状態の期待値は `g(L−1)/4`、0 Site では0とする。正の g は強磁性的結合である。
+For physical spins `J_i=S_i/2` and real coupling `g`, the Hamiltonian is `H=-g Σ⟨i,j⟩ J_i·J_j=-(g/4) Σ⟨i,j⟩ S_i·S_j`. On an open chain of length L≥1, the Neel expectation is `g(L−1)/4`; it is zero for zero sites. Positive g is ferromagnetic.
 
-併せて、全局所規則、独自の有限次元代数、非正規直交基底、graded な CAR・符号、基底の往復、空間・束縛・エラー・共有・深い木・微小係数の保存を検証する。検証結果の履歴は進行中の計画の経過として記録し、本書には実行済みコマンドや過去の移行経緯を置かない。
+Also verify all local rules, a custom finite-dimensional algebra, non-orthonormal bases, graded CAR and signs, basis round trips, spaces, bindings, errors, sharing, deep trees, and preservation of small coefficients. Record executed checks in the progress of active plans rather than putting command results or migration history in this document.

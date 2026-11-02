@@ -1,65 +1,69 @@
-# v3 公開前のドキュメント修正項目
+# Documentation adjustments before the v3 release
 
-作成日: 2026-11-02
-更新日: 2026-11-02
+Created: 2026-11-02
+Last updated: 2026-11-02
 
-v3 公開前に修正したい項目と合意した方針を記録する一時ドキュメント。文書間の責任分離は再構成を実施した。英語化と、README・Cargo.toml の crate の並び順の修正は未着手である。
+This temporary document records requested adjustments and agreed policies before the v3 release. Document responsibilities have been reorganized and English migration has been implemented. Crate ordering in README and Cargo.toml remains pending.
 
-## 1. 文書間の責任分離
+## 1. Document responsibilities
 
-`docs/` 以下の各ドキュメントの責任が適切に分離されていない。各文書が扱う範囲を整理し、その責任に沿って記述を配置する。
+Responsibilities across `docs/` were insufficiently separated. Each document's scope must be clear, with content placed according to that responsibility.
 
-### 責任分担（確定）
+### Agreed responsibilities
 
-| 文書 | 責任 |
+| Document | Responsibility |
 | --- | --- |
-| `requirements.md` | プロジェクトの目的・責任範囲・機能要件など、「何を作っているか」を記述する。 |
-| `architecture.md` | プロジェクトの全体構造など、「何を提供しているか」を大まかに記述する。 |
-| `future-work.md` | 今後実装する機能を記述する。 |
-| `design/xxx` | 各機能単位ごとに、「何を提供しているか」を詳述する。 |
-| `plans/xxx` | 現在進行形で実装を進めているものについて、その計画や経過を記述する。 |
+| `requirements.md` | Describe what the project is building: purpose, responsibility boundaries, functional requirements, and related requirements. |
+| `architecture.md` | Describe broadly what the project provides, including its overall structure. |
+| `future-work.md` | Describe features to implement in the future. |
+| `design/xxx` | Describe in detail what each individual feature provides. |
+| `plans/xxx` | Record plans and progress for work currently being implemented. |
 
-既存文書の整理はこの責任分担に従う。現在提供している内容は `architecture.md` と `design/` に概要と詳細を分けて記述し、今後実装する機能と現在進行中の計画・経過は、それぞれ `future-work.md` と `plans/` に配置する。
+Existing documents follow this division. `architecture.md` and `design/` provide an overview and details of current offerings. Future features and ongoing plans and progress belong in `future-work.md` and `plans/`, respectively.
 
-### 実施した整理
+### Completed reorganization
 
-文書の案内を [docs/README](../../README.md) に追加した。Requirements は目的・範囲・機能要件・非機能要件・受入条件、architecture は全体構造の概要、design は現在の機能別仕様に整理した。未実装機能と未着手の API 候補は `future-work/`、公開準備で参照する検証の履歴は[v3 の経過](verification.md)に配置した。
+A documentation guide was added at [docs/README](../../README.md). Requirements now cover purpose, scope, functional and nonfunctional requirements, and acceptance criteria; architecture covers the overall structure; design covers current features. Unimplemented features and API candidates without active implementation belong in `future-work/`. Verification history relevant to release preparation belongs in the [v3 history](verification.md).
 
-英語化と README・Cargo.toml の並べ替えは別項目として残す。
+English migration and README / Cargo.toml ordering are tracked separately below.
 
-## 2. ドキュメントの英語化
+## 2. English documentation
 
-`docs/` 以下のドキュメントはこれまで日本語で書いてきたが、英語へ移行する。
+Documents under `docs/`, previously written in Japanese, have been migrated to English.
 
-### 移行方針（確定）
+### Agreed migration policy
 
-`requirements.md`・`architecture.md`・`future-work.md`・`design/`・`plans/` を含む、`docs/` 以下のドキュメントを英語に統一する。第1項の責任分担に沿って文書を整理し、英語化する。
+Use English throughout `docs/`, including `requirements.md`, `architecture.md`, `future-work.md`, `design/`, and `plans/`. Organize and translate documents according to the responsibilities in item 1.
 
-## 3. ルート README の crate 一覧と Cargo.toml の依存一覧の順序
+All 27 documents have been translated, including headings, tables, code-example comments, and plan history. Mathematical conventions and API names are preserved. Repository links to translated headings and the root README's language description have been updated.
 
-ディレクトリトップの [README](../../../README.md#crates) に掲載されている crate が、それぞれの責任に基づく意味論に沿った順序になっていない。各 crate の責任と関係を踏まえて、掲載順序を見直す。
+Verification on 2026-11-02 covered 38 Markdown files and 340 local links, including heading anchors, with no broken links or unclosed fences. All 45 math blocks were unchanged; Rust code in seven fenced examples was unchanged except for comments. External reference URLs were preserved. `git diff --check` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --quiet` passed. Implementation code and dependencies were unchanged; workspace tests were not rerun for this translation.
 
-### 掲載方針
+## 3. Crate ordering in the root README and Cargo.toml dependency lists
 
-共通の中核を担う `syntaqs-core` を先頭とし、識別子・幾何・共通機能を続け、具体的な局所代数を担う `syntaqs-spin-half` などは後方にまとめる。
+The crate list in the [root README](../../../README.md#crates) does not follow a semantic order based on responsibilities. Review its order according to each crate's role and relationships.
 
-具体的な掲載順序案は以下とする。
+### Presentation policy
 
-| 順序 | Crate | 責任 |
+Start with the shared foundation, `syntaqs-core`, followed by identifiers, geometry, and shared capabilities. Group concrete local-algebra crates such as `syntaqs-spin-half` later.
+
+The proposed order is:
+
+| Order | Crate | Responsibility |
 | --- | --- | --- |
-| 1 | `syntaqs-core` | 共通の代数契約・式・空間・評価・基底処理。 |
-| 2 | `syntaqs-basic` | 因子を識別する UUID・名前付き Index。 |
-| 3 | `syntaqs-geometry` | 幾何・Site 間の関係と外部データへの接続。 |
-| 4 | `syntaqs-normalize` | 共通のノルム・正規化・正規化期待値。 |
-| 5 | `syntaqs-export` | 共通の数値コンテナへの出力。 |
-| 6 | `syntaqs-spin-half` | Spin-1/2 の局所代数・基底・モデル。 |
-| 7 | `syntaqs-spin-one` | Spin-1 の局所代数・基底・モデル。 |
-| 8 | `syntaqs-fermion` | Fermion の局所代数・基底・モデル。 |
+| 1 | `syntaqs-core` | Shared algebraic contracts, expressions, spaces, evaluation, and bases. |
+| 2 | `syntaqs-basic` | UUID and named indices identifying factors. |
+| 3 | `syntaqs-geometry` | Geometry, relations between Sites, and external-data integration. |
+| 4 | `syntaqs-normalize` | Shared norms, normalization, and normalized expectations. |
+| 5 | `syntaqs-export` | Shared export to numerical containers. |
+| 6 | `syntaqs-spin-half` | Spin-1/2 local algebra, bases, and models. |
+| 7 | `syntaqs-spin-one` | Spin-1 local algebra, bases, and models. |
+| 8 | `syntaqs-fermion` | Fermion local algebra, bases, and models. |
 
-### Cargo.toml への適用
+### Application to Cargo.toml
 
-**適用範囲・方針は確定。** Cargo.toml の依存一覧も、各依存の責任・役割に基づく意味論的な順序で整備する。
+**Scope and policy are agreed.** Order Cargo.toml dependency lists semantically by each dependency's responsibility and role.
 
-- `syntaqs-*` だけでなく、外部依存も対象とする。プロジェクト内 crate の相対順序は上表にそろえ、外部依存もその責任・役割を踏まえて並べる。
-- ルートの `[workspace.dependencies]` に加え、各 crate の Cargo.toml にも同じ方針を適用する。`examples`・`tests` の Cargo.toml も対象とする。
-- `[dependencies]`・`[dev-dependencies]`・`[build-dependencies]` など、各依存セクション内でこの方針に従って並べる。
+- Include external dependencies as well as `syntaqs-*`. Keep project crates in the relative order above; order external dependencies according to their responsibilities and roles.
+- Apply the same policy to the root `[workspace.dependencies]` and each crate's Cargo.toml, including `examples` and `tests`.
+- Follow this policy within each dependency section, including `[dependencies]`, `[dev-dependencies]`, and `[build-dependencies]`.

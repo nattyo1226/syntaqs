@@ -1,100 +1,100 @@
-# Index の同一性・発行・共有
+# Index identity, issuance, and sharing
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-## 1. 対象と合意した契約
+## 1. Scope and contract
 
-本書は、因子を識別する Index の発行、一意性の前提、再利用、局所状態・演算子への付与、および整合性検証の責任を定める。[アーキテクチャ概要](../architecture.md)における自由度・Hilbert 空間の設計の一部であり、Site は幾何の位置番号として別に扱う。
+This document specifies factor-index issuance, uniqueness assumptions, reuse, placement on local expressions, and consistency checks as part of the [architecture](../architecture.md). Sites are separately represented as positions in geometry.
 
-`syntaqs-core` は Index 型をジェネリックに受け取り、同一性の照合と局所式への付与・空間との整合性検証を担当する。標準具体型は `syntaqs-basic` の Id128（UUID）と Tag（文字列）とする。`syntaqs-geometry` は外部の局所空間列から葉を借用するが、Chain 自体は Index 型を持たず、発行補助も提供しない。独立した自由度識別子は導入しない。
+`syntaqs-core` takes a generic index type and handles identity comparison, placement, and consistency with spaces. Standard types are `syntaqs-basic`'s Id128 (UUID) and Tag (string). `syntaqs-geometry` borrows leaves from caller-owned spaces; Chain has neither an index type nor issuance helpers. No separate degree-of-freedom identifier is introduced.
 
-core が Index に要求する意味上の契約は「同じ Index であることを照合できる」こととする。同一性は安定した等価関係であり、照合するメソッドで標準の `Eq` を要求する。UUID の表現・生成、乱数源、seed、大小関係は core の契約に含めず、`Hash`・`Ord` や発行能力を一律に要求しない。保持・共有は空間・式のハンドルを複製することで行い、Index 本体の `Clone` は要求しない。
+The core's semantic contract is stable identity comparison as an equivalence relation, requiring standard Eq where comparison occurs. UUID representation/generation, randomness, seeds, and ordering are outside core's contract. Hash, Ord, and issuance capabilities are not universal requirements. Space/expression handles share indices without requiring Clone on I itself.
 
-> Index は識別子のみを表し、局所構造とは独立に発行する。提供側が一意性を管理し、局所状態・演算子の作用先の識別と Hilbert 空間の因子順序の指定に使う。因子の構造は指定された Index から構築し、局所代数は式の primitive 型が定める。両者の対応を全体で登録・固定する機構は設けず、合成・埋め込み・評価に必要な整合性は、その操作の対象から検証する。
+> An index is only an identifier, issued independently of local algebra. Its provider manages uniqueness; it identifies local expression factors and Hilbert-space factor order. Factor structure uses the supplied index, while expression primitive types define local algebra. No global registry fixes that correspondence: composition, embedding, and evaluation validate their own operands.
 
-## 2. Index と局所構造・自由度・空間
+## 2. Indices, local algebras, factors, and spaces
 
-Index は因子を照合する識別子であり、局所構造、次元、site 上の位置、基底、および tensor ordering を持たない。表示名の有無は具体型が定める。Id128 は UUID 自体、Tag は利用側が指定した文字列を表示する。基底の座標を指定する数値的な index とも区別する。
+An index has no local structure, dimension, site position, basis, or tensor ordering. Concrete types decide display labels: Id128 shows its UUID and Tag its caller-supplied string. This identity differs from a numerical basis-coordinate index.
 
-| 対象 | 保持する情報と役割 |
+| Object | Stored information and role |
 | --- | --- |
-| Index | 因子の同一性を表す識別子 |
-| Index を付与した局所状態・演算子 | primitive 型 S・O と、所属先・作用先の因子を識別する Index |
-| 基本自由度（Factor） | Index を保持する Hilbert 空間の葉。独立した Dof 型は設けない |
-| Hilbert 空間 | 基本因子の Index、因子順序、ordinary / graded の tensor 構造 |
+| Index | Factor identity. |
+| Placed local state/operator | Primitive types S/O and an index identifying its factor. |
+| Basic factor (Factor) | An indexed Hilbert-space leaf, without a separate Dof type. |
+| Hilbert space | Basic indices, factor order, and ordinary/graded tensor structure. |
 
-Hilbert 空間は Factor・Tensor の再帰構造とし、自由度の Index は Factor に置く。自由度の構築は `HilbertSpace` の葉の構築を意味し、別の Dof オブジェクトは作らない。Tensor の構築や既存因子の再利用で Index を追加・変更せず、重複は全階層の基本因子について検証する。部分系の取得操作は設けず、構築時に指定した空間を保持して利用する。詳細は [Hilbert 空間の再帰構造](hilbert-space.md)に定める。
+Hilbert spaces recursively contain Factor and Tensor nodes, with indices on factors. Constructing a degree of freedom means constructing a HilbertSpace leaf, not a separate Dof object. Tensor construction/reuse does not change or issue indices; duplicates are checked across all leaves. There is no subsystem-extraction operation; callers retain their constructed spaces. See [Hilbert spaces](hilbert-space.md).
 
-異なる Index を持つ因子は独立である。Index は局所代数の意味を定めず、S・O と各能力の実装が意味・規則を定める。空間構造の比較は Index と順序等を確認し、異種の式の不適切な合成は primitive と係数の型制約で拒否する。詳細は[局所 primitive の型契約](local-structure.md#4-局所構造の一致条件)に定める。
+Different indices identify independent factors. Indices do not define local algebra; S/O and capability implementations do. Space comparisons inspect indices and order, while primitive/coefficient types reject inappropriate expression combinations. See [primitive type contracts](local-structure.md#4-conditions-for-matching-local-structures).
 
-一つの系の全基本因子は同じ primitive 型 S・O に揃える。この制限は Index に局所構造を付加したり、Index と局所構造の対応を全体で固定したりするものではない。異なる局所構造を使う別々の系は独立に構築できる。
+All factors within one system use the same S/O types. This does not attach algebra to indices or establish a global registry. Separate systems with different local algebras can be constructed independently.
 
-## 3. 発行、構築、および局所状態・演算子への付与
+## 3. Issuance, construction, and placement
 
-Index の発行は、局所構造を指定せずに行う独立した操作とする。因子を構築する操作には発行済みの Index を与える。
+Issue indices independently without specifying local structure, then supply existing indices to factor construction.
 
 ```text
-Index の発行
-    → Index を指定して HilbertSpace の葉を構築
-    → 葉を空間の合成や状態・演算子の配置先として利用
+Issue an Index
+    → Construct a HilbertSpace leaf with that Index
+    → Use the leaf to compose spaces or place states and operators
 ```
 
-自由度の構築は、与えられた Index を保持する。局所構造だけから自由度を構築し、その内部で Index を自動発行する経路は設けない。
+Factor construction retains the supplied index. No constructor implicitly issues one from local structure alone.
 
-局所状態・演算子には、発行済みの Index を明示的に付与して所属先・作用先を指定できる。primitive 型 S・O はその局所状態・演算子が保持し、Index から取得しない。一つの局所自由度に属する未配置の局所式には、式全体に同じ Index を付与する。複数自由度の式は、それぞれの局所式に Index を付与してから合成する。
+Explicit placement assigns an existing index to a local state/operator. The expression retains S/O instead of obtaining them from I. An unplaced expression on one local factor receives one index throughout. Multi-factor expressions place local pieces before composition.
 
-Index の付与は、spectator を含む全 Hilbert 空間への束縛とは別の操作である。付与だけでは全作用空間は確定せず、全作用空間への bind だけから各局所式の Index を推測しない。自由度の構築と局所式への付与のいずれも、新しい Index を暗黙に発行しない。
+Placement is distinct from binding to an ambient Hilbert space including spectators. Placement does not determine that ambient space, and binding alone does not infer each local expression's factor. Neither factor construction nor placement implicitly issues indices.
 
-Index の新規発行は利用側で明示的に行い、Chain は発行・保持しない。標準の Id128::default() は独立した Index を発行する。Clone／Copy は同じ識別値の複製であり、新規発行ではない。
+Callers issue indices; Chain neither issues nor stores them. Id128::default() issues a fresh index, whereas Clone/Copy duplicates the same identity.
 
-Site 順の局所空間列を Chain とモデル構築へ借用して渡す。空間の共有と葉の列挙に Index の Clone は不要である。モデルと空間の構築は全葉の重複を Eq で検証する。詳細は[Chain の設計](geometry.md)に従う。
+Callers pass site-ordered spaces by borrow to geometry and model construction. Space sharing and leaf enumeration need no index Clone. Model/space construction checks all leaf duplicates with Eq; see [geometry](geometry.md).
 
-## 4. 一意性の前提
+## 4. Uniqueness assumptions
 
-Index の提供側は、同一ランタイム内および複数ランタイム間で、独立した因子に異なる Index を与える責任を持つ。Id128 は seed 指定不要の UUID を用い、一意性を生成方式に基づく実用上の前提とする。数学的な無衝突保証ではない。Tag は文字列そのものが同一性であり、別々に構築しても同名なら同じ因子を参照する。独立した因子の名前は利用側が管理し、異なるランタイムの名前が自動で一意になる保証はない。core は Index の同一性を照合し、生成方式や名前の選択を検証しない。
+Index providers must assign distinct identities to independent factors within and across runtimes. Id128 uses seed-free UUID generation, providing practical uniqueness rather than a mathematical collision guarantee. Tag uses the whole string as identity, so independently constructed equal names identify the same factor. Callers manage distinct names; names are not automatically unique across runtimes. Core compares identities, not generation methods or naming policies.
 
-共有採番器や、発行済み Index 全体を登録・照会する機構によって一意性を保証することは要求しない。標準の Id128 は UUID v4 を利用する。UUID と乱数源に関する依存は core に持ち込まず、core の `no_std + alloc` を維持する。
+No global counter or registry of all issued indices is required. Standard Id128 uses UUID v4. UUID/randomness dependencies stay outside core, preserving its `no_std + alloc` support.
 
-この方針は、中央登録を必要とせずに実用的な一意性を得る UUID の考え方を参考にする。[RFC 9562 §6.8](https://www.rfc-editor.org/rfc/rfc9562.html#section-6.8)
+The approach follows UUIDs' practical uniqueness without central registration; see [RFC 9562 §6.8](https://www.rfc-editor.org/rfc/rfc9562.html#section-6.8).
 
-## 5. Index の再利用と参照の共有
+## 5. Reuse and shared references
 
-既存の自由度を利用するときは、同じ Index を保持する。ハンドルの複製、構築時に指定した自由度の再利用、およびその自由度への局所状態・演算子の配置によって、新しい Index を発行しない。共有は HilbertSpace と式の不変ハンドルを通して行う。
+Reusing a factor retains its index. Cloning handles, reusing constructed factors, and placing expressions do not issue fresh identities. HilbertSpace and expression handles provide immutable sharing.
 
-| 操作 | Index の扱い |
+| Operation | Index handling |
 | --- | --- |
-| 独立した因子を用意する | 新しい Index を発行し、その Index で自由度を構築する |
-| 既存の自由度のハンドルを複製する | Index を保持する |
-| 構築時に指定した既存の自由度を再利用する | Index を保持する |
-| 既存の自由度を状態・演算子の配置先として指定する | 指定した自由度の Index を付与する |
+| Create an independent factor | Issue an index, then construct the factor. |
+| Clone an existing factor handle | Retain identity. |
+| Reuse an existing factor | Retain identity. |
+| Place an expression on a factor | Use that factor's index. |
 
-Index の意図的な再利用は、独立に発行した Index の偶発的な衝突とは区別する。同じ Index を持つ二つの自由度を、一つの tensor product に独立した因子として追加することは、基本因子の重複となる。同じ因子への複数の参照として Index を再利用することは許可する。
+Intentional reuse differs from accidental issuance collisions. Adding equal-index factors independently to one tensor product is a duplicate and is rejected. Multiple references to the same factor are allowed.
 
-## 6. 局所構造との対応と整合性検証
+## 6. Local algebra correspondence and consistency
 
-Index と局所構造の対応を全体で登録・固定する機構は設けない。同じ Index を異なる局所構造と組み合わせた自由度の構築を、Index の既使用状況や過去の対応の照会によって拒否しない。
+No global registry fixes index-to-algebra associations. Construction is not rejected by consulting whether an index was previously used with another structure.
 
-Index 単体や空間の葉から局所代数を取得する契約は置かない。式が S・O の型と能力実装により局所規則を定める。空間は因子の Index・順序・tensor 構造を保持する。
+Neither indices nor space leaves provide local algebra. Expressions define rules through S/O and capabilities; spaces retain indices, order, and tensor structure.
 
-合成・配置・束縛では次を確認する。
+Composition, placement, and binding check:
 
-- 空間の互換性・部分系判定は Index・順序と、空・単因子の同一視および同種の積の結合則に基づく。
-- 空間・状態の tensor product は基本因子の Index が重複する場合に拒否する。
-- 式が参照する Index の存在を確認し、状態・演算子の組合せは対応する S・O・C の型制約と評価時の能力で保証する。
-- 同じ因子への演算子同士の積は許可する。
+- Space compatibility/subsystems through indices, order, unit/singleton identifications, and associativity of the same product kind.
+- Duplicate basic indices in space/state tensor products.
+- Existence of expression references, with S/O/C and evaluation capabilities ensuring appropriate state/operator combinations.
+- Operator products on the same factor remain allowed.
 
-同じ因子構造を spin-1/2 と独自代数の式が独立に利用できる。このことは、その異なる primitive 型の式を同じ式に合成できることを意味しない。
+Spin-1/2 and custom-algebra expressions may independently use the same factor structure; they cannot thereby combine their different primitive types into one expression.
 
-判定できる情報が構築時に揃っていれば早期に検証し、全作用空間や評価 context に依存する条件は、その情報が得られる時点で検証する。これは Index と局所構造の対応を全体で管理することを要求しない。
+Validate as early as available information permits. Ambient-space/evaluation-dependent checks occur when that context is available, without global correspondence management.
 
-## 7. 標準具体型と公開 API
+## 7. Standard types and public APIs
 
-同一性を照合するジェネリックな core と、標準具体型 Id128・Tag を提供する basic の分離は採用済みとする。葉の空間と式の共有ハンドルの複製に Index 本体の不要な複製を要求しない。
+Core provides generic identity comparison, basic provides Id128/Tag, and shared leaf/expression handles avoid unnecessary copies of I.
 
-Core の照合は標準の `Eq`、Factor の構築は `HilbertSpace::factor(index)`、局所式の配置は `at(&factor)` とする。標準具体型 `syntaqs_basic::Id128` は UUID v4 を包む不透明な型であり、`new()` と `Default` は seed 指定不要で新しい Index を発行する。Clone・Copy は同一性を保持し、Display・Debug・等値比較・順序比較・Hash を提供する。生成は `uuid::Uuid::new_v4` に委譲し、乱数源が利用できない場合を含む挙動は同 API に従う。UUID・乱数源は basic に閉じ、Chain は basic に依存しない。
+Comparison uses Eq, factor construction uses `HilbertSpace::factor(index)`, and placement uses `at(&factor)`. Opaque `syntaqs_basic::Id128` wraps UUID v4; `new()` and Default issue fresh identities without seeds. Clone/Copy preserve identity. Display, Debug, equality, ordering, and Hash are provided. Generation delegates to `uuid::Uuid::new_v4`, including behavior when randomness is unavailable. Chain does not depend on basic.
 
-Id128 は `syntaqs-basic`、ジェネリックな HilbertSpace は `syntaqs-core` から利用する。UUID を Index とする空間は `syntaqs_core::HilbertSpace<Id128>` と指定する。
+Use Id128 from `syntaqs-basic` and `syntaqs_core::HilbertSpace<Id128>` for a UUID-indexed space.
 
-`syntaqs_basic::Tag { raw: String }` は文字列で自分で名前を付ける標準 Index。raw は非公開で、`new(impl Into<String>)`・`as_str()`・`From<String>`・`From<&str>` を提供する。Clone・Debug・Eq・Hash・Ord 等は文字列に従い、Copy・隠れた UUID・改名 API は持たない。`syntaqs_core::HilbertSpace<Tag>` で利用する。
+`syntaqs_basic::Tag { raw: String }` is a named index with private raw storage and `new(impl Into<String>)`, `as_str()`, `From<String>`, and `From<&str>`. Clone, Debug, Eq, Hash, and Ord follow the string. It has no Copy, hidden UUID, or rename API. Use `syntaqs_core::HilbertSpace<Tag>`.
 
-Id128 単体の Display・Debug は完全な UUID、Tag 単体の Display は文字列をそのまま出す。式木の Display 内だけ、任意の Index の出力を先頭8文字（Rust の char 単位）に制限する。Debug は完全な Index を保持する。表示文字列の衝突は許容し、同一性判定には使わない。命名は tensor ordering から推定せず、表示用の位置検索も行わない。詳細は[式木の表示](expression-formatting.md)に定める。
+Standalone Id128 Display/Debug retains the complete UUID; Tag Display writes the name unchanged. Expression Display alone limits any index to its first eight Rust chars. Debug retains full indices. Display collisions are allowed and never determine identity. Names are not inferred from tensor ordering and require no position lookup. See [formatting](expression-formatting.md).

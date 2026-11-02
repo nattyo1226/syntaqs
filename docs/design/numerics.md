@@ -1,53 +1,51 @@
-# 係数型と数値規約
+# Coefficient types and numeric conventions
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-係数表現・操作ごとの能力・数値的な零・近似比較を定める。実装は [coefficient.rs](../../crates/syntaqs-core/src/coefficient.rs) を参照する。
+This document defines coefficients, operation-specific capabilities, numerical zero, and approximate comparison. See [coefficient.rs](../../crates/syntaqs-core/src/coefficient.rs) for implementation.
 
-## 1. 係数型と能力
+## 1. Coefficient types and capabilities
 
-式は係数全体 C を保持する。標準例は `Complex<f32>`・`Complex<f64>` であり、独自係数も操作ごとの能力を実装して接続できる。Primitive 自体は数値精度に依存しない。
+Expressions store the whole coefficient C. Standard examples are `Complex<f32>` and `Complex<f64>`; custom coefficients connect by implementing the capabilities an operation needs. Primitives themselves do not fix numerical precision.
 
-| 能力 | 提供元・役割 |
+| Capability | Source and role |
 | --- | --- |
-| `Zero`・`One` と算術 trait | num-traits と標準 trait。必要な操作だけが要求する。 |
-| `Conjugate` | 共有参照からの共役。内積と随伴などで使う。 |
-| `RealPart` | 自己内積からノルム二乗の実部を得る。 |
-| `ImaginaryUnit` | 局所規則で必要な虚数単位。 |
-| `Divide` | 数学的な係数除算。正規化期待値と HS 内積で使う。 |
-| `From<R>` / `Into<C>` | 実数の埋め込みと、選択済みの係数型への入力変換。 |
+| `Zero`, `One`, arithmetic traits | num-traits and standard traits, requested only where used. |
+| `Conjugate` | Conjugation from a shared reference, used by inner products and adjoints. |
+| `RealPart` | Extracting the real part of a self-inner-product for squared norms. |
+| `ImaginaryUnit` | The imaginary unit required by particular local rules. |
+| `Divide` | Mathematical coefficient division for normalized expectations and HS inner products. |
+| `From<R>` / `Into<C>` | Real embedding and input conversion to the selected coefficient type. |
 
-保持・共有・係数計算を伴わない遅延構築には数値演算・係数や primitive の Clone を要求しない。係数は可換な scalar とし、各能力は単位元・分配則・共役・実数埋め込みの法則を満たすものとする。全能力を束ねた必須 trait や数値 provider は置かない。
+Storage, sharing, and delayed construction without coefficient arithmetic require neither numeric operations nor Clone on coefficients or primitives. Coefficients are commutative scalars whose capabilities obey the unit, distributive, conjugation, and real-embedding laws. There is no mandatory trait combining all capabilities or numeric provider.
 
-同じ演算で係数精度を混在させず、暗黙の精度昇格・縮小を行わない。左右のスカラー倍は同じ数学的意味を持ち、任意の C では `scaled` が使える。標準複素数の左スカラー倍には個別実装を提供する。実数入力の変換と型推論は[式の構築](expression-construction.md)に定める。
+Operations do not mix coefficient precisions or implicitly promote/narrow them. Left and right scaling have the same mathematical meaning; `scaled` works for arbitrary C. Standard complex coefficients have concrete left-scaling implementations. See [construction](expression-construction.md) for real inputs and inference.
 
-算術・厳密比較・丸め・NaN・infinity などは数値型に委ね、独自の拒否・補正・置換規則を加えない。局所規則や基底展開は数学的構造に従うため、元の数値演算列の丸め・非有限値の伝播をそのまま再現する保証はない。
+Arithmetic, exact comparison, rounding, NaN, and infinity follow the numeric type without additional rejection, correction, or substitution. Local rules and expansion follow mathematical structure, so they do not guarantee identical rounding or nonfinite-value propagation to the original sequence of arithmetic operations.
 
-## 2. Divide と複素除算
+## 2. Divide and complex division
 
-`Divide` は標準の Div と独立した能力であり、数値表現ごとの除算方法を利用できる。除数が非零であることは呼び出し側の契約であり、正規化期待値では自己内積の厳密な零を検査する。HS 内積では局所次元 `Tr(I)` が非零であることを前提とする。整数のような切り捨て算術を使う場合も、分数が必要な局所規則・基底・モデルでは数学的な分数を表現できることが前提となる。
+`Divide` is independent of standard Div and permits representation-specific division. A nonzero divisor is the caller's contract: normalized expectations check exact zero self-inner-products, while HS inner products require a nonzero local dimension `Tr(I)`. Even with truncating arithmetic such as integers, operations using fractions in rules, bases, or models require mathematical fractions to be representable.
 
-標準 `Complex<T>` の `Divide` は成分 T に `PartialOrd` を要求する。純実の分母は直接除算し、虚部が非零の場合は分母の最大成分の絶対値で正規化してから二乗する。分子の正規化が overflow する場合は分子を半分にして計算し、結果で倍率を戻す。小さい成分は加算後、大きい成分は加算前に正規化した分母のノルム二乗で割る。これにより丸め誤差による分母の微小な虚部でも不要な二乗の overflow / underflow を避ける。Float・Copy・One・数学関数 backend は追加せず、独自係数型 C の `Divide` や式メソッドには順序の制約を追加しない。整数のような切り捨て除算では元の直接計算を維持する。
+The standard `Complex<T>` implementation requires `T: PartialOrd`. Purely real divisors are divided directly. Otherwise, the divisor is scaled by its largest component magnitude before squaring. If scaling the dividend overflows, the dividend is halved first and the factor restored afterward. Small components are summed before division by the normalized squared divisor norm; large components are divided before summing. This avoids unnecessary squared-denominator overflow/underflow even for tiny imaginary rounding residuals. It adds no Float, Copy, One, or math backend requirement, and no ordering bound to custom C implementations or expression methods. Truncating division retains the original direct formula.
 
-## 3. 数値的近似等価性と検証の規約
+## 3. Approximate equivalence and verification
 
-本節はテスト・参照計算で用いる比較の規約であり、汎用の公開等価性判定 API は提供していない。
+This section specifies comparison in tests and reference calculations; there is no general public equivalence-checking API.
 
-数値的近似等価性は、対応する数値が指定された許容誤差の範囲で一致することとする。作用としての等価性は、同一の Hilbert 空間上で同じ線形作用を表すこととする。
+Numerical approximate equivalence means corresponding values agree within explicit tolerances. Equivalence as an action means the same linear action on the same Hilbert space.
 
-近似比較には、絶対許容誤差 `atol` と相対許容誤差 `rtol` を用い、複素数 `a`, `b` に対して
+For complex `a` and `b`, use absolute tolerance `atol` and relative tolerance `rtol`:
 
 ```math
 |a-b| \leq \mathrm{atol}
        + \mathrm{rtol}\max(|a|,|b|)
 ```
 
-を満たす場合に近似的に等しいと判定する。
+Approximate equivalence is not transitive and must be checked separately from exact equality. A value containing NaN is never approximately equal, including to itself. Small-system numerical representations may serve as references for action equivalence.
 
-近似等価性は推移律を満たさないため、通常の厳密な等値判定とは別の明示的な操作とする。NaN を含む値は、自身を含めて近似的に等しいと判定しない。作用としての等価性の検証には、小規模系の数値表現を基準にできるものとする。
+Tests state their `atol` and `rtol`. Comparison and rank tolerances depend on precision and problem size, using independently defined vectors and matrices. Test tolerances must not remove terms in ordinary evaluation.
 
-テストでは、検証に使用した `atol` と `rtol` を明示する。数値比較と rank 判定の許容誤差は数値精度と計算規模に応じて設定し、独立に定義した小規模系のベクトル・行列による参照計算と比較する。検証用の許容誤差を通常の式評価での zero term の削除に使わない。
+Evaluation, expansion, and coordinates remove zero coefficients only via exact `Zero::is_zero()`, retaining small nonzero coefficients. Local coefficient generation follows [local primitive contracts](local-structure.md#3-consistency-of-mathematical-capabilities).
 
-通常の評価・基底展開・座標取得で零係数を除く際は `Zero::is_zero()` による厳密零だけを対象とし、微小な非零の係数を保存する。局所規則の係数生成は[局所 primitive の設計](local-structure.md#3-数学的能力の整合性)に従う。
-
-一般の式の相殺・基底の往復・結合則では、数学的に零の結果が浮動小数点でも厳密零になるとは保証しない。行列・作用・座標を許容誤差で比較し、疎な項数の一致を要求しない。相殺残差が厳密零でなければ、状態の正規化で ZeroNorm を保証できず、残差の成分が拡大され得る。検証には積の連鎖・基底の往復・大小の係数の相殺・微小非零係数の保存を含め、解析的に零の局所規則の空性は厳密に確認する。
+Mathematical cancellation in general expressions, basis round trips, and associativity need not yield exact floating-point zero. Compare matrices, actions, and coordinates with tolerances rather than requiring identical sparse term counts. A nonzero cancellation residual need not produce ZeroNorm during normalization and may be amplified. Verify product chains, basis round trips, cancellation between large and small coefficients, and preservation of tiny nonzero values; check analytically zero local rules for exact emptiness.

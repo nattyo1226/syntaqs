@@ -1,16 +1,16 @@
-# 検証の構成と実行方法
+# Verification structure and commands
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-## 1. 検証の責任
+## 1. Verification responsibilities
 
-各機能の数学的契約と境界条件は対応する `design/` の文書に定める。本書は検証の配置・共通の実行方法・環境上の限界を記述する。過去の実行結果・当時の toolchain・公開準備の経過は[v3 の検証記録](../plans/v3/verification.md)で管理する。
+Feature designs define mathematical contracts and boundary cases. This document describes test placement, common commands, and environment limitations. Historical results, toolchains, and release progress belong in the [v3 verification record](../plans/v3/verification.md).
 
-本番ライブラリのテストは各 crate の `tests/` と単体テストに置く。共有の三準位・graded 二状態代数、非正規直交基底、独立参照計算と core・normalize・export の横断テストは [syntaqs-tests](../../tests/README.md)、モデル利用の縦断テストは [examples](../../examples/README.md)に置く。本番 crate はテストパッケージに依存しない。
+Production-library tests live in each crate's `tests/` and unit tests. [syntaqs-tests](../../tests/README.md) holds shared three-level and graded two-state algebras, non-orthonormal bases, independent references, and core/normalize/export integration tests. [Examples](../../examples/README.md) include end-to-end model tests. Production crates do not depend on test packages.
 
-## 2. 共通の確認方法
+## 2. Common checks
 
-リポジトリ直下から実行する。開発ツールが PATH にない場合は `direnv exec .` を付ける。
+Run from the repository root. Prefix commands with `direnv exec .` when development tools are not on PATH.
 
 ```sh
 cargo build --workspace --all-features
@@ -21,16 +21,16 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 ```
 
-任意 backend の独立検証には `cargo test -p syntaqs-export --no-default-features` と `cargo test -p syntaqs-tests --no-default-features` を使い、それぞれ backend なし・`--features ndarray`・`--features sprs` を確認する。両 backend は workspace の全 feature 構成で確認する。workspace 一括実行では他パッケージからの feature 統合があるため、単独検証も区別する。
+For independent optional-backend checks, use `cargo test -p syntaqs-export --no-default-features` and `cargo test -p syntaqs-tests --no-default-features` with no backend, `--features ndarray`, and `--features sprs`. Workspace all-features covers both together. Keep separate package checks because workspace runs may unify features from other packages.
 
-独立な小規模行列・Fock 空間の符号規則・Gram 行列を参照に、代数計算・基底展開・密疎出力を両精度で比較する。実装中の evaluator や export で参照値そのものを生成しない。近似比較・厳密零・相殺残差は[数値規約](numerics.md)に従う。型制約と誤った型の合成は capability テスト・compile_fail doctest でも確認する。
+Compare algebraic evaluation, expansion, and dense/sparse output at both precisions against independent small matrices, Fock-space sign rules, and Gram matrices. Do not construct reference values using the evaluator/export under test. Follow [numerics](numerics.md) for approximate comparison, exact zero, and cancellation residuals. Capability tests and compile_fail doctests also check bounds and incompatible type combinations.
 
-## 3. CI と検証限界
+## 3. CI and verification limits
 
-[CI workflow](../../.github/workflows/ci.yml) は `main` への push・pull request・手動実行を契機に Linux の64 bit 環境で動作する。Rust 1.85.0 と stable それぞれで、workspace の既定・全 feature・既定 feature 無効のテストを実行し、doctest・compile_fail も含める。
+The [CI workflow](../../.github/workflows/ci.yml) runs on pushes to `main`, pull requests, and manual dispatch on 64-bit Linux. Rust 1.85.0 and stable each test the workspace with default, all, and no default features, including doctests and compile_fail cases.
 
-Stable では export・共有テストの backend 別検証、format・Clippy、警告をエラーとする API ドキュメント生成を行う。依存キャッシュと同じ PR・ブランチの古い実行のキャンセルを設定する。
+Stable also runs backend-specific export/shared tests, format, Clippy, and API documentation with warnings denied. Dependency caching and cancellation of older runs for the same PR/branch are configured.
 
-`no_std + alloc` を宣言する core・geometry・spin-half・fermion の専用 target での実ビルドは未実施である。ソース・依存 feature とホスト上の確認を、専用 target での成功とみなさない。共有の Arc はポインタ幅の atomic 操作を持つ target を前提とする。
+Dedicated no_std target builds for core, geometry, spin-half, and fermion remain unverified. Source/dependency-feature inspection and host builds do not establish dedicated-target success. Shared Arc requires pointer-width atomic operations on the target.
 
-性能ベンチマーク・速度比較・追加の割り当て最適化も未実施である。共有・疎出力で密中間領域を作らないこと・深い木の反復処理に関するテストを、一般的な速度やメモリ量の保証と混同しない。今後の検証・最適化は[future-work](../future-work.md#3-未実施の検証と性能)に記録する。
+Benchmarks, speed comparisons, and additional allocation optimization are also unverified. Tests for sharing, sparse output without dense intermediates, and iterative deep-tree processing are not general speed/memory guarantees. Track further verification and optimization in [future work](../future-work.md#3-outstanding-verification-and-performance).

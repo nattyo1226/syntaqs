@@ -1,35 +1,35 @@
-# 保存・復元と Index の付け直し
+# Storage, restoration, and index reassignment
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-未実装の保存・復元・独立した系の作成に必要な契約をまとめる。現在の Index の発行・共有は[現行仕様](../design/index.md)を参照する。
+These contracts concern unimplemented storage, restoration, and independent copies. See [current index specifications](../design/index.md) for issuance and sharing.
 
-## 1. 保存・復元と複数ランタイム
+## 1. Storage, restoration, and multiple runtimes
 
-以下の三つの操作を区別する。
+Distinguish three operations:
 
-| 操作 | Index の扱い |
+| Operation | Index handling |
 | --- | --- |
-| 保存した対象を復元する | 元の Index とその参照関係を保持し、同じ自由度の記述を復元する |
-| 保存した対象から独立した系を作る | 新しい Index を発行し、関連する空間・状態・演算子の参照を一貫して付け直す |
-| 複数ランタイムから対象を持ち寄る | Index で因子を照合し、局所構造と空間の互換性を検証する |
+| Restore a stored object | Retain original indices and references, restoring a description of the same factors. |
+| Create an independent system from stored data | Issue fresh indices and consistently reassign space/state/operator references. |
+| Combine objects from multiple runtimes | Match factors by index and validate local structures and spaces. |
 
-### 1.1. 同じ自由度の記述の復元
+### 1.1. Restoring the same factors
 
-復元によって新しい Index を発行しない。同じ保存対象を複数回復元した場合、同じ Index を持つ。メモリ上では別のオブジェクトでも、同じ自由度を指す記述として扱う。共有所有や同一のメモリ上のオブジェクトへの復元は要求しない。
+Restoration must not issue new indices. Repeated restoration of the same data produces the same indices. Separate memory objects describe the same factors; shared ownership or restoration to the same memory object is not required.
 
-二度の復元結果を独立した因子として一つの空間・状態の tensor product に追加すると、基本因子の Index が重複するため拒否する。同じ因子への複数の参照として利用することは許可する。
+Adding two restored copies as independent factors in one space/state tensor product must fail for duplicate basic indices. Multiple references to the same factor are allowed.
 
-### 1.2. 独立した系の作成
+### 1.2. Creating an independent system
 
-保存した対象から独立した系を作る場合は、Index を保持する復元とは別に、明示的に新しい Index への対応を作る。同じ元 Index のすべての参照には同じ新 Index を割り当て、異なる元 Index には異なる新 Index を割り当てる。対象となる空間・状態・演算子の参照を一貫して付け直し、系内の参照関係を保持する。局所構造、因子順序、および tensor 構造はこの操作によって変更しない。
+Unlike identity-preserving restoration, explicitly map old indices to fresh ones. Every reference to one old index receives the same new index, and different old indices receive different new indices. Reassign all space/state/operator references consistently while preserving local structure, factor order, and tensor structure.
 
-### 1.3. 複数ランタイムからの持ち寄り
+### 1.3. Combining runtimes
 
-別ランタイム由来でも、同じ Index は同じ因子を参照する記述として照合する。Index の一致だけで空間の互換性を認めず、[Index と式の整合性条件](../design/index.md#6-局所構造との対応と整合性検証)を検証する。異種の式の不適切な接続は S・O・C と演算能力の制約で拒否する。対応を全体で登録・固定する機構は設けない。
+Equal indices denote the same factor even across runtimes. Index equality alone does not imply space compatibility: apply [index/expression consistency checks](../design/index.md#6-local-algebra-correspondence-and-consistency). S/O/C and operation bounds reject incompatible expression types. No global index-to-structure registry is introduced.
 
-異なる Index を、次元や物理的意味の一致だけから自動で対応づけない。独立した系として扱いたい場合は、本書の独立した系の作成の契約の明示的な付け直しを用いる。合成時の重複を避けるために Index を暗黙に変更しない。
+Do not match different indices automatically merely because dimensions or physical meanings agree. Use explicit reassignment under the independent-system contract when independence is intended. Do not silently change indices to avoid duplicates during composition.
 
-計算上の内部 bond の処理によって syntaqs の Index を暗黙に変更しない。テンソルネットワークへの export では、物理自由度と計算上の脚の対応を別に設計する。
+Processing internal computational bonds must not implicitly modify syntaqs indices. Tensor-network export needs a separate mapping between physical factors and computational legs.
 
-保存形式・公開 API・Index の付け直しは未実装であり、並列評価とは独立に検討する。
+Storage formats, public APIs, and index reassignment are unimplemented and should be considered independently of parallel evaluation.

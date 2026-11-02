@@ -21,4 +21,4 @@ Model parameters retain their physical-spin meaning. The helpers use negative bi
 
 This crate uses the standard library. Local products and state actions use `Complex<R>` with `R: num_traits::Float`; other capabilities use their own numeric bounds. Model construction remains delayed and does not require local evaluation.
 
-See the [crate API overview](src/lib.rs), [spin-one design](../../docs/design/local-structure.md#9-spin-one-の局所代数), and [spin-one example](../../examples/src/bin/spin_one.rs). Installation is covered by the [project README](../../README.md).
+See the [crate API overview](src/lib.rs), [spin-one design](../../docs/design/local-structure.md#9-spin-one-local-algebra), and [spin-one example](../../examples/src/bin/spin_one.rs). Installation is covered by the [project README](../../README.md).

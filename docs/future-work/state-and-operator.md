@@ -1,22 +1,22 @@
-# State・Operator と空間の設計見直し
+# Reviewing State, Operator, and space management
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-## 1. 見直しの対象
+## 1. Review scope
 
-State・Operator・Structure・Space の所有・共有・関連付け、および Geometry と空間の依存関係を再検討する。具体的な設計と実施時期は未定である。現在の primitive・空間・式の責任分離を、最終形として固定するものではない。
+Revisit ownership, sharing, associations among State, Operator, Structure, and Space, and dependencies between Geometry and spaces. Design and timing are undecided. Current primitive/space/expression boundaries are not fixed as the final design.
 
-## 2. Operator と State の整理
+## 2. Relating operators and states
 
-未着手の設計検討であり、実施時期と実装範囲は未定である。
+This review has not started; timing and implementation scope are undecided.
 
-操作的量子論の枠組みで両者を一般の演算子の特別な形として扱えるかを検討し、数学的意味と API の対応を決める。現在の State は ket であり、`ℂ→H` として始域・終域を参照できる。束縛済み Operator は `H→H` として参照できる。ただし、局所・複合それぞれに状態用と演算子用の式木・評価処理があり、一般の `U→V` の写像を表す型はない。
+Consider whether operational quantum theory can organize both as special cases of general operators, and decide how mathematical meaning maps to APIs. Current State is a ket with domain/codomain `ℂ→H`; bound Operator has `H→H`. Local and composite representations each have separate state/operator trees and evaluation, with no type for a general `U→V` map.
 
-再開時には次の論点を検討する。
+Review these questions:
 
-- 「一般の演算子」が表す数学的対象と、扱う状態の意味。Ket、密度演算子、量子操作を同じ対象として扱う前提を置かない。
-- 合成、tensor product、随伴、内積、trace、zero・identity と始域・終域の対応。
-- 数学的な共通化を公開型、内部表現、共通処理のどこまで反映するか。公開型を統合するかは別に判断する。
-- 未束縛の配置式と、始域・終域が確定した写像の関係。
+- What mathematical object does a general operator represent, and what kind of state is meant? Do not assume kets, density operators, and quantum operations are one object.
+- How do composition, tensor product, adjoint, inner product, trace, zero/identity, and domains/codomains relate?
+- How far should mathematical commonality extend into public types, representations, or shared processing? Decide public-type unification separately.
+- How do unbound placement expressions relate to maps with definite domains/codomains?
 
-空間・幾何との境界を再確認し、型と評価器の統合を伴う実装は責任分担が定まってから範囲を決める。Grading の情報保持・API の具体化とは独立に検討する。完了条件は、採用する数学的対象、対応する API、共通化する範囲、別に維持する範囲を理由とともに記録することとし、統合を採用しない結論も含む。
+Recheck space/geometry boundaries and scope type/evaluator integration only after responsibilities are clear. Consider this independently of grading storage and APIs. Completion means documenting the mathematical objects, API mapping, shared and distinct parts, and reasons, including a possible decision against unification.

@@ -1,193 +1,193 @@
-# 基底展開・座標・列挙
+# Basis expansion, coordinates, and enumeration
 
-更新日: 2026-11-02
+Updated: 2026-11-02
 
-## 1. 対象と合意した契約
+## 1. Scope and contract
 
-本書は、[要件](../requirements.md)と[アーキテクチャ概要](../architecture.md)に基づき、状態・演算子の局所 primitive に対応する基底、その tensor product による複合基底、および式の展開に関する契約を定める。[局所 primitive・式木の数学的能力](primitive-expression.md)における基底との接続の詳細設計である。
+Under [requirements](../requirements.md) and [architecture](../architecture.md), this document specifies local state/operator bases, tensor-product bases, and expression expansion, detailing the basis connection of [local expressions](primitive-expression.md).
 
-基底の能力契約、式全体への展開、複合基底、座標取得は `syntaqs-core` が担当する。具体的代数の crate は局所基底と primitive の展開規則を実装する。得られた係数を外部数値コンテナへ格納する処理は `syntaqs-export` に置く。
+Core owns basis capabilities, whole-expression expansion, composite bases, and coordinates. Concrete algebras implement local bases and primitive expansion rules; export stores the resulting coefficients in numerical containers.
 
-基底の定義は `CartesianBasis` のような struct が表し、対象の要素型を指定した `Basis<P, C>` を実装する。その実装が、特定の primitive たちを基底とする規則と、各 primitive をその基底へ展開する手続きを提供する。状態基底の展開は `LinearCombination<S, C>`、演算子基底の展開は `LinearCombination<O, C>` を返す。式木側が要素を `map` して通常の式へ取り込む。利用者が基底要素の配列や集合そのものを入力することは要求しない。
+A struct such as CartesianBasis defines a basis through `Basis<P,C>`, selecting primitive members and expansion rules. State expansion returns `LinearCombination<S,C>`, operator expansion `LinearCombination<O,C>`; expressions map these elements into ordinary syntax. Callers need not supply arrays/sets of basis elements.
 
-展開・順序番号・列挙は単一の `Basis<P, C>` 実装で提供する。共通 trait 自体には数値制約を置かず、各具体基底の実装に、その展開規則で必要な能力だけを要求する。この実装の制約は `index`・`elements` にも適用される。係数精度を推論できない情報取得では、`<B as Basis<P, C>>::elements` のように明示する。
+One Basis implementation provides expansion, indexing, and enumeration. The trait has no numeric bounds; concrete implementations request their rule's capabilities, which consequently apply to index/elements too. Use a qualified call such as `<B as Basis<P,C>>::elements` when precision cannot be inferred.
 
-状態・演算子とも単一の Basis trait を用い、処理の対象型に応じて次の制約を要求する。
+State/operator processing uses the same trait:
 
-| 基底を使う処理 | 型制約 |
+| Processing | Bound |
 | --- | --- |
-| 局所状態の基底処理 | `B: Basis<S, C>` |
-| 局所演算子の基底処理 | `B: Basis<O, C>` |
+| Local state bases | `B: Basis<S, C>` |
+| Local operator bases | `B: Basis<O, C>` |
 
-局所基底要素は対応する primitive の部分集合とし、線型独立かつ対象空間全体に完全であることを要求する。局所基底要素として一般の式を指定することは本契約に含めない。正規直交性は要求しない。Primitive 全体は線型従属でもよい。
+Local basis elements are a linearly independent, complete subset of the corresponding primitives, not arbitrary expressions. Orthonormality is not required, and the full primitive set may be dependent.
 
-基底を使う側は、対応する[局所構造](local-structure.md)、その定義パラメータ、および対象が状態か演算子かを確定する。型の対応は `Basis<S, C>` または `Basis<O, C>` で指定し、独立した所属宣言は要求しない。選択基底は局所構造や自由度の Index の同一性とは区別する。
+Users determine the [local algebra](local-structure.md), its definition parameters, and whether the target is a state/operator. Basis<S,C>/Basis<O,C> establishes that correspondence without a separate membership declaration. Basis selection does not define algebra or factor identity.
 
-現在の複合基底は、同じ primitive 型 S・O の基本因子に対し、一つの局所基底を全因子へ共通に適用して構成する。因子ごとに異なる基底や定義パラメータを指定することは扱わない。これは同じ primitive 型から数学的に決まる制限ではなく、基底指定と保持情報を簡素にするための提供範囲の判断である。別の独自代数の基底は、その代数だけを使う別の系で利用・検証する。
+Composite bases currently apply one local basis to all factors of the same S/O types, without per-factor basis/parameter choices. This is an API/storage scope decision rather than a mathematical consequence of homogeneous primitive types. A custom algebra's basis can be used in a separate homogeneous system.
 
-## 2. Basis の三つの能力
+## 2. Three Basis capabilities
 
-| 能力 | 入力 | 結果・契約 |
+| Capability | Input | Result and contract |
 | --- | --- | --- |
-| Primitive の基底展開 | 対応する対象空間の primitive | 選択された基底 primitive の有限線型結合 |
-| 基底順序番号の取得 | primitive | 選択された基底要素である場合に、その順序番号を返す。基底要素でなければ番号は存在しない |
-| 順序付きの列挙 | 基底の定義・パラメータ | 基底順序に従って、基底 primitive を必要に応じて列挙する |
+| Primitive expansion | A primitive in the target space | Finite combination of selected basis primitives. |
+| Basis index | A primitive | Its index if it is itself a basis member, otherwise none. |
+| Ordered enumeration | Basis definition/parameters | Basis primitives generated as needed in index order. |
 
-基底を `B = {b_0, …, b_{n−1}}` とすると、任意の対応する primitive `p` について以下を与える。
+For `B={b_0,…,b_(n−1)}` and every target primitive p:
 
 ```math
 p=\sum_{\mu=0}^{n-1}c_\mu(p)b_\mu.
 ```
 
-線型独立性によって、この展開の係数は一意となる。展開は対象全体を正確に表し、射影や成分の切り捨てを行わない。基底要素でない primitive も展開できるが、それ自体を指す基底順序番号は返さない。
+Independence makes these coefficients unique. Expansion represents the whole object without projection/pruning. Nonmembers expand but have no index identifying themselves.
 
-| 展開する入力 | 返却型 |
+| Input | Result |
 | --- | --- |
-| 状態 primitive `S` | `LinearCombination<S, C>` |
-| 演算子 primitive `O` | `LinearCombination<O, C>` |
+| State primitive S | `LinearCombination<S, C>` |
+| Operator primitive O | `LinearCombination<O, C>` |
 
-返却する線型結合の要素は選択した基底の primitive に限る。式木側は係数・項順序を保持した `map` と共通 constructor により、`Primitive`・`Scale`・`Sum` の通常の式へ取り込む。線型結合にも取り込み後の式にも基底情報や特別な展開済み状態は保持させない。取り込み後は通常の演算や別基底への再展開に使える。基底要素の条件と取り込みの整合性は検証対象とする。
+Results contain only selected basis primitives. A coefficient/order-preserving map and common constructors produce ordinary Primitive/Scale/Sum syntax. Neither combinations nor expressions retain basis metadata or a special expanded state; they remain usable for ordinary operations and re-expansion. Verify membership and conversion consistency.
 
-順序番号は選択基底の中での zero-based な座標番号とし、primitive の表示名や値の大小から暗黙に決めない。自由度を識別する Index とは別の概念である。`index(&self, primitive: &P) -> Option<usize>` は基底要素でなければ `None` を返す。
+Indices are zero-based basis coordinates, not implicit label/value order or factor identity. `index(&self, primitive: &P) -> Option<usize>` returns None for nonmembers.
 
-列挙は全要素の一括生成・保持を要求しない。`elements(&self) -> impl Iterator<Item = P> + '_` は所有要素を遅延列挙する。順序番号から primitive を得る操作は列挙から導出でき、Basis の必須の独立能力にはしない。列挙の内部表現と基底 primitive の共有実体の管理方法は内部実装で定める。
+`elements(&self) -> impl Iterator<Item=P> + '_` lazily yields owned elements without materializing all of them. Index-to-element lookup can be derived from enumeration and is not a separate mandatory capability. Representation and shared primitive storage are implementation details.
 
-## 3. 要素数の導出
+## 3. Deriving basis sizes
 
-基底要素数は、対応する局所構造と対象種別から共通機構で導出する。局所 Hilbert 空間の次元を `d` としたとき、以下の要素数になる。
+Derive sizes from local structure and target kind. For local Hilbert dimension d:
 
-| 対象 | 基底要素数 |
+| Space | Basis size |
 | --- | --- |
-| 状態空間 | `d` |
-| 全演算子空間 | `d²` |
+| State space | d |
+| Full operator space | d² |
 
-Basis に独立した要素数の提供を要求しない。要素数を得る便利な操作を設ける場合も、上記の情報から導出する。primitive の個数や、列挙を完走して数えた値を要素数の定義にはしない。
+Basis has no independent size capability. Convenience queries also derive these values, rather than defining size by primitive variant count or a completed iterator count.
 
-この契約は対象空間全体に完全な基底を前提とする。部分空間基底・射影、および fermion の even 部分だけへの制限は現在の提供範囲で扱わない。`dim_state<S>()`・`dim_op<O>()` は対象 primitive の Dimension を参照して `Result<usize, DimensionOverflow>` を返す。O の span の次元は既に d² なので、この関数でさらに二乗しない。整数化できない次元のエラーは取得時に返し、基底や式の保持・構築には次元の能力を要求しない。
+This contract assumes complete bases, excluding subspace/projection and fermion-even-only bases. `dim_state<S>()`/`dim_op<O>()` query Dimension and return `Result<usize, DimensionOverflow>`. O already has span dimension d² and is not squared again. Representability errors occur at queries, not storage/construction.
 
-## 4. 能力間の整合性
+## 4. Capability consistency
 
-- 列挙は基底要素を一度ずつ返し、第 `k` 要素の基底順序番号は `k` とする。
-- 列挙順序と順序番号は、同じ基底定義・パラメータのもとで一致する。
-- 列挙される要素数は、局所構造と対象種別から導出した数と一致する。
-- 基底要素自身の展開は、係数 `1` のその要素となる。
-- 任意の primitive の展開結果に現れる primitive は、選択された基底要素に限る。
-- Primitive 間の線型関係を保存し、同じ数学的対象を表す式から同じ基底座標を得る。
+- Enumerate each basis element once; element k has index k.
+- Enumeration and indexing agree for the same definition/parameters.
+- Enumeration count equals the derived dimension.
+- A basis member expands to itself with coefficient 1.
+- Every output primitive is a selected basis member.
+- Preserve primitive linear relations, giving mathematically identical coordinates for equivalent expressions.
 
-これらと基底の線型独立性・完全性は、基底実装が満たす数学的な契約と検証対象である。全 primitive の列挙や、任意の実装に対する実行時の自動証明は要求しない。数値精度・特殊値・近似比較は[数値規約](numerics.md)に従う。
+These laws, independence, and completeness are implementation contracts and verification obligations, not runtime automatic proofs over every possible primitive. Precision, special values, and comparisons follow [numerics](numerics.md).
 
-## 5. 式・座標取得・数値変換との責任分担
+## 5. Expressions, coordinates, and numerical conversion
 
-Basis は primitive 一つに対する展開を提供し、core の共通機構が線型性を用いて式全体へ拡張する。積・作用などを含む場合は、必要な局所規則と合成則を評価して基底へ展開する。展開された基底 primitive の順序番号を使って係数を座標へ対応付け、同じ基底要素の係数をまとめる。
+`Basis::expand` expands one primitive; core extends this linearly to expressions, evaluating local/composition rules as needed for products/actions. Basis indices associate coefficients with coordinates and aggregate equal members.
 
-`syntaqs-core` は、局所規則による `evaluate` とは別に、指定基底への展開と係数取得を提供する。基底に対する座標は数学的に一意であり、一般的な簡約の到達形や最適性を別途要求しない。入力の式は変更しない。
+Core provides explicit expansion/coordinates separately from local-rule evaluate. Coordinates are mathematically unique without requiring a generally optimal simplification normal form. Inputs remain unchanged.
 
-`expand` は基底展開の結果を既存の通常の式型で返す。数値表現への export に向けた集約済み座標は、対象式と基底を入力とする別の公開 API で取得する。座標取得に事前の `expand` 呼び出しや展開済み専用型を要求せず、展開結果へ座標コンテナ・基底情報・展開済みマーカー・座標のキャッシュを付随させない。単一成分取得と未集約の寄与の列挙はこの独立した公開 API の必須項目にしない。座標番号と返却形式は第7節に記録する。
+expand returns the ordinary expression type. Coordinates are a separate public operation on an expression and basis, without prior expand or a dedicated expanded type. Expanded trees gain no coordinate containers, basis labels, markers, or caches. Separate single-component access and unaggregated contribution enumeration are not required APIs. Section 7 defines numbering/results.
 
-内積、Gram 行列、および双対基底は、展開手続きを実装するために利用できるが、Basis が提供する必須の独立能力とはしない。直接の展開規則を提供できれば座標を取得できる。非正規直交基底も `Basis::expand` の規則で扱い、共通処理に汎用 Gram 行列ソルバーや新しい数値ライブラリを導入していない。演算子内積を使う場合は、[次元規格化した Hilbert–Schmidt 内積](primitive-expression.md#41-hilbertschmidt-内積の次元規格化) `Tr(A†B)/D`（D は作用先の次元）に従う。
+Inner products, Gram matrices, and dual bases may implement expansion, but are not mandatory Basis capabilities. Direct rules suffice even for non-orthonormal bases, without a shared generic Gram solver or extra numeric dependency. Operator inner products use [dimension-normalized HS](primitive-expression.md#41-dimension-normalized-hilbertschmidt-inner-products), `Tr(A†B)/D`, where D is the action-space dimension.
 
-Hermite な完全基底が `Tr(B_mu B_nu)=D delta_mu,nu` を満たす場合、展開係数は `a_mu=Tr(B_mu A)/D` である。同じ正規直交な局所演算子基底を tensor 合成した基底も、全次元で割った HS 内積に関して正規直交となる。graded な場合は parity string を含む通常作用行列でも直交性を確認する。
+For a complete Hermitian basis with `Tr(B_mu B_nu)=D delta_mu,nu`, coefficients are `a_mu=Tr(B_mu A)/D`. Tensor products of normalized orthonormal local operator bases stay orthonormal under total-dimension-normalized HS. Verify graded orthogonality also using ordinary action matrices with parity strings.
 
-通常の評価・座標取得では成分を近似的に捨てない。明示的な成分切り捨ては[将来の式操作](../future-work.md#22-式と空間の操作)で検討する。
+Ordinary evaluation/coordinates do not approximately discard components. Explicit pruning remains [future expression work](../future-work.md#22-expression-and-space-operations).
 
-基底展開による式の整理・座標取得は、通常の積・作用・内積・trace の評価経路から分離し、これらの評価に選択基底を必須としない。式の整理や数値変換などで指定基底への展開を要求した時点で必要な部分を展開し、完全な密・疎行列を中間表現として要求しない。同じ基底要素の係数は、式の構造比較を使わず基底の順序番号に基づいてまとめる。
+Expansion/coordinates are separate from ordinary product/action/inner-product/trace paths, which need no basis. Expand necessary parts when explicitly requested, without complete numerical matrices as intermediates. Aggregate by basis index rather than structural expression comparison.
 
-基底展開に必要な分配・局所積・係数処理は内部処理であり、個別の簡約規則を選ぶ公開 API は提供しない。係数の零・精度・許容誤差は[数値規約](numerics.md)に従い、近似比較の許容誤差で成分を捨てない。
+Distribution, local multiplication, and coefficient handling are internal expansion steps, not independently selectable simplification APIs. Follow [numerics](numerics.md); comparison tolerances never silently discard components.
 
-### 5.1. Tensor product による複合基底
+### 5.1. Composite tensor-product bases
 
-複合基底は、一つの局所基底を全基本因子へ共通に適用し、Hilbert 空間の因子順序で tensor product にしたものに限定する。状態には局所状態基底、演算子には局所演算子基底を用い、指定された局所基底と対象空間から core が複合基底を導出する。利用者に別の複合基底オブジェクトの構築を要求しない。複数の因子をまとめて独自の基底を指定することや、もつれた基底を別に定義することは本契約に含めない。局所基底が完全なので、この制限によって表現できる状態・演算子の範囲は狭まらない。
+Apply one local basis uniformly in Hilbert-space factor order, using state bases for states and operator bases for operators. Core derives the composite basis from the local basis and space; callers construct no separate object. Custom multi-factor or entangled bases are outside this contract, without limiting representable objects because each local basis is complete.
 
-基底順序は mixed-radix とし、右端の因子の基底 index が最も速く変化する。因子 i の局所基底番号を s_i、基底要素数を d_i としたとき、平坦番号は次の式で定める。現在の一つの基底指定では、全因子に同じ局所基底と次元を使う。
+Use mixed-radix order with the rightmost factor varying fastest. For local indices s_i and sizes d_i, flatten as follows; current uniform basis arguments use the same basis/dimension throughout.
 
 ```math
 \operatorname{index}(s_0,\ldots,s_{N-1})
 =\sum_{i=0}^{N-1}s_i\prod_{j=i+1}^{N-1}d_j.
 ```
 
-二因子の spin-1/2 の SzBasis は `|up,up>`・`|up,down>`・`|down,up>`・`|down,down>` を、それぞれ番号0・1・2・3に対応付ける。密・疎出力はこの同じ順序を使う。
+Two spin-1/2 SzBasis factors enumerate `|up,up>`, `|up,down>`, `|down,up>`, `|down,down>` at indices 0,1,2,3, shared by dense/sparse output.
 
-要素数は局所基底要素数の積から導出する。Grouping は括り方だけを表し、同じ基本因子・局所基底・順序なら、複合基底や座標を変えない。空の tensor product の基底は `{1}`、単因子の場合はその因子の基底とする。
+Sizes multiply. Grouping changes parentheses only, not coordinates for equal factors/bases/order. The empty tensor basis is `{1}` and a singleton uses its local basis.
 
-Graded な演算子基底の合成は、[複合空間の合成則](composite-expression.md)に従う。演算子の tensor 記法は数学的な規則を表し、独立した tensor product 操作・節点を追加しない。全基底を一度に materialize せず、必要な要素・係数だけを処理する。基底選択によって Hilbert 空間の因子順序や互換性は変更しない。
+Graded operator bases follow [composite composition](composite-expression.md). Operator tensor notation expresses mathematical rules, not another constructor/node. Do not materialize all elements; process needed elements/components only. Choosing bases does not change factor order or compatibility.
 
-### 5.2. 展開結果は通常の式木とする
+### 5.2. Expansion returns ordinary expression trees
 
-基底は展開操作への入力とし、式全体への展開結果は選択した基底要素で表した通常の式木とする。局所基底規則の返す `LinearCombination` は、その式を組み立てるための受け渡し型とする。結果に基底の識別情報や「展開済み」という特別な状態を保持することは要求しない。演算子・状態の表現が変わる操作とし、入力の式は変更しない。結果は Index・局所構造・確定済みの所属空間や作用空間を保持する。source の自動保持は要求しない。
+The basis is an operation input. Expansion returns ordinary syntax in selected members; local LinearCombination results transfer data for constructing that syntax. No retained basis identity or special expanded state is required. Inputs are unchanged; indices, local algebra, and definite state/ambient spaces remain. Original sources are not automatically retained.
 
-展開結果にも通常の積・作用・内積・trace、および指定基底への展開を適用できる。別の基底へ表現を変える場合は、その基底を指定して再展開する。前の基底の識別情報や、式木に対する独立した基底変更機構は必要としない。直接の展開と再展開は数学的に同じ座標を与える契約とし、浮動小数点の演算順序による差は既存の数値規約に従う。
+Expanded expressions support products, actions, inner products, traces, and expansion again. Re-expanding in a different basis needs neither previous basis metadata nor a separate tree basis-change mechanism. Direct expansion and re-expansion have equal mathematical coordinates, subject to ordinary floating-point ordering differences.
 
-式から係数列や行列へ export する場合は、その数値を解釈できるよう基底と順序を確定する。この数値表現の契約は、通常の式木に基底情報を保持させることとは区別する。
+Numerical vectors/matrices require a definite basis/order for interpretation, distinct from storing basis metadata on expression trees.
 
-## 6. CartesianBasis の例と検証条件
+## 6. CartesianBasis example and verification
 
-`syntaqs-spin-half` の `CartesianBasis` は spin 演算子を対象とする `Basis` を実装し、`{I,Sx,Sy,Sz}` をこの順序の基底とする。Spin 演算子の規約は[局所代数](local-structure.md#6-spin-12-の規約)に従う。
+Spin-half CartesianBasis implements Basis for operators in order `{I,Sx,Sy,Sz}` under [local conventions](local-structure.md#6-spin-12-conventions).
 
-| Primitive | 基底展開 | 基底順序番号 |
+| Primitive | Expansion | Index |
 | --- | --- | --- |
 | `I` | `I` | `0` |
 | `Sx` | `Sx` | `1` |
 | `Sy` | `Sy` | `2` |
 | `Sz` | `Sz` | `3` |
-| `Sp` | `(Sx + i Sy)/2` | 存在しない |
+| `Sp` | `(Sx + i Sy)/2` | None |
 
-列挙結果は `I, Sx, Sy, Sz` とする。対応する局所状態空間の次元は `d = 2` なので、全演算子基底の要素数は `d² = 4` と導出する。列挙・順序番号・展開の整合性を確認し、`Sp` と `(Sx + i Sy)/2` の基底座標が一致することも検証対象とする。
+Enumeration is I,Sx,Sy,Sz. State dimension d=2 gives operator size d²=4. Verify enumeration/index/expansion consistency and equal coordinates for Sp and its Cartesian expression.
 
-Spin-half の `SzBasis` が状態 primitive の線型結合、`CartesianBasis`・`LadderBasis` が演算子 primitive の線型結合を返し、それぞれを `map` と共通 constructor で局所式へ取り込めることを確認する。各要素が選択基底に限られること、単精度・倍精度で現行の展開規則と基底順序が維持されること、および非公開の局所代数・非正規直交基底も接続できることを検証する。
+Verify that SzBasis returns state combinations, CartesianBasis/LadderBasis operator combinations, and map/common constructors accept them into local syntax. LadderBasis enumerates `{I,Sp,Sm,Sz}`. Check member-only outputs and rules/order at both precisions, plus custom local algebras and non-orthonormal bases.
 
-式全体の展開では、同じ基底で `Sp + Sm` が `Sx`、`Sx Sx` が `I` へ展開されることを確認する。前者は基底要素の係数結合、後者は必要な局所積の評価を含む。展開で入力の式が変更されず、結果が選択した空間の情報を保持することと、通常の作用・内積・trace にこの基底展開を強制しないことを検証する。
+Whole-expression examples are `Sp+Sm` expanding to Sx and `Sx Sx` to I: the first aggregates coefficients, the second evaluates local multiplication. Verify unchanged inputs, retained space, and basis-independent ordinary evaluation.
 
-展開結果に基底情報を要求せず、通常の式として評価・再展開できることを確認する。例えば `Sx` を `{I,Sp,Sm,Sz}` で `Sp + Sm` に展開し、`{I,Sx,Sy,Sz}` で再展開すると `Sx` と同じ座標を得る。複合基底では、括り方によらない要素・座標、右端の因子が最も速く変化する順序、および空・単因子の基底も検証する。
+Expanded syntax works without metadata: expand Sx into Sp+Sm, then back into CartesianBasis for Sx coordinates. Composite tests cover grouping-independent elements/coordinates, rightmost-fastest order, and empty/singleton cases.
 
-## 7. 公開 API
+## 7. Public APIs
 
-### 7.1. 基底展開と集約済み座標
+### 7.1. Expansion and aggregated coordinates
 
-| 対象 | API | 結果 |
+| Target | API | Result |
 | --- | --- | --- |
-| `LocalState`・`LocalOperator` | `expand(&basis)` | 指定基底で係数を集約した同じ局所式型 |
-| `State` | `expand(&basis)` | 元の所属空間を共有する通常の状態式 |
-| `Operator` | `expand(&basis)` | 既存の束縛先における通常の演算子式。未束縛はエラー |
-| `Operator` | `expand_in(&basis, &ambient)` | 明示空間を優先し、その空間に束縛された通常の演算子式 |
-| 局所式・`State`・`Operator` | `coordinates(&basis)` | 式とは独立した集約済みの疎な `Coordinates` |
-| `Operator` | `coordinates_in(&basis, &ambient)` | 明示空間を優先した集約済みの疎な `Coordinates` |
+| LocalState / LocalOperator | `expand(&basis)` | Same local expression type, aggregated in the basis. |
+| State | `expand(&basis)` | Ordinary state sharing its original space. |
+| Operator | `expand(&basis)` | Ordinary operator on its binding; unbound is an error. |
+| Operator | `expand_in(&basis, &ambient)` | Ordinary operator bound to the explicit, preferred space. |
+| Local expressions / State / Operator | `coordinates(&basis)` | Independent aggregated sparse Coordinates. |
+| Operator | `coordinates_in(&basis, &ambient)` | Coordinates using the preferred explicit space. |
 
-いずれも `Result<_, BasisError>` を返す。全因子に同じ局所基底を適用し、局所規則の評価後に基底番号で係数を集約する。複合状態は自身の所属空間を使い、複合演算子は明示空間を優先し、省略時は束縛先を使う。未束縛の演算子の全作用空間を局所基底から推論しない。Primitive の比較・Clone や、Index の Clone・Hash・Ord は要求しない。演算子の spectator は恒等演算子として指定基底へ展開するため、恒等元自体が基底要素である必要はない。Zero は空の和として選択空間を保持し、0因子の状態・演算子はそれぞれ単位状態・scalar identity を使う。
+All return `Result<_,BasisError>`, applying the same local basis to all factors and aggregating indices after evaluating local rules. States use their own space; operators prefer explicit space, then binding. A local basis never implies an unbound operator's ambient space. No primitive comparison/Clone or index Clone/Hash/Ord is required. Expand identity spectators too, even when identity is not itself a basis member. Zero retains its selected space as an empty sum; zero-factor states/operators use unit/scalar identity syntax.
 
-状態への作用評価は既存の経路を再利用し、演算子 primitive の `Product` を要求しない。演算子の展開では `Identity`・`Product`・`Adjoint` を要求する。係数には必要な Clone・Zero・乗算・共役を要求し、複合処理では数値的な単位係数に One を使う。共通処理自体は Float・除算を要求しないが、具体的な局所規則・Basis には操作固有の bound が適用される。通常の作用・内積・trace の経路に基底処理は追加していない。
+State evaluation reuses existing action without primitive Product. Operator expansion requires Identity/Product/Adjoint. Coefficients need operation-specific Clone/Zero/multiplication/conjugation, and composite unit coefficients use One. Shared processing needs neither Float nor division, though concrete rules/bases may. Ordinary action/inner-product/trace paths gain no basis dependency.
 
-### 7.2. Coordinates の解釈と番号
+### 7.2. Coordinate interpretation and indices
 
-`Coordinates<'b, B, C, H = ()>` は基底を借用し、係数を所有する。局所式では `H = ()`、複合式では `H = HilbertSpace<I>` として選択空間を共有する。入力式は借用しないため、入力を破棄しても基底が有効な間は座標を利用できる。
+`Coordinates<'b,B,C,H=()>` borrows the basis and owns coefficients. H is () locally or a shared HilbertSpace<I> for composites. It does not borrow its source expression and remains usable after that expression is dropped while the basis lives.
 
-`Coordinates` は対象の primitive 型を型引数として保持しない。同じ基底型が複数の primitive 型に対して `Basis` を実装する場合、基底要素の解釈に必要な対象型は元の式の型など利用側の文脈から確定する。数値 export は入力の式と基底から対象を確定できる。
+Coordinates does not retain a primitive type parameter. If B implements Basis for multiple primitives, callers determine interpretation from the source type/context; expression export has that information.
 
-- `basis()`・`space()`・`factor_count()`・`dim_local()` で基底と空間・順序の解釈に必要な情報を取得する。
-- `entries()` は `(&[usize], &C)` を基底順で返す。番号列は空間の因子順で局所基底番号を並べたもので、重複しない。局所式の番号列は一桁、0因子では空列となる。
-- `flat_entries()` は `Result<(usize, &C), DimensionOverflow>` を要素とする iterator を返す。右端が最速の mixed-radix で平坦化し、成分ごとに overflow を検出する。空列の番号は0。
-- `dim()` は全座標空間の要素数を検査付きで計算する。`entries()` の保持・列挙や式の展開は、総要素数の整数化を必要としない。総次元が overflow しても、小さい平坦番号の成分は取得できる。
-- `len()`・`is_empty()` は格納した座標の数を返し、`into_entries()` は番号列と係数を基底順で所有値として取り出す。
+- basis(), space(), factor_count(), and dim_local() expose basis/space/order interpretation.
+- entries() returns unique `(&[usize],&C)` in basis order, one local basis digit per ordered factor. Local expressions have one digit; zero-factor spaces an empty sequence.
+- flat_entries() yields `Result<(usize,&C),DimensionOverflow>` using rightmost-fastest mixed radix and per-entry overflow checks. The empty index is zero.
+- dim() checks total coordinate dimension. Retaining/enumerating entries or expanding does not need that dimension to fit; small flat indices can remain available despite global overflow.
+- len()/is_empty() describe stored entries; into_entries() moves digit sequences and coefficients out in basis order.
 
-例えば二因子の状態 `2(Up⊗Down) + 3(Up⊗Down) − (Down⊗Up)` の `SzBasis` 座標は、番号列 `[0, 1]` に係数 `5`、`[1, 0]` に係数 `−1` を対応付ける。平坦番号はそれぞれ `1` と `2` となる。
+For `2(Up⊗Down)+3(Up⊗Down)−(Down⊗Up)`, SzBasis coordinates are 5 at `[0,1]` and −1 at `[1,0]`, with flat indices 1 and 2.
 
-内部では BTreeMap を使い、基底番号列に対して疎に集約する。集約時と複合状態のスカラー倍後に厳密な零係数を除き、その後の tensor 積へ零成分を持ち越さない。近似誤差による成分の切り捨ては行わず、零係数を理由に後続の基底展開を打ち切らない。`LinearCombination` の重複・零・入力順を保持する契約は変更しない。全基底要素や密ベクトル・行列の一括生成は行わないが、集約済みの疎な係数自体は保持する。
+Internally, BTreeMap aggregates sparse digit keys. Remove exact zeros during aggregation and composite state scaling before later tensor products, without approximate pruning or stopping later basis rules because a coefficient is zero. LinearCombination's order/duplicate/zero-preserving contract stays unchanged. Aggregated sparse coefficients are stored, but no full basis, dense vector, or matrix is materialized.
 
-演算子の座標は演算子基底に対する展開係数であり、状態に作用する数値行列とは区別する。[数値 export](export.md) が座標を数値コンテナへ接続し、作用行列は状態基底への作用結果を列として座標化する。
+Operator coordinates are operator-basis coefficients, distinct from action matrices. [Export](export.md) stores coordinates numerically and generates action-matrix columns by applying operators to state-basis inputs.
 
-### 7.3. 複合基底の遅延列挙
+### 7.3. Lazy composite enumeration
 
-`HilbertSpace::basis_states::<S, O, C, B>(&basis)` と `basis_operators::<O, C, B>(&basis)` は、同じ局所基底から導出した通常の状態式・束縛済み演算子式を順序付きで遅延列挙する。戻り値は `Result<impl Iterator<Item = Result<式, BasisError>>, BasisError>` とする。利用者が別の複合基底オブジェクトを構築する必要はない。
+`HilbertSpace::basis_states::<S,O,C,B>(&basis)` and `basis_operators::<O,C,B>(&basis)` lazily enumerate ordinary states and bound operators from one local basis, returning `Result<impl Iterator<Item=Result<Expression,BasisError>>,BasisError>`. No separate composite basis object is needed.
 
-要素の生成には Dimension と Basis を使い、Index の Eq・Clone、primitive の Clone、作用・積・随伴・恒等元の局所規則、係数の算術を必須にしない。生成した式に対し、Index を照合する操作には引き続き Eq を要求する。全要素数を整数化せず、番号列を進めるため、大きな空間でも必要な先頭要素だけを取得できる。Grouping は列挙順序を変えず、空の空間は一要素の単位基底を返す。
+Generation needs Dimension/Basis, not index Eq/Clone, primitive Clone, local action/product/adjoint/identity rules, or coefficient arithmetic. Operations later comparing indices still need Eq. Increment digit sequences without an integer total count, allowing initial elements of huge spaces. Grouping does not change order; the unit space yields one unit element.
 
-### 7.4. エラー・再公開・利用例
+### 7.4. Errors, re-exports, and examples
 
-`BasisError` は基底展開が返した非基底 primitive（`NonBasisElement`）、局所番号の範囲外（`IndexOutOfBounds`）、列挙と番号・要素数の不一致（`InvalidEnumeration`）、次元 overflow（`Dimension`）、空間不整合・未束縛など（`Expression`）を区別する。得られた情報で検出し、全基底の線型独立性・完全性を実行時に自動証明することは要求しない。零係数であっても不正な参照や不正な展開先を見逃さない。
+BasisError distinguishes non-basis outputs (NonBasisElement), out-of-range local indices (IndexOutOfBounds), inconsistent enumeration/counts (InvalidEnumeration), dimension overflow (Dimension), and incompatible/unbound spaces (Expression). Check available information without automatically proving full independence/completeness. Zero coefficients do not hide invalid references or expansions.
 
-`syntaqs-core` の root から Basis・BasisError・Coordinates を公開する。利用例は [basis_expansion.rs](../../examples/src/bin/basis_expansion.rs) に置く。検証の概要は第6節に記録する。
+Basis, BasisError, and Coordinates are re-exported at core's root. See [basis_expansion.rs](../../examples/src/bin/basis_expansion.rs) and section 6 for verification.
 
-## 8. Graded 基底
+## 8. Graded bases
 
-状態基底の tensor 自体には符号を加えず、元空間の kind を列挙・展開・座標へ保持する。演算子基底は因子順の配置積とし、`expand` / `coordinates` と明示空間版は intrinsic な整列項を使う。P string を含む通常行列を演算子基底の座標として返さない。展開結果は元の空間へ束縛した配置積として再構築し、再展開でも作用と座標を保つ。例えば第二因子の消滅演算子 `c_1` は、intrinsic な基底 `I ⊗g a` の係数が1となり、状態基底上の通常行列は `P ⊗ a` となる。通常表現の配置積 `P_0 a_1` として再構築すると P を二重に含むため、演算子の座標には用いない。`basis_operators` は因子順の配置積を列挙し、局所 Product の評価や全行列を必要としない。
+Tensor state bases add no sign and preserve space kind in enumeration/expansion/coordinates. Operator bases are factor-ordered placement products. expand/coordinates and explicit-space variants use intrinsic sorted terms, not ordinary matrices containing parity strings. Reconstruct placements bound to the original space, preserving action/coordinates under re-expansion. For second-mode annihilation c_1, intrinsic `I ⊗g a` has coefficient 1 while its ordinary state-basis matrix is `P⊗a`. Reconstructing ordinary `P_0 a_1` placements would insert P twice and is wrong for operator coordinates. basis_operators enumerates ordered placements without local Product evaluation or full matrices.
 
-空の基底 `{1}`、右端が最速の mixed-radix、非正規直交な状態基底も同じ契約に従う。Trait bound は[共通評価の能力](composite-expression.md#112-共通-api-と最小能力)、intrinsic / 通常表現の区別は[内部表現](composite-expression.md#114-intrinsic-な項と通常表現)を参照する。
+The empty basis `{1}`, rightmost-fastest order, and non-orthonormal state bases retain the same contracts. See [common evaluation bounds](composite-expression.md#112-shared-apis-and-minimal-capabilities) and [intrinsic/ordinary representations](composite-expression.md#114-intrinsic-terms-and-ordinary-representations).
