@@ -4,11 +4,11 @@
 
 ## 1. 状態と責任分担
 
-**完了（2026-10-27）**。Step 6 として、採用した型・API・feature・依存指定を qmb-export に実装した。Rust 1.98.0 で受入確認を実施した。現在は `qmb-export` を直接利用する。MSRV 1.85 の実ビルド・テストは利用者の依頼により省略しており、対応を実証したものではない。
+**完了（2026-10-27）**。Step 6 として、採用した型・API・feature・依存指定を syntaqs-export に実装した。Rust 1.98.0 で受入確認を実施した。現在は `syntaqs-export` を直接利用する。MSRV 1.85 の実ビルド・テストは利用者の依頼により省略しており、対応を実証したものではない。
 
 数学的契約は[要件第6節](../requirements.md#6-基底export)、既存の基底列挙・座標取得 API は[基底の設計](basis.md)、初期版の完成条件は[アーキテクチャ第9節](../architecture.md#9-初期版の提供範囲と完成条件)に従う。
 
-代数的な基底列挙・作用・座標取得は `qmb-core`、数値データの格納と backend への接続は `qmb-export` が担当する。core の非公開の式木へアクセスせず、評価規則を再実装しない。core に backend の依存を加えず、既存の `no_std + alloc` を維持する。export は std を利用できる一つの crate にまとめる。
+代数的な基底列挙・作用・座標取得は `syntaqs-core`、数値データの格納と backend への接続は `syntaqs-export` が担当する。core の非公開の式木へアクセスせず、評価規則を再実装しない。core に backend の依存を加えず、既存の `no_std + alloc` を維持する。export は std を利用できる一つの crate にまとめる。
 
 ## 2. 出力形式と結果型
 
@@ -107,7 +107,7 @@ ndarray への変換では、ベクトルは `Array1::from_vec`、行列はメ�
 
 疎ベクトルは Coordinates の成分から index・値の配列を作り、`CsVec::try_new(dim, indices, data)` で構築する。疎行列の初期 export は CSC・index は `usize` に固定する。列ごとに得た座標の平坦番号順を使い、重複のない成分から `indptr`・`indices`・`data` を作って `CsMat::try_new_csc` へ渡す。検査付き API を利用し、unsafe や非公開の検査省略経路を使わない。
 
-sprs に `qmb-core` の Coordinates をそのまま渡す既存 API があるという意味ではない。`qmb-export` の Export 実装が、`flat_entries()`・`into_entries()` などと sprs の constructor を接続する。密表現用の Vec 中間層や、新しい独自の疎コンテナを必須経路にしない。
+sprs に `syntaqs-core` の Coordinates をそのまま渡す既存 API があるという意味ではない。`syntaqs-export` の Export 実装が、`flat_entries()`・`into_entries()` などと sprs の constructor を接続する。密表現用の Vec 中間層や、新しい独自の疎コンテナを必須経路にしない。
 
 sprs には座標形式で行列を作る `TriMat::from_triplets`・`add_triplet` と、`to_csc`・`to_csr` もある。採用した列生成では整列・集約済み座標から CSC を構築し、TriMat の経由を必須にしない。CSR が必要な利用者は取り出した sprs 行列を変換する。export 時の形式選択や別の index 整数型は後続の必要性に応じて追加する。
 
@@ -140,9 +140,9 @@ sprs には座標形式で行列を作る `TriMat::from_triplets`・`add_triplet
 
 ### 6.1. 有効化と利用窓口
 
-`qmb-export` の既定 feature は空とし、Export・Vec 出力・メタデータを常時提供する。`ndarray`・`sprs` の feature で各 API と任意依存を有効にする。ndarray feature は式・Coordinates からの直接出力と、所有する Vec 出力結果からの変換の両方を有効にする。
+`syntaqs-export` の既定 feature は空とし、Export・Vec 出力・メタデータを常時提供する。`ndarray`・`sprs` の feature で各 API と任意依存を有効にする。ndarray feature は式・Coordinates からの直接出力と、所有する Vec 出力結果からの変換の両方を有効にする。
 
-利用者は `qmb-export` の feature を直接選択する。backend の型は対応 feature の下で `qmb_export::ndarray`・`qmb_export::sprs` として再公開する。`examples` パッケージの任意の `export` feature は両 backend を有効にする。
+利用者は `syntaqs-export` の feature を直接選択する。backend の型は対応 feature の下で `syntaqs_export::ndarray`・`syntaqs_export::sprs` として再公開する。`examples` パッケージの任意の `export` feature は両 backend を有効にする。
 
 sprs は通常依存に ndarray を含むため、sprs feature だけでも ndarray 自体は依存に入る。この分離は公開する変換 API の選択である。sprs の既定の alga・multi_thread は無効とし、ndarray は std の範囲で使う。BLAS・rayon・保存用 feature は初期導入に含めない。
 
@@ -157,7 +157,7 @@ MSRV 1.85 を維持する。sprs 0.11.4 の公開 manifest は Rust 1.85.0 と n
 
 参照: [sprs 0.11.4 manifest](https://docs.rs/crate/sprs/0.11.4/source/Cargo.toml)、[sprs 0.11.5 manifest](https://docs.rs/crate/sprs/0.11.5/source/Cargo.toml.orig)、[ndarray 0.17.2 manifest](https://github.com/rust-ndarray/ndarray/blob/0.17.2/Cargo.toml)、[sprs の feature](https://docs.rs/crate/sprs/0.11.4/features)。
 
-workspace と qmb-export の Cargo.toml に採用指定を反映し、依存を解決した。直接依存と sprs の ndarray はどちらも 0.17.2 で統一されていることを cargo tree で確認した。Cargo.lock は既存のリポジトリ方針で Git 管理対象外である。MSRV 1.85 のビルド・テストは利用者の依頼により省略した。
+workspace と syntaqs-export の Cargo.toml に採用指定を反映し、依存を解決した。直接依存と sprs の ndarray はどちらも 0.17.2 で統一されていることを cargo tree で確認した。Cargo.lock は既存のリポジトリ方針で Git 管理対象外である。MSRV 1.85 のビルド・テストは利用者の依頼により省略した。
 
 ## 7. 受入確認
 
@@ -177,23 +177,23 @@ workspace と qmb-export の Cargo.toml に採用指定を反映し、依存を�
 2026-10-27 の受入確認では、依存取得後に以下を実行し、すべて成功した。
 
 - `cargo test --workspace --all-features --offline -j 2 --quiet`（doc test を含む151テスト）と `cargo test --workspace --no-default-features --offline -j 2 --quiet`（146テスト）。
-- `cargo test -p qmb-export --no-default-features --features ndarray --offline -j 2 --quiet`（15テスト）と、同じ指定の sprs 構成（16テスト）。
+- `cargo test -p syntaqs-export --no-default-features --features ndarray --offline -j 2 --quiet`（15テスト）と、同じ指定の sprs 構成（16テスト）。
 - 当時の包括 crate での、正規化を無効にして export を有効にした構成（13テスト）。対応する縦断テストは現在 `examples` パッケージにある。
-- `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --all-features --offline -j 2 -- -D warnings`、`RUSTDOCFLAGS='-D warnings' cargo doc --workspace --all-features --no-deps --offline -j 2`、および qmb-export の default feature 無効でのドキュメント生成。
-- `cargo check -p qmb-core --no-default-features --offline -j 2` と heisenberg の `--all-features`、`--no-default-features --features export`、`--no-default-features` の各構成での実行。
+- `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --all-features --offline -j 2 -- -D warnings`、`RUSTDOCFLAGS='-D warnings' cargo doc --workspace --all-features --no-deps --offline -j 2`、および syntaqs-export の default feature 無効でのドキュメント生成。
+- `cargo check -p syntaqs-core --no-default-features --offline -j 2` と heisenberg の `--all-features`、`--no-default-features --features export`、`--no-default-features` の各構成での実行。
 
 6-site open chain の代数・密・疎の期待値はいずれも 1.25 であり、CSC 行列の shape は `(64, 64)`、非零成分は224だった。MSRV・専用 no_std target・性能ベンチマークの未実施事項は[今後の課題](../future-work.md#3-未実施の検証と性能)に記録する。
 
 ## 8. 実装した型と構成・延期範囲
 
-公開型は `qmb_export` の root に提供する。`VectorMetadata<'b, B, H = (), P = ()>` は、基底・空間・shape に加えて状態からの export では P に状態 primitive 型を記録し、Coordinates の直接 export では P を `()` とする。`MatrixMetadata<'b, S, B, H = ()>` は状態型 S と選択空間を記録する。H は局所式では `()`、複合式では `HilbertSpace<I>` である。
+公開型は `syntaqs_export` の root に提供する。`VectorMetadata<'b, B, H = (), P = ()>` は、基底・空間・shape に加えて状態からの export では P に状態 primitive 型を記録し、Coordinates の直接 export では P を `()` とする。`MatrixMetadata<'b, S, B, H = ()>` は状態型 S と選択空間を記録する。H は局所式では `()`、複合式では `HilbertSpace<I>` である。
 
 出力先は `Exported<Vec<C>, M>`、`Exported<ndarray::Array1<C>, M>`・`Exported<ndarray::Array2<C>, M>`、`Exported<sprs::CsVec<C>, M>`・`Exported<sprs::CsMat<C>, M>` のように指定する。具体的な組み合わせの型別名は設けない。局所変数ではメタデータを `_` で推論できる。行列の状態型は `MatrixArgs::<S, _>::new(&basis)` で指定できる。完全な型引数と各メソッドは Rust API ドキュメントを参照する。
 
-実装は data・vector・matrix・error と backend ごとの非公開 module に分けた。内部の格納処理で密・疎の列生成を共有し、ndarray の直接・段階的な変換は共通の Vec 構築・配列変換を使う。qmb-core の実装や通常依存は変更していない。
+実装は data・vector・matrix・error と backend ごとの非公開 module に分けた。内部の格納処理で密・疎の列生成を共有し、ndarray の直接・段階的な変換は共通の Vec 構築・配列変換を使う。syntaqs-core の実装や通常依存は変更していない。
 
 Partial trace、汎用的な写像の表現行列・表現係数、異なる入出力基底を扱う汎用機構、異種局所代数・追加 backend は既存の初期版の範囲に従って延期する。Graded な入力への対応は第9節に記録する。通常の状態・演算子の数値 export は、これらを前提条件にしない。
 
 ## 9. Graded な入力（2026-10-29）
 
-共通の `Export` から ordinary / graded の両方を扱う。列ごとの core の作用・状態座標が符号を処理し、Vec / ndarray / sprs の storage には graded 専用処理を加えない。metadata が保持する HilbertSpace は kind・因子順を保存する。複合状態・演算子の出力では O の `HomogeneousParity + ParityOperator` を従来の bound に追加し、局所式の出力には追加しない。vector 出力も共通の作用評価を使い、shape・格納順序は変えない。`qmb-normalize` も共通の内積・期待値を呼び、平方根・除算・零 norm の処理を共有する。能力の一覧と移行は[共通評価と移行](composite-expression.md#122-共通-api-と最小能力)、実装時の検証記録は[受入確認](composite-expression.md#13-ordinary--graded-の受入確認2026-10-29)を参照。
+共通の `Export` から ordinary / graded の両方を扱う。列ごとの core の作用・状態座標が符号を処理し、Vec / ndarray / sprs の storage には graded 専用処理を加えない。metadata が保持する HilbertSpace は kind・因子順を保存する。複合状態・演算子の出力では O の `HomogeneousParity + ParityOperator` を従来の bound に追加し、局所式の出力には追加しない。vector 出力も共通の作用評価を使い、shape・格納順序は変えない。`syntaqs-normalize` も共通の内積・期待値を呼び、平方根・除算・零 norm の処理を共有する。能力の一覧と移行は[共通評価と移行](composite-expression.md#122-共通-api-と最小能力)、実装時の検証記録は[受入確認](composite-expression.md#13-ordinary--graded-の受入確認2026-10-29)を参照。

@@ -4,7 +4,7 @@ use std::{fmt::Debug, num::NonZeroUsize, ops::Neg};
 
 use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
-use qmb_core::{
+use syntaqs_core::{
     Act, Adjoint, Basis, Dimension, DimensionOverflow, Identity, InnerProduct, LinearCombination,
     Product, Term, Trace,
 };
@@ -350,17 +350,17 @@ impl Dimension for Operator {
     }
 }
 
-impl qmb_core::HomogeneousParity for Ket {
-    fn parity(&self) -> qmb_core::Parity {
-        qmb_core::Parity::Even
+impl syntaqs_core::HomogeneousParity for Ket {
+    fn parity(&self) -> syntaqs_core::Parity {
+        syntaqs_core::Parity::Even
     }
 }
-impl qmb_core::HomogeneousParity for Operator {
-    fn parity(&self) -> qmb_core::Parity {
-        qmb_core::Parity::Even
+impl syntaqs_core::HomogeneousParity for Operator {
+    fn parity(&self) -> syntaqs_core::Parity {
+        syntaqs_core::Parity::Even
     }
 }
-impl qmb_core::ParityOperator for Operator {
+impl syntaqs_core::ParityOperator for Operator {
     fn parity_operator() -> Self {
         Self::identity()
     }

@@ -1,8 +1,8 @@
 use fixture::*;
 use num_complex::Complex;
-use qmb_core::{Basis, HilbertSpace, LocalOperator, LocalState};
-use qmb_export::{Export, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
-use qmb_tests::three_level as fixture;
+use syntaqs_core::{Basis, HilbertSpace, LocalOperator, LocalState};
+use syntaqs_export::{Export, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
+use syntaqs_tests::three_level as fixture;
 
 // Follow the required complex-magnitude atol/rtol comparison, independently of
 // the fixture's component-wise assertions used by older core tests.
@@ -75,22 +75,24 @@ fn check<T: Real>() {
         }
         #[cfg(feature = "ndarray")]
         {
-            let direct: Exported<qmb_export::ndarray::Array2<_>, MatrixMetadata<'_, Ket, _, ()>> =
-                (&op).export(MatrixArgs::new(&basis)).unwrap();
+            let direct: Exported<
+                syntaqs_export::ndarray::Array2<_>,
+                MatrixMetadata<'_, Ket, _, ()>,
+            > = (&op).export(MatrixArgs::new(&basis)).unwrap();
             for (i, row) in expected.iter().enumerate() {
                 for (j, &value) in row.iter().enumerate() {
                     close(direct.data()[[i, j]], value);
                 }
             }
             let converted: Exported<
-                qmb_export::ndarray::Array2<_>,
+                syntaqs_export::ndarray::Array2<_>,
                 MatrixMetadata<'_, Ket, _, ()>,
             > = output.export(()).unwrap();
             assert_eq!(direct.data(), converted.data());
         }
         #[cfg(feature = "sprs")]
         {
-            let sparse: Exported<qmb_export::sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, ()>> =
+            let sparse: Exported<syntaqs_export::sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, ()>> =
                 (&op).export(MatrixArgs::new(&basis)).unwrap();
             for (i, row) in expected.iter().enumerate() {
                 for (j, &value) in row.iter().enumerate() {
@@ -141,7 +143,7 @@ fn check<T: Real>() {
         }
     }
     // Identity is not itself a MatrixUnits basis element; export remains valid.
-    let identity = qmb_core::Operator::<u8, Operator, Complex<T>>::identity()
+    let identity = syntaqs_core::Operator::<u8, Operator, Complex<T>>::identity()
         .bind(&space)
         .unwrap();
     let output: Exported<Vec<_>, MatrixMetadata<'_, Ket, _, _>> =

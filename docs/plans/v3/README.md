@@ -1,7 +1,7 @@
 # v3 に向けた実装案
 
 作成日: 2026-10-30
-更新日: 2026-11-01
+更新日: 2026-11-02
 
 v3 への更新の対象は以下の5項目とする。未実装の項目は本書とリンク先の修正案で検討し、実装済みの項目は現行の設計文書・使用例を参照する。
 
@@ -19,21 +19,21 @@ primitive の一覧・規格化は[局所 primitive の設計](../../design/loca
 
 ## プロジェクトルートの README とライセンスファイル
 
-プロジェクトルートに `README.md` とライセンスファイルを整備する。
+**整備・検証済み（2026-11-02）。** プロジェクトの説明・導入方法は[トップの README](../../../README.md)、各 crate の担当責任は[crate 一覧](../../../README.md#crates)から各 README を参照する。ライセンス本文はルートの [LICENSE](../../../LICENSE) に配置した。
 
 - `README.md` には、プロジェクトの目的・提供機能、crate の構成、依存設定と feature、最小の利用例、examples・設計文書へのリンク、開発時のビルド・検証方法をまとめる。
 - 実装済みの機能と将来の計画を区別し、利用例やコマンドは現行の公開 API・リポジトリ構成と一致させる。
-- 採用ライセンス、著作権者表記、適用範囲を確定したうえで、対応するライセンスファイルを配置する。採用ライセンスは現時点では未定とする。
-- ライセンス確定後、README の案内と workspace・各 crate の Cargo メタデータを整合させる。
+- 採用ライセンスは MIT、著作権表示は `Copyright (c) 2026 Haruki SAITO`、適用範囲はリポジトリ全体とする。
+- README の案内と workspace・各 crate のライセンス・README・repository メタデータを整合させる。
 
-検証では、README 内のリンク・利用例・コマンドと、ライセンスファイル・Cargo メタデータの対応を確認する。
+README 内のローカルリンク・利用例、ドキュメント生成とフォーマット確認のコマンド、ライセンスファイル・Cargo メタデータの対応を確認した。利用例の Git 依存は手元のリポジトリへ対応付けて検証しており、改名済みコードの GitHub 反映後の導入確認は未実施である。
 
 ## GitHub Actions の workflow 整備
 
 `.github/workflows/` に継続的な検証のための workflow を整備する。現時点では同ディレクトリは存在しない。
 
 - pull request・push 時に、format、Clippy、ビルド・テスト（doc test を含む）、ドキュメント生成を実行する。
-- default feature 無効・全 feature 有効に加え、`qmb-export` の backend ごとの feature 構成を確認する。
+- default feature 無効・全 feature 有効に加え、`syntaqs-export` の backend ごとの feature 構成を確認する。
 - MSRV でのビルド・テストと、`no_std + alloc` 対応 crate の専用 target でのビルドを検討し、[未実施の検証](../../future-work.md#3-未実施の検証と性能)を補う。
 - 対象ブランチ・OS・Rust toolchain、ジョブ分割、依存キャッシュ、実行時間を整理し、ローカルの検証手順と README の案内を一致させる。
 

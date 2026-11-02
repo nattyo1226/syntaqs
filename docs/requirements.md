@@ -1,10 +1,10 @@
-# qmb-rs 要件
+# syntaqs 要件
 
 更新日: 2026-11-01
 
 ## 1. 文書の目的と責任分離
 
-本文書は、qmb-rs の目的、責任分離、機能要件、数学的・数値的規約、および検証方針を定め、開発計画の基準とする。
+本文書は、syntaqs の目的、責任分離、機能要件、数学的・数値的規約、および検証方針を定め、開発計画の基準とする。
 
 2026-10-26 に LocalStructure の廃止方針を採用した。primitive の意味・規則は S・O の型と各能力の実装で定め、追加の定義ラベルは設けない。次元は primitive 型全体の span、恒等元は演算子 primitive O の値として提供する。L による関連付け・一致判定は廃止し、[局所構造の設計第7節](design/local-structure.md#7-localstructure-廃止の採用方針2026-10-26)で置き換える。製品コード・テスト・利用例を移行済みである。
 
@@ -18,13 +18,13 @@
 
 初期版では、一つの系を同じ primitive 型 S・O で表す一種類の局所代数から構成する。空間・状態・演算子式に含まれる全基本因子は同じ局所構造を持ち、異種局所構造の混在・合成は後続へ延期する。独自代数を別の系として単独利用する拡張性は維持する。同じ局所構造の複数因子、入れ子 Tensor、および一つの Site への複数自由度の配置は初期版に含める。
 
-qmb-rs は、量子系の Hilbert 空間、状態、および演算子を代数的に構築・合成・評価し、必要に応じて数値計算 backend へ export する汎用ライブラリとする。
+syntaqs は、量子系の Hilbert 空間、状態、および演算子を代数的に構築・合成・評価し、必要に応じて数値計算 backend へ export する汎用ライブラリとする。
 
 演算子基底の構成・列挙、行列を生成しない代数計算、および指定基底への展開・座標取得を提供する。写像の再利用可能な係数データの生成は future work とする。第一目標はシンボリックな構造を保持しつつ必要な部分を密表現へ export できることであり、密・疎表現への四つの変換経路を提供する。
 
 以下の対象ごとに、定義、操作、制約、および検証条件をまとめる。局所構造から埋め込み・評価までと、基底・係数データの構築は代数 core が担当し、幾何・モデル構築と数値 backend への export はその上に接続する。
 
-代数 core は `qmb-core` に集約する。具体的代数は `qmb-spin-half` などの専用 crate、幾何と外部の Site 列への借用接続は `qmb-geometry`、外部数値コンテナへの変換は `qmb-export`、Heisenberg・Neel の構築 utility は `qmb-spin-half` が担当する。利用例は各 crate を直接利用する workspace の [examples パッケージ](../examples/README.md)に置く。共通の型・式木・評価・基底処理を core の module として分離し、具体的代数には独自の式木・evaluator を要求しない。責任と依存関係は[アーキテクチャ](architecture.md#21-crate-の構成)に定める。
+代数 core は `syntaqs-core` に集約する。具体的代数は `syntaqs-spin-half` などの専用 crate、幾何と外部の Site 列への借用接続は `syntaqs-geometry`、外部数値コンテナへの変換は `syntaqs-export`、Heisenberg・Neel の構築 utility は `syntaqs-spin-half` が担当する。利用例は各 crate を直接利用する workspace の [examples パッケージ](../examples/README.md)に置く。共通の型・式木・評価・基底処理を core の module として分離し、具体的代数には独自の式木・evaluator を要求しない。責任と依存関係は[アーキテクチャ](architecture.md#21-crate-の構成)に定める。
 
 | 対象 | 担当すること | 記述先 |
 | --- | --- | --- |
@@ -175,7 +175,7 @@ spinful fermion は、物理 site `i` と mode `(i,σ)` を区別する。spin-1
 
 Index は局所構造から独立した識別子であり、局所構造や次元を持たない。基本自由度は Index と局所構造を持つ `HilbertSpace` の葉（Factor）として表し、独立した `Dof` 型は設けない。同じ局所構造を持っていても、異なる Index を持つ自由度は独立した因子である。Index の一意性は提供側が管理する。Id128 は UUID の生成方式、Tag は利用側の名前選択に依存する。独立した発行、自由度の構築、および局所状態・演算子への付与の契約は、[Index の設計](design/index.md)に定める。Index は基底の座標を指定する数値的な index と区別する。
 
-`qmb-core` は Index 型をジェネリックに扱い、同じ Index であることを照合できることを契約とする。具体的な表現・発行・一意性の確保は提供側の責任とし、標準具体型は `qmb-basic` の Id128 と Tag とし、Id128 は seed 指定不要の UUID、Tag は文字列そのものを同一性とする。core は UUID・乱数源に依存せず、`no_std + alloc` を維持する。
+`syntaqs-core` は Index 型をジェネリックに扱い、同じ Index であることを照合できることを契約とする。具体的な表現・発行・一意性の確保は提供側の責任とし、標準具体型は `syntaqs-basic` の Id128 と Tag とし、Id128 は seed 指定不要の UUID、Tag は文字列そのものを同一性とする。core は UUID・乱数源に依存せず、`no_std + alloc` を維持する。
 
 保存した対象の復元は元の Index を保持し、独立した系の作成は新しい Index に参照を一貫して付け直す。複数ランタイムから対象を持ち寄る場合は、Index で因子を照合し、局所構造と空間の互換性を検証する。詳細は [Index の保存・復元と複数ランタイムの契約](design/index.md#7-保存復元と複数ランタイム)に定める。保存形式と具体的な API は未決とし、保存機能や並列評価を初期版の必須実装には追加しない。
 
@@ -271,7 +271,7 @@ Builtin の式木の節点を列挙して評価を分岐することは許容す
 
 左 scalar multiplication と右 scalar multiplication は同じ意味とする。単精度と倍精度のオブジェクトを同じ演算で混在させず、暗黙の精度昇格も行わない。精度を変更する場合は明示的な変換を必要とする。
 
-scalar の算術、厳密比較、丸め、NaN・正負の infinity などの特殊値の挙動は、採用する数値型に委譲する。型が表現できる値は受け入れ、qmb-rs 独自の正規化・拒否・例外化・置換・補正規則を設けない。5.6 節の明示的な近似比較と精度混在の検証は別の契約として定める。
+scalar の算術、厳密比較、丸め、NaN・正負の infinity などの特殊値の挙動は、採用する数値型に委譲する。型が表現できる値は受け入れ、syntaqs 独自の正規化・拒否・例外化・置換・補正規則を設けない。5.6 節の明示的な近似比較と精度混在の検証は別の契約として定める。
 
 局所規則による評価や基底展開は数学的な構造に従って行い、元の数値演算列の丸めや非有限値の伝播をそのまま再現する追加保証は設けない。
 
@@ -776,7 +776,7 @@ A_{mn}=\langle e_m^{\mathrm{out}}|A|e_n^{\mathrm{in}}\rangle.
 
 係数データ、直接微分可能な ML module、tensor network・MPS・MPO への export に拡張できるようにする。局所演算子積の有限和、内部分解、grading などの情報を不要に失わず、数値表現を経由することを必須としない。
 
-初期版の疎表現への変換では密表現を中間生成せず、Coordinates の疎な成分と sprs の構築 API を qmb-export で接続する。
+初期版の疎表現への変換では密表現を中間生成せず、Coordinates の疎な成分と sprs の構築 API を syntaqs-export で接続する。
 
 少なくとも以下を検出してエラーとして扱う。
 
@@ -1040,13 +1040,13 @@ Fermion などについて本文書で定める合成・評価・検証規約は
 | [TeNPy: SpinHalfFermionSite](https://tenpy.readthedocs.io/en/stable/reference/tenpy.networks.site.SpinHalfFermionSite.html) | Spinful fermion の四次元局所空間、内部 CAR を満たす局所演算子、site 総 parity |
 | [TeNPy: GroupedSite](https://tenpy.readthedocs.io/en/stable/reference/tenpy.networks.site.GroupedSite.html) | 複数の局所空間をまとめて一つの site として扱い、Fermion の内部符号を含む局所演算子を構成する機構 |
 
-参考資料で採用されている仕様と、本文書で定める qmb-rs の仕様は同一とは限らない。Fermion の trace は 5.4 節の通常の trace の規約に従い、外部ライブラリとの責任分離は 6.5 節に従う。
+参考資料で採用されている仕様と、本文書で定める syntaqs の仕様は同一とは限らない。Fermion の trace は 5.4 節の通常の trace の規約に従い、外部ライブラリとの責任分離は 6.5 節に従う。
 
 ## 11. 型選択の構築 API
 
-`qmb_core::QuantumSystem` は `State`・`Operator`（primitive 型）・`Coeff` だけを関連型として持つ。構築は `qmb_core::ExpressionFactory<S,O,C>` の inherent method `state(primitive)`・`operator(primitive)` から既存の局所式を返す。構築時に Clone・数値演算・Act などを要求せず、評価の能力は各操作で要求する。空間・幾何・Index 発行は担わず、選択した系の識別子を式へ加えない。既存 constructor の直接利用も維持する。
+`syntaqs_core::QuantumSystem` は `State`・`Operator`（primitive 型）・`Coeff` だけを関連型として持つ。構築は `syntaqs_core::ExpressionFactory<S,O,C>` の inherent method `state(primitive)`・`operator(primitive)` から既存の局所式を返す。構築時に Clone・数値演算・Act などを要求せず、評価の能力は各操作で要求する。空間・幾何・Index 発行は担わず、選択した系の識別子を式へ加えない。既存 constructor の直接利用も維持する。
 
-`LocalStateOf<Q>`・`LocalOperatorOf<Q>`・`StateOf<Q,I>`・`OperatorOf<Q,I>` は関連型を既存の core 式型へ投影する別名である。`qmb_spin_half::SpinHalf<C>` は精度の既定値を持たず、C を一度選んで状態・演算子・モデルの戻り値へ引き継ぐ。異なる係数精度の暗黙変換や個別 primitive 用メソッドは追加しない。選択済みの Q は入口で指定し、投影を逆向きに推論できることは前提にしない。
+`LocalStateOf<Q>`・`LocalOperatorOf<Q>`・`StateOf<Q,I>`・`OperatorOf<Q,I>` は関連型を既存の core 式型へ投影する別名である。`syntaqs_spin_half::SpinHalf<C>` は精度の既定値を持たず、C を一度選んで状態・演算子・モデルの戻り値へ引き継ぐ。異なる係数精度の暗黙変換や個別 primitive 用メソッドは追加しない。選択済みの Q は入口で指定し、投影を逆向きに推論できることは前提にしない。
 
 ### 11.1. 構築・集約の共通入口（2026-10-28）
 

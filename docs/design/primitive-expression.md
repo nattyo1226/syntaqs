@@ -6,7 +6,7 @@
 
 本書は、状態・演算子の primitive と、それらを葉とする局所式の数学的能力を定める。[要件](../requirements.md)と[アーキテクチャ概要](../architecture.md)に基づく詳細設計であり、[局所構造](local-structure.md)が対応する primitive と能力を関連付け、その整合性を要求する。
 
-具体的代数の crate が primitive の局所的な演算規則を実装し、`qmb-core` の共通の式木・評価機構が線型結合、積、作用、随伴などへ拡張する。独自の局所代数を追加する際は、primitive と規則を実装し、core の共通型を直接利用する。具体的な Rust の型、trait シグネチャ、および内部表現は本書では定めない。Product と Act は能力を区別する設計上の名前として用いる。
+具体的代数の crate が primitive の局所的な演算規則を実装し、`syntaqs-core` の共通の式木・評価機構が線型結合、積、作用、随伴などへ拡張する。独自の局所代数を追加する際は、primitive と規則を実装し、core の共通型を直接利用する。具体的な Rust の型、trait シグネチャ、および内部表現は本書では定めない。Product と Act は能力を区別する設計上の名前として用いる。
 
 本書の局所式は、一つの局所構造の上の式を扱う。Index の付与と全作用空間への束縛は、[Index の契約](index.md)および要件の 5.1 節に従う。複合空間の tensor product、因子間の grading、partial trace は共通の合成・埋め込み・評価機構が担当する。
 
@@ -109,7 +109,7 @@ bra 型・構築 API は後続へ延期し、初期版の braket は内積で計
 
 ### 4.1. Norm・正規化の API と feature
 
-係数全体を C、`C: RealPart` の実数型を R とする。内積・期待値・norm squared・スカラー除算は `qmb-core`、以下の拡張 trait と `NormalizationError` は std を利用する `qmb-normalize` が提供する。
+係数全体を C、`C: RealPart` の実数型を R とする。内積・期待値・norm squared・スカラー除算は `syntaqs-core`、以下の拡張 trait と `NormalizationError` は std を利用する `syntaqs-normalize` が提供する。
 
 | 操作 | 提供元 | 局所状態の返り値 | 複合状態の返り値 |
 | --- | --- | --- | --- |
@@ -125,7 +125,7 @@ norm squared は自己内積の実部、norm はその平方根とする。`norm
 
 正規化期待値は期待値を自己内積全体で除し、`Divide` を要求する。平方根・実部取得・実数の埋め込みは要求しない。標準 `Complex<T>` の `Divide` は成分 T に `PartialOrd` を要求する。純実の分母は直接除算し、虚部が非零の場合は分母の最大成分の絶対値で正規化してから二乗する。分子の正規化が overflow する場合は分子を半分にして計算し、結果で倍率を戻す。小さい成分は加算後、大きい成分は加算前に正規化した分母のノルム二乗で割る。これにより丸め誤差による分母の微小な虚部でも不要な二乗の overflow / underflow を避ける。Float・Copy・One・数学関数 backend は追加せず、独自係数型 C の `Divide` や式メソッドには順序の制約を追加しない。整数のような切り捨て除算では元の直接計算を維持する。明示空間を渡す複合式では、その空間を演算子の既存束縛より優先する。
 
-拡張 trait とエラーは `qmb-normalize` から直接利用する。core の libm feature は設けず、core の代数 API・norm squared・スカラー除算は正規化 crate がなくても利用できる。非零の自己内積による商を明示的に計算でき、平方根を使わない正規化期待値の拡張 trait も `qmb-normalize` に属する。
+拡張 trait とエラーは `syntaqs-normalize` から直接利用する。core の libm feature は設けず、core の代数 API・norm squared・スカラー除算は正規化 crate がなくても利用できる。非零の自己内積による商を明示的に計算でき、平方根を使わない正規化期待値の拡張 trait も `syntaqs-normalize` に属する。
 
 ### 4.2. Hilbert–Schmidt 内積の次元規格化
 
@@ -147,7 +147,7 @@ norm squared は自己内積の実部、norm はその平方根とする。`norm
 
 `LocalOperator::hs_inner_product` は局所の `Tr(A†B)` を `O::identity()` の trace で割る。実装では評価後の各 primitive の trace を先に規格化し、その後で係数を掛けて加算する。`Operator::hs_inner_product`・`hs_inner_product_in` も[通常表現の局所 trace の走査](composite-expression.md#124-intrinsic-な項と通常表現)で同じ処理を用いてから縮約する。局所式に係数を付けてから配置した場合も、配置後に付けた場合も、不要な非正規化 trace の中間値を作らない。各局所次元は係数型 C の非零の値として表せ、数学的な除算ができることを要求する。除算には既存の `Divide` を使い、通常の `trace` / `trace_in` に除算能力を追加しない。
 
-この計算には状態型・Dimension・総次元の整数化・整数から C への変換を要求しない。空の tensor 空間は D=1 とする。総次元の `usize` overflow と、identity spectator の次元を掛け重ねることによる中間値の増大を避けるが、一般の係数の桁あふれや丸め誤差を防ぐ保証はしない。実装は [evaluate/trace.rs](../../crates/qmb-core/src/evaluate/trace.rs)、回帰テストは [hs_inner_product.rs](../../tests/tests/core_hs_inner_product.rs)を参照する。
+この計算には状態型・Dimension・総次元の整数化・整数から C への変換を要求しない。空の tensor 空間は D=1 とする。総次元の `usize` overflow と、identity spectator の次元を掛け重ねることによる中間値の増大を避けるが、一般の係数の桁あふれや丸め誤差を防ぐ保証はしない。実装は [evaluate/trace.rs](../../crates/syntaqs-core/src/evaluate/trace.rs)、回帰テストは [hs_inner_product.rs](../../tests/tests/core_hs_inner_product.rs)を参照する。
 
 ## 5. 線型従属性と基底との接続
 
@@ -171,7 +171,7 @@ Primitive が線型独立でないため、同じ数学的対象に複数の式�
 
 ## 7. 式構築の入口と係数変換（2026-10-28）
 
-構築・集約の基本の入口は qmb_core::ExpressionFactory とし、構築済みの式の操作・計算はインスタンスメソッドで行う。LocalStateOf・LocalOperatorOf・StateOf・OperatorOf は主に型注釈で使う。状態のテンソル構築は既存空間を明示する tensor_in・try_tensor_in に移行し、ExpressionFactory の同名 inherent method も基礎 API へ委譲する。primitive の葉順の配置には product_state を使う。具体的な配置・合成の契約は[複合式の設計](composite-expression.md#11-expressionfactory-の構築入口と-fallible-集約2026-10-28)に記録する。
+構築・集約の基本の入口は syntaqs_core::ExpressionFactory とし、構築済みの式の操作・計算はインスタンスメソッドで行う。LocalStateOf・LocalOperatorOf・StateOf・OperatorOf は主に型注釈で使う。状態のテンソル構築は既存空間を明示する tensor_in・try_tensor_in に移行し、ExpressionFactory の同名 inherent method も基礎 API へ委譲する。primitive の葉順の配置には product_state を使う。具体的な配置・合成の契約は[複合式の設計](composite-expression.md#11-expressionfactory-の構築入口と-fallible-集約2026-10-28)に記録する。
 
 局所・複合の4式型と LinearCombination の scaled は `impl Into<C>` を受け取り、入口で一度だけ C に変換する。式型は係数を保持するだけで数値能力・Clone を要求せず、LinearCombination は従来の `C: Clone + Mul<Output=C>` を維持する。変換元の Clone は不要で、空の LinearCombination でも変換は一度行う。C の精度は維持し、新たなキャストや精度変換は導入しない。Mul・scalar・term の引数は広げない。
 

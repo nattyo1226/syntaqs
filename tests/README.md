@@ -1,26 +1,28 @@
-# qmb-rs workspace tests
+# syntaqs workspace tests
 
-`qmb-tests` は、共有するテスト用代数と独立した数値参照計算、およびそれらを使う公開 API・横断テストを持つ workspace パッケージである。`examples` と同様に version・edition・rust-version を workspace から継承し、`publish = false` とする。
+See the [project README](../README.md) for an overview and development commands.
 
-`src/graded.rs` は parity を持つ二状態代数、`src/three_level.rs` は非正規直交基底も扱う三状態代数を提供する。`tests/` の各テストはこのライブラリを import し、core・normalize・export の公開 API を検証する。ファイル名の `core_`・`normalize_`・`export_` は主な検証対象を表す。ライブラリ crate の内部実装を検証するテストや固有の fixture は、各 crate に残す。
+`syntaqs-tests` is a workspace package containing shared test algebras, independent numerical reference calculations, and public API and integration tests that use them. Like `examples`, it inherits version, edition, and rust-version from the workspace and sets `publish = false`.
 
-本番用の crate は `qmb-tests` に依存しない。共有 fixture を使うテストをこのパッケージ内にまとめることで、他の crate の `tests/` を相対パスで読み込まず、テスト支援ライブラリの配布も不要にする。各ライブラリ単体の `cargo test` と、workspace 全体の検証を区別する。
+`src/graded.rs` provides a two-state algebra with parity; `src/three_level.rs` provides a three-state algebra with support for non-orthonormal bases. Tests under `tests/` import this library to exercise the public APIs of core, normalize, and export. Filename prefixes `core_`, `normalize_`, and `export_` identify the main component under test. Tests of library internals and fixtures specific to a crate remain in that crate.
 
-リポジトリ直下から実行する。
+Production crates do not depend on `syntaqs-tests`. Keeping tests that use shared fixtures in this package avoids importing other crates' `tests/` directories through relative paths and removes the need to publish a test-support library. Testing an individual library with `cargo test` is distinct from validating the entire workspace.
+
+Run these commands from the repository root:
 
 ```sh
-# core・normalize・Vec export のテスト
-cargo test -p qmb-tests
+# Test core, normalize, and Vec export
+cargo test -p syntaqs-tests
 
-# ndarray・sprs を含む全 backend
-cargo test -p qmb-tests --all-features
+# Test all backends, including ndarray and sprs
+cargo test -p syntaqs-tests --all-features
 
-# backend を個別に検証
-cargo test -p qmb-tests --no-default-features --features ndarray
-cargo test -p qmb-tests --no-default-features --features sprs
+# Test each optional backend separately
+cargo test -p syntaqs-tests --no-default-features --features ndarray
+cargo test -p syntaqs-tests --no-default-features --features sprs
 
-# 各 crate・examples・横断テストをまとめて検証
+# Test all crates, examples, and workspace integration tests
 cargo test --workspace --all-features
 ```
 
-`qmb-tests` の既定 feature は空である。`ndarray`・`sprs` は、それぞれ `qmb-export` の対応 feature を有効にする。単独の backend 構成は `-p qmb-tests` で検証する。workspace 全体では、他パッケージの依存設定から backend が有効になる場合がある。
+`syntaqs-tests` has no default features. Its `ndarray` and `sprs` features enable the corresponding features in `syntaqs-export`. Use `-p syntaqs-tests` to test individual backend configurations. When testing the entire workspace, dependency settings in other packages may enable additional backends.

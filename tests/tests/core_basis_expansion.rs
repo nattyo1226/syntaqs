@@ -1,10 +1,10 @@
 //! Basis coordinates and reconstruction against independent three-level algebra.
 
 use num_complex::Complex;
-use qmb_core::{Basis, BasisError, Coordinates, HilbertSpace, LocalOperator, LocalState};
+use syntaqs_core::{Basis, BasisError, Coordinates, HilbertSpace, LocalOperator, LocalState};
 
 use fixture::*;
-use qmb_tests::three_level as fixture;
+use syntaqs_tests::three_level as fixture;
 
 type Ls<T> = LocalState<Ket, Operator, Complex<T>>;
 type Lo<T> = LocalOperator<Operator, Complex<T>>;
@@ -41,7 +41,7 @@ fn assert_values<T: Real>(
     }
 }
 
-fn check_three_level<T: Real>(kind: qmb_core::TensorKind) {
+fn check_three_level<T: Real>(kind: syntaqs_core::TensorKind) {
     let p = Ls::<T>::primitive(Ket::Phase).scaled(c(0.3, -0.7))
         + Ls::primitive(Ket::Sum).scaled(c(-0.2, 0.6));
     let reference = std::array::from_fn::<_, 3, _>(|i| {
@@ -114,7 +114,7 @@ fn check_three_level<T: Real>(kind: qmb_core::TensorKind) {
     .unwrap();
     let a = Ls::<T>::primitive(Ket::Phase).at(&f).unwrap();
     let b = Ls::<T>::primitive(Ket::Sum).at(&g).unwrap();
-    let other = qmb_core::State::tensor_in(
+    let other = syntaqs_core::State::tensor_in(
         &space,
         [
             Ls::<T>::primitive(Ket::Unit(Axis::B)).at(&f).unwrap(),
@@ -122,7 +122,7 @@ fn check_three_level<T: Real>(kind: qmb_core::TensorKind) {
         ],
     )
     .unwrap();
-    let state = (qmb_core::State::tensor_in(&space, [a, b])
+    let state = (syntaqs_core::State::tensor_in(&space, [a, b])
         .unwrap()
         .scaled(c(0.3, -0.7))
         .clone()
@@ -158,7 +158,7 @@ fn check_three_level<T: Real>(kind: qmb_core::TensorKind) {
 
     // Identity is not a MatrixUnits basis primitive. Both spectator identities
     // must expand into sums of three diagonal units, rather than a fake index.
-    let identity = qmb_core::Operator::<_, Operator, Complex<T>>::identity();
+    let identity = syntaqs_core::Operator::<_, Operator, Complex<T>>::identity();
     let coords = identity.coordinates_in(&MatrixUnits, &space).unwrap();
     assert_eq!(coords.dim().unwrap(), 81);
     assert_eq!(coords.len(), 9);
@@ -212,7 +212,10 @@ fn check_three_level<T: Real>(kind: qmb_core::TensorKind) {
 
 #[test]
 fn independent_three_level_expansion_at_both_precisions() {
-    for kind in [qmb_core::TensorKind::Ordinary, qmb_core::TensorKind::Graded] {
+    for kind in [
+        syntaqs_core::TensorKind::Ordinary,
+        syntaqs_core::TensorKind::Graded,
+    ] {
         check_three_level::<f32>(kind);
         check_three_level::<f64>(kind);
     }
@@ -220,8 +223,8 @@ fn independent_three_level_expansion_at_both_precisions() {
 
 struct BrokenBasis(u8);
 impl Basis<Ket, Complex<f64>> for BrokenBasis {
-    fn expand(&self, _: &Ket) -> qmb_core::LinearCombination<Ket, Complex<f64>> {
-        qmb_core::LinearCombination::primitive(Ket::Phase)
+    fn expand(&self, _: &Ket) -> syntaqs_core::LinearCombination<Ket, Complex<f64>> {
+        syntaqs_core::LinearCombination::primitive(Ket::Phase)
     }
     fn index(&self, _: &Ket) -> Option<usize> {
         match self.0 {
@@ -264,10 +267,10 @@ fn malformed_expansion_and_enumeration_are_errors_even_under_zero_scale() {
 fn zero_state_factor_does_not_hide_invalid_basis_expansion_in_another_factor() {
     let a = HilbertSpace::factor(0u8);
     let b = HilbertSpace::factor(1u8);
-    let state = qmb_core::State::tensor_in(
+    let state = syntaqs_core::State::tensor_in(
         &a.tensor(&b).unwrap(),
         [
-            qmb_core::State::<_, Ket, Operator, Complex<f64>>::zero(&a),
+            syntaqs_core::State::<_, Ket, Operator, Complex<f64>>::zero(&a),
             Ls::<f64>::primitive(Ket::Phase).at(&b).unwrap(),
         ],
     )
@@ -284,8 +287,8 @@ fn zero_state_factor_does_not_hide_invalid_basis_expansion_in_another_factor() {
 
 struct BrokenOperatorBasis;
 impl Basis<Operator, Complex<f64>> for BrokenOperatorBasis {
-    fn expand(&self, p: &Operator) -> qmb_core::LinearCombination<Operator, Complex<f64>> {
-        qmb_core::LinearCombination::primitive(*p)
+    fn expand(&self, p: &Operator) -> syntaqs_core::LinearCombination<Operator, Complex<f64>> {
+        syntaqs_core::LinearCombination::primitive(*p)
     }
     fn index(&self, p: &Operator) -> Option<usize> {
         matches!(p, Operator::Identity).then_some(0)

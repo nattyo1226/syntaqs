@@ -6,7 +6,7 @@ use std::{
 };
 
 use num_complex::Complex;
-use qmb_core::{LinearCombination, Term};
+use syntaqs_core::{LinearCombination, Term};
 
 struct CountingAllocator;
 thread_local! {
@@ -106,7 +106,7 @@ fn empty_and_single_term_mapping_do_not_allocate() {
 
 #[test]
 fn singleton_fallible_collections_need_no_temporary_allocation() {
-    use qmb_core::{HilbertSpace, LocalOperator, LocalState, Operator, State};
+    use syntaqs_core::{HilbertSpace, LocalOperator, LocalState, Operator, State};
     // Construction of the existing nodes is outside the observation window.
     // Primitives and coefficients provide no capabilities, including Clone.
     struct Primitive;
@@ -125,14 +125,14 @@ fn singleton_fallible_collections_need_no_temporary_allocation() {
     });
 }
 
-use qmb_tests::graded;
+use syntaqs_tests::graded;
 #[test]
 fn graded_contractions_and_trace_do_not_materialize_a_global_basis() {
     use graded::*;
-    use qmb_core::{HilbertSpace, LocalState, State};
+    use syntaqs_core::{HilbertSpace, LocalState, State};
     let factors: Vec<_> = (0..32).map(HilbertSpace::factor).collect();
     let psi = State::<_, Ket, Op, Complex<f64>>::tensor_in(
-        &qmb_core::HilbertSpace::tensor_all_g(factors.iter().cloned()).unwrap(),
+        &syntaqs_core::HilbertSpace::tensor_all_g(factors.iter().cloned()).unwrap(),
         factors.iter().map(|f| {
             (LocalState::primitive(Ket(0)) + LocalState::primitive(Ket(1)))
                 .at(f)

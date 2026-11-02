@@ -4,7 +4,7 @@
 
 ## 1. 対象と責任分担
 
-`qmb-geometry` は幾何、Site の配置規則、外部列への借用接続を分離する。公開型は crate root から利用する。core は geometry に依存せず、geometry は HilbertSpace 接続のため core に依存する。`no_std + alloc` を維持する。
+`syntaqs-geometry` は幾何、Site の配置規則、外部列への借用接続を分離する。公開型は crate root から利用する。core は geometry に依存せず、geometry は HilbertSpace 接続のため core に依存する。`no_std + alloc` を維持する。
 
 | 型・trait | 責務 |
 | --- | --- |
@@ -44,7 +44,7 @@ periodic: [0,1,2], [1,2,3], [2,3,4], [3,4,0], [4,0,1]
 組内の位置は局所演算子の役割に対応する。回転した支持集合が同じでも、`X_i Z_j X_k` の中央の役割や graded な積の符号を保つために統合しない。相互作用の対称性による重複の扱いはモデル側が決める。
 
 ```rust,ignore
-use qmb_geometry::{Boundary, Chain, Consecutive, NearestNeighbors, SiteMapper};
+use syntaqs_geometry::{Boundary, Chain, Consecutive, NearestNeighbors, SiteMapper};
 let chain = Chain::new(4, Boundary::Open);
 let mapper = SiteMapper::new(&chain, &site_spaces)?;
 for group in mapper.groups(&Consecutive::<3>)? {
@@ -81,7 +81,7 @@ HilbertSpace 用 MappedGroup は次の三つの入口を持つ。
 
 任意の Site 数で同じ入口を使い、体数ごとの tuple trait を要求しない。標準の二つは `combine_leaves` を利用する。直積は先頭 Site を最も外側とし、読み取った葉への参照をキャッシュして再走査する。全結果の事前生成や Leaves・Index の Clone は不要である。zip は最短の葉列までとし、いずれも Site 内のテンソル積順を保つ。
 
-`combine_leaves` は Site ごとの `Vec<qmb_core::space::Leaves<'s, I>>` を FnOnce に一度だけ渡し、返された Iterator をそのまま返す。出力 Item は固定せず、専用の選択 trait は導入しない。直積を全件消費した場合の参照キャッシュは、入力の葉数の和に比例する。
+`combine_leaves` は Site ごとの `Vec<syntaqs_core::space::Leaves<'s, I>>` を FnOnce に一度だけ渡し、返された Iterator をそのまま返す。出力 Item は固定せず、専用の選択 trait は導入しない。直積を全件消費した場合の参照キャッシュは、入力の葉数の和に比例する。
 
 空 Site を含めば結果なしとし、位置を詰めてつなぎ直さない。Site の組自体が空なら両方とも空の葉列を一つ返す。一つの Site はその葉を一つずつ返す。独自 Fn が順序や対応を変える場合の契約は利用側が定める。
 
@@ -95,7 +95,7 @@ K は作用する Site 数であり、実際に作用する葉の数とは区別
 
 ## 4. SpinHalf のモデル構築
 
-モデル構築の公開入口は `qmb_spin_half::models::SpinHalfModels<SpinHalf<C>>` の関連関数である。以下では `type Models = SpinHalfModels<Spin>` とする。旧 `utility` の自由関数は残さず、エラー型 `UtilityError` を crate root から公開する。
+モデル構築の公開入口は `syntaqs_spin_half::models::SpinHalfModels<SpinHalf<C>>` の関連関数である。以下では `type Models = SpinHalfModels<Spin>` とする。旧 `utility` の自由関数は残さず、エラー型 `UtilityError` を crate root から公開する。
 
 | 呼び出し | 成功時の戻り値 |
 | --- | --- |
@@ -125,9 +125,9 @@ spin-half のテストは複数葉の全組み合わせ結合、Site ごとの�
 
 | 対象 | テスト・使用例 |
 | --- | --- |
-| 最近接・多体配置の列挙規約、容量制限、保存済み Group の借用、独自エラーと遅延範囲検証 | [geometry.rs](../../crates/qmb-geometry/tests/geometry.rs) |
-| 最大 Site 数での折り返し算術 | [consecutive.rs の単体テスト](../../crates/qmb-geometry/src/relation/consecutive.rs) |
-| 入れ子・複数葉・可変長 Group、空入力、終了後の next、借用の同一性、FnOnce、トップレベル解釈 | [space.rs](../../crates/qmb-geometry/tests/space.rs) |
+| 最近接・多体配置の列挙規約、容量制限、保存済み Group の借用、独自エラーと遅延範囲検証 | [geometry.rs](../../crates/syntaqs-geometry/tests/geometry.rs) |
+| 最大 Site 数での折り返し算術 | [consecutive.rs の単体テスト](../../crates/syntaqs-geometry/src/relation/consecutive.rs) |
+| 入れ子・複数葉・可変長 Group、空入力、終了後の next、借用の同一性、FnOnce、トップレベル解釈 | [space.rs](../../crates/syntaqs-geometry/tests/space.rs) |
 | 3体・4体の Pauli 配置、Pauli string 37項、周期境界の fermion 積を手作業構築・独立な行列と比較 | [geometry_relations.rs](../../examples/tests/geometry_relations.rs) |
 | 複数 Relation、異なる geometry、方向付き列、中心・方向を持つ可変長近傍、最小限の型制約 | [geometry_relations.rs のサンプル](../../examples/src/bin/geometry_relations.rs) |
 | 支持集合の Iterator と Pauli の規格化・独立行列 | [pauli_strings.rs のサンプル](../../examples/src/bin/pauli_strings.rs) |
@@ -141,7 +141,7 @@ spin-half のテストは複数葉の全組み合わせ結合、Site ごとの�
 examples への移設時には両サンプルを実行し、feature 無効時のテスト11件・全 feature 有効時のテスト13件、format、両 feature 構成の全 target の Clippy が成功した。Pauli の行列比較を含む2件は `export` feature を有効にする。これらは実装・移設時の記録であり、今回の文書整理でテストを再実行したものではない。
 
 ```sh
-direnv exec . cargo test -p qmb-geometry --all-features --offline
+direnv exec . cargo test -p syntaqs-geometry --all-features --offline
 direnv exec . cargo test -p examples --all-features --offline --test geometry_relations
 direnv exec . cargo test -p examples --all-features --offline --bin geometry_relations --bin pauli_strings
 direnv exec . cargo test --workspace --all-features --offline -j2
@@ -209,7 +209,7 @@ FermionModels::<Fermion<C>>::symmetric_hubbard(&chain, &sites, t, u)
 - 0 Site は graded な単位空間に束縛した zero Hamiltonian を返す。1 Site はホッピングなしで相互作用を保持する。
 - standard Hubbard の係数 bound は `C: Clone + From<R> + Neg<Output=C>`、symmetric Hubbard はさらに `One + Add<Output=C> + Div<Output=C>` を要求する。入力 t・U は同じ R とする。symmetric 相互作用は `(U/4) Mz↑Mz↓` を使い、1/4を係数型の中で生成する。虚数単位・局所 Product・Act・Float は要求しない。t・U が実数に対応すること、分数を数学的に表せることを契約とする。
 
-局所演算子・Majorana の規格化・基底・spinful の位相規約は [Fermion の局所代数](local-structure.md#9-fermion-の局所代数)に従う。係数の中で1/4を生成して `(U/4) Mz↑Mz↓` を構築する実装は [models.rs](../../crates/qmb-fermion/src/models.rs) に置く。
+局所演算子・Majorana の規格化・基底・spinful の位相規約は [Fermion の局所代数](local-structure.md#9-fermion-の局所代数)に従う。係数の中で1/4を生成して `(U/4) Mz↑Mz↓` を構築する実装は [models.rs](../../crates/syntaqs-fermion/src/models.rs) に置く。
 
 ### 6.3. 検証
 
@@ -220,11 +220,11 @@ FermionModels::<Fermion<C>>::symmetric_hubbard(&chain, &sites, t, u)
 - 0・1・2 Site と3 Site 以上の open / periodic、Site 数不一致、mode 数の過不足、ordinary な Site、Index 重複、非 Clone Index を検証する。
 - `Complex<f32>` / `Complex<f64>` と Vec・ndarray・sprs の同じ基底順で値を比較し、構築の係数 bound に評価能力が混入していないことも確認する。
 
-[モデルのテスト](../../crates/qmb-fermion/tests/models.rs)で局所規則と独立した Fock 空間の参照行列を使う。各辺に一度だけホッピングを追加すること、同じ spin のみが接続すること、symmetric 相互作用の定数項を保存することを確認する。実装時の実行結果・コマンド・未実施事項は [受入確認の記録](local-structure.md#96-実装時の検証記録)にまとめる。
+[モデルのテスト](../../crates/syntaqs-fermion/tests/models.rs)で局所規則と独立した Fock 空間の参照行列を使う。各辺に一度だけホッピングを追加すること、同じ spin のみが接続すること、symmetric 相互作用の定数項を保存することを確認する。実装時の実行結果・コマンド・未実施事項は [受入確認の記録](local-structure.md#96-実装時の検証記録)にまとめる。
 
 ## 7. SpinOne のモデル構築
 
-`qmb_spin_one::models::SpinOneModels<SpinOne<C>>` は XYZ・Heisenberg・BLBQ の3モデルを関連関数として提供する。局所 primitive・基底・数値規約は [Spin-one の局所代数](local-structure.md#10-spin-one-の局所代数)に従い、構築は [models.rs](../../crates/qmb-spin-one/src/models.rs) に置く。
+`syntaqs_spin_one::models::SpinOneModels<SpinOne<C>>` は XYZ・Heisenberg・BLBQ の3モデルを関連関数として提供する。局所 primitive・基底・数値規約は [Spin-one の局所代数](local-structure.md#10-spin-one-の局所代数)に従い、構築は [models.rs](../../crates/syntaqs-spin-one/src/models.rs) に置く。
 
 ### 7.1. Hamiltonian の規約
 
@@ -257,7 +257,7 @@ BLBQ は bilinear 結合 J と biquadratic 結合 K を独立に受け取る。�
 | `SpinOneModels::<SpinOne<C>>::heisenberg(&chain, &sites, j)` | `OperatorOf<SpinOne<C>,I>` |
 | `SpinOneModels::<SpinOne<C>>::blbq(&chain, &sites, j, k)` | `OperatorOf<SpinOne<C>,I>` |
 
-全関数は `&Chain` と `&[HilbertSpace<I>]` を受け取り、`Result<_,qmb_spin_one::UtilityError>` を返す。Site 列・全葉ペア・束縛の基本契約は第4節の SpinHalf の XYZ / Heisenberg とそろえる。
+全関数は `&Chain` と `&[HilbertSpace<I>]` を受け取り、`Result<_,syntaqs_spin_one::UtilityError>` を返す。Site 列・全葉ペア・束縛の基本契約は第4節の SpinHalf の XYZ / Heisenberg とそろえる。
 
 - 一つの入力空間を一 Site とし、隣接 Site 間の全葉ペア `(a,b)` に相互作用を加える。BLBQ の二乗は各葉ペアの `A_ab=S_a·S_b` に個別に適用し、Site 内の結合や異なる葉ペア間の交差項を加えない。
 - 列長と全 Site にわたる Index の一意性を、辺の有無・結合定数によらず検証する。Index には Eq のみを要求し、Clone・Hash・Ord は要求しない。
@@ -281,13 +281,13 @@ XYZ は配置した Cartesian 成分の積と和、Heisenberg は XYZ の等方�
 
 ### 7.4. 検証と実装時の記録
 
-[models.rs](../../crates/qmb-spin-one/tests/models.rs) では、直接記述した3×3スピン行列から参照行列を構成し、モデル実装や Chain の辺列挙を参照計算に使わない。
+[models.rs](../../crates/syntaqs-spin-one/tests/models.rs) では、直接記述した3×3スピン行列から参照行列を構成し、モデル実装や Chain の辺列挙を参照計算に使わない。
 
 - `Complex<f32>` / `Complex<f64>` の両方で0〜3 Site・両境界の全行列成分・Hermite 性・trace を比較する。異方的結合、正負の J・K、zero 結合、pure biquadratic 項、等方的・bilinear 極限を含める。
 - 二 spin の全スピン0・1・2に対する `A_ij` の固有値 -2・-1・1と、BLBQ のエネルギー `2J-4K`・`J-K`・`-J-K` を、独立した状態の期待値と作用の残差で検証する。
 - 複数葉 Site の全葉ペアとペアごとの二乗、空 Site、0 / 1 Site、2 Site の周期辺の重複防止、非連番の因子順、grouping の共有と spectator の保持を確認する。
 - 辺なし・zero 結合でも列長不一致と重複 Index を拒否すること、エラーの source、Clone・From・Neg だけの係数と非 Clone の結合入力・Index で構築できることを確認する。
 
-2026-10-30、Rust 1.99.1 の direnv devShell で `cargo test -p qmb-spin-one --test models` の9件が成功した。これは実装時の記録であり、文書整理時の再実行結果ではない。workspace 全体を含む確認コマンドと未実施事項は [Spin-one の検証記録](local-structure.md#106-実装時の検証記録)を参照する。
+2026-10-30、Rust 1.99.1 の direnv devShell で `cargo test -p syntaqs-spin-one --test models` の9件が成功した。これは実装時の記録であり、文書整理時の再実行結果ではない。workspace 全体を含む確認コマンドと未実施事項は [Spin-one の検証記録](local-structure.md#106-実装時の検証記録)を参照する。
 
 利用例 [spin_one.rs](../../examples/src/bin/spin_one.rs) は `--no-default-features` と `--all-features` で実行した。`|+,->` の期待値は J=1 の等方的 XYZ / Heisenberg で1、J=1・K=0.25 の BLBQ で0.5となり、export 有効時には9×9の Vec / sprs 行列が一致した。

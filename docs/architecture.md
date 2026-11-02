@@ -1,4 +1,4 @@
-# qmb-rs アーキテクチャ概要
+# syntaqs アーキテクチャ概要
 
 更新日: 2026-11-01
 
@@ -28,17 +28,17 @@
 
 ### 2.1. crate の構成
 
-Chain はサイト数と境界条件だけを保持する。`qmb-geometry` は外部の局所空間列への接続補助のため `qmb-core` に依存するが、Chain 自体は Index・Hilbert 空間を保持しない。core は geometry に依存しない。
+Chain はサイト数と境界条件だけを保持する。`syntaqs-geometry` は外部の局所空間列への接続補助のため `syntaqs-core` に依存するが、Chain 自体は Index・Hilbert 空間を保持しない。core は geometry に依存しない。
 
-代数系の共通処理は `qmb-core` に集約する。抽象契約・有限線型結合に加え、局所・複合式木、Index・自由度・Hilbert 空間、局所式の配置・束縛、評価、基底展開・座標取得を同じ crate が所有する。写像の表現係数は将来の同 crate の担当とする。本文書と詳細設計でいう「代数 core」は `qmb-core` を指す。
+代数系の共通処理は `syntaqs-core` に集約する。抽象契約・有限線型結合に加え、局所・複合式木、Index・自由度・Hilbert 空間、局所式の配置・束縛、評価、基底展開・座標取得を同じ crate が所有する。写像の表現係数は将来の同 crate の担当とする。本文書と詳細設計でいう「代数 core」は `syntaqs-core` を指す。
 
-具体的代数は専用 crate とし、`qmb-spin-half`・`qmb-spin-one`・`qmb-fermion` は primitive・局所規則・具体的基底を実装し、core の共通型を直接利用できる。UUID による Id128 と、文字列で名前を付ける Tag は `qmb-basic`、Site・近接関係と外部列への借用接続は `qmb-geometry`、外部数値コンテナへの変換は `qmb-export`、Heisenberg・Neel の構築 utility は `qmb-spin-half`、spin-1 の XYZ・Heisenberg・BLBQ の構築は `qmb-spin-one`、標準 Hubbard・symmetric Hubbard の構築は `qmb-fermion`、norm・状態の正規化・正規化期待値は `qmb-normalize` が担当する。workspace は8つの本番用ライブラリ crate、[examples パッケージ](../examples/README.md)、および [qmb-tests パッケージ](../tests/README.md)で構成する。qmb-tests は repository top の tests/ に置き、共有 fixture のライブラリと公開 API・横断テストを持つ。version・edition・rust-version は workspace から継承し、examples と同様に publish = false とする。本番用 crate は qmb-tests に依存しない。basic・geometry・spin-half・spin-one・fermion・export・normalize は core に依存し、spin-half・spin-one・fermion のモデル構築は geometry の公開契約を利用する。normalize と spin-one は std を利用できる。core と geometry は `no_std + alloc` を維持し、core は basic・UUID・乱数源・具体的代数・geometry・normalize・数値 backend に依存しない。
+具体的代数は専用 crate とし、`syntaqs-spin-half`・`syntaqs-spin-one`・`syntaqs-fermion` は primitive・局所規則・具体的基底を実装し、core の共通型を直接利用できる。UUID による Id128 と、文字列で名前を付ける Tag は `syntaqs-basic`、Site・近接関係と外部列への借用接続は `syntaqs-geometry`、外部数値コンテナへの変換は `syntaqs-export`、Heisenberg・Neel の構築 utility は `syntaqs-spin-half`、spin-1 の XYZ・Heisenberg・BLBQ の構築は `syntaqs-spin-one`、標準 Hubbard・symmetric Hubbard の構築は `syntaqs-fermion`、norm・状態の正規化・正規化期待値は `syntaqs-normalize` が担当する。workspace は8つの本番用ライブラリ crate、[examples パッケージ](../examples/README.md)、および [syntaqs-tests パッケージ](../tests/README.md)で構成する。syntaqs-tests は repository top の tests/ に置き、共有 fixture のライブラリと公開 API・横断テストを持つ。version・edition・rust-version は workspace から継承し、examples と同様に publish = false とする。本番用 crate は syntaqs-tests に依存しない。basic・geometry・spin-half・spin-one・fermion・export・normalize は core に依存し、spin-half・spin-one・fermion のモデル構築は geometry の公開契約を利用する。normalize と spin-one は std を利用できる。core と geometry は `no_std + alloc` を維持し、core は basic・UUID・乱数源・具体的代数・geometry・normalize・数値 backend に依存しない。
 
 core 内では局所契約、式、空間、評価、基底処理を module で分離する。共通表現と基本操作・名前付きメソッドを同じ crate で設計し、具体的代数ごとに別の式木や evaluator を作らない。式の内容を保持する `ScaleExpr`・`SumExpr`・`ProductExpr`・`ActExpr`・`AdjointExpr` を共通パーツとし、局所式・複合式で再利用する。`LinearCombination<P, C>` は薄い有限線型結合型として維持し、共通パーツで保持する。局所規則・局所基底展開は線型結合を返し、式木側が `map` で要素を変換して共通 constructor で取り込む。Step 2 で core・spin-half・テストの演算 trait を関連型に揃え、式木との接続を実装した。将来の追加 crate は、独立した機能・依存関係・実行基盤の境界が必要になった段階で検討する。
 
 共通パーツは `expr::parts` で保持内容も含めて公開し、式ハンドルは crate root から再公開する。節点 enum と共有の内部表現は非公開とする。項型 `Term<P, C>` は `ScaleExpr<P, C>` の別名に統合し、要素名を `operand` に揃える。演算 trait の関連型 `Term` は係数を含まない要素型として区別する。既存の線型結合の構築・走査 API を維持し、走査を共通パーツへ集約する。
 
-この分割は、共通型と基本演算を所有する [tensory-core](https://github.com/todo-group/tensory/blob/c84f091e5c65f1408dee91db3730bdb8729e966e/tensory-core/src/lib.rs)と、公開テンソル表現の所有先を集約しつつ実行系・演算群を分ける [tenferro-rs の crate 設計](https://github.com/tensor4all/tenferro-rs/blob/f1d4d8d961ff6b937768111888ad2a493314892a/docs/architecture/tenferro-crates.md)を参考にした。qmb-rs では primitive の局所規則と共通合成則に基づく評価を core に含め、外部数値 backend との接続を分離する。
+この分割は、共通型と基本演算を所有する [tensory-core](https://github.com/todo-group/tensory/blob/c84f091e5c65f1408dee91db3730bdb8729e966e/tensory-core/src/lib.rs)と、公開テンソル表現の所有先を集約しつつ実行系・演算群を分ける [tenferro-rs の crate 設計](https://github.com/tensor4all/tenferro-rs/blob/f1d4d8d961ff6b937768111888ad2a493314892a/docs/architecture/tenferro-crates.md)を参考にした。syntaqs では primitive の局所規則と共通合成則に基づく評価を core に含め、外部数値 backend との接続を分離する。
 
 ### 2.2. crate 内のモジュール構造
 
@@ -48,21 +48,21 @@ geometry は `boundary`・`geometry`・`relation`・`group`・`connection` に�
 
 ### 2.3. 数値 export（実装済み）
 
-2026-10-27に Step 6 の数値 export を完了した。qmb-export の `Export<T, Args = ()>` と、数値データ・メタデータを持つ `Exported<D, M>` を共通の利用窓口にする。密表現は Vec と shape・格納順序のメタデータを出力し、ndarray の Array1／Array2 への直接出力・取得済み Vec 出力からの変換も提供する。密行列専用の数値コンテナは設けない。
+2026-10-27に Step 6 の数値 export を完了した。syntaqs-export の `Export<T, Args = ()>` と、数値データ・メタデータを持つ `Exported<D, M>` を共通の利用窓口にする。密表現は Vec と shape・格納順序のメタデータを出力し、ndarray の Array1／Array2 への直接出力・取得済み Vec 出力からの変換も提供する。密行列専用の数値コンテナは設けない。
 
 疎表現は core の Coordinates から sprs の疎ベクトル・CSC 行列を構築する。行列の列は状態基底への作用と座標取得から生成し、密・疎で共有する。空間・基底・因子順序・係数型の解釈を保持し、通常の式木に backend や基底識別情報を追加しない。
 
-qmb-export は既定 feature なしで Vec 出力を提供し、ndarray・sprs は個別の feature で有効化する。examples の任意の export feature は両方を有効にする。公開 API・所有権・エラー・依存指定・未実施の検証は[数値 export の設計](design/export.md)に定める。Step 6 の実装と Rust 1.98.0 での受入確認は完了した。MSRV の実ビルドは利用者の依頼により省略している。
+syntaqs-export は既定 feature なしで Vec 出力を提供し、ndarray・sprs は個別の feature で有効化する。examples の任意の export feature は両方を有効にする。公開 API・所有権・エラー・依存指定・未実施の検証は[数値 export の設計](design/export.md)に定める。Step 6 の実装と Rust 1.98.0 での受入確認は完了した。MSRV の実ビルドは利用者の依頼により省略している。
 
 ### 2.4. Fermion（実装済み）
 
-`qmb-fermion` は `no_std + alloc` で、二状態の単一 mode、I・a・a†・n・Mx・My・Mz の七つの primitive を提供する。状態基底は OccupationBasis、演算子基底は LadderBasis と MajoranaBasis とする。`Fermion<C>` は ExpressionFactory の型エイリアスとして共通の構築入口を使い、局所規則に Float・係数の Clone / Copy を要求しない。
+`syntaqs-fermion` は `no_std + alloc` で、二状態の単一 mode、I・a・a†・n・Mx・My・Mz の七つの primitive を提供する。状態基底は OccupationBasis、演算子基底は LadderBasis と MajoranaBasis とする。`Fermion<C>` は ExpressionFactory の型エイリアスとして共通の構築入口を使い、局所規則に Float・係数の Clone / Copy を要求しない。
 
 複数 mode の交換符号は primitive の parity と core の graded 評価に委ねる。モデル構築は `models::FermionModels<Fermion<C>>::hubbard`・`symmetric_hubbard` に、Chain と各 Site が `(up,down)` の2 mode を持つ graded 空間列を渡す。標準 Hubbard の係数 bound は `Clone + From<R> + Neg`、symmetric Hubbard はさらに `One + Add + Div` を要求する。後者は `(U/4) Mz_up Mz_down` によって物理的な結合定数を維持し、構築に局所 Product・Act を要求しない。規約・基底・検証記録は [Fermion の局所代数](design/local-structure.md#9-fermion-の局所代数)、モデル API は [Hubbard モデルの設計](design/geometry.md#6-fermion-の-hubbard-モデル)、利用例は [hubbard.rs](../examples/src/bin/hubbard.rs) に記録する。
 
 ### 2.5. Spin-one（実装済み）
 
-`qmb-spin-one` は三状態と I・スピン5値・四重極9値の計15演算子 primitive を提供し、状態空間3次元・演算子空間9次元を表す。状態基底は SzBasis、演算子基底は CartesianBasis / LadderBasis。同じ基底の primitive 同士の積はその基底内に閉じる。CartesianBasis は次元規格化した HS 内積に関して正規直交とする。std を許可し、積と作用は `Complex<R>`・`R: Float`、他の局所規則は操作ごとの小さい bound とする。規則は直接の match で実装し、全要素 even・P=I で共通の ordinary / graded 評価へ接続する。規約・係数能力・検証は [Spin-one の局所代数](design/local-structure.md#10-spin-one-の局所代数)にまとめる。
+`syntaqs-spin-one` は三状態と I・スピン5値・四重極9値の計15演算子 primitive を提供し、状態空間3次元・演算子空間9次元を表す。状態基底は SzBasis、演算子基底は CartesianBasis / LadderBasis。同じ基底の primitive 同士の積はその基底内に閉じる。CartesianBasis は次元規格化した HS 内積に関して正規直交とする。std を許可し、積と作用は `Complex<R>`・`R: Float`、他の局所規則は操作ごとの小さい bound とする。規則は直接の match で実装し、全要素 even・P=I で共通の ordinary / graded 評価へ接続する。規約・係数能力・検証は [Spin-one の局所代数](design/local-structure.md#10-spin-one-の局所代数)にまとめる。
 
 `models::SpinOneModels<SpinOne<C>>::xyz`・`heisenberg`・`blbq` は Chain と外部の Site 空間列から束縛済み Hamiltonian を構築する。符号・全葉ペア・空 Site・空間共有の扱いは spin-half にそろえ、BLBQ は各葉ペアの内積を個別に二乗する。構築に必要な係数能力は `Clone + From<R> + Neg + One + Add + Div` とし、2/3・4/9の補正によって結合定数の物理的な意味を維持する。局所評価は遅延する。[SpinOne のモデル構築](design/geometry.md#7-spinone-のモデル構築)に定義と検証を記録する。
 
@@ -88,9 +88,9 @@ Grouping は空間の木の括り方で表し、そのための独立した Grou
 
 Index は局所構造を指定せずに独立に発行し、自由度はあらかじめ発行した Index と局所構造から構築する。局所状態・演算子には発行済みの Index を明示的に付与する。自由度の構築や局所式への付与で Index を自動発行する経路は設けない。
 
-core は Index 型をジェネリックに扱い、同じ Index であることを照合できることを契約とする。具体的な表現・発行・一意性の確保は Index の提供側が担い、標準具体型は `qmb-basic` の Id128 と Tag とする。Id128 は seed 指定不要の UUID を生成する。Tag は文字列自体を同一性とし、独立した因子の名前は利用側が管理する。Index と局所構造の対応を全体で登録・固定する機構は設けず、合成・埋め込み・評価に必要な整合性は、その操作の対象から検証する。
+core は Index 型をジェネリックに扱い、同じ Index であることを照合できることを契約とする。具体的な表現・発行・一意性の確保は Index の提供側が担い、標準具体型は `syntaqs-basic` の Id128 と Tag とする。Id128 は seed 指定不要の UUID を生成する。Tag は文字列自体を同一性とし、独立した因子の名前は利用側が管理する。Index と局所構造の対応を全体で登録・固定する機構は設けず、合成・埋め込み・評価に必要な整合性は、その操作の対象から検証する。
 
-詳細は [Index の契約](design/index.md)に定める。同一性の照合は標準の `Eq` で行う。Step 4 では UUID v4 の具体型を `qmb_basic::Id128` とし、`new()` と `Default` による seed 指定不要の新規発行を提供する。自分で名前を付ける場合は `qmb_basic::Tag::new(name)` を利用できる。発行が必要な箇所だけ `I: Default` を要求し、専用の Index trait は設けない。
+詳細は [Index の契約](design/index.md)に定める。同一性の照合は標準の `Eq` で行う。Step 4 では UUID v4 の具体型を `syntaqs_basic::Id128` とし、`new()` と `Default` による seed 指定不要の新規発行を提供する。自分で名前を付ける場合は `syntaqs_basic::Tag::new(name)` を利用できる。発行が必要な箇所だけ `I: Default` を要求し、専用の Index trait は設けない。
 
 保存・復元と複数ランタイムの契約は以下のとおりとする。詳細は [Index の契約の 7 節](design/index.md#7-保存復元と複数ランタイム)に定める。
 
@@ -144,17 +144,17 @@ Step 3 の複合状態 `State` は常に所属空間を持ち、複合演算子 
 
 ## 8. 型選択・幾何・モデル構築
 
-`qmb_core::QuantumSystem` は primitive の `State`・`Operator` と係数型 `Coeff` を関連付ける。`qmb_core::ExpressionFactory<S,O,C>` の inherent method `state(primitive)`・`operator(primitive)` は既存の局所式を返し、構築時の数値能力や Clone を要求しない。評価の能力は引き続き各操作で要求する。`LocalStateOf<Q>`・`LocalOperatorOf<Q>`・`StateOf<Q,I>`・`OperatorOf<Q,I>` は既存の式型への投影別名であり、系を表す識別子や新たな式ラッパーは保持しない。
+`syntaqs_core::QuantumSystem` は primitive の `State`・`Operator` と係数型 `Coeff` を関連付ける。`syntaqs_core::ExpressionFactory<S,O,C>` の inherent method `state(primitive)`・`operator(primitive)` は既存の局所式を返し、構築時の数値能力や Clone を要求しない。評価の能力は引き続き各操作で要求する。`LocalStateOf<Q>`・`LocalOperatorOf<Q>`・`StateOf<Q,I>`・`OperatorOf<Q,I>` は既存の式型への投影別名であり、系を表す識別子や新たな式ラッパーは保持しない。
 
 共通の構築入口は `ExpressionFactory<S,O,C>` の inherent method とし、`SpinHalf<C>`・`SpinOne<C>`・`Fermion<C>` はその型エイリアスである。QuantumSystem trait は型情報だけを持ち、通常の構築呼び出しに trait import は不要である。モデル固有構築は各 primitive crate の公開 models module の `SpinHalfModels<SpinHalf<C>>`・`SpinOneModels<SpinOne<C>>`・`FermionModels<Fermion<C>>` に置く。
 
-`qmb_spin_half::SpinHalf<C>` で代数と係数型を一度選択する。既定精度・個別 primitive 用メソッド・異精度の暗黙変換は設けない。状態の tensor constructor は既存空間を明示する入口へ移行した。明示的な戻り値型には投影別名を使え、Q は構築入口で選ぶ。構築・集約は ExpressionFactory の product_state・operator_product_at・state_sum・operator_sum・tensor_in・operator_product と集約の try_ 版に揃え、構築済み式の操作はインスタンスメソッドで行う。scaled は `impl Into<C>` を一度変換して保持する。try_ は最初の ExpressionError で入力消費を止め、全成功時だけ合成を検証する。契約は[複合式の設計](design/composite-expression.md#11-expressionfactory-の構築入口と-fallible-集約2026-10-28)に記録する。
+`syntaqs_spin_half::SpinHalf<C>` で代数と係数型を一度選択する。既定精度・個別 primitive 用メソッド・異精度の暗黙変換は設けない。状態の tensor constructor は既存空間を明示する入口へ移行した。明示的な戻り値型には投影別名を使え、Q は構築入口で選ぶ。構築・集約は ExpressionFactory の product_state・operator_product_at・state_sum・operator_sum・tensor_in・operator_product と集約の try_ 版に揃え、構築済み式の操作はインスタンスメソッドで行う。scaled は `impl Into<C>` を一度変換して保持する。try_ は最初の ExpressionError で入力消費を止め、全成功時だけ合成を検証する。契約は[複合式の設計](design/composite-expression.md#11-expressionfactory-の構築入口と-fallible-集約2026-10-28)に記録する。
 
 Chain はサイト数と境界条件のみを持ち、Index の入力・発行・ToSpace による空間生成を行わない。`Chain::new(n, boundary)` は Self を返す。近接 Site 対は辞書順で、0・1 Site は辺なし、2 Site は open／periodic とも一辺とする。
 
 `SiteMapper::new(&geometry, &values)` は Relation の適用前に列長を検証する。`groups(&relation)` は規則固有の関連型 Error を返し、成功時は各 Group の番号範囲を遅延検証して MappedGroup へ写す。HilbertSpace 用の `leaves_cartesian`・`leaves_zip` は共通入口 `combine_leaves(FnOnce)` で実装し、任意の Site 数を扱う。`from_space` は保存されたトップレベル分割を Site と読む。要素・Index の Clone・Eq は接続に要求しない。
 
-モデル構築は `qmb_spin_half::models::SpinHalfModels<SpinHalf<C>>` の関連関数 xyz・heisenberg・neel で提供し、Chain と局所空間列を受け取る。Index の重複と列長を辺の有無によらず検証する。Hamiltonian は局所空間ハンドルを共有して列順に tensor した空間へ束縛する。標準モデルは複数葉と空 Site を受け入れ、XYZ・Heisenberg は Site 間の全葉ペアへ結合を与え、Neel は Site ごとに向きを決めて全葉へ割り当てる。空 Site は位置と偶奇を保ち、前後を直接結び直さない。0 Site では単位空間上の zero Hamiltonian と単位状態を返す。
+モデル構築は `syntaqs_spin_half::models::SpinHalfModels<SpinHalf<C>>` の関連関数 xyz・heisenberg・neel で提供し、Chain と局所空間列を受け取る。Index の重複と列長を辺の有無によらず検証する。Hamiltonian は局所空間ハンドルを共有して列順に tensor した空間へ束縛する。標準モデルは複数葉と空 Site を受け入れ、XYZ・Heisenberg は Site 間の全葉ペアへ結合を与え、Neel は Site ごとに向きを決めて全葉へ割り当てる。空 Site は位置と偶奇を保ち、前後を直接結び直さない。0 Site では単位空間上の zero Hamiltonian と単位状態を返す。
 
 Index は引き続き Eq だけで照合し、共有に Clone・再発行を要求しない。局所 grouping は維持するが、別途保持する全空間の上位 grouping・異なる因子順序を復元する契約は持たない。契約と検証は [Chain の設計](design/geometry.md)に記録する。
 
@@ -178,7 +178,7 @@ State・Operator・Structure・Space の管理方法は、将来必ず再検討�
 
 このリファクタリングと併せて、以下を必須課題として扱う。
 
-1. **core の係数型・数値能力の整理（実装移行完了）**：`qmb-core` に `num-complex`・`num-traits` を含め、係数型には必要な操作で必要な trait bound を課す。零・単位元には `num_traits::Zero`・`One` をそのまま使い、付随する能力も受け入れる。不足する能力 trait は core で定義し、`Complex<f32>`・`Complex<f64>` に直接実装できる構成にする。保持・構築へ不要な数値能力を要求せず、係数表現・演算・norm・正規化の責任を整理する。
+1. **core の係数型・数値能力の整理（実装移行完了）**：`syntaqs-core` に `num-complex`・`num-traits` を含め、係数型には必要な操作で必要な trait bound を課す。零・単位元には `num_traits::Zero`・`One` をそのまま使い、付随する能力も受け入れる。不足する能力 trait は core で定義し、`Complex<f32>`・`Complex<f64>` に直接実装できる構成にする。保持・構築へ不要な数値能力を要求せず、係数表現・演算・norm・正規化の責任を整理する。
 2. **LocalStructure の必要性（実装移行完了）**：primitive 型 S・O を式へ直接指定し、次元と恒等元を primitive 側へ移す。追加の定義ラベルは設けず、意味・規則は S・O と各能力の実装で定める。
 3. **Operator と State の整理（初期版実装後）**：操作的量子論の枠組みで、Operator と State をいずれも一般の演算子の特別な形として整理できるかを議論し、解決する。その整理が数学的意味と API にどう対応するかを検討し、結論と根拠を記録する。2026-10-26に、検討事項が多いため初期版実装後へ延期した。初期版では現行の分離を維持し、この整理の結論を実装の前提条件にしない。
 4. **HilbertSpace の最小構成（初期版の範囲は完了）**：LocalStructure 廃止により、Index と順序付き Tensor の構造だけを保持する構成へ移行した。primitive 型・次元・局所規則は式・取得時の入力・個別能力が担う。Grading の具体的な保持方法・API は 2026-10-29 に実装済み。第10.2節を参照。
@@ -186,7 +186,7 @@ State・Operator・Structure・Space の管理方法は、将来必ず再検討�
 
 初項は、2026-10-25 の方針変更により、数値ライブラリ依存の解消から、`num-complex` を含めた最小限の能力契約の設計・実装へ変更し、2026-10-26 に完了を確認した。未検証事項は[今後の課題](future-work.md#3-未実施の検証と性能)に記録する。LocalStructure は同日に廃止し、ordinary な空間の責任分離も実装済みである。Chain の Index 列保持・ToSpace への2026-10-27の移行を経て、2026-10-28に純粋な Chain と外部局所空間列・SpinHalf<C> の関連関数へ移行した。Operator と State の統合、Grading の具体的な保持方法・API のうち後者は実装済みであり、前者の Operator / State 統合は引き続き後続課題とする。
 
-係数型については、成分型 T から係数全体 C への移行と、共役・実数値取得・実係数の埋め込み・純虚係数の生成を個別の能力として扱う方針を採用した。norm・normalized・正規化期待値と NormalizationError は std を利用する qmb-normalize へ移し、Float は平方根を使う実数型 R に要求する。内積・期待値・norm squared・スカラー除算は core に残し、provider は導入しない。標準 Complex の左スカラー倍は個別実装、任意の C は scaled(c) を基本とする。正規化期待値の純実分母を不要に二乗しない処理も維持する。これらの実装移行は完了し、追加能力は Conjugate・RealPart・ImaginaryUnit・Divide、実係数の埋め込みは From<R> で提供する。拡張 trait は qmb_normalize::{Norm, Normalize, NormalizedExpectation, NormalizedExpectationIn} とする。core に正規化専用 module・エラーは置かない。詳細は[正規化 API の契約](design/primitive-expression.md#41-norm正規化の-api-と-feature)に記録する。
+係数型については、成分型 T から係数全体 C への移行と、共役・実数値取得・実係数の埋め込み・純虚係数の生成を個別の能力として扱う方針を採用した。norm・normalized・正規化期待値と NormalizationError は std を利用する syntaqs-normalize へ移し、Float は平方根を使う実数型 R に要求する。内積・期待値・norm squared・スカラー除算は core に残し、provider は導入しない。標準 Complex の左スカラー倍は個別実装、任意の C は scaled(c) を基本とする。正規化期待値の純実分母を不要に二乗しない処理も維持する。これらの実装移行は完了し、追加能力は Conjugate・RealPart・ImaginaryUnit・Divide、実係数の埋め込みは From<R> で提供する。拡張 trait は syntaqs_normalize::{Norm, Normalize, NormalizedExpectation, NormalizedExpectationIn} とする。core に正規化専用 module・エラーは置かない。詳細は[正規化 API の契約](design/primitive-expression.md#41-norm正規化の-api-と-feature)に記録する。
 
 LocalStructure 廃止後は、演算子式に O・C、状態式に S・O・C を直接指定する。次元は primitive 型全体の span の次元（S は d、O は d²）、恒等元は係数型に依存せず生成する O の値とする。空間・Geometry／Chain から L を外し、因子構造と局所規則を分離する。採用した契約と移行前の仕様の扱いは[局所構造の設計第7節](design/local-structure.md#7-localstructure-廃止の採用方針2026-10-26)に記録する。全 crate の製品コード・テスト・利用例を移行済みである。
 

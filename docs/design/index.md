@@ -6,7 +6,7 @@
 
 本書は、因子を識別する Index の発行、一意性の前提、再利用、局所状態・演算子への付与、保存・復元、複数ランタイム間での利用、および整合性検証の責任を定める。[アーキテクチャ概要](../architecture.md)における自由度・Hilbert 空間の設計の一部であり、site ID の具体的な生成方式は本書では定めない。
 
-`qmb-core` は Index 型をジェネリックに受け取り、同一性の照合と局所式への付与・空間との整合性検証を担当する。標準具体型は `qmb-basic` の Id128（UUID）と Tag（文字列）とする。`qmb-geometry` は外部の局所空間列から葉を借用するが、Chain 自体は Index 型を持たず、発行補助も提供しない。独立した自由度識別子は導入しない。
+`syntaqs-core` は Index 型をジェネリックに受け取り、同一性の照合と局所式への付与・空間との整合性検証を担当する。標準具体型は `syntaqs-basic` の Id128（UUID）と Tag（文字列）とする。`syntaqs-geometry` は外部の局所空間列から葉を借用するが、Chain 自体は Index 型を持たず、発行補助も提供しない。独立した自由度識別子は導入しない。
 
 core が Index に要求する意味上の契約は「同じ Index であることを照合できる」こととする。同一性は安定した等価関係であり、照合するメソッドで標準の `Eq` を要求する。UUID の表現・生成、乱数源、seed、大小関係は core の契約に含めず、`Hash`・`Ord` や発行能力を一律に要求しない。保持・共有は空間・式のハンドルを複製することで行い、Index 本体の `Clone` は要求しない。
 
@@ -53,7 +53,7 @@ Site 順の局所空間列を Chain とモデル構築へ借用して渡す。�
 
 Index の提供側は、同一ランタイム内および複数ランタイム間で、独立した因子に異なる Index を与える責任を持つ。Id128 は seed 指定不要の UUID を用い、一意性を生成方式に基づく実用上の前提とする。数学的な無衝突保証ではない。Tag は文字列そのものが同一性であり、別々に構築しても同名なら同じ因子を参照する。独立した因子の名前は利用側が管理し、異なるランタイムの名前が自動で一意になる保証はない。core は Index の同一性を照合し、生成方式や名前の選択を検証しない。
 
-共有採番器や、発行済み Index 全体を登録・照会する機構によって一意性を保証することは要求しない。UUID のバージョン・採用ライブラリ・発行 API は `qmb-basic` の実装設計で定める。UUID と乱数源に関する依存は core に持ち込まず、core の `no_std + alloc` を維持する。
+共有採番器や、発行済み Index 全体を登録・照会する機構によって一意性を保証することは要求しない。UUID のバージョン・採用ライブラリ・発行 API は `syntaqs-basic` の実装設計で定める。UUID と乱数源に関する依存は core に持ち込まず、core の `no_std + alloc` を維持する。
 
 この方針は、中央登録を必要とせずに実用的な一意性を得る UUID の考え方を参考にする。[RFC 9562 §6.8](https://www.rfc-editor.org/rfc/rfc9562.html#section-6.8)
 
@@ -113,7 +113,7 @@ Index 単体や空間の葉から局所代数を取得する契約は置かな�
 
 異なる Index を、次元や物理的意味の一致だけから自動で対応づけない。独立した系として扱いたい場合は、7.2 節の明示的な付け直しを用いる。合成時の重複を避けるために Index を暗黙に変更しない。
 
-計算上の内部 bond の処理によって qmb-rs の Index を暗黙に変更しない。テンソルネットワークへの export では、物理自由度と計算上の脚の対応を別に設計する。
+計算上の内部 bond の処理によって syntaqs の Index を暗黙に変更しない。テンソルネットワークへの export では、物理自由度と計算上の脚の対応を別に設計する。
 
 本節は同一性の設計契約を定めるものであり、保存機能や並列評価を初期版の必須実装に追加するものではない。
 
@@ -121,11 +121,11 @@ Index 単体や空間の葉から局所代数を取得する契約は置かな�
 
 同一性を照合するジェネリックな core と、標準具体型 Id128・Tag を提供する basic の分離は採用済みとする。葉の空間と式の共有ハンドルの複製に Index 本体の不要な複製を要求しない。
 
-Core の照合は標準の `Eq`、Factor の構築は `HilbertSpace::factor(index)`、局所式の配置は `at(&factor)` とする。標準具体型 `qmb_basic::Id128` は UUID v4 を包む不透明な型であり、`new()` と `Default` は seed 指定不要で新しい Index を発行する。Clone・Copy は同一性を保持し、Display・Debug・等値比較・順序比較・Hash を提供する。生成は `uuid::Uuid::new_v4` に委譲し、乱数源が利用できない場合を含む挙動は同 API に従う。UUID・乱数源は basic に閉じ、Chain は basic に依存しない。
+Core の照合は標準の `Eq`、Factor の構築は `HilbertSpace::factor(index)`、局所式の配置は `at(&factor)` とする。標準具体型 `syntaqs_basic::Id128` は UUID v4 を包む不透明な型であり、`new()` と `Default` は seed 指定不要で新しい Index を発行する。Clone・Copy は同一性を保持し、Display・Debug・等値比較・順序比較・Hash を提供する。生成は `uuid::Uuid::new_v4` に委譲し、乱数源が利用できない場合を含む挙動は同 API に従う。UUID・乱数源は basic に閉じ、Chain は basic に依存しない。
 
-`qmb_basic::HilbertSpace` は `qmb_core::HilbertSpace<Id128>` の型別名とし、局所 primitive の型引数を持たない。Id128 は `qmb-basic`、ジェネリックな HilbertSpace は `qmb-core` から利用する。
+`syntaqs_basic::HilbertSpace` は `syntaqs_core::HilbertSpace<Id128>` の型別名とし、局所 primitive の型引数を持たない。Id128 は `syntaqs-basic`、ジェネリックな HilbertSpace は `syntaqs-core` から利用する。
 
-`qmb_basic::Tag { raw: String }` は文字列で自分で名前を付ける標準 Index。raw は非公開で、`new(impl Into<String>)`・`as_str()`・`From<String>`・`From<&str>` を提供する。Clone・Debug・Eq・Hash・Ord 等は文字列に従い、Copy・隠れた UUID・改名 API は持たない。`qmb_core::HilbertSpace<Tag>` で利用する。
+`syntaqs_basic::Tag { raw: String }` は文字列で自分で名前を付ける標準 Index。raw は非公開で、`new(impl Into<String>)`・`as_str()`・`From<String>`・`From<&str>` を提供する。Clone・Debug・Eq・Hash・Ord 等は文字列に従い、Copy・隠れた UUID・改名 API は持たない。`syntaqs_core::HilbertSpace<Tag>` で利用する。
 
 Id128 単体の Display・Debug は完全な UUID、Tag 単体の Display は文字列をそのまま出す。式木の Display 内だけ、任意の Index の出力を先頭8文字（Rust の char 単位）に制限する。Debug は完全な Index を保持する。表示文字列の衝突は許容し、同一性判定には使わない。命名は tensor ordering から推定せず、表示用の位置検索も行わない。詳細は[式木の表示](expression-formatting.md)に定める。
 
