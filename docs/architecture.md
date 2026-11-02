@@ -52,4 +52,4 @@ Core is divided into `ops`, `coefficient`, `space`, `system`, `expr`, `basis`, a
 
 Geometry separates geometry, boundaries, relations, groups, and connections. Normalize separates norms, expectations, and errors. Export separates arguments, results, metadata, coordinate/vector/matrix conversion, and backends. Concrete algebras separate primitives, coefficient helpers, bases, and models. Feature designs specify detailed types, capabilities, errors, and processing.
 
-See [verification](design/verification.md) for checks, [future work](future-work.md) for unimplemented extensions, and the [v3 plan](plans/v3/README.md) for release progress.
+See [verification](design/verification.md) for checks, [future work](future-work.md) for unimplemented extensions, and the [documentation guide](README.md) for document responsibilities and maintenance conventions.

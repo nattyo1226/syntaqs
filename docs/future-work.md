@@ -2,7 +2,7 @@
 
 Updated: 2026-11-02
 
-This document collects future features, required design reviews, and candidates not yet adopted. Current specifications belong in [architecture](architecture.md) and [design](README.md#2-feature-details); ongoing release preparation belongs in the [v3 plan](plans/v3/README.md).
+This document collects future features, required design reviews, and candidates not yet adopted. Current specifications belong in [architecture](architecture.md) and [design](README.md#2-feature-details). Follow the [documentation guide](README.md#1-document-responsibilities) when starting an implementation plan or completing work.
 
 ## 1. Required design review
 

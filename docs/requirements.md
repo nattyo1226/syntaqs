@@ -6,7 +6,7 @@ Updated: 2026-11-02
 
 syntaqs is a Rust library for constructing, composing, and evaluating quantum Hilbert spaces, states, and operators algebraically, with numerical output when needed. Its goal is to use local algebra and expression structure to compute actions, inner products, expectations, and traces before constructing numerical matrices.
 
-This document defines what the project builds. See [architecture](architecture.md) for crates and overall structure, [feature designs](README.md#2-feature-details) for concrete types, public APIs, and mathematical conventions, [future work](future-work.md) for features to implement, and [plans](plans/v3/README.md) for ongoing work.
+This document defines what the project builds. See [architecture](architecture.md) for crates and overall structure, [feature designs](README.md#2-feature-details) for concrete types, public APIs, and mathematical conventions, and [future work](future-work.md) for features to implement. The [documentation guide](README.md#1-document-responsibilities) defines where ongoing plans and current specifications belong.
 
 ## 2. Scope
 
