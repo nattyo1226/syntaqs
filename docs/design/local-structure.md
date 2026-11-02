@@ -1,6 +1,6 @@
 # 局所 primitive の設計
 
-更新日: 2026-11-01
+更新日: 2026-11-02
 
 ## 1. 対象と検討状況
 
@@ -329,7 +329,7 @@ Sp・Sm の非零な遷移振幅は √3、Sx の隣接状態への振幅は √
 
 ### 10.7. 後続の範囲
 
-公開の MatrixUnitBasis、標準的な球面テンソル位相を付けた基底、一般 spin-S、異種局所代数の混在は後続とする。Float を満たさない厳密係数による局所 Product / Act、専用 no_std target・MSRV の検証状況は別途扱う。
+公開の MatrixUnitBasis、標準的な球面テンソル位相を付けた基底、一般 spin-S、異種局所代数の混在は後続とする。Float を満たさない厳密係数による局所 Product / Act、専用 no_std target の検証状況は別途扱う。MSRV の検証は `main` への push・PR 時に CI で実行する。
 
 ## 11. 規格化変更の検証記録
 
@@ -358,4 +358,4 @@ syntaqs-export は単独でも `cargo test -p syntaqs-export --no-default-featur
 
 examples の全8バイナリを `cargo run -p examples --bin <name> --offline --quiet` により、既定 feature・`--all-features`・`--no-default-features` の3構成で実行した。一重項・三重項のエネルギー −0.75 / 0.25、symmetric Hubbard のエネルギー −2、spin-one BLBQ の期待値0.5、Pauli string の37項と密疎 export の一致が保たれた。
 
-依存関係と feature 要件は変更していない。MSRV 1.85 と専用 no_std target での実ビルドは今回実行しておらず、[未実施の検証](../future-work.md#3-未実施の検証と性能)として引き続き扱う。
+依存関係と feature 要件は変更していない。MSRV `1.85.0` でのビルド・テストは、現在は `main` への push・PR 時に [CI workflow](../../.github/workflows/ci.yml) で検証する。専用 no_std target での実ビルドは、[未実施の検証](../future-work.md#3-未実施の検証と性能)として引き続き扱う。

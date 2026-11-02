@@ -1,6 +1,6 @@
 # Chain・Site と自由度の配置
 
-更新日: 2026-11-01
+更新日: 2026-11-02
 
 ## 1. 対象と責任分担
 
@@ -151,7 +151,7 @@ direnv exec . cargo clippy --workspace --all-targets --all-features --offline --
 direnv exec . sh -c 'RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --offline'
 ```
 
-Rust 1.85 と専用 no_std target の実ビルドは利用者の指定により省略した。専用 target の試行は依存解決とネットワーク制限で完了しておらず、成功した検証には数えない。性能測定・キャッシュと再生成の比較、周期正方格子の正式実装も未実施である。共通の未実施事項は[今後の課題](../future-work.md#3-未実施の検証と性能)にまとめる。
+MSRV `1.85.0` でのビルド・テストは、現在は `main` への push・PR 時に [CI workflow](../../.github/workflows/ci.yml) で検証する。実装・移設時の専用 no_std target の試行は依存解決とネットワーク制限で完了しておらず、成功した検証には数えない。性能測定・キャッシュと再生成の比較、周期正方格子の正式実装も未実施である。共通の未実施事項は[今後の課題](../future-work.md#3-未実施の検証と性能)にまとめる。
 
 ## 6. Fermion の Hubbard モデル
 

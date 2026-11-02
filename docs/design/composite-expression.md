@@ -1,6 +1,6 @@
 # 埋め込み・複合空間の式と数学的能力
 
-更新日: 2026-11-01
+更新日: 2026-11-02
 
 ## 1. 対象と責任分担
 
@@ -383,4 +383,4 @@ Rust 1.98.0 の direnv devShell で次を実行し、成功した。
 - `cargo fmt --all -- --check`
 - `cargo run -p examples --bin tensor_products`
 
-最終調整した構築入口と export の contract テストも再実行した。no_std の確認はホスト上のビルドであり、専用 target の検証ではない。MSRV 1.85 の実ビルド・専用 no_std target・性能ベンチマークは今回も未実施で、既存の [未実施事項](../future-work.md#3-未実施の検証と性能)として残す。
+最終調整した構築入口と export の contract テストも再実行した。no_std の確認はホスト上のビルドであり、専用 target の検証ではない。MSRV `1.85.0` でのビルド・テストは、現在は `main` への push・PR 時に [CI workflow](../../.github/workflows/ci.yml) で検証する。専用 no_std target・性能ベンチマークは引き続き [未実施事項](../future-work.md#3-未実施の検証と性能)として残す。

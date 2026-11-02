@@ -30,14 +30,16 @@ README 内のローカルリンク・利用例、ドキュメント生成とフ�
 
 ## GitHub Actions の workflow 整備
 
-`.github/workflows/` に継続的な検証のための workflow を整備する。現時点では同ディレクトリは存在しない。
+**整備・GitHub Actions 上でのテスト実行確認済み（2026-11-02）。** 定義は [CI workflow](../../../.github/workflows/ci.yml) を参照する。
 
-- pull request・push 時に、format、Clippy、ビルド・テスト（doc test を含む）、ドキュメント生成を実行する。
-- default feature 無効・全 feature 有効に加え、`syntaqs-export` の backend ごとの feature 構成を確認する。
-- MSRV でのビルド・テストと、`no_std + alloc` 対応 crate の専用 target でのビルドを検討し、[未実施の検証](../../future-work.md#3-未実施の検証と性能)を補う。
-- 対象ブランチ・OS・Rust toolchain、ジョブ分割、依存キャッシュ、実行時間を整理し、ローカルの検証手順と README の案内を一致させる。
+- `main` への push、pull request、手動実行を契機とし、Linux の64 bit 環境で検証する。
+- MSRV `1.85.0` と最新 `stable` のそれぞれで、workspace 全体の既定 feature・全 feature 有効・既定 feature 無効の3構成をテストする。doc test と `compile_fail` の検証も含む。
+- 最新 `stable` で `syntaqs-export` と `syntaqs-tests` を個別にテストし、backend なし・`ndarray` のみ・`sprs` のみを確認する。両 backend 有効の構成は workspace の全 feature テストで確認する。
+- format・Clippy と、警告をエラーにする API ドキュメント生成を別ジョブで実行する。依存キャッシュと、同じ PR・ブランチの古い実行のキャンセルを設定する。
 
-具体的な workflow 構成は未確定とする。導入時には GitHub Actions 上での実行結果を確認し、実施できた検証と残る制約を記録する。
+利用者が push 対象に `feat/workflow` を一時的に追加し、GitHub Actions 上でテストが正常に実行されることを確認した。確認後の push 対象は `main` のみとする。
+
+`no_std + alloc` 対応 crate の専用 target でのビルドは今回の workflow に含めておらず、引き続き未実施である。
 
 ## 3体以上の相互作用に対応する関係の列挙
 

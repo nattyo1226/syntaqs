@@ -176,4 +176,4 @@ direnv exec . cargo run -p examples --no-default-features --bin expression_forma
 
 書式・型制約・エラー・深さの回帰テストは [core の formatting.rs](../../crates/syntaqs-core/tests/formatting.rs)、Tag と Id128 は [basic の indices.rs](../../crates/syntaqs-basic/tests/indices.rs)、primitive 全 variant は各 builtin crate の `tests/formatting.rs` で確認する。深さ20,000の局所／複合の作用・和・係数倍・積・随伴と混合 tensor を128 KiBのスタックで表示・破棄できた。内部テストでは深い単純 tensor の ket 化と共有部分式の分類も確認した。最後に追加した深さ・Debug・分類のテストは対象を絞って再実行した。
 
-no_std 対応はホスト上の確認であり、専用 target でのビルドは未実施（環境にはホスト target のライブラリのみ導入済み）。MSRV での検証、性能ベンチマーク・速度比較も今回の実施範囲には含めない。[今後の課題](../future-work.md#3-未実施の検証と性能)を参照する。
+上記の受入確認では、no_std 対応はホスト上の確認であり、専用 target でのビルドは未実施（環境にはホスト target のライブラリのみ導入済み）。MSRV `1.85.0` でのビルド・テストは、現在は `main` への push・PR 時に [CI workflow](../../.github/workflows/ci.yml) で検証する。専用 no_std target・性能ベンチマーク・速度比較の未実施事項は[今後の課題](../future-work.md#3-未実施の検証と性能)を参照する。
