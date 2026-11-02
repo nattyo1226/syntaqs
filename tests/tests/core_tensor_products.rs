@@ -1,7 +1,7 @@
 use graded::OperatorOf;
 use graded::*;
-use qmb_core::{HilbertSpace as H, *};
-use qmb_tests::graded;
+use syntaqs_core::{HilbertSpace as H, *};
+use syntaqs_tests::graded;
 
 #[test]
 fn normalized_kinds_grouping_subsystems_and_errors() {
@@ -288,7 +288,7 @@ fn scope_and_intrinsic_coordinates_are_preserved() {
 
 #[test]
 fn constructors_fallibility_and_deep_graded_trees() {
-    type Q = qmb_core::ExpressionFactory<Ket, Op, num_complex::Complex<f64>>;
+    type Q = syntaqs_core::ExpressionFactory<Ket, Op, num_complex::Complex<f64>>;
     let a = H::factor(0);
     let b = H::factor(1);
     let g = Q::product_state(
@@ -466,7 +466,7 @@ fn local_expression_homomorphism_three_odd_factors_and_empty_bases() {
     for kind in [TensorKind::Ordinary, TensorKind::Graded] {
         let factors = [H::factor(0), H::factor(1), H::factor(2)];
         let h = H::tensor_all_with(kind, factors.clone()).unwrap();
-        let local = qmb_core::LocalOperator::<Op, num_complex::Complex<f64>>::primitive(A)
+        let local = syntaqs_core::LocalOperator::<Op, num_complex::Complex<f64>>::primitive(A)
             .scaled(c(0.3, 0.4))
             + LocalOperator::primitive(Op::P);
         let local_product = (local.clone() * &local.adjoint()).adjoint();

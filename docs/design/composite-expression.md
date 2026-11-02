@@ -65,7 +65,7 @@ Index の付与を「配置」、spectator を含む全 Hilbert 空間の確定�
 | 演算子式 | Hilbert–Schmidt 内積 | `Tr(A†B)/D`。D は全作用空間の次元 |
 | 状態・演算子式 | 期待値・正規化期待値 | 作用と内積による `⟨ψ,Aψ⟩`、および `⟨ψ,ψ⟩` による除算。後者は zero-norm state を拒否する |
 
-共通の複合式・配置・束縛・評価は `qmb-core` が担当し、具体的代数の局所規則を合成する。source の自動保持と式の構造比較は、要件の 4.5 節に従って後続へ延期する。Display・Debug は[式木の表示](expression-formatting.md)に従って提供する。局所式と Index・局所構造・作用空間の整合性判定は維持し、数学的な等価性に式構造の一致を要求しない。
+共通の複合式・配置・束縛・評価は `syntaqs-core` が担当し、具体的代数の局所規則を合成する。source の自動保持と式の構造比較は、要件の 4.5 節に従って後続へ延期する。Display・Debug は[式木の表示](expression-formatting.md)に従って提供する。局所式と Index・局所構造・作用空間の整合性判定は維持し、数学的な等価性に式構造の一致を要求しない。
 
 指定基底への展開・座標取得は、局所規則による評価とは別の操作として core が提供する。[局所基底の能力](basis.md)と複合基底の順序規約から処理し、同じ基底要素の係数をまとめる。通常の積・作用・内積・trace の評価に基底展開を必須としない。複合演算子の基底展開には、要件の 5.1 節に従って全作用空間を確定する。
 
@@ -137,7 +137,7 @@ Graded でも状態の内積は通常の正定値な Hilbert 空間の内積と�
 
 通常の演算子積では、graded でも `(XY)† = Y†X†` とする。上記の graded な tensor の随伴の符号は、積の順序反転後に因子順序を元に戻す際の交換則と整合する。
 
-これらの graded な積・作用・随伴は、[Crismale・Rossi・Zurlo, On C*-norms on Z₂-graded tensor products, 2–3 節](https://link.springer.com/article/10.1007/s43037-021-00168-0)の規約に対応する。qmb-rs ではこの規約を、通常の Hilbert 空間上の作用・随伴と整合する合成則として採用する。
+これらの graded な積・作用・随伴は、[Crismale・Rossi・Zurlo, On C*-norms on Z₂-graded tensor products, 2–3 節](https://link.springer.com/article/10.1007/s43037-021-00168-0)の規約に対応する。syntaqs ではこの規約を、通常の Hilbert 空間上の作用・随伴と整合する合成則として採用する。
 
 通常の tensor 表現へ変換する場合は、要件の 5.5 節に従って parity 演算子を挿入する。Intrinsic な graded 規則と parity string による経路は同じ作用を表し、変換済みの符号を再度適用しない。
 
@@ -240,7 +240,7 @@ Step 3 の設計判断は以下を採用済みとする。Ordinary / graded な�
 | 評価経路 | 作用・内積・full trace を分担し、全経路共通の完全展開形を強制しない。作用は primitive の Product を要求せず、full trace は必要な項の局所積・局所 trace へ委譲する |
 | 深い式 | 評価・走査・最後の所有者になった節点の破棄には明示的な作業スタックを使う |
 
-Step 3 は期待値、commutator・anticommutator、Hilbert–Schmidt 内積までを含む。局所式・複合式の Norm・正規化・正規化期待値は qmb-normalize に実装済みであり、[正規化 API の契約](primitive-expression.md#41-norm正規化の-api-と-feature)に従う。bra 型・構築 API は初期版では導入せず、braket は内積で計算する。基底展開・座標取得は Step 5 で実装済みであり、初期版の必須範囲を維持する。Partial trace は future work とし、Step 5 と初期版の必須範囲に含めない。
+Step 3 は期待値、commutator・anticommutator、Hilbert–Schmidt 内積までを含む。局所式・複合式の Norm・正規化・正規化期待値は syntaqs-normalize に実装済みであり、[正規化 API の契約](primitive-expression.md#41-norm正規化の-api-と-feature)に従う。bra 型・構築 API は初期版では導入せず、braket は内積で計算する。基底展開・座標取得は Step 5 で実装済みであり、初期版の必須範囲を維持する。Partial trace は future work とし、Step 5 と初期版の必須範囲に含めない。
 
 Step 3 で非公開の節点・作業スタック、`ExpressionError` と必要なシグネチャを実装した。LocalStructure 廃止後の公開型は `State<I, S, O, C>`・`Operator<I, O, C>` とする。現在の API は第10節に記録する。Partial trace の節点と数値 API など、後続段階の詳細はその段階で設計する。
 
@@ -373,12 +373,12 @@ Ordinary / graded の共通機構の実装時に行った受入確認を記録�
 | 深い木 | 既存 ordinary 回帰と graded の2万段 wrapper の構築・比較・評価・破棄（128 KiB stack） |
 | spin-half・利用例 | 全 primitive が even、P=I、両種類での作用と trace の一致。[tensor_products.rs](../../examples/src/bin/tensor_products.rs) を実行 |
 
-非自明な grading の参照代数は[テスト専用二状態代数](../../crates/qmb-core/tests/support/graded.rs)であり、製品用 fermion API ではない。`|0>` even、`|1>` odd、`a=|0><1|`、`P=diag(1,-1)` とし、二 mode の基底順は `|00>,|01>,|10>,|11>` とする。独立した Kronecker 行列で `c_1|11>=-|10>`、`c_0 c_1|11>=-|00>`、`c_1 c_0|11>=|00>`、局所・異なる mode の CAR、`Tr(c_1†c_1)=2` を確認した。参照行列は評価器・export を使わずに構築し、intrinsic 座標と通常行列を別々に照合した。近似的な零成分の削除は行わない。
+非自明な grading の参照代数は[テスト専用二状態代数](../../tests/src/graded.rs)であり、製品用 fermion API ではない。`|0>` even、`|1>` odd、`a=|0><1|`、`P=diag(1,-1)` とし、二 mode の基底順は `|00>,|01>,|10>,|11>` とする。独立した Kronecker 行列で `c_1|11>=-|10>`、`c_0 c_1|11>=-|00>`、`c_1 c_0|11>=|00>`、局所・異なる mode の CAR、`Tr(c_1†c_1)=2` を確認した。参照行列は評価器・export を使わずに構築し、intrinsic 座標と通常行列を別々に照合した。近似的な零成分の削除は行わない。
 
 Rust 1.98.0 の direnv devShell で次を実行し、成功した。
 
 - `cargo test --workspace --all-features`（doctest を含む）
-- `cargo check -p qmb-core -p qmb-geometry --no-default-features`
+- `cargo check -p syntaqs-core -p syntaqs-geometry --no-default-features`
 - `cargo clippy --workspace --all-features --all-targets -- -D warnings`
 - `cargo fmt --all -- --check`
 - `cargo run -p examples --bin tensor_products`

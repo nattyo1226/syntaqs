@@ -1,12 +1,12 @@
 //! Normalized HS contractions preserve ambient-space and grading semantics.
-use qmb_tests::graded as support;
+use syntaqs_tests::graded as support;
 
 use num_complex::Complex;
-use qmb_core::{
+use support::{Op, Real, c, close};
+use syntaqs_core::{
     Adjoint, DimensionOverflow, HilbertSpace, HomogeneousParity, Identity, LinearCombination,
     LocalOperator, Operator, Parity, ParityOperator, Product, TensorKind, Trace,
 };
-use support::{Op, Real, c, close};
 
 // No Dimension, state type, or basis implementation: HS gets d from Tr(I).
 #[derive(Clone, Copy)]

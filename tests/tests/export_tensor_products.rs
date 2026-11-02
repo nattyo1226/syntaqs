@@ -1,7 +1,7 @@
 use graded::*;
-use qmb_core::{HilbertSpace, TensorKind};
-use qmb_export::{Export, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
-use qmb_tests::graded;
+use syntaqs_core::{HilbertSpace, TensorKind};
+use syntaqs_export::{Export, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
+use syntaqs_tests::graded;
 fn check<T: Real>() {
     for kind in [TensorKind::Ordinary, TensorKind::Graded] {
         let factors = [
@@ -42,21 +42,23 @@ fn check<T: Real>() {
         assert_eq!(dense_vector.metadata().space().effective_kind(), Some(kind));
         #[cfg(feature = "ndarray")]
         {
-            let matrix: Exported<qmb_export::ndarray::Array2<_>, MatrixMetadata<'_, Ket, _, _>> =
-                (&op).export(MatrixArgs::new(&States).in_space(&h)).unwrap();
+            let matrix: Exported<
+                syntaqs_export::ndarray::Array2<_>,
+                MatrixMetadata<'_, Ket, _, _>,
+            > = (&op).export(MatrixArgs::new(&States).in_space(&h)).unwrap();
             values(matrix.data().as_slice().unwrap(), &expected);
             assert_eq!(matrix.metadata().space().effective_kind(), Some(kind));
-            let v: Exported<qmb_export::ndarray::Array1<_>, VectorMetadata<'_, _, _, Ket>> =
+            let v: Exported<syntaqs_export::ndarray::Array1<_>, VectorMetadata<'_, _, _, Ket>> =
                 (&psi).export(&States).unwrap();
             values(v.data().as_slice().unwrap(), &reference);
         }
         #[cfg(feature = "sprs")]
         {
-            let matrix: Exported<qmb_export::sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, _>> =
+            let matrix: Exported<syntaqs_export::sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, _>> =
                 (&op).export(MatrixArgs::new(&States).in_space(&h)).unwrap();
             values(matrix.data().to_dense().as_slice().unwrap(), &expected);
             assert_eq!(matrix.metadata().space().effective_kind(), Some(kind));
-            let v: Exported<qmb_export::sprs::CsVec<_>, VectorMetadata<'_, _, _, Ket>> =
+            let v: Exported<syntaqs_export::sprs::CsVec<_>, VectorMetadata<'_, _, _, Ket>> =
                 (&psi).export(&States).unwrap();
             values(v.data().to_dense().as_slice().unwrap(), &reference);
         }
@@ -74,8 +76,8 @@ fn check<T: Real>() {
             (&bad).export(MatrixArgs::new(&States).in_space(&h));
         assert!(matches!(
             bad,
-            Err(qmb_export::ExportError::Expression(
-                qmb_core::ExpressionError::MissingIndex
+            Err(syntaqs_export::ExportError::Expression(
+                syntaqs_core::ExpressionError::MissingIndex
             ))
         ));
     }

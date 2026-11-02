@@ -1,12 +1,12 @@
 //! Geometry relations using the library API and a custom open square grid.
 //! The example-local grid demonstrates custom Geometry and Relation implementations.
 
-use qmb_core::HilbertSpace;
-use qmb_geometry::{
+use syntaqs_core::HilbertSpace;
+use syntaqs_geometry::{
     Boundary, Chain, Consecutive, Geometry, MappedGroup, NearestNeighbors, Relation, SiteMapper,
 };
 #[cfg(test)]
-use qmb_geometry::{ConsecutiveError, MappingError};
+use syntaqs_geometry::{ConsecutiveError, MappingError};
 
 type Error = Box<dyn std::error::Error>;
 
@@ -578,7 +578,7 @@ mod tests {
 
     #[test]
     fn mapped_spaces_feed_existing_expression_construction_without_evaluation_bounds() {
-        use qmb_spin_half::{SpinHalf, SpinHalfOperator as Op};
+        use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op};
         #[derive(PartialEq, Eq)]
         struct Index(usize);
         struct Scale;

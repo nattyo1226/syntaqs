@@ -27,7 +27,7 @@ Dimension は `fn dim() -> Result<NonZeroUsize, DimensionOverflow>` として実
 
 恒等元は primitive の値として表せることを要求するが、選択基底の要素である必要はない。基底に含まれなければ Basis が展開する。線型従属な primitive を許容するため、恒等元用の値を追加しても基底の次元は増えない。局所式の恒等元は `Primitive(O::identity())` として保持し、作用・積・随伴・trace・基底展開を通常の primitive と同じ経路で処理する。`LocalOperator::identity()` と空の `product` は `O: Identity` を要求するが、係数の数値能力は要求しない。複合式の記号的な `OpNode::Identity` は、未束縛の空の積や全作用空間の恒等演算子として維持する。
 
-局所 identity と spectator 因子の trace は、O の Identity・Trace から得る。次元の整数値を係数へ変換する経路に置き換えず、局所 trace に係数の One・整数変換を追加要求しない。外部の O に Identity を追加実装できない場合は、提供元の実装か利用者が所有する wrapper で接続する。`Identity`・`Dimension` は `qmb_core::ops` と crate root から公開する。`Identity` は局所式（`O: Identity`）と複合式（追加の能力制約なし）にも実装する。
+局所 identity と spectator 因子の trace は、O の Identity・Trace から得る。次元の整数値を係数へ変換する経路に置き換えず、局所 trace に係数の One・整数変換を追加要求しない。外部の O に Identity を追加実装できない場合は、提供元の実装か利用者が所有する wrapper で接続する。`Identity`・`Dimension` は `syntaqs_core::ops` と crate root から公開する。`Identity` は局所式（`O: Identity`）と複合式（追加の能力制約なし）にも実装する。
 
 ### 2.1. 提供する primitive と規格化
 
@@ -93,7 +93,7 @@ S・O の直接指定、primitive の span の次元と恒等元、追加の定�
 
 ## 8. Grading の局所能力と移行
 
-`qmb_core::ops` と crate root から、係数型に依存しない次の能力を公開する。
+`syntaqs_core::ops` と crate root から、係数型に依存しない次の能力を公開する。
 
 ```rust,ignore
 enum Parity { Even, Odd }
@@ -129,9 +129,9 @@ Spin-half はこの自明な grading を明示実装する。既存モデルの�
 
 ## 9. Fermion の局所代数
 
-`qmb-fermion` は `no_std + alloc`、unsafe 禁止とし、係数型から独立した `FermionState`・`FermionOperator` を提供する。状態は `Empty/Occupied`、演算子は `I/Annihilate/Create/Number/Mx/My/Mz` の7 variant とする。旧 `MajoranaX/Y/Z` と独立した `Parity` variant は公開しない。状態空間の次元は2、演算子空間の次元は4である。
+`syntaqs-fermion` は `no_std + alloc`、unsafe 禁止とし、係数型から独立した `FermionState`・`FermionOperator` を提供する。状態は `Empty/Occupied`、演算子は `I/Annihilate/Create/Number/Mx/My/Mz` の7 variant とする。旧 `MajoranaX/Y/Z` と独立した `Parity` variant は公開しない。状態空間の次元は2、演算子空間の次元は4である。
 
-`Fermion<C>` は `ExpressionFactory<FermionState,FermionOperator,C>` の型エイリアスである。公開入口は [lib.rs](../../crates/qmb-fermion/src/lib.rs)、局所規則は [state.rs](../../crates/qmb-fermion/src/state.rs)・[operator.rs](../../crates/qmb-fermion/src/operator.rs)、基底は [basis.rs](../../crates/qmb-fermion/src/basis.rs) に実装する。モデルは [Hubbard モデルの設計](geometry.md#6-fermion-の-hubbard-モデル)に従う。
+`Fermion<C>` は `ExpressionFactory<FermionState,FermionOperator,C>` の型エイリアスである。公開入口は [lib.rs](../../crates/syntaqs-fermion/src/lib.rs)、局所規則は [state.rs](../../crates/syntaqs-fermion/src/state.rs)・[operator.rs](../../crates/syntaqs-fermion/src/operator.rs)、基底は [basis.rs](../../crates/syntaqs-fermion/src/basis.rs) に実装する。モデルは [Hubbard モデルの設計](geometry.md#6-fermion-の-hubbard-モデル)に従う。
 
 ### 9.1. 規約・次元・parity
 
@@ -224,11 +224,11 @@ mode の順序・交換符号・先行区間の parity string は core に委ね
 
 ### 9.6. 実装時の検証記録
 
-名前・規格化の移行時の受入結果は[第11節](#11-規格化変更の検証記録)に記録する。局所規則・基底の独立2×2行列との照合は [contracts.rs](../../crates/qmb-fermion/tests/contracts.rs)、非 Clone / Copy / Float の係数能力は [minimal_scalar.rs](../../crates/qmb-fermion/tests/minimal_scalar.rs)、式・全 backend は [local_expressions.rs](../../crates/qmb-fermion/tests/local_expressions.rs)、graded 接続・CAR・両 Hubbard の独立 Fock 空間参照は [models.rs](../../crates/qmb-fermion/tests/models.rs)で検証する。数値試験は f32 / f64 の両方を対象とする。
+名前・規格化の移行時の受入結果は[第11節](#11-規格化変更の検証記録)に記録する。局所規則・基底の独立2×2行列との照合は [contracts.rs](../../crates/syntaqs-fermion/tests/contracts.rs)、非 Clone / Copy / Float の係数能力は [minimal_scalar.rs](../../crates/syntaqs-fermion/tests/minimal_scalar.rs)、式・全 backend は [local_expressions.rs](../../crates/syntaqs-fermion/tests/local_expressions.rs)、graded 接続・CAR・両 Hubbard の独立 Fock 空間参照は [models.rs](../../crates/syntaqs-fermion/tests/models.rs)で検証する。数値試験は f32 / f64 の両方を対象とする。
 
 ## 10. Spin-one の局所代数
 
-`qmb-spin-one` は三状態の spin-1、15個の演算子 primitive、2種類の演算子基底と XYZ・Heisenberg・BLBQ を提供する。std を許可し、unsafe を禁止する。モデルの定義は [SpinOne のモデル構築](geometry.md#7-spinone-のモデル構築)に従う。
+`syntaqs-spin-one` は三状態の spin-1、15個の演算子 primitive、2種類の演算子基底と XYZ・Heisenberg・BLBQ を提供する。std を許可し、unsafe を禁止する。モデルの定義は [SpinOne のモデル構築](geometry.md#7-spinone-のモデル構築)に従う。
 
 ### 10.1. Primitive と規約
 
@@ -321,9 +321,9 @@ Sp・Sm の非零な遷移振幅は √3、Sx の隣接状態への振幅は √
 
 ### 10.6. 実装時の検証記録
 
-規格化の移行時の受入結果は[第11節](#11-規格化変更の検証記録)にまとめる。独立な物理的 J の行列と採用倍率から参照値を作り、[contracts.rs](../../crates/qmb-spin-one/tests/contracts.rs) で全225積・45作用・随伴・trace・結合則・作用整合性・両基底と Gram 行列を f32 / f64 で検証する。
+規格化の移行時の受入結果は[第11節](#11-規格化変更の検証記録)にまとめる。独立な物理的 J の行列と採用倍率から参照値を作り、[contracts.rs](../../crates/syntaqs-spin-one/tests/contracts.rs) で全225積・45作用・随伴・trace・結合則・作用整合性・両基底と Gram 行列を f32 / f64 で検証する。
 
-[minimal_scalar.rs](../../crates/qmb-spin-one/tests/minimal_scalar.rs) は平方根を必要としない能力の最小 bound、[local_expressions.rs](../../crates/qmb-spin-one/tests/local_expressions.rs) は局所式と全 backend、[tensor_products.rs](../../crates/qmb-spin-one/tests/tensor_products.rs) は複合基底・ordinary / graded・全 backend、[models.rs](../../crates/qmb-spin-one/tests/models.rs) は物理的な3モデルとエネルギー・構築能力を検証する。
+[minimal_scalar.rs](../../crates/syntaqs-spin-one/tests/minimal_scalar.rs) は平方根を必要としない能力の最小 bound、[local_expressions.rs](../../crates/syntaqs-spin-one/tests/local_expressions.rs) は局所式と全 backend、[tensor_products.rs](../../crates/syntaqs-spin-one/tests/tensor_products.rs) は複合基底・ordinary / graded・全 backend、[models.rs](../../crates/syntaqs-spin-one/tests/models.rs) は物理的な3モデルとエネルギー・構築能力を検証する。
 
 数値比較は複素数の絶対値による `|a−b| <= atol + rtol max(|a|,|b|)` とし、現在の小規模試験では f32 は atol=rtol=2e-5、f64 は atol=rtol=1e-12 を使う。検証用の閾値を通常評価の項削除に流用しない。局所規則の厳密な零と、一般の式の相殺残差は区別する。
 
@@ -338,16 +338,16 @@ Sp・Sm の非零な遷移振幅は √3、Sx の隣接状態への振幅は √
 ```sh
 cargo test --workspace --all-features --no-fail-fast --quiet
 cargo test --workspace --no-default-features --offline --no-fail-fast --quiet
-cargo test -p qmb-spin-one -p qmb-fermion --all-features --offline --quiet
-cargo test -p qmb-spin-one --test tensor_products -p qmb-fermion --test models --offline --quiet
-cargo check -p qmb-core -p qmb-geometry --no-default-features --offline
+cargo test -p syntaqs-spin-one -p syntaqs-fermion --all-features --offline --quiet
+cargo test -p syntaqs-spin-one --test tensor_products -p syntaqs-fermion --test models --offline --quiet
+cargo check -p syntaqs-core -p syntaqs-geometry --no-default-features --offline
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features --offline -- -D warnings
 cargo clippy --workspace --all-targets --no-default-features --offline -- -D warnings
 sh -c 'RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --offline'
 ```
 
-qmb-export は単独でも `cargo test -p qmb-export --no-default-features --offline --quiet` を実行し、追加 feature なし・`--features ndarray`・`--features sprs` の3構成を確認した。両 backend 有効の構成は workspace の全 feature テストで確認した。
+syntaqs-export は単独でも `cargo test -p syntaqs-export --no-default-features --offline --quiet` を実行し、追加 feature なし・`--features ndarray`・`--features sprs` の3構成を確認した。両 backend 有効の構成は workspace の全 feature テストで確認した。
 
 確認した内容は次のとおり。
 

@@ -33,7 +33,7 @@ primitive の一覧・規格化は[局所 primitive の設計](../../design/loca
 `.github/workflows/` に継続的な検証のための workflow を整備する。現時点では同ディレクトリは存在しない。
 
 - pull request・push 時に、format、Clippy、ビルド・テスト（doc test を含む）、ドキュメント生成を実行する。
-- default feature 無効・全 feature 有効に加え、`qmb-export` の backend ごとの feature 構成を確認する。
+- default feature 無効・全 feature 有効に加え、`syntaqs-export` の backend ごとの feature 構成を確認する。
 - MSRV でのビルド・テストと、`no_std + alloc` 対応 crate の専用 target でのビルドを検討し、[未実施の検証](../../future-work.md#3-未実施の検証と性能)を補う。
 - 対象ブランチ・OS・Rust toolchain、ジョブ分割、依存キャッシュ、実行時間を整理し、ローカルの検証手順と README の案内を一致させる。
 

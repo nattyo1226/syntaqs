@@ -1,8 +1,8 @@
 use num_complex::Complex64 as C;
-use qmb_core::HilbertSpace as H;
-use qmb_fermion::{Fermion, FermionOperator as F, FermionState as Occupation};
-use qmb_geometry::{Boundary, Chain, Consecutive, NearestNeighbors, SiteMapper};
-use qmb_spin_half::{SpinHalf, SpinHalfOperator as S, SpinHalfState as Spin};
+use syntaqs_core::HilbertSpace as H;
+use syntaqs_fermion::{Fermion, FermionOperator as F, FermionState as Occupation};
+use syntaqs_geometry::{Boundary, Chain, Consecutive, NearestNeighbors, SiteMapper};
+use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as S, SpinHalfState as Spin};
 
 fn close(actual: C, expected: C) {
     assert!(

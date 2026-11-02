@@ -7,19 +7,19 @@ publish = false
 
 [features]
 default = ["normalize"]
-normalize = ["dep:qmb-normalize"]
-export = ["dep:qmb-export"]
+normalize = ["dep:syntaqs-normalize"]
+export = ["dep:syntaqs-export"]
 libm = ["normalize"]
 
 [dependencies]
-qmb-basic.workspace = true
-qmb-core.workspace = true
-qmb-geometry.workspace = true
-qmb-spin-half.workspace = true
-qmb-spin-one.workspace = true
-qmb-fermion.workspace = true
-qmb-normalize = { workspace = true, optional = true }
-qmb-export = { workspace = true, optional = true, features = ["ndarray", "sprs"] }
+syntaqs-basic.workspace = true
+syntaqs-core.workspace = true
+syntaqs-geometry.workspace = true
+syntaqs-spin-half.workspace = true
+syntaqs-spin-one.workspace = true
+syntaqs-fermion.workspace = true
+syntaqs-normalize = { workspace = true, optional = true }
+syntaqs-export = { workspace = true, optional = true, features = ["ndarray", "sprs"] }
 num-complex.workspace = true
 
 [dev-dependencies]

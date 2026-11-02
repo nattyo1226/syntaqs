@@ -1,7 +1,7 @@
 use graded::*;
-use qmb_core::{HilbertSpace, TensorKind};
-use qmb_normalize::{Norm, Normalize, NormalizedExpectation, NormalizedExpectationIn};
-use qmb_tests::graded;
+use syntaqs_core::{HilbertSpace, TensorKind};
+use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation, NormalizedExpectationIn};
+use syntaqs_tests::graded;
 fn check<T: Real + num_traits::Float>() {
     let factors = [
         HilbertSpace::factor(0),
@@ -49,7 +49,7 @@ fn check<T: Real + num_traits::Float>() {
         c(1., 0.),
     );
     assert!(
-        qmb_core::State::<u8, Ket, Op, num_complex::Complex<T>>::zero(&h)
+        syntaqs_core::State::<u8, Ket, Op, num_complex::Complex<T>>::zero(&h)
             .normalized()
             .is_err()
     );

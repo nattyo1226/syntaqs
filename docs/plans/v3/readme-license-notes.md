@@ -7,17 +7,19 @@
 
 ## 名前と発音
 
-- 新しいプロジェクト名は **syreqa**。`qmb` は仮の名前として扱う。
-- 由来は **Sy**mbolic **R**epresentation and **E**valuation of **Q**uantum **A**lgebra。
-- 二酸化珪素を表す英語の **silica** と同じ発音とし、日本語の読みは「シリカ」とする。
-- README には発音記号 **/ˈsɪl.ɪ.kə/** を掲載する。
-- 発音記号の参照先: [Cambridge Dictionary — silica](https://dictionary.cambridge.org/pronunciation/english/silica)。英米ともに /ˈsɪl.ɪ.kə/ と記載されている。
+- プロジェクト名は **syntaqs**。
+- 由来は **synta**x for **q**uantum **s**ystems。
+- 読みは未確定。読みの確定後、README に対応する発音記号を掲載する。
 
 README での表記案:
 
-> syreqa /ˈsɪl.ɪ.kə/ — Symbolic Representation and Evaluation of Quantum Algebra
+> syntaqs — syntax for quantum systems
 
-同名ソフトウェア・crate の予備検索では重複を確認していないが、crates.io での登録可否は未確認。crate 名・ディレクトリ名・リポジトリ名などへの名称変更はまだ実施していない。
+今回の新名称について、同名ソフトウェアの調査と crates.io での登録可否の確認は未実施。
+
+- crate 名とそのディレクトリ名は `syntaqs-*` に統一する。横断テスト用パッケージも `syntaqs-tests` とする。
+- import、依存設定、利用例、文書内の名称とパスを新名称に統一する。
+- GitHub のリポジトリ名は利用者が後で変更する。
 
 ## ライセンス
 
@@ -39,4 +41,21 @@ README での表記案:
 
 既存の利用者向け README である `examples/README.md` と `tests/README.md` を英訳した。各ライブラリ crate 内には現時点で README は存在しない。設計・計画文書は既存の日本語を維持している。
 
-ルートの README・ライセンスファイルの作成、各ライブラリ crate の README の作成、名称変更、既存コード・Cargo メタデータの変更は未実施。
+crate 名・ディレクトリ名・依存設定・import・利用例・文書を新名称へ変更した。
+
+ルートの README・ライセンスファイルの作成、各ライブラリ crate の README の作成、Cargo のライセンス指定は未実施。
+
+## 名称変更の検証
+
+2026-11-02、direnv の devShell（Rust 1.99.1）で以下を実行し、成功した。
+
+```sh
+direnv exec . cargo test --workspace --all-features --offline --quiet
+direnv exec . cargo check --workspace --all-targets --no-default-features --offline --quiet
+direnv exec . cargo fmt --all -- --check
+direnv exec . cargo clippy --workspace --all-targets --all-features --offline --quiet -- -D warnings
+direnv exec . env RUSTDOCFLAGS='-D warnings' cargo doc --workspace --all-features --no-deps --offline --quiet
+direnv exec . cargo run -p examples --no-default-features --bin two_spins --offline --quiet
+```
+
+全 feature のテストには doctest を含む。Cargo メタデータ上の10パッケージと依存名、旧名称と以前の名前に由来する発音表記がソース・設定・文書に残っていないこと、ルートの Cargo.lock に旧パッケージ名が残っていないこと、文書内のローカルリンク240件の参照先を確認した。

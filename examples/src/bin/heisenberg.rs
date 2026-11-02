@@ -1,15 +1,15 @@
 use num_complex::Complex;
-use qmb_basic::Id128;
+use syntaqs_basic::Id128;
 #[cfg(not(feature = "normalize"))]
-use qmb_core::Divide;
-use qmb_core::HilbertSpace;
-use qmb_geometry::{Boundary, Chain};
+use syntaqs_core::Divide;
+use syntaqs_core::HilbertSpace;
+use syntaqs_geometry::{Boundary, Chain};
 #[cfg(feature = "normalize")]
-use qmb_normalize::{Norm, NormalizedExpectation};
-use qmb_spin_half::{SpinHalf, SpinHalfState};
+use syntaqs_normalize::{Norm, NormalizedExpectation};
+use syntaqs_spin_half::{SpinHalf, SpinHalfState};
 
 type Spin = SpinHalf<Complex<f64>>;
-type Models = qmb_spin_half::models::SpinHalfModels<Spin>;
+type Models = syntaqs_spin_half::models::SpinHalfModels<Spin>;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chain = Chain::new(6, Boundary::Open);
@@ -30,12 +30,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Neel norm: {}", psi.norm()?);
     #[cfg(feature = "export")]
     {
-        use qmb_export::{
+        use syntaqs_export::{
             Export, Exported, MatrixArgs,
             ndarray::{Array1, Array2},
             sprs::{CsMat, CsVec},
         };
-        use qmb_spin_half::SzBasis;
+        use syntaqs_spin_half::SzBasis;
         // The Vec output is also usable with other numerical libraries.
         let raw: Exported<Vec<_>, _> = (&psi).export(&SzBasis)?;
         println!("Vector shape: {:?}", raw.metadata().shape());

@@ -1,8 +1,8 @@
 //! Test-only homogeneous two-level algebra and independent dense reference.
 use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
-use qmb_core::*;
 use std::{fmt::Debug, num::NonZeroUsize};
+use syntaqs_core::*;
 
 pub trait Real:
     Num

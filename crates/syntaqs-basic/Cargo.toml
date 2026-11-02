@@ -1,0 +1,10 @@
+[package]
+name = "syntaqs-basic"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "UUID indices and standard conveniences for syntaqs"
+
+[dependencies]
+syntaqs-core.workspace = true
+uuid.workspace = true

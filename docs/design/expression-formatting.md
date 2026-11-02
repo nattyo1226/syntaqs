@@ -2,7 +2,7 @@
 
 更新日: 2026-11-01
 
-局所・複合の状態式と演算子式の Display・Debug、および標準 Index の表示契約を定める。状態と4 Site の Hamiltonian の Display 利用例は [expression_formatting](../../examples/src/bin/expression_formatting.rs)、公開 API の説明は `qmb_core::expr` と `qmb_basic::Tag` の rustdoc を参照する。
+局所・複合の状態式と演算子式の Display・Debug、および標準 Index の表示契約を定める。状態と4 Site の Hamiltonian の Display 利用例は [expression_formatting](../../examples/src/bin/expression_formatting.rs)、公開 API の説明は `syntaqs_core::expr` と `syntaqs_basic::Tag` の rustdoc を参照する。
 
 ## 1. 対象と型制約
 
@@ -31,9 +31,9 @@
 
 ### 標準具体型
 
-`qmb-basic::Id128` は現行の UUID を維持する。単体の Display・Debug は完全な UUID を表示し、Copy・16 byte・UUID 全体による同一性を変えない。`qmb_basic::HilbertSpace` も `HilbertSpace<Id128>` の別名を維持する。
+`syntaqs-basic::Id128` は現行の UUID を維持する。単体の Display・Debug は完全な UUID を表示し、Copy・16 byte・UUID 全体による同一性を変えない。`syntaqs_basic::HilbertSpace` も `HilbertSpace<Id128>` の別名を維持する。
 
-`qmb-basic` は以下の標準 Index を提供する。Tag は `qmb_core::HilbertSpace<Tag>` で利用し、core は標準具体型に依存しない。
+`syntaqs-basic` は以下の標準 Index を提供する。Tag は `syntaqs_core::HilbertSpace<Tag>` で利用し、core は標準具体型に依存しない。
 
 ```rust
 pub struct Tag {
@@ -141,7 +141,7 @@ SpinOneState::Zero と FermionState::Empty は零ベクトルではない。`|0>
 
 ## 5. 実装と資源の扱い
 
-表示処理は [qmb-core/src/expr/format.rs](../../crates/qmb-core/src/expr/format.rs) に閉じる。局所／複合、状態／演算子をまたぐ借用の作業スタックを使い、括弧・改行・配置先も反復処理する。和・tensor の子は iterator の継続項目で扱い、全子を一括で積まない。葉や係数の複製、式全体の中間 String、評価用 traversal は使わない。出力エラーでは直ちに停止する。
+表示処理は [syntaqs-core/src/expr/format.rs](../../crates/syntaqs-core/src/expr/format.rs) に閉じる。局所／複合、状態／演算子をまたぐ借用の作業スタックを使い、括弧・改行・配置先も反復処理する。和・tensor の子は iterator の継続項目で扱い、全子を一括で積まない。葉や係数の複製、式全体の中間 String、評価用 traversal は使わない。出力エラーでは直ちに停止する。
 
 ket にまとめられる tensor の判定は反復的な後順走査で行う。表示呼び出し内だけの `BTreeMap` に、共有された構文節点のアドレスをキーとして可否の両方を記録する。キーを参照外しせず、Index の同一性判定にも使わない。このため I に Eq・Hash・Ord は不要。判定対象の一意な節点数を U、辺数を E とすると、分類は O((U + E) log(U + 1))、記録は O(U)。深い混合 tensor を祖先ごとに再走査する二乗化を避ける。
 
@@ -174,6 +174,6 @@ direnv exec . cargo doc --workspace --all-features --no-deps --offline
 direnv exec . cargo run -p examples --no-default-features --bin expression_formatting --offline
 ```
 
-書式・型制約・エラー・深さの回帰テストは [core の formatting.rs](../../crates/qmb-core/tests/formatting.rs)、Tag と Id128 は [basic の indices.rs](../../crates/qmb-basic/tests/indices.rs)、primitive 全 variant は各 builtin crate の `tests/formatting.rs` で確認する。深さ20,000の局所／複合の作用・和・係数倍・積・随伴と混合 tensor を128 KiBのスタックで表示・破棄できた。内部テストでは深い単純 tensor の ket 化と共有部分式の分類も確認した。最後に追加した深さ・Debug・分類のテストは対象を絞って再実行した。
+書式・型制約・エラー・深さの回帰テストは [core の formatting.rs](../../crates/syntaqs-core/tests/formatting.rs)、Tag と Id128 は [basic の indices.rs](../../crates/syntaqs-basic/tests/indices.rs)、primitive 全 variant は各 builtin crate の `tests/formatting.rs` で確認する。深さ20,000の局所／複合の作用・和・係数倍・積・随伴と混合 tensor を128 KiBのスタックで表示・破棄できた。内部テストでは深い単純 tensor の ket 化と共有部分式の分類も確認した。最後に追加した深さ・Debug・分類のテストは対象を絞って再実行した。
 
 no_std 対応はホスト上の確認であり、専用 target でのビルドは未実施（環境にはホスト target のライブラリのみ導入済み）。MSRV での検証、性能ベンチマーク・速度比較も今回の実施範囲には含めない。[今後の課題](../future-work.md#3-未実施の検証と性能)を参照する。

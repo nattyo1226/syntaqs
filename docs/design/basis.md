@@ -6,7 +6,7 @@
 
 本書は、[要件](../requirements.md)と[アーキテクチャ概要](../architecture.md)に基づき、状態・演算子の局所 primitive に対応する基底、その tensor product による複合基底、および式の展開に関する契約を定める。[局所 primitive・式木の数学的能力](primitive-expression.md)における基底との接続の詳細設計である。
 
-基底の能力契約、式全体への展開、複合基底、座標取得は `qmb-core` が担当する。具体的代数の crate は局所基底と primitive の展開規則を実装する。得られた係数を外部数値コンテナへ格納する処理は `qmb-export` に置く。
+基底の能力契約、式全体への展開、複合基底、座標取得は `syntaqs-core` が担当する。具体的代数の crate は局所基底と primitive の展開規則を実装する。得られた係数を外部数値コンテナへ格納する処理は `syntaqs-export` に置く。
 
 基底の定義は `PauliBasis` のような struct が表し、対象の要素型を指定した `Basis<P, C>` を実装する。その実装が、特定の primitive たちを基底とする規則と、各 primitive をその基底へ展開する手続きを提供する。状態基底の展開は `LinearCombination<S, C>`、演算子基底の展開は `LinearCombination<O, C>` を返す。式木側が要素を `map` して通常の式へ取り込む。利用者が基底要素の配列や集合そのものを入力することは要求しない。
 
@@ -80,7 +80,7 @@ Basis に独立した要素数の提供を要求しない。要素数を得る�
 
 Basis は primitive 一つに対する展開を提供し、core の共通機構が線型性を用いて式全体へ拡張する。積・作用などを含む場合は、必要な局所規則と合成則を評価して基底へ展開する。展開された基底 primitive の順序番号を使って係数を座標へ対応付け、同じ基底要素の係数をまとめる。
 
-`qmb-core` は、局所規則による `evaluate` とは別に、指定基底への展開と係数取得を提供する。基底に対する座標は数学的に一意であり、一般的な簡約の到達形や最適性を別途要求しない。入力の式は変更しない。
+`syntaqs-core` は、局所規則による `evaluate` とは別に、指定基底への展開と係数取得を提供する。基底に対する座標は数学的に一意であり、一般的な簡約の到達形や最適性を別途要求しない。入力の式は変更しない。
 
 `expand` は基底展開の結果を既存の通常の式型で返す。数値表現への export に向けた集約済み座標は、対象式と基底を入力とする別の公開 API で取得する。座標取得に事前の `expand` 呼び出しや展開済み専用型を要求せず、展開結果へ座標コンテナ・基底情報・展開済みマーカー・座標のキャッシュを付随させない。単一成分取得と未集約の寄与の列挙は今回の独立した公開 API の必須項目にしない。座標番号と返却形式は第8節に記録する。
 
@@ -171,7 +171,7 @@ Step 2 では、spin-half の `SzBasis` が状態 primitive の線型結合、`C
 
 内部では BTreeMap を使い、基底番号列に対して疎に集約する。集約時と複合状態のスカラー倍後に厳密な零係数を除き、その後の tensor 積へ零成分を持ち越さない。近似誤差による成分の切り捨ては行わず、零係数を理由に後続の基底展開を打ち切らない。`LinearCombination` の重複・零・入力順を保持する契約は変更しない。全基底要素や密ベクトル・行列の一括生成は行わないが、集約済みの疎な係数自体は保持する。
 
-演算子の座標は演算子基底に対する展開係数であり、状態に作用する数値行列の成分とは区別する。写像の表現行列は future work とし、外部数値コンテナへの格納は Step 6 で実装した。[数値 export の設計](export.md)に従い、座標から Vec とメタデータ・ndarray・sprs へ接続し、作用行列は状態基底への作用結果を列として座標化する。Coordinates をそのまま受け取る sprs の API を前提とせず、qmb-export が既存の成分列挙と constructor を接続する。Step 6 の検証結果は[数値 export の設計第7節](export.md#7-受入確認)、省略した MSRV の確認は[今後の課題](../future-work.md#3-未実施の検証と性能)に記録する。
+演算子の座標は演算子基底に対する展開係数であり、状態に作用する数値行列の成分とは区別する。写像の表現行列は future work とし、外部数値コンテナへの格納は Step 6 で実装した。[数値 export の設計](export.md)に従い、座標から Vec とメタデータ・ndarray・sprs へ接続し、作用行列は状態基底への作用結果を列として座標化する。Coordinates をそのまま受け取る sprs の API を前提とせず、syntaqs-export が既存の成分列挙と constructor を接続する。Step 6 の検証結果は[数値 export の設計第7節](export.md#7-受入確認)、省略した MSRV の確認は[今後の課題](../future-work.md#3-未実施の検証と性能)に記録する。
 
 ### 8.3. 複合基底の遅延列挙
 
@@ -183,7 +183,7 @@ Step 2 では、spin-half の `SzBasis` が状態 primitive の線型結合、`C
 
 `BasisError` は基底展開が返した非基底 primitive（`NonBasisElement`）、局所番号の範囲外（`IndexOutOfBounds`）、列挙と番号・要素数の不一致（`InvalidEnumeration`）、次元 overflow（`Dimension`）、空間不整合・未束縛など（`Expression`）を区別する。得られた情報で検出し、全基底の線型独立性・完全性を実行時に自動証明することは要求しない。零係数であっても不正な参照や不正な展開先を見逃さない。
 
-`qmb-core` の root から Basis・BasisError・Coordinates を公開する。利用例は [basis_expansion.rs](../../examples/src/bin/basis_expansion.rs) に置く。検証の概要は第7節に記録する。
+`syntaqs-core` の root から Basis・BasisError・Coordinates を公開する。利用例は [basis_expansion.rs](../../examples/src/bin/basis_expansion.rs) に置く。検証の概要は第7節に記録する。
 
 ## 9. Graded 基底の実装（2026-10-29）
 

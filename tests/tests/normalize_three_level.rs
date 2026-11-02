@@ -1,16 +1,16 @@
 use fixture::*;
 use num_complex::Complex;
 use num_traits::Float;
-use qmb_core::{Basis, HilbertSpace};
-use qmb_normalize::{
+use syntaqs_core::{Basis, HilbertSpace};
+use syntaqs_normalize::{
     Norm, NormalizationError, Normalize, NormalizedExpectation, NormalizedExpectationIn,
 };
-use qmb_tests::three_level as fixture;
+use syntaqs_tests::three_level as fixture;
 type CompositeSpace = HilbertSpace<u8>;
-type CompositeOperator<T> = qmb_core::Operator<u8, Operator, Complex<T>>;
+type CompositeOperator<T> = syntaqs_core::Operator<u8, Operator, Complex<T>>;
 
 fn check_three_level_normalization<T: Real + Float>() {
-    use qmb_core::LocalState as S;
+    use syntaqs_core::LocalState as S;
     let x = S::<Ket, Operator, Complex<T>>::primitive(Ket::Sum).scaled(c(2.0, -1.0));
     let normalized = x.normalized().unwrap();
     assert_complex(Complex::new(normalized.norm(), T::zero()), c(1.0, 0.0));
@@ -35,7 +35,7 @@ fn three_level_normalization_and_zero_norm_rejection_both_precisions() {
 }
 
 fn check_derived_state_operations<T: Real>() {
-    use qmb_core::{ExpressionError, LocalOperator as O, LocalState as S};
+    use syntaqs_core::{ExpressionError, LocalOperator as O, LocalState as S};
     let x = S::<Ket, Operator, Complex<T>>::primitive(Ket::Sum);
     let y = S::<Ket, Operator, Complex<T>>::primitive(Ket::Phase);
     let z = S::<Ket, Operator, Complex<T>>::primitive(Ket::Unit(Axis::A));
@@ -92,8 +92,9 @@ fn check_derived_state_operations<T: Real>() {
     let a = CompositeSpace::factor(11);
     let b = CompositeSpace::factor(7);
     let h = a.tensor(&b).unwrap();
-    let first = qmb_core::State::tensor_in(&h, [x.at(&a).unwrap(), y.at(&b).unwrap()]).unwrap();
-    let second = qmb_core::State::tensor_in(&h, [y.at(&a).unwrap(), z.at(&b).unwrap()]).unwrap();
+    let first = syntaqs_core::State::tensor_in(&h, [x.at(&a).unwrap(), y.at(&b).unwrap()]).unwrap();
+    let second =
+        syntaqs_core::State::tensor_in(&h, [y.at(&a).unwrap(), z.at(&b).unwrap()]).unwrap();
     let ci = CompositeOperator::identity().bind(&h).unwrap();
     assert_complex(
         Complex::new(first.norm_squared().unwrap(), T::zero()),
@@ -114,7 +115,7 @@ fn check_derived_state_operations<T: Real>() {
         alpha * first.inner_product(&first).unwrap() + beta * first.inner_product(&second).unwrap(),
     );
     for zero in [
-        qmb_core::State::zero(&h),
+        syntaqs_core::State::zero(&h),
         (&first - &first.clone()).unwrap(),
     ] {
         assert_complex(
