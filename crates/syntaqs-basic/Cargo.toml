@@ -7,8 +7,10 @@ license.workspace = true
 license-file.workspace = true
 repository.workspace = true
 readme = "README.md"
-description = "UUID indices and standard conveniences for syntaqs"
+description = "UUID and named indices for syntaqs"
 
 [dependencies]
-syntaqs-core.workspace = true
 uuid.workspace = true
+
+[dev-dependencies]
+syntaqs-core.workspace = true

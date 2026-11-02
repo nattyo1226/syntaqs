@@ -1,5 +1,6 @@
 use core::num::NonZeroUsize;
-use syntaqs_basic::{HilbertSpace, Id128};
+use syntaqs_basic::Id128;
+use syntaqs_core::HilbertSpace;
 
 #[test]
 fn uuid_generation_and_core_connection_preserve_existing_identity() {

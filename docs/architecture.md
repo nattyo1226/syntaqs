@@ -1,6 +1,6 @@
 # syntaqs アーキテクチャ概要
 
-更新日: 2026-11-01
+更新日: 2026-11-02
 
 ## 1. 文書の位置づけ
 
@@ -32,7 +32,7 @@ Chain はサイト数と境界条件だけを保持する。`syntaqs-geometry` �
 
 代数系の共通処理は `syntaqs-core` に集約する。抽象契約・有限線型結合に加え、局所・複合式木、Index・自由度・Hilbert 空間、局所式の配置・束縛、評価、基底展開・座標取得を同じ crate が所有する。写像の表現係数は将来の同 crate の担当とする。本文書と詳細設計でいう「代数 core」は `syntaqs-core` を指す。
 
-具体的代数は専用 crate とし、`syntaqs-spin-half`・`syntaqs-spin-one`・`syntaqs-fermion` は primitive・局所規則・具体的基底を実装し、core の共通型を直接利用できる。UUID による Id128 と、文字列で名前を付ける Tag は `syntaqs-basic`、Site・近接関係と外部列への借用接続は `syntaqs-geometry`、外部数値コンテナへの変換は `syntaqs-export`、Heisenberg・Neel の構築 utility は `syntaqs-spin-half`、spin-1 の XYZ・Heisenberg・BLBQ の構築は `syntaqs-spin-one`、標準 Hubbard・symmetric Hubbard の構築は `syntaqs-fermion`、norm・状態の正規化・正規化期待値は `syntaqs-normalize` が担当する。workspace は8つの本番用ライブラリ crate、[examples パッケージ](../examples/README.md)、および [syntaqs-tests パッケージ](../tests/README.md)で構成する。syntaqs-tests は repository top の tests/ に置き、共有 fixture のライブラリと公開 API・横断テストを持つ。version・edition・rust-version は workspace から継承し、examples と同様に publish = false とする。本番用 crate は syntaqs-tests に依存しない。basic・geometry・spin-half・spin-one・fermion・export・normalize は core に依存し、spin-half・spin-one・fermion のモデル構築は geometry の公開契約を利用する。normalize と spin-one は std を利用できる。core と geometry は `no_std + alloc` を維持し、core は basic・UUID・乱数源・具体的代数・geometry・normalize・数値 backend に依存しない。
+具体的代数は専用 crate とし、`syntaqs-spin-half`・`syntaqs-spin-one`・`syntaqs-fermion` は primitive・局所規則・具体的基底を実装し、core の共通型を直接利用できる。UUID による Id128 と、文字列で名前を付ける Tag は `syntaqs-basic`、Site・近接関係と外部列への借用接続は `syntaqs-geometry`、外部数値コンテナへの変換は `syntaqs-export`、Heisenberg・Neel の構築 utility は `syntaqs-spin-half`、spin-1 の XYZ・Heisenberg・BLBQ の構築は `syntaqs-spin-one`、標準 Hubbard・symmetric Hubbard の構築は `syntaqs-fermion`、norm・状態の正規化・正規化期待値は `syntaqs-normalize` が担当する。workspace は8つの本番用ライブラリ crate、[examples パッケージ](../examples/README.md)、および [syntaqs-tests パッケージ](../tests/README.md)で構成する。syntaqs-tests は repository top の tests/ に置き、共有 fixture のライブラリと公開 API・横断テストを持つ。version・edition・rust-version は workspace から継承し、examples と同様に publish = false とする。本番用 crate は syntaqs-tests に依存しない。geometry・spin-half・spin-one・fermion・export・normalize は core に依存し、spin-half・spin-one・fermion のモデル構築は geometry の公開契約を利用する。normalize と spin-one は std を利用できる。basic はテスト・doctest のみで core に依存する。core と geometry は `no_std + alloc` を維持し、core は basic・UUID・乱数源・具体的代数・geometry・normalize・数値 backend に依存しない。
 
 core 内では局所契約、式、空間、評価、基底処理を module で分離する。共通表現と基本操作・名前付きメソッドを同じ crate で設計し、具体的代数ごとに別の式木や evaluator を作らない。式の内容を保持する `ScaleExpr`・`SumExpr`・`ProductExpr`・`ActExpr`・`AdjointExpr` を共通パーツとし、局所式・複合式で再利用する。`LinearCombination<P, C>` は薄い有限線型結合型として維持し、共通パーツで保持する。局所規則・局所基底展開は線型結合を返し、式木側が `map` で要素を変換して共通 constructor で取り込む。Step 2 で core・spin-half・テストの演算 trait を関連型に揃え、式木との接続を実装した。将来の追加 crate は、独立した機能・依存関係・実行基盤の境界が必要になった段階で検討する。
 

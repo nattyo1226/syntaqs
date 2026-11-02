@@ -1,6 +1,6 @@
 # 式木の表示
 
-更新日: 2026-11-01
+更新日: 2026-11-02
 
 局所・複合の状態式と演算子式の Display・Debug、および標準 Index の表示契約を定める。状態と4 Site の Hamiltonian の Display 利用例は [expression_formatting](../../examples/src/bin/expression_formatting.rs)、公開 API の説明は `syntaqs_core::expr` と `syntaqs_basic::Tag` の rustdoc を参照する。
 
@@ -31,7 +31,7 @@
 
 ### 標準具体型
 
-`syntaqs-basic::Id128` は現行の UUID を維持する。単体の Display・Debug は完全な UUID を表示し、Copy・16 byte・UUID 全体による同一性を変えない。`syntaqs_basic::HilbertSpace` も `HilbertSpace<Id128>` の別名を維持する。
+`syntaqs-basic::Id128` は現行の UUID を維持する。単体の Display・Debug は完全な UUID を表示し、Copy・16 byte・UUID 全体による同一性を変えない。空間には `syntaqs_core::HilbertSpace<Id128>` を利用する。
 
 `syntaqs-basic` は以下の標準 Index を提供する。Tag は `syntaqs_core::HilbertSpace<Tag>` で利用し、core は標準具体型に依存しない。
 

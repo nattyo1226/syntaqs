@@ -92,6 +92,3 @@ impl fmt::Display for Tag {
         fmt::Display::fmt(&self.raw, f)
     }
 }
-
-/// A core space using the standard UUID index.
-pub type HilbertSpace = syntaqs_core::HilbertSpace<Id128>;

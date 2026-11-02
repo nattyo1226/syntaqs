@@ -1,6 +1,6 @@
 # Index の契約
 
-更新日: 2026-11-01
+更新日: 2026-11-02
 
 ## 1. 対象と合意した契約
 
@@ -123,7 +123,7 @@ Index 単体や空間の葉から局所代数を取得する契約は置かな�
 
 Core の照合は標準の `Eq`、Factor の構築は `HilbertSpace::factor(index)`、局所式の配置は `at(&factor)` とする。標準具体型 `syntaqs_basic::Id128` は UUID v4 を包む不透明な型であり、`new()` と `Default` は seed 指定不要で新しい Index を発行する。Clone・Copy は同一性を保持し、Display・Debug・等値比較・順序比較・Hash を提供する。生成は `uuid::Uuid::new_v4` に委譲し、乱数源が利用できない場合を含む挙動は同 API に従う。UUID・乱数源は basic に閉じ、Chain は basic に依存しない。
 
-`syntaqs_basic::HilbertSpace` は `syntaqs_core::HilbertSpace<Id128>` の型別名とし、局所 primitive の型引数を持たない。Id128 は `syntaqs-basic`、ジェネリックな HilbertSpace は `syntaqs-core` から利用する。
+Id128 は `syntaqs-basic`、ジェネリックな HilbertSpace は `syntaqs-core` から利用する。UUID を Index とする空間は `syntaqs_core::HilbertSpace<Id128>` と指定する。
 
 `syntaqs_basic::Tag { raw: String }` は文字列で自分で名前を付ける標準 Index。raw は非公開で、`new(impl Into<String>)`・`as_str()`・`From<String>`・`From<&str>` を提供する。Clone・Debug・Eq・Hash・Ord 等は文字列に従い、Copy・隠れた UUID・改名 API は持たない。`syntaqs_core::HilbertSpace<Tag>` で利用する。
 
