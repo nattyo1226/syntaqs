@@ -1,0 +1,16 @@
+[package]
+name = "syntaqs-basic"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+license-file.workspace = true
+repository.workspace = true
+readme = "README.md"
+description = "UUID and named indices for syntaqs"
+
+[dependencies]
+uuid.workspace = true
+
+[dev-dependencies]
+syntaqs-core.workspace = true

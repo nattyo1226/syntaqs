@@ -1,7 +1,7 @@
 //! Select a tensor rule at construction and use the common evaluation API.
 use num_complex::Complex;
-use qmb_core::{HilbertSpace, HomogeneousParity, Parity, ParityOperator, TensorKind};
-use qmb_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket};
+use syntaqs_core::{HilbertSpace, HomogeneousParity, Parity, ParityOperator, TensorKind};
+use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket};
 type Spin = SpinHalf<Complex<f64>>;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let a = HilbertSpace::factor("a");
@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for kind in [TensorKind::Ordinary, TensorKind::Graded] {
         let space = HilbertSpace::tensor_all_with(kind, [a.clone(), b.clone()])?;
         let psi = Spin::product_state(&space, [Ket::Up, Ket::Down])?;
-        let op = Spin::operator(Op::SPlus).at(&b)?.bind(&space)?;
+        let op = Spin::operator(Op::Sp).at(&b)?.bind(&space)?;
         assert!((psi.act(&op)?.norm_squared()? - 1.0).abs() < 1e-12);
         assert!(((op.adjoint().clone() * &op)?.trace()?.re - 2.0).abs() < 1e-12);
         println!(

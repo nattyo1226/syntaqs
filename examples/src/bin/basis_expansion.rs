@@ -1,8 +1,8 @@
 //! Expand ordinary expressions, then obtain sparse coordinates for numeric export.
 
 use num_complex::Complex;
-use qmb_core::HilbertSpace;
-use qmb_spin_half::{
+use syntaqs_core::HilbertSpace;
+use syntaqs_spin_half::{
     CartesianBasis, LadderBasis, SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis,
 };
 
@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Re-expansion needs no record of the previous basis in the expression.
-    let raising = Spin::operator(Op::SPlus).expand(&CartesianBasis)?;
+    let raising = Spin::operator(Op::Sp).expand(&CartesianBasis)?;
     let raising = raising.expand(&LadderBasis)?;
     let coordinates = raising.coordinates(&LadderBasis)?;
     println!(

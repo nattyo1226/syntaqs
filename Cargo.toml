@@ -1,37 +1,44 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/qmb-core",
-    "crates/qmb-spin-half",
-    "crates/qmb-spin-one",
-    "crates/qmb-fermion",
-    "crates/qmb-basic",
-    "crates/qmb-geometry",
-    "crates/qmb-normalize",
-    "crates/qmb-export",
+    "crates/syntaqs-core",
+    "crates/syntaqs-basic",
+    "crates/syntaqs-geometry",
+    "crates/syntaqs-normalize",
+    "crates/syntaqs-export",
+    "crates/syntaqs-spin-half",
+    "crates/syntaqs-spin-one",
+    "crates/syntaqs-fermion",
     "examples",
+    "tests",
 ]
 
 [workspace.package]
 edition = "2024"
-version = "0.2.0"
+version = "0.3.0"
 rust-version = "1.85"
+license = "MIT"
+license-file = "LICENSE"
+repository = "https://github.com/nattyo1226/syntaqs"
 
 [workspace.dependencies]
-qmb-basic = { path = "crates/qmb-basic" }
-qmb-core = { path = "crates/qmb-core" }
-qmb-export = { path = "crates/qmb-export" }
-qmb-geometry = { path = "crates/qmb-geometry" }
+syntaqs-core = { path = "crates/syntaqs-core" }
+syntaqs-basic = { path = "crates/syntaqs-basic" }
+syntaqs-geometry = { path = "crates/syntaqs-geometry" }
+syntaqs-normalize = { path = "crates/syntaqs-normalize" }
+syntaqs-export = { path = "crates/syntaqs-export" }
+syntaqs-spin-half = { path = "crates/syntaqs-spin-half" }
+syntaqs-spin-one = { path = "crates/syntaqs-spin-one" }
+syntaqs-fermion = { path = "crates/syntaqs-fermion" }
 
-qmb-fermion = { path = "crates/qmb-fermion" }
-qmb-normalize = { path = "crates/qmb-normalize" }
-qmb-spin-half = { path = "crates/qmb-spin-half" }
-qmb-spin-one = { path = "crates/qmb-spin-one" }
+# Identifiers and error handling.
+uuid = { version = "1.18.1", features = ["v4"] }
+thiserror = { version = "2.0.21", default-features = false }
 
-num-complex = { version = "0.4.6", default-features = false }
+# Numeric traits and coefficients.
 num-traits = { version = "0.2.19", default-features = false }
+num-complex = { version = "0.4.6", default-features = false }
+
+# Dense and sparse numerical containers.
 ndarray = { version = "0.17.2", default-features = false, features = ["std"] }
 sprs = { version = "=0.11.4", default-features = false }
-
-thiserror = { version = "2.0.21", default-features = false }
-uuid = { version = "1.18.1", features = ["v4"] }

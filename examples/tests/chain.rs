@@ -2,15 +2,15 @@ use num_complex::Complex;
 #[cfg(feature = "normalize")]
 use num_traits::Float;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
-use qmb_basic::Id128;
-use qmb_core::{Divide, HilbertSpace, LocalState, State};
-use qmb_geometry::{Boundary, Chain};
-#[cfg(feature = "normalize")]
-use qmb_normalize::{Norm, Normalize, NormalizedExpectation};
-use qmb_spin_half::{SpinHalf, SpinHalfState};
 use std::{fmt::Debug, ops::Neg};
+use syntaqs_basic::Id128;
+use syntaqs_core::{Divide, HilbertSpace, LocalState, State};
+use syntaqs_geometry::{Boundary, Chain};
+#[cfg(feature = "normalize")]
+use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+use syntaqs_spin_half::{SpinHalf, SpinHalfState};
 
-trait Real: Num + Copy + Neg<Output = Self> + FromPrimitive + ToPrimitive + Debug {
+trait Real: Num + Copy + PartialOrd + Neg<Output = Self> + FromPrimitive + ToPrimitive + Debug {
     const ATOL: f64;
     const RTOL: f64;
 }
@@ -40,7 +40,7 @@ fn close<T: Real>(actual: Complex<T>, expected: Complex<T>) {
 fn basis<T: Real>(
     factors: &[HilbertSpace<Id128>],
     bits: usize,
-) -> qmb_core::StateOf<SpinHalf<Complex<T>>, Id128> {
+) -> syntaqs_core::StateOf<SpinHalf<Complex<T>>, Id128> {
     State::tensor_in(
         &HilbertSpace::tensor_all(factors.iter().cloned()).unwrap(),
         factors.iter().enumerate().map(|(i, factor)| {
@@ -112,14 +112,14 @@ fn check<T: Real>() {
             let factors = factors(n);
             let space = HilbertSpace::tensor_all(factors.iter().cloned()).unwrap();
             let j = real::<T>(1.3);
-            let h = qmb_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::heisenberg(
+            let h = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::heisenberg(
                 &chain, &factors, j,
             )
             .unwrap();
             assert!(h.space().unwrap().is_compatible_with(&space));
             let before: Vec<_> = space.indices().copied().collect();
             for first in [SpinHalfState::Up, SpinHalfState::Down] {
-                let psi = qmb_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::neel(
+                let psi = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::neel(
                     &chain, &factors, first,
                 )
                 .unwrap();
@@ -178,10 +178,11 @@ fn check<T: Real>() {
             let chain = Chain::new(n, boundary);
             let factors = factors(n);
             for j in [real::<T>(1.3), real::<T>(-0.7)] {
-                let h = qmb_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::heisenberg(
-                    &chain, &factors, j,
-                )
-                .unwrap();
+                let h =
+                    syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::heisenberg(
+                        &chain, &factors, j,
+                    )
+                    .unwrap();
                 let adj = h.adjoint();
                 for row in 0..(1 << n) {
                     for col in 0..(1 << n) {
@@ -209,24 +210,24 @@ fn models_match_analytic_energies_and_independent_matrices_both_precisions() {
 
 #[cfg(feature = "export")]
 fn check_exports<T: Real + num_traits::NumAssign + Default + Send + Sync + 'static>() {
-    use qmb_export::{
+    use syntaqs_export::{
         Export, Exported, MatrixArgs,
         ndarray::{Array1, Array2},
         sprs::{CsMat, CsVec},
     };
-    use qmb_spin_half::SzBasis;
+    use syntaqs_spin_half::SzBasis;
     for n in 0..=4 {
         for boundary in [Boundary::Open, Boundary::Periodic] {
             let chain = Chain::new(n, boundary);
             let factors = factors(n);
             let space = HilbertSpace::tensor_all(factors.iter().cloned()).unwrap();
             let j = real::<T>(1.3);
-            let h = qmb_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::heisenberg(
+            let h = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::heisenberg(
                 &chain, &factors, j,
             )
             .unwrap();
             for first in [SpinHalfState::Up, SpinHalfState::Down] {
-                let psi = qmb_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::neel(
+                let psi = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::neel(
                     &chain, &factors, first,
                 )
                 .unwrap();
@@ -326,7 +327,7 @@ fn check_norms<T: Real + Float>() {
         for first in [SpinHalfState::Up, SpinHalfState::Down] {
             let chain = Chain::new(n, Boundary::Open);
             let factors = factors(n);
-            let psi = qmb_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::neel(
+            let psi = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::neel(
                 &chain, &factors, first,
             )
             .unwrap();
@@ -361,13 +362,13 @@ fn check_xyz<T: Real>() {
                 [0.8, 0.8, 0.8],
             ] {
                 let [jx, jy, jz] = values.map(real::<T>);
-                let h = qmb_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::xyz(
+                let h = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::xyz(
                     &chain, &factors, jx, jy, jz,
                 )
                 .unwrap();
                 assert!(h.space().unwrap().is_compatible_with(&space));
                 let isotropic =
-                    qmb_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::heisenberg(
+                    syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::heisenberg(
                         &chain, &factors, jx,
                     )
                     .unwrap();

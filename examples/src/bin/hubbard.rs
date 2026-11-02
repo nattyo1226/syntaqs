@@ -1,14 +1,14 @@
 //! Standard and symmetric Hubbard models on a two-site graded chain.
 use num_complex::Complex;
-use qmb_basic::Id128;
-use qmb_core::HilbertSpace;
-use qmb_fermion::{Fermion, FermionOperator as O, FermionState as S, MajoranaBasis};
-use qmb_geometry::{Boundary, Chain};
+use syntaqs_basic::Id128;
+use syntaqs_core::HilbertSpace;
+use syntaqs_fermion::{Fermion, FermionOperator as O, FermionState as S, MajoranaBasis};
+use syntaqs_geometry::{Boundary, Chain};
 #[cfg(feature = "normalize")]
-use qmb_normalize::{Normalize, NormalizedExpectation};
+use syntaqs_normalize::{Normalize, NormalizedExpectation};
 
 type F = Fermion<Complex<f64>>;
-type Models = qmb_fermion::models::FermionModels<F>;
+type Models = syntaqs_fermion::models::FermionModels<F>;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chain = Chain::new(2, Boundary::Open);
@@ -37,18 +37,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             (normalized.normalized_expectation(&symmetric)? - shifted_energy).norm_sqr() < 1e-24
         );
     }
-    let p = F::operator(O::Parity).coordinates(&MajoranaBasis)?;
+    let p = F::operator(O::Mz).coordinates(&MajoranaBasis)?;
     for entry in p.flat_entries() {
         let (index, coefficient) = entry?;
         println!("Parity in MajoranaBasis: coordinate {index} = {coefficient}");
     }
     #[cfg(feature = "export")]
     {
-        use qmb_export::{Export, Exported, MatrixArgs};
-        use qmb_fermion::OccupationBasis;
+        use syntaqs_export::{Export, Exported, MatrixArgs};
+        use syntaqs_fermion::OccupationBasis;
         let dense: Exported<Vec<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
-        let sparse: Exported<qmb_export::sprs::CsMat<Complex<f64>>, _> =
+        let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
         assert_eq!(dense.metadata().shape(), [16, 16]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {

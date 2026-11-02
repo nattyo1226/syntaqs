@@ -1,9 +1,9 @@
 //! Spin-1 dipoles, quadrupoles, chain models and common expression APIs.
 
 use num_complex::Complex;
-use qmb_core::HilbertSpace;
-use qmb_geometry::{Boundary, Chain};
-use qmb_spin_one::{
+use syntaqs_core::HilbertSpace;
+use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_spin_one::{
     CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as Op, SpinOneState as Ket,
 };
 
@@ -14,29 +14,30 @@ fn assert_close(actual: Complex<f64>, expected: Complex<f64>) {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     type Spin = SpinOne<Complex<f64>>;
-    type Models = qmb_spin_one::models::SpinOneModels<Spin>;
+    type Models = syntaqs_spin_one::models::SpinOneModels<Spin>;
     let psi = Spin::state(Ket::Plus)
         + Spin::state(Ket::Zero).scaled(Complex::new(0.0, 1.0))
         + Spin::state(Ket::Minus);
     let z = Spin::operator(Op::Sz);
+    let c = (3.0_f64 / 2.0).sqrt();
     // Axial and rhombic single-ion anisotropy, plus a transverse field.
-    let h = (z.clone() * &z).scaled(0.4)
-        + Spin::operator(Op::Dxy).scaled(0.2)
-        + Spin::operator(Op::Sx).scaled(0.3);
+    let h = (z.clone() * &z).scaled(0.4 * (2.0 / 3.0))
+        + Spin::operator(Op::Dxy).scaled(0.2 / c)
+        + Spin::operator(Op::Sx).scaled(0.3 / c);
     let energy = psi.expectation(&h);
     assert_close(energy, Complex::new(1.2, 0.0));
     println!("Unnormalized energy: {energy}");
 
-    let plus = Spin::operator(Op::SPlus);
+    let plus = Spin::operator(Op::Sp);
     let squared = plus.clone() * &plus;
     let coordinates = squared.coordinates(&LadderBasis)?;
     assert_eq!(coordinates.dim()?, 9);
     assert_eq!(coordinates.len(), 1);
     for entry in coordinates.flat_entries() {
         let (index, coefficient) = entry?;
-        assert_eq!(index, 7); // Q2Plus, with coefficient one.
-        assert_eq!(*coefficient, Complex::new(1.0, 0.0));
-        println!("SPlus²: ladder coordinate {index} = {coefficient}");
+        assert_eq!(index, 7); // Q2p, with coefficient sqrt(3/2).
+        assert_close(*coefficient, Complex::new(c, 0.0));
+        println!("Sp²: ladder coordinate {index} = {coefficient}");
     }
     let round = squared.expand(&CartesianBasis)?.expand(&LadderBasis)?;
     assert_eq!(round.coordinates(&LadderBasis)?.len(), 1);
@@ -48,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = Spin::product_state(&space, [Ket::Plus, Ket::Minus])?;
     let zz = Spin::operator_product_at([(&a, Op::Sz), (&b, Op::Sz)])?;
     assert_eq!(state.space().dim::<Ket>()?, 9);
-    assert_eq!(state.expectation(&zz)?, Complex::new(-1.0, 0.0));
+    assert_close(state.expectation(&zz)?, Complex::new(-1.5, 0.0));
 
     // The model helpers use -J for bilinear coupling, as in spin-half.
     // A two-site periodic chain has one bond, counted once.
@@ -65,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(feature = "normalize")]
     {
-        use qmb_normalize::{Norm, Normalize, NormalizedExpectation};
+        use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
         let normalized = psi.normalized()?;
         assert!((normalized.norm() - 1.0).abs() < 1e-12);
         let energy = psi.normalized_expectation(&h)?;
@@ -74,11 +75,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     #[cfg(feature = "export")]
     {
-        use qmb_export::{Export, Exported, MatrixArgs};
-        use qmb_spin_one::SzBasis;
+        use syntaqs_export::{Export, Exported, MatrixArgs};
+        use syntaqs_spin_one::SzBasis;
         let dense: Exported<Vec<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
-        let sparse: Exported<qmb_export::sprs::CsMat<Complex<f64>>, _> =
+        let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
         assert_eq!(dense.metadata().shape(), [3, 3]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {
@@ -91,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let dense: Exported<Vec<Complex<f64>>, _> =
             blbq.export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
-        let sparse: Exported<qmb_export::sprs::CsMat<Complex<f64>>, _> =
+        let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<f64>>, _> =
             blbq.export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
         assert_eq!(dense.metadata().shape(), [9, 9]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {
