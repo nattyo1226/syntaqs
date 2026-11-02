@@ -12,11 +12,13 @@ description = "Fermion primitives, Majorana bases, and Hubbard models for syntaq
 [dependencies]
 syntaqs-core.workspace = true
 syntaqs-geometry.workspace = true
-num-traits.workspace = true
+
 thiserror.workspace = true
 
+num-traits.workspace = true
+
 [dev-dependencies]
-num-complex.workspace = true
 syntaqs-normalize.workspace = true
 syntaqs-export = { workspace = true, features = ["ndarray", "sprs"] }
 
+num-complex.workspace = true

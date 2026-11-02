@@ -3,7 +3,7 @@
 Created: 2026-11-02
 Last updated: 2026-11-02
 
-This temporary document records requested adjustments and agreed policies before the v3 release. Document responsibilities have been reorganized and English migration has been implemented. Crate ordering in README and Cargo.toml remains pending.
+This temporary document records requested adjustments and agreed policies before the v3 release. Document responsibilities, English migration, and crate ordering in README and Cargo.toml have been completed.
 
 ## 1. Document responsibilities
 
@@ -41,13 +41,13 @@ Verification on 2026-11-02 covered 38 Markdown files and 340 local links, includ
 
 ## 3. Crate ordering in the root README and Cargo.toml dependency lists
 
-The crate list in the [root README](../../../README.md#crates) does not follow a semantic order based on responsibilities. Review its order according to each crate's role and relationships.
+The crate list in the [root README](../../../README.md#crates) previously did not follow a semantic order based on responsibilities. It now follows each crate's role and relationships.
 
 ### Presentation policy
 
 Start with the shared foundation, `syntaqs-core`, followed by identifiers, geometry, and shared capabilities. Group concrete local-algebra crates such as `syntaqs-spin-half` later.
 
-The proposed order is:
+The agreed order is:
 
 | Order | Crate | Responsibility |
 | --- | --- | --- |
@@ -67,3 +67,7 @@ The proposed order is:
 - Include external dependencies as well as `syntaqs-*`. Keep project crates in the relative order above; order external dependencies according to their responsibilities and roles.
 - Apply the same policy to the root `[workspace.dependencies]` and each crate's Cargo.toml, including `examples` and `tests`.
 - Follow this policy within each dependency section, including `[dependencies]`, `[dev-dependencies]`, and `[build-dependencies]`.
+
+External dependencies follow this order: identifiers (`uuid`), error handling (`thiserror`), numeric traits (`num-traits`), complex coefficients (`num-complex`), dense containers (`ndarray`), and sparse containers (`sprs`). Each dependency section lists project crates first in the agreed relative order, followed by external dependencies in this role order. Blank lines separate responsibility groups; the workspace dependency table also labels the external groups.
+
+On 2026-11-02, the root README crate table and installation snippet, workspace members and dependencies, and package dependency lists were aligned with this policy. All 11 manifests and 19 dependency sections were checked, including those already in the agreed order. Settings within each original table were preserved, including versions, features, optional flags, and paths. `cargo metadata --locked --offline --no-deps --format-version 1` and `git diff --check` passed. Source code and Cargo.lock were unchanged; builds and tests were not rerun for this ordering-only change.

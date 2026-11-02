@@ -11,4 +11,5 @@ description = "Immutable site geometries and geometric relations"
 
 [dependencies]
 syntaqs-core.workspace = true
+
 thiserror.workspace = true

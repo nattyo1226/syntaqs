@@ -10,9 +10,9 @@ This document records plans and progress for ongoing v3 release preparation. Imp
 | --- | --- |
 | Document responsibilities | Reorganized requirements, overview, feature specifications, future features, and ongoing plans. |
 | English documentation in `docs/` | Translated all documents, including `plans/`, and updated links to translated headings. |
-| Crate order in README and Cargo.toml | Not started. Apply responsibility-based ordering to external dependencies and each package's dependency lists as well. |
+| Crate order in README and Cargo.toml | Completed responsibility-based ordering, including external dependencies, each package's dependency lists, and workspace members. |
 
-[Documentation final adjustments](documentation.md) records agreed policies and individual items. README and dependency-list ordering remains a separate task.
+[Documentation final adjustments](documentation.md) records agreed policies and completion of all three documentation adjustments above.
 
 ## 2. Release preparation progress
 
@@ -28,7 +28,7 @@ Implementation and verification completed on 2026-11-01. Features include ordina
 
 On 2026-11-02, installation instructions, crate READMEs, and the MIT license were prepared. Checks covered local links, examples, and consistency between license and Cargo metadata. Current instructions are in the [root README](../../../README.md) and license text in [LICENSE](../../../LICENSE). Copyright is `Copyright (c) 2026 Haruki SAITO`, covering the entire repository.
 
-Example Git dependencies were verified by mapping them to the local repository. Installation after the renamed code reaches GitHub has not been checked. README crate ordering remains a final-adjustment item.
+Example Git dependencies were verified by mapping them to the local repository. Installation after the renamed code reaches GitHub has not been checked. README crate ordering was subsequently completed as recorded in section 2.7.
 
 ### 2.4. GitHub Actions
 
@@ -45,3 +45,7 @@ Implementation and acceptance checks completed on 2026-10-31. See [geometry](../
 Implementation details and migration history were separated from requirements; architecture became an overall structural overview. Design documents now describe current features, with separate construction, normalization, numeric-convention, model-construction, and verification documents. Unimplemented feature details and API candidates moved to `future-work/`; earlier verification records moved into this plan's history.
 
 Repository Markdown links were updated for moved documents and headings. During reorganization on 2026-11-02, 38 files, 340 local links, and code fences were checked, with no broken links or unclosed fences. `git diff --check` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` passed. Implementation code and dependency settings were unchanged; workspace tests were not rerun for that reorganization.
+
+### 2.7. Presentation order
+
+On 2026-11-02, the root README crate list, workspace members, and dependency sections were aligned with the agreed core-to-concrete-algebra order. External dependencies use the role order defined in the [documentation adjustments](documentation.md#application-to-cargotoml). All 11 manifests and 19 dependency sections were checked for ordering and preserved settings. Locked offline Cargo metadata and `git diff --check` passed. Source code, dependency settings, and Cargo.lock were unchanged; builds and tests were not rerun for this ordering-only change.
