@@ -58,6 +58,14 @@ There is no dedicated reference Killing-form test.
 
 ## Numerical documentation
 
-- [ndarray-linalg 0.18.1 dependencies and library guidance](https://docs.rs/crate/ndarray-linalg/0.18.1): ndarray `^0.17.1` and application-selected LAPACK.
-- [Provider features](https://docs.rs/crate/ndarray-linalg/0.18.1/features), [Cargo feature unification](https://doc.rust-lang.org/cargo/reference/features.html#feature-unification).
+- [ndarray-linalg 0.18.1 dependencies](https://docs.rs/crate/ndarray-linalg/0.18.1) and [BLAS feature](https://docs.rs/crate/ndarray-linalg/0.18.1/features): ndarray `^0.17.1`; provider selection for this project is delegated to blas-src.
+- [blas-src 0.14.0 features](https://docs.rs/crate/blas-src/0.14.0/features), [OpenBLAS linkage](https://docs.rs/crate/openblas-src/0.10.16), [Cargo feature unification](https://doc.rust-lang.org/cargo/reference/features.html#feature-unification).
+
 - [NumPy rank threshold](https://numpy.org/doc/stable/reference/generated/numpy.linalg.matrix_rank.html), [SciPy nullspace threshold](https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.null_space.html): dimension-times-epsilon scaling. The fixed floors in our specification are project recommendations, not those libraries' defaults.
+
+Backend separation follows the inspected tensory checkout
+`abac6a1b491738e509139a21a74a8833134c4a4f`:
+[library dependencies](https://github.com/todo-group/tensory/blob/abac6a1b491738e509139a21a74a8833134c4a4f/tensory-ndarray/Cargo.toml),
+[centralized development provider](https://github.com/todo-group/tensory/blob/abac6a1b491738e509139a21a74a8833134c4a4f/lin-dev-deps/Cargo.toml),
+and [Nix environment](https://github.com/todo-group/tensory/blob/abac6a1b491738e509139a21a74a8833134c4a4f/flake.nix).
+This adopts the separation pattern, not its repository-specific dependency patches.

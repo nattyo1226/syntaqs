@@ -119,17 +119,33 @@ norms and squared norms with the appropriate units. Propagate overrides into
 internal checks and record effective settings and diagnostics. These rules
 must not prune ordinary expression coefficients.
 
-## Dependencies and LAPACK selection
+## Dependencies and BLAS linkage
 
 Initially pair ndarray 0.17.2 with ndarray-linalg 0.18.1, whose declared ndarray
 dependency is `^0.17.1`. Verify actual builds and Rust 1.85 compatibility.
-The production dependency selects no LAPACK provider:
+Enable BLAS use in syntaqs-lie's ndarray dependencies and separate provider
+selection through blas-src. Planned production dependencies are:
 
 ```toml
-ndarray-linalg = { version = "0.18.1", default-features = false }
+ndarray = { workspace = true, features = ["blas"] }
+ndarray-linalg = { version = "0.18.1", default-features = false, features = ["blas"] }
+blas-src = { version = "0.14.0", default-features = false }
 ```
 
-The final application selects one provider through a matching direct dependency,
-for example `features=["openblas-system"]`; Cargo unifies that selection.
-This is build/link-time selection. Configure test/CI/example providers
-separately, without forcing their choice on downstream production users.
+Keep provider features off the production blas-src dependency and include
+`extern crate blas_src as _;` in the library to retain native linkage. The
+application chooses the implementation through blas-src, not through
+ndarray-linalg provider features. For example, system OpenBLAS uses:
+
+```toml
+blas-src = { version = "0.14.0", features = ["openblas"] }
+openblas-src = { version = "0.10", features = ["system"] }
+```
+
+The chosen implementation must supply both BLAS and the compatible LAPACK
+routines required by ndarray-linalg. The `blas` feature alone does not supply
+those libraries. This is build/link-time selection; syntaqs-lie does not expose
+provider-selection features. Centralize the development/test/example provider
+configuration, with system OpenBLAS as the initial development target supplied
+by Nix/CI. Verify that its selection and native linkage do not leak into
+downstream production dependency settings.

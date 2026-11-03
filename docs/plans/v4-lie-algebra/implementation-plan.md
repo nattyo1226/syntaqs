@@ -10,9 +10,10 @@ commands/results when completed, not as prospective successes.
 - [ ] Add syntaqs-lie to the workspace with crate documentation and private
   numerical/error modules. Use core, ndarray, and compatible ndarray-linalg;
   keep concrete algebras in development/example dependencies.
-- [ ] Configure one test backend in Nix/CI and a downstream smoke-test fixture
-  that selects LAPACK itself. Keep production dependencies provider-neutral;
-  avoid exposing mutually exclusive provider features as the initial API.
+- [ ] Enable ndarray/ndarray-linalg BLAS features and retain linkage through a
+  provider-neutral blas-src dependency. Centralize the development provider
+  selection, initially system OpenBLAS from Nix/CI, and add a downstream fixture
+  selecting it through blas-src. Expose no syntaqs-lie provider features.
 - [ ] Implement tolerance settings/defaults, effective-setting diagnostics,
   linear solves, symmetric eigensolves, and real SVD/nullspace helpers.
 - [ ] Set operation-specific scales, Gram-eigenvalue/conditioning rules, and
@@ -22,8 +23,11 @@ commands/results when completed, not as prospective successes.
 **Completion gate:** f32/f64 solve/eigen/nullspace smoke tests execute with the
 test provider; zero/rank-deficient rectangular matrices yield expected nullspaces.
 Verify the dependency pair with Rust 1.85 and stable. The downstream fixture
-links with its own provider choice, and production feature inspection shows
-no library-selected provider. Cover tolerance overrides and boundary cases.
+links through its own blas-src provider selection without ndarray-linalg
+provider features. Production feature inspection shows no library-selected
+provider. Check native-link propagation in workspace feature combinations and
+that the selected source supplies LAPACK too. Cover tolerance overrides and
+boundary cases.
 
 Resolve concrete options/error signatures here. If the dependency pair fails
 the existing minimum Rust version, establish a compatible configuration before
@@ -109,7 +113,8 @@ successful complete decomposition.
 
 - [ ] Add a runnable syntaqs-lie example covering family construction,
   validation, projection, retained coefficients, and center/ideal decomposition.
-  Show how the application selects LAPACK and overrides tolerances/seeds.
+  Show blas-src linkage, the required native libraries, and tolerance/seed
+  overrides; avoid ndarray-linalg provider-selection instructions.
 - [ ] Add public-API integration coverage using existing spin/fermion and shared
   test algebras as appropriate; confirm Gram/bracket evaluation needs neither
   full physical matrices nor a state basis.
@@ -142,9 +147,10 @@ env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 
 Also run the existing default/no-default-feature CI tests, Rust 1.85 checks,
 and independent export/shared backend checks from
-[verification](../../design/verification.md). If backend forwarding features
-are introduced later, adapt provider test combinations rather than enabling
-mutually incompatible LAPACK providers together with all-features.
+[verification](../../design/verification.md). Use the centralized development
+blas-src provider for linked test/example binaries and verify feature-unified
+workspace builds. syntaqs-lie has no mutually exclusive provider features to
+combine under all-features.
 
 No new-crate build or feature test has run yet. Record dated completed-step
 results here, distinguishing pre-existing failures, regressions, and unverified
