@@ -1,6 +1,6 @@
 # Documentation guide
 
-Updated: 2026-11-02
+Updated: 2026-11-04
 
 ## 1. Document responsibilities
 
@@ -41,7 +41,7 @@ When moving documents or changing headings, update incoming repository links, in
 
 ## 4. Presentation order
 
-Present project crates from shared foundations to concrete local algebras, following the [architecture crate table](architecture.md#2-crates-and-responsibilities): `syntaqs-core`, `syntaqs-basic`, `syntaqs-geometry`, `syntaqs-normalize`, `syntaqs-export`, `syntaqs-spin-half`, `syntaqs-spin-one`, and `syntaqs-fermion`.
+Present project crates from shared foundations to concrete local algebras, following the [architecture crate table](architecture.md#2-crates-and-responsibilities): `syntaqs-core`, `syntaqs-basic`, `syntaqs-geometry`, `syntaqs-normalize`, `syntaqs-export`, `syntaqs-lie`, `syntaqs-spin-half`, `syntaqs-spin-one`, and `syntaqs-fermion`.
 
 Use this relative order in the root README crate list and dependency examples, workspace members, and every Cargo.toml dependency section. Workspace members list `examples` and `tests` after the library crates. The dependency convention applies to `[workspace.dependencies]`, `[dependencies]`, `[dev-dependencies]`, `[build-dependencies]`, and target-specific dependency sections in all packages, including examples and tests.
 

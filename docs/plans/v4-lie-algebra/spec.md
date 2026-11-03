@@ -1,6 +1,7 @@
 # Implementation specification
 
-Status: agreed contracts; numerical defaults are initial values to verify.
+Status: agreed contracts; Step 1 numerical foundations are implemented.
+Operator-family and decomposition operations below remain target behavior.
 Implementation order and checks are in [the plan](implementation-plan.md).
 
 ## Scope and boundaries
@@ -112,12 +113,23 @@ membership uses the target's normalized HS norm as scale. Rank/nullspace tests
 classify `sigma <= cutoff*sigma_max` as zero. Eigenvalue grouping uses
 `cutoff*max(abs(eigenvalues))` as its gap threshold.
 
-Gram eigenvalues have squared singular-value scaling and their own roundoff;
-specify/report their cutoff separately. Define other operation scales, small
-imaginary-part conversion, and norm-squared roundoff handling in Step 1. Check
-norms and squared norms with the appropriate units. Propagate overrides into
-internal checks and record effective settings and diagnostics. These rules
-must not prune ordinary expression coefficients.
+Step 1 exposes independent settings through NumericalOptions. Spectral
+`None` selects the dimension-aware default; `Some(r)` overrides it exactly,
+including zero. Gram checks apply `gram_cutoff*lambda_max` directly to Gram
+eigenvalues, report that separate threshold, and reject numerical singularity
+or materially negative spectra; this is not a cutoff on the original family's
+singular values.
+
+Dense symmetry checks measure Frobenius defects against the input Frobenius
+scale before averaging triangles. Real-coordinate conversion checks the
+imaginary part against its separately configured bound and caller-supplied
+scale. Negative squared norms are clamped only within a squared-unit bound,
+initially `atol=0, rtol=64*epsilon`; larger negatives error, and positive tiny
+values remain. Invalid settings, nonfinite analysis data, and overflowing
+bounds error without changing ordinary expression evaluation. Higher-level
+operator-scale selection follows the relevant operation as it is implemented.
+Propagate overrides and retain effective diagnostics; do not prune expression
+coefficients.
 
 ## Dependencies and BLAS linkage
 
@@ -146,6 +158,7 @@ The chosen implementation must supply both BLAS and the compatible LAPACK
 routines required by ndarray-linalg. The `blas` feature alone does not supply
 those libraries. This is build/link-time selection; syntaqs-lie does not expose
 provider-selection features. Centralize the development/test/example provider
-configuration, with system OpenBLAS as the initial development target supplied
-by Nix/CI. Verify that its selection and native linkage do not leak into
+configuration in the unpublished internal `blas-provider` package under
+`support/blas-provider`, with system OpenBLAS supplied by Nix/CI initially.
+Verify that its selection and native linkage do not leak into
 downstream production dependency settings.

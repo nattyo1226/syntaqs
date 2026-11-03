@@ -1,0 +1,12 @@
+[package]
+name = "blas-provider"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "Internal system OpenBLAS provider for development, examples, and verification"
+
+[dependencies]
+blas-src = { workspace = true, features = ["openblas"] }
+openblas-src = { workspace = true, features = ["system"] }

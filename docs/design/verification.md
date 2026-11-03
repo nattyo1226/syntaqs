@@ -1,6 +1,6 @@
 # Verification structure and commands
 
-Updated: 2026-11-02
+Updated: 2026-11-04
 
 ## 1. Verification responsibilities
 
@@ -45,6 +45,18 @@ Reference values for graded tests come from the [test-only two-state algebra](..
 The [CI workflow](../../.github/workflows/ci.yml) runs on pushes to `main`, pull requests, and manual dispatch on 64-bit Linux. Rust 1.85.0 and stable each test the workspace with default, all, and no default features, including doctests and compile_fail cases.
 
 Stable also runs backend-specific export/shared tests, format, Clippy, and API documentation with warnings denied. Dependency caching and cancellation of older runs for the same PR/branch are configured.
+
+Lie numerical tests and export examples share the internal
+[blas-provider package](../../support/blas-provider/README.md).
+CI installs system OpenBLAS and pkg-config. The standalone application in
+`tests/fixtures/lie-blas` executes f32/f64 BLAS/LAPACK calculations and checks
+that provider features are selected by the application through blas-src, not
+by syntaqs-lie or ndarray-linalg. CI checks both provider-neutral and
+application-selected dependency features with `cargo tree`; the same shell
+check can be run locally under the development environment. The crate's unit
+tests cover solves, complete right nullspaces, symmetric spectra, Gram cutoffs,
+tolerance overrides, and invalid
+numerical data. This does not establish later Lie-algebra/decomposition APIs.
 
 Dedicated no_std target builds for core, geometry, spin-half, and fermion remain unverified. Source/dependency-feature inspection and host builds do not establish dedicated-target success. Shared Arc requires pointer-width atomic operations on the target.
 

@@ -12,7 +12,7 @@ publish = false
 [features]
 default = ["normalize"]
 normalize = ["dep:syntaqs-normalize"]
-export = ["dep:syntaqs-export"]
+export = ["dep:syntaqs-export", "dep:blas-provider"]
 libm = ["normalize"]
 
 [dependencies]
@@ -24,6 +24,7 @@ syntaqs-export = { workspace = true, optional = true, features = ["ndarray", "sp
 syntaqs-spin-half.workspace = true
 syntaqs-spin-one.workspace = true
 syntaqs-fermion.workspace = true
+blas-provider = { path = "../support/blas-provider", optional = true }
 
 num-complex.workspace = true
 

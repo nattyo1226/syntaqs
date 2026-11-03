@@ -1,6 +1,6 @@
 # syntaqs architecture overview
 
-Updated: 2026-11-02
+Updated: 2026-11-04
 
 ## 1. Overall structure
 
@@ -8,7 +8,8 @@ syntaqs connects local algebra rules to shared expressions, spaces, and evaluati
 
 ## 2. Crates and responsibilities
 
-The workspace contains eight libraries and two packages for examples and integration tests.
+The workspace contains nine libraries and three packages for examples,
+integration tests, and shared internal BLAS/LAPACK support.
 
 | Crate / package | Provides |
 | --- | --- |
@@ -17,19 +18,21 @@ The workspace contains eight libraries and two packages for examples and integra
 | `syntaqs-geometry` | Chains, boundaries, site relations, and borrowing connections to caller-owned data and space sequences. |
 | `syntaqs-normalize` | Extension traits for norms, state normalization, and normalized expectations. |
 | `syntaqs-export` | Vec, ndarray, and sprs output with interpretation metadata. |
+| `syntaqs-lie` | Numerical options and internal dense solve/eigen/nullspace kernels for Lie analysis; operator-family and decomposition APIs are not yet implemented. |
 | `syntaqs-spin-half` | Spin-1/2 primitives and bases, XYZ/Heisenberg models, and Neel construction. |
 | `syntaqs-spin-one` | Spin-1 primitives and bases, and XYZ/Heisenberg/BLBQ construction. |
 | `syntaqs-fermion` | Single-mode fermion primitives and bases, and standard/symmetric Hubbard construction. |
 | [examples](../examples/README.md) | Runnable examples using the individual crates directly. |
 | [syntaqs-tests](../tests/README.md) | Shared custom-algebra fixtures and public-API integration tests. |
+| [blas-provider](../support/blas-provider/README.md) | Internal system OpenBLAS selection shared by development, examples, and verification; kept under `support/` and not published. |
 
 ## 3. Dependency direction
 
-The core does not depend on concrete algebras, basic, geometry, normalize, or export. Local rules and bases connect through public traits; concrete algebras do not provide separate expression trees or evaluators.
+The core does not depend on concrete algebras, basic, geometry, normalize, export, or lie. Local rules and bases connect through public traits; concrete algebras do not provide separate expression trees or evaluators.
 
-Geometry, normalize, export, and the three concrete algebras depend on core. Each algebra's model construction uses geometry. Basic depends on core only for tests and doctests; UUIDs and randomness stay in basic. Production libraries do not depend on examples or syntaqs-tests.
+Geometry, normalize, export, lie, and the three concrete algebras depend on core. Each algebra's model construction uses geometry. Basic depends on core only for tests and doctests; UUIDs and randomness stay in basic. Production libraries do not depend on examples, syntaqs-tests, or the development BLAS provider.
 
-Core, geometry, spin-half, and fermion use `no_std + alloc`; basic, normalize, export, and spin-one use std. Export has no default features, always supports Vec, and independently enables ndarray and sprs.
+Core, geometry, spin-half, and fermion use `no_std + alloc`; basic, normalize, export, lie, and spin-one use std. Export has no default features, always supports Vec, and independently enables ndarray and sprs. Lie enables ndarray BLAS and retains native linkage through provider-neutral blas-src; applications select a source supplying BLAS and LAPACK.
 
 ## 4. Main data and operations
 

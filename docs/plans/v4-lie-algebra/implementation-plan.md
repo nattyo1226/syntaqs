@@ -1,22 +1,22 @@
 # Implementation plan
 
-Status: all implementation steps pending. Execute in order against
-[the specification](spec.md); no production code or manifest was changed while
-preparing this plan. Each step includes its feature tests. Record actual
-commands/results when completed, not as prospective successes.
+Status: Step 1 complete; Steps 2–6 pending. Continue in order against
+[the specification](spec.md). Each step includes its feature tests. Record
+actual commands/results when completed, not as prospective successes.
 
 ## Step 1: Crate and numerical foundation
 
-- [ ] Add syntaqs-lie to the workspace with crate documentation and private
+- [x] Add syntaqs-lie to the workspace with crate documentation and private
   numerical/error modules. Use core, ndarray, and compatible ndarray-linalg;
   keep concrete algebras in development/example dependencies.
-- [ ] Enable ndarray/ndarray-linalg BLAS features and retain linkage through a
+- [x] Enable ndarray/ndarray-linalg BLAS features and retain linkage through a
   provider-neutral blas-src dependency. Centralize the development provider
-  selection, initially system OpenBLAS from Nix/CI, and add a downstream fixture
+  selection in the unpublished internal `support/blas-provider` package,
+  initially system OpenBLAS from Nix/CI, and add a downstream fixture
   selecting it through blas-src. Expose no syntaqs-lie provider features.
-- [ ] Implement tolerance settings/defaults, effective-setting diagnostics,
+- [x] Implement tolerance settings/defaults, effective-setting diagnostics,
   linear solves, symmetric eigensolves, and real SVD/nullspace helpers.
-- [ ] Set operation-specific scales, Gram-eigenvalue/conditioning rules, and
+- [x] Set operation-specific scales, Gram-eigenvalue/conditioning rules, and
   roundoff policy for real coordinates and squared norms. Define invalid
   settings/nonfinite numerical-data errors without changing core evaluation.
 
@@ -152,6 +152,38 @@ blas-src provider for linked test/example binaries and verify feature-unified
 workspace builds. syntaqs-lie has no mutually exclusive provider features to
 combine under all-features.
 
-No new-crate build or feature test has run yet. Record dated completed-step
-results here, distinguishing pre-existing failures, regressions, and unverified
-environments. The earlier foundation test is recorded in [the index](README.md#verification-record).
+## Step 1 results: 2026-11-04
+
+Implemented `NumericalOptions`, `Tolerance`, `ToleranceCheck`, and
+`NumericalError`, with private real solve/eigen/SVD/nullspace/Gram kernels.
+Independent numerical tests cover both precisions, wide/tall/empty matrices,
+noncontiguous layouts, overrides, finite-data checks, and roundoff boundaries.
+
+| Check | Result |
+| --- | --- |
+| `cargo test -p syntaqs-lie` in stable and Rust 1.85.0 devShells | 22 tests passed in each. |
+| `cargo test --workspace` with default, all, and no default features | Passed, including doctests. |
+| `cargo build --workspace --all-features`; `cargo check --workspace --all-targets --no-default-features` | Passed. |
+| Workspace format, Clippy all-targets/all-features with `-D warnings`, and rustdoc with `-D warnings` | Passed; standalone fixture formatting passed too. |
+| Standalone `lie-blas` application in stable and Rust 1.85.0 devShells | f32/f64 BLAS matrix products and LAPACK solve/eigen calls executed successfully. |
+| Provider-isolation CI shell check using `cargo tree` | Provider-neutral graph has no native provider, and application selection uses blas-src without ndarray-linalg provider features. |
+| Independent syntaqs-export and syntaqs-tests runs for Vec, ndarray, and sprs | All six package/backend combinations passed. |
+
+Verification ran locally on aarch64 macOS with system OpenBLAS from Nix.
+CI now installs OpenBLAS/pkg-config and executes the downstream/graph checks;
+GitHub-hosted Linux jobs have not been run in this session. Existing manifest
+warnings about both license fields remain. Enabling ndarray BLAS exposed a
+workspace feature-unification link failure in the existing Heisenberg example
+and its integration test; both now import the central development provider
+only with the export feature, and all workspace configurations pass.
+
+The shared provider is an unpublished internal package at
+`support/blas-provider`. After its relocation and rename, Lie and example tests
+with all features, standalone native-link execution, provider-graph checks,
+workspace formatting, and all-target/all-feature Clippy passed again.
+
+The existing local `.sideflake/flake.nix` devShell was extended with OpenBLAS,
+pkg-config, and an MSRV shell. It is globally Git-ignored, as is the local
+Cargo.lock; these local environment changes are not tracked source changes.
+Production library dependencies do not select OpenBLAS. No operator-family or
+decomposition functionality from subsequent steps is claimed complete.

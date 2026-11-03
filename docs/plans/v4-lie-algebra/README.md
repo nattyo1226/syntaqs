@@ -1,8 +1,8 @@
 # syntaqs v4: Lie algebra implementation
 
-Updated: 2026-11-03
-Status: scope and main decisions agreed; implementation has not started.
-Next action: [Step 1](implementation-plan.md#step-1-crate-and-numerical-foundation).
+Updated: 2026-11-04
+Status: Step 1 complete; operator-family and decomposition APIs remain pending.
+Next action: [Step 2](implementation-plan.md#step-2-operator-families-validation-and-projection).
 
 Implement the agreed LieAlgebra.jl functionality on syntaqs in the dedicated
 `syntaqs-lie` crate. This directory is the temporary implementation workspace.
@@ -25,11 +25,11 @@ step under the agreed contracts. No further broad design review is a prerequisit
 | 2026-11-03, initial investigation | `direnv exec . cargo test -p syntaqs-core -p syntaqs-tests --all-features` | Passed, including integration tests and doctests. Existing manifest warnings about both license fields were emitted. |
 | 2026-11-03, document consolidation | Local links/anchors, Markdown structure/whitespace, stale-reference search, and final scope review | Passed. Six implementation steps remain pending; changes are confined to this workspace. |
 
-These results cover existing foundations, not the new crate. The full workspace
-matrix and the reference's full Julia test suite have not been run for this
-project. Version compatibility has been checked from metadata; LAPACK linking,
-Rust 1.85 builds with the new dependency, and the proposed numerical defaults
-still require verification in Step 1 and subsequent feature tests.
+Step 1 numerical tests, full local workspace feature checks, Rust 1.85,
+application linkage, and provider-isolation checks are complete; see
+[the execution record](implementation-plan.md#step-1-results-2026-11-04).
+Later Lie algebra features and the reference's full Julia suite remain
+unverified. GitHub-hosted CI was configured but not executed in this session.
 
 ## Maintenance
 

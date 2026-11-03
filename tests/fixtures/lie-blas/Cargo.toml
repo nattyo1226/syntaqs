@@ -1,0 +1,21 @@
+[package]
+name = "syntaqs-lie-downstream"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[workspace]
+
+[features]
+default = ["system-openblas"]
+system-openblas = ["dep:blas-provider"]
+
+[dependencies]
+syntaqs-lie = { path = "../../../crates/syntaqs-lie" }
+
+ndarray = { version = "0.17.2", default-features = false, features = ["std", "blas"] }
+ndarray-linalg = { version = "0.18.1", default-features = false, features = ["blas"] }
+
+# The application explicitly selects the centralized development provider.
+blas-provider = { path = "../../../support/blas-provider", optional = true }
