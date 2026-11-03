@@ -1,105 +1,39 @@
-# syntaqs v4: Lie algebra implementation workspace
+# syntaqs v4: Lie algebra implementation
 
-Created: 2026-11-03
-Status: design decisions in progress; implementation has not started.
+Updated: 2026-11-03
+Status: scope and main decisions agreed; implementation has not started.
+Next action: [Step 1](implementation-plan.md#step-1-crate-and-numerical-foundation).
 
-This directory holds temporary investigation notes, design decisions, and
-implementation progress for bringing the functionality of LieAlgebra.jl onto
-syntaqs. The present task establishes the workspace and records the existing
-implementations; it does not settle public APIs or add production code.
+Implement the agreed LieAlgebra.jl functionality on syntaqs in the dedicated
+`syntaqs-lie` crate. This directory is the temporary implementation workspace.
 
-## Documents
-
-| Document | Purpose |
+| Document | Responsibility |
 | --- | --- |
-| [Current implementation](current-implementation.md) | Existing syntaqs foundations, extension points, and constraints. |
-| [Reference functionality](reference-functionality.md) | Source-based inventory of LieAlgebra.jl functionality and compatibility questions. |
-| [Design questions](design-questions.md) | Adopted decisions, remaining questions, and a provisional order of work. |
+| [Specification](spec.md) | Single source of truth for agreed behavior and numerical defaults. |
+| [Implementation plan](implementation-plan.md) | Six ordered steps, deliverables, acceptance checks, and remaining implementation choices. |
+| [References](references.md) | Existing extension points, pinned Julia sources, and intentional compatibility differences. |
 
-## Investigation baseline
+Read the specification, then execute the plan in order. Record completed steps
+and dated checks in the plan; do not duplicate specifications in progress logs.
+Concrete Rust signatures and supporting type names can be settled within each
+step under the agreed contracts. No further broad design review is a prerequisite.
 
-| Repository | Inspected revision | Working tree at inspection |
+## Verification record
+
+| Date | Check | Result |
 | --- | --- | --- |
-| syntaqs | `de686db19630a7a2fadcaab660fd12ea4fb5dcdc` | Clean before these documents were added. |
-| LieAlgebra.jl | `575029c12fcad44b3b41206ee564437a7ec5fa45` | Clean. |
+| 2026-11-03, initial investigation | `direnv exec . cargo test -p syntaqs-core -p syntaqs-tests --all-features` | Passed, including integration tests and doctests. Existing manifest warnings about both license fields were emitted. |
+| 2026-11-03, document consolidation | Local links/anchors, Markdown structure/whitespace, stale-reference search, and final scope review | Passed. Six implementation steps remain pending; changes are confined to this workspace. |
 
-The reference was read from the existing local clone at
-`~/repos/github.com/nattyo1226/LieAlgebra`. Its source and tests, rather than its
-minimal README, are the basis of the inventory. The upstream repository is
-[LieAlgebra.jl](https://github.com/nattyo1226/LieAlgebra.jl); source links in these
-notes are pinned to the inspected revision. No fetch or reference-repository
-modification was performed. Local checkout freshness against upstream was not
-verified.
+These results cover existing foundations, not the new crate. The full workspace
+matrix and the reference's full Julia test suite have not been run for this
+project. Version compatibility has been checked from metadata; LAPACK linking,
+Rust 1.85 builds with the new dependency, and the proposed numerical defaults
+still require verification in Step 1 and subsequent feature tests.
 
-The user called this effort “v4”; the current Cargo workspace version is
-`0.3.0`. A release version or version bump is not decided here.
+## Maintenance
 
-## Location and lifecycle
-
-This workspace is under `docs/plans/v4-lie-algebra/`, alongside the existing
-permanent documentation under [`docs/`](../../../docs/README.md). These notes
-use English consistently with the documentation convention.
-
-Keep proposals distinct from verified existing behavior. Record adopted
-decisions and dated verification here during implementation. When the work is
-complete and merged, transfer lasting specifications into the appropriate
-permanent documents, update references, and remove this temporary workspace in
-accordance with the documentation guide.
-
-## Progress
-
-- [x] Read the current architecture, requirements, relevant designs, and source.
-- [x] Inspect the local LieAlgebra.jl implementation and its tests.
-- [x] Record feature coverage, reuse opportunities, and unresolved contracts.
-- [x] Create this temporary workspace.
-- [x] Confirm the real Hermitian Lie algebra domain and the bracket `-i(AB-BA)`.
-- [x] Adopt lightweight basis construction, explicit validation, and required
-  precondition checks for mathematical operations, with tolerance-aware reports.
-- [x] Adopt the classical Killing form `K(X,Y)=Tr(ad_X ad_Y)`, without
-  conjugation or dimension normalization.
-- [x] Adopt the normalized HS residual norm `sqrt(Tr(R†R)/D)`.
-- [x] Adopt projection-coefficient retrieval with separate reconstruction,
-  residual-norm, and span-membership operations, including nonorthonormal bases.
-- [x] Adopt decomposition into the full center and nonabelian simple ideals.
-- [x] Adopt the Julia-style commutant/eigenspace algorithm with center
-  extraction, internal orthonormalization, result validation/retry, and
-  caller-supplied random seeds.
-- [x] Fix the Lie algebra commutant as the commutant of its adjoint
-  representation, expressed in the selected Lie algebra basis.
-- [x] Record the provisional numerical error policy: recommended
-  precision-aware defaults with caller-supplied tolerance overrides. Initial
-  residual tolerances are `atol=rtol=2e-5` for f32 and `1e-12` for f64, with
-  dimension-aware spectral cutoffs; verification and configuration signatures
-  remain implementation work.
-- [x] Adopt syntaqs for algebraic expression operations and dense ndarray arrays
-  for numerical coefficients, using ndarray-linalg for factorizations as
-  needed. Initially target ndarray-linalg 0.18.1 with ndarray 0.17.2, subject
-  to build verification.
-- [x] Leave LAPACK provider selection to the final application; do not select
-  a provider in syntaqs-lie's production dependencies. Test/CI configuration
-  remains implementation work.
-- [x] Place Lie algebra functionality and its numerical integration in the
-  dedicated syntaqs-lie crate, using the existing public core capabilities.
-- [x] Keep representation-coefficient generation and storage within syntaqs-lie
-  for this iteration; defer commonality with general map representations.
-- [x] Fix the operator inner product to normalized HS, without custom inner
-  products, and report dependent/numerically singular bases as errors in
-  operations requiring independence.
-- [x] Adopt OperatorFamily for candidate operator collections and
-  LieDecomposition for the center-plus-simple-ideal result.
-- [ ] Resolve the remaining design questions and agree on concrete acceptance criteria.
-- [ ] Implement and verify the selected functionality.
-
-## Verification on 2026-11-03
-
-| Check | Result |
-| --- | --- |
-| `direnv exec . cargo test -p syntaqs-core -p syntaqs-tests --all-features` | Passed, including unit/integration tests, doctests, and compile-fail doctests. Covers the existing foundations, not the proposed Lie algebra feature. |
-| Local Markdown links and code-fence pairing in these four files | Passed using a local Python check. External link availability was not checked by that script. |
-| Whitespace and final change-scope review | Passed; additions are limited to this directory. |
-
-Cargo emitted existing manifest warnings about specifying both `license` and
-`license-file`; no manifest was changed. The full workspace CI matrix was not
-run for this documentation-only task. The reference's full Julia test suite was
-not executed. Exploratory checks do not establish general decomposition support.
-No runtime compatibility between the two libraries has yet been established.
+Follow the [documentation guide](../../README.md). Once the implementation is
+complete and merged, move lasting specifications to permanent documentation,
+update incoming links, and remove this workspace. “v4” is the project label;
+the current Cargo version is `0.3.0`. Release numbering is a release-time task.
