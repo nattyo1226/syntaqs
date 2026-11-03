@@ -1,6 +1,6 @@
 # Implementation plan
 
-Status: Step 1 complete; Steps 2–6 pending. Continue in order against
+Status: Steps 1–2 complete; Steps 3–6 pending. Continue in order against
 [the specification](spec.md). Each step includes its feature tests. Record
 actual commands/results when completed, not as prospective successes.
 
@@ -35,13 +35,13 @@ dependent steps; do not silently raise the workspace minimum.
 
 ## Step 2: Operator families, validation, and projection
 
-- [ ] Implement OperatorFamily construction, ordered access, shared expression
+- [x] Implement OperatorFamily construction, ordered access, shared expression
   retention, and common-context selection using existing local/placed APIs.
-- [ ] Add Gram evaluation, rank/independence and Hermiticity diagnostics,
+- [x] Add Gram evaluation, rank/independence and Hermiticity diagnostics,
   reconstruction, projection coefficients, residuals, and span membership.
-- [ ] Return errors for dependent/numerically singular bases where uniqueness
+- [x] Return errors for dependent/numerically singular bases where uniqueness
   is required. Retain report tolerances; allow explicit Gram/factorization reuse.
-- [ ] Set family/result ownership and validation-report signatures. Context
+- [x] Set family/result ownership and validation-report signatures. Context
   compatibility is checked even when expressions are zero.
 
 **Completion gate:** empty/incompatible inputs fail construction; compatible
@@ -185,5 +185,36 @@ workspace formatting, and all-target/all-feature Clippy passed again.
 The existing local `.sideflake/flake.nix` devShell was extended with OpenBLAS,
 pkg-config, and an MSRV shell. It is globally Git-ignored, as is the local
 Cargo.lock; these local environment changes are not tracked source changes.
-Production library dependencies do not select OpenBLAS. No operator-family or
-decomposition functionality from subsequent steps is claimed complete.
+Production library dependencies do not select OpenBLAS. Step 1 provided the
+numerical foundations only.
+
+## Step 2 results: 2026-11-04
+
+Implemented ordered local/placed `OperatorFamily<E>`, Hermiticity and
+real-independence reports, complex Gram matrices, reusable real LU
+factorizations, real coordinates, reconstruction, projection, residuals, and
+span checks. Results borrow their originating family; numerical settings remain
+explicit. Concrete API contracts are in [the current design](../../design/lie.md).
+
+Core provides explicit exact term collection to reduce cancellation before
+squaring residuals. It requires primitive equality, shares handles without
+primitive cloning, retains local sums in factored form, and removes exact zeros
+only. A 32-factor regression protects against global Cartesian expansion.
+Ordinary evaluation and core's no_std/dependency direction remain unchanged.
+
+| Check | Result |
+| --- | --- |
+| `cargo test -p syntaqs-lie` in stable and Rust 1.85.0 devShells | 22 numerical tests, 27 public API tests, and one doctest passed in each. |
+| `cargo test -p syntaqs-tests --test core_collect_terms` | Two independent ordinary/graded reference tests passed. |
+| `cargo test --workspace` with default, all, and no default features | Passed, including doctests; the final all-feature rerun after collection refinement passed too. |
+| `cargo build --workspace --all-features`; `cargo check --workspace --all-targets --no-default-features` | Passed. |
+| Workspace format, all-target/all-feature Clippy and rustdoc with `-D warnings` | Passed. |
+| Standalone `lie-blas` application and Cargo provider-isolation check | Passed. |
+
+Public tests cover independent small-matrix references, nonorthonormal and
+changed bases, in/out-of-span targets, complex-coefficient Hermitian expressions,
+invalid contexts including zero inputs, singularity, tolerance overrides,
+nonfinite data, tiny positive residuals, and non-Clone primitives/indices without
+state/basis/Dimension capabilities. Verification ran locally on aarch64 macOS
+with Nix OpenBLAS. GitHub-hosted Linux CI has not run in this session. Closure,
+brackets, retained Lie representations, and decomposition remain later steps.

@@ -39,3 +39,31 @@ pub enum NumericalError {
     #[error("{0}")]
     Backend(#[from] ndarray_linalg::error::LinalgError),
 }
+
+/// Invalid family context or failed operator-analysis precondition.
+#[derive(Debug, thiserror::Error)]
+pub enum LieError<R> {
+    /// A family must retain at least one input operator.
+    #[error("operator family is empty")]
+    EmptyFamily,
+    /// Core rejected a binding, factor index, or expression context.
+    #[error("{0}")]
+    Expression(#[from] syntaqs_core::ExpressionError),
+    /// Invalid numerical data, singularity, or a factorization failure.
+    #[error("{0}")]
+    Numerical(#[from] NumericalError),
+    /// An operation requiring Hermitian family elements rejected one input.
+    #[error("family element {index} is not Hermitian within tolerance")]
+    NonHermitianElement {
+        /// Index in the original family order.
+        index: usize,
+        /// Measured defect, scale, and effective bound.
+        check: crate::ToleranceCheck<R>,
+    },
+    /// Real projection requires a Hermitian target.
+    #[error("target is not Hermitian within tolerance")]
+    NonHermitianTarget {
+        /// Measured defect, scale, and effective bound.
+        check: crate::ToleranceCheck<R>,
+    },
+}

@@ -1,7 +1,7 @@
 # Implementation specification
 
-Status: agreed contracts; Step 1 numerical foundations are implemented.
-Operator-family and decomposition operations below remain target behavior.
+Status: numerical foundations and Step 2 operator-family/projection APIs are
+implemented. Bracket, representation, and decomposition operations remain target behavior.
 Implementation order and checks are in [the plan](implementation-plan.md).
 
 ## Scope and boundaries

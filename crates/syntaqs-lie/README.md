@@ -1,8 +1,30 @@
 # syntaqs-lie
 
-Numerical foundations for Lie algebra analysis using syntaqs expressions.
-OperatorFamily, brackets, and decomposition are not implemented yet; this
-initial step provides precision-specific numerical options and internal kernels.
+Operator families and numerical foundations for Lie algebra analysis using
+syntaqs expressions. Lie brackets and decomposition remain subsequent steps.
+
+`OperatorFamily<E>` retains a nonempty ordered family of `LocalOperator` or
+placed `Operator` expressions with complex f32/f64 coefficients. `new` infers a
+local context or a bound input's ambient space; `new_in` supplies the space for
+unbound inputs. Conflicting bindings and missing indices fail, including zero
+inputs. Construction does not evaluate or certify the candidates.
+
+`gram(&options)` returns the complex normalized-HS Gram matrix. Its `validate()`
+reports per-element Hermiticity and real-linear independence, including failed
+diagnostics for invalid candidates. `factorize()` rejects non-Hermitian or
+singular families and retains an LU decomposition for repeated targets.
+`coefficients`, `project`, `residual`, and `in_span` also work directly on a
+family, using explicit numerical options. Projection solves `G c = b` for real
+coordinates in independent, potentially nonorthonormal families. Out-of-span
+Hermitian targets still have coefficients; membership compares the residual's
+normalized HS norm against the target's normalized HS norm scale.
+
+Coordinates, Gram matrices, and projections borrow the exact originating family.
+Expressions remain shared core handles; no physical action matrix, state basis,
+or custom inner product is used. Primitives need `PartialEq` for exact collection
+of equal terms before HS contraction. This reduces cancellation in residuals
+without tolerance-based pruning. See the [current API contract](../../docs/design/lie.md)
+and the crate-level Rust example.
 
 `NumericalOptions<f32/f64>` exposes independent residual, Hermiticity, imaginary,
 negative-squared-norm roundoff, rank, Gram-eigenvalue, and eigenvalue-gap settings.

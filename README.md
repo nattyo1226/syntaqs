@@ -79,7 +79,7 @@ The coefficient type is selected once through `Spin`. The spin-1/2 Cartesian pri
 | [syntaqs-geometry](crates/syntaqs-geometry/README.md) | Site geometries, relations, and connections to caller-owned data. |
 | [syntaqs-normalize](crates/syntaqs-normalize/README.md) | Norms, state normalization, and normalized expectations. |
 | [syntaqs-export](crates/syntaqs-export/README.md) | Numerical containers and the metadata needed to interpret them. |
-| [syntaqs-lie](crates/syntaqs-lie/README.md) | Lie analysis numerical settings and internal dense kernels; operator-family APIs are in progress. |
+| [syntaqs-lie](crates/syntaqs-lie/README.md) | Ordered operator families, validation, real HS projection, and numerical foundations for Lie analysis. |
 | [syntaqs-spin-half](crates/syntaqs-spin-half/README.md) | Spin-1/2 primitives, bases, and spin-chain models. |
 | [syntaqs-spin-one](crates/syntaqs-spin-one/README.md) | Spin-1 dipoles and quadrupoles, bases, and spin-chain models. |
 | [syntaqs-fermion](crates/syntaqs-fermion/README.md) | Single-mode fermions, Majorana bases, and Hubbard chains. |

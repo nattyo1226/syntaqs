@@ -31,6 +31,7 @@ Keep detailed current specifications in the corresponding design documents and l
 | Geometry, relations, and site connections | [geometry](design/geometry.md) |
 | Spin and Hubbard model construction | [models](design/models.md) |
 | Export to numerical containers | [export](design/export.md) |
+| Operator families, validation, and real HS projection | [lie](design/lie.md) |
 | Verification structure and commands | [verification](design/verification.md) |
 
 ## 3. Language and maintenance

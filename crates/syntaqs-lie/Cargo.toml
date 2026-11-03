@@ -21,4 +21,6 @@ ndarray-linalg.workspace = true
 blas-src.workspace = true
 
 [dev-dependencies]
+syntaqs-spin-half.workspace = true
+
 blas-provider = { path = "../../support/blas-provider" }

@@ -7,7 +7,7 @@ use num_traits::{Float, FromPrimitive};
 
 use crate::{NumericalError, NumericalOptions};
 
-fn finite<R: Float>(values: impl IntoIterator<Item = R>) -> Result<(), NumericalError> {
+pub(crate) fn finite<R: Float>(values: impl IntoIterator<Item = R>) -> Result<(), NumericalError> {
     if values.into_iter().any(|value| !value.is_finite()) {
         return Err(NumericalError::NonFinite(
             "matrix/vector or factorization result",
