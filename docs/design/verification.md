@@ -90,6 +90,8 @@ and complete simple-ideal spans, basis-change covariance, emitted-expression
 reconstruction/validation, independent block invariants, seeded reproducibility,
 explicit tolerance overrides, and finite exhaustion at f32/f64. Internal tests
 force collisions/retries and reject unsplit or nonideal candidates.
+Shared [higher-dimensional decomposition tests](../../tests/tests/lie_decomposition.rs)
+also check su(3) and mixed su(3) + su(2) ideal projectors at both precisions.
 
 Family analysis inherits the expression-contraction cancellation limits documented
 in [Lie contracts](lie.md#3-projection-and-numerical-scales). Some cyclic

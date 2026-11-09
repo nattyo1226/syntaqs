@@ -331,6 +331,12 @@ collision, verify retry/exhaustion behavior, and reject invariant unsplit direct
 sums and nonideal partitions. Capability tests also exercise decomposition
 without primitive/index Clone, Dimension, or state traits.
 
+[Higher-dimensional decomposition tests](../../tests/tests/lie_decomposition.rs)
+check that su(3) remains one eight-dimensional simple ideal and that a mixed
+su(3) + su(2) family recovers separate eight- and three-dimensional ideals.
+Both precisions use default tolerances and compare component projectors after
+undoing the input mixing and applying independently specified HS norms.
+
 The runnable [lie_algebra example](../../examples/src/bin/lie_algebra.rs) exercises
 the public workflow on su(2) + su(2) + u(1), including explicit residual and seed
 settings and application-owned native linkage. Shared
