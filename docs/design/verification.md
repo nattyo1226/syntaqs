@@ -61,7 +61,7 @@ Reference values for graded tests come from the [test-only two-state algebra](..
 
 ## 3. CI and verification limits
 
-The [CI workflow](../../.github/workflows/ci.yml) runs on pushes to `main`, pull requests, and manual dispatch on 64-bit Linux. Rust 1.85.0 and stable each test the workspace with default, all, and no default features, including doctests and compile_fail cases. Each configuration also runs the Lie-only example and shared Lie integration tests without enabling export backends.
+The [CI workflow](../../.github/workflows/ci.yml) runs on pushes to `main`, pull requests, and manual dispatch on 64-bit Linux. Rust 1.85.0 and stable each test the workspace with default, all, and no default features, including doctests and compile_fail cases. For each toolchain, only the default-configuration job runs the additional Lie-only example and shared Lie integration tests without export backends, downstream linkage fixture, and provider-selection checks. These commands select their own features independently of the workspace test configuration.
 
 Stable also runs backend-specific export/shared tests, format, Clippy, and API documentation with warnings denied. Dependency caching and cancellation of older runs for the same PR/branch are configured.
 
