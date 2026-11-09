@@ -1,7 +1,8 @@
 # syntaqs-lie
 
 Operator families, numerical foundations, and Lie representations using syntaqs
-expressions. Center, commutant, and ideal decomposition remain subsequent steps.
+expressions, including adjoint commutants and centers. Simple-ideal decomposition
+remains a subsequent step.
 
 `OperatorFamily<E>` retains a nonempty ordered family of `LocalOperator` or
 placed `Operator` expressions with complex f32/f64 coefficients. `new` infers a
@@ -60,6 +61,29 @@ original family. `select(indices)` retains a selection matrix. `orthogonalize`
 and `orthonormalize` use the Gram eigensystem and reject dependent or
 non-Hermitian inputs. `orthonormality` reports the Gram defect from identity,
 Hermiticity, and independence. See the [API contract](../../docs/design/lie.md).
+
+## Adjoint commutant and center
+
+`commutant` on an `AdjointRepresentation` returns `AdjointCommutant`, a basis of
+all real matrices commuting with every adjoint matrix. The matrices act on the
+original family coordinates and are Frobenius-orthonormal there. The full real
+space includes nonsymmetric matrices. An n-dimensional abelian algebra returns
+dimension n². This operation does not compute a physical-operator centralizer.
+
+`center` returns `CenterSplit`, containing the full center and its HS-orthogonal
+complement as optional HS-orthonormal operator families. An absent component is
+`None`, with an `(n,0)` coordinate matrix. Coordinate columns reconstruct each
+component in the original context. The result also retains the internal
+orthonormal coordinate transformation and its inverse. Family convenience
+methods take explicit numerical options and first validate the Lie preconditions;
+retained adjoints reuse their existing coefficients and settings.
+
+Both results borrow their source family and retain settings and SVD rank
+diagnostics. Constraint candidates must pass the residual tolerance as well as
+the singular-value cutoff; failures return `ConstraintResidual`. Center residuals
+are also checked in original coordinates. The symmetric commuting subspace used
+for later decomposition is a separate internal object in orthonormal coordinates.
+See the [API contract](../../docs/design/lie.md#6-adjoint-commutant-and-center).
 
 ## Native linkage
 

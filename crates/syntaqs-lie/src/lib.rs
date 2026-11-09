@@ -4,7 +4,8 @@
 //! are selected by the application through `blas-src`; this crate selects none.
 //! Ordered operator families support explicit validation and real HS projection.
 //! Lie brackets, closure diagnostics, retained representations, and real basis
-//! transformations are supported. Center and ideal decomposition are subsequent steps.
+//! transformations, adjoint commutants, and centers are supported. Simple-ideal
+//! decomposition is a subsequent step.
 //!
 //! ```
 //! # extern crate blas_provider as _;
@@ -33,6 +34,11 @@
 //! assert_eq!(constants.values()[(2, 0, 1)], 2.);
 //! let killing = constants.adjoint().killing_form()?;
 //! assert_eq!(killing.values()[(0, 0)], -8.);
+//! let adjoint = constants.adjoint();
+//! assert_eq!(adjoint.commutant()?.dimension(), 1);
+//! let split = adjoint.center()?;
+//! assert!(split.center().is_none());
+//! assert_eq!(split.complement().unwrap().len(), 3);
 //! # Ok::<(), LieError<f64>>(())
 //! ```
 
@@ -47,6 +53,7 @@ extern crate blas_provider as _;
 mod error;
 mod expression;
 mod family;
+mod invariant;
 mod representation;
 mod transform;
 // Some kernels are reserved for subsequent Lie-representation operations.
@@ -60,6 +67,7 @@ pub use family::{
     FamilyCoordinates, FamilyValidation, GramFactorization, GramMatrix, IndependenceReport,
     OperatorFamily, Projection,
 };
+pub use invariant::{AdjointCommutant, CenterSplit, ConstraintDiagnostics};
 pub use representation::{
     AdjointRepresentation, BracketClosureCheck, ClosureReport, KillingForm, StructureConstants,
     lie_bracket,

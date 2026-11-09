@@ -1,6 +1,6 @@
 # Implementation plan
 
-Status: Steps 1–3 complete; Steps 4–6 pending. Continue in order against
+Status: Steps 1–4 complete; Steps 5–6 pending. Continue in order against
 [the specification](spec.md). Each step includes its feature tests. Record
 actual commands/results when completed, not as prospective successes.
 
@@ -73,11 +73,11 @@ to verify signs while retaining the ordinary Lie bracket.
 
 ## Step 4: Adjoint commutant and center
 
-- [ ] Form real linear constraints for the full adjoint commutant and common
+- [x] Form real linear constraints for the full adjoint commutant and common
   adjoint kernel. Return matrices in the original family coordinates.
-- [ ] Construct internal orthonormal coordinates and their transforms. Compute
+- [x] Construct internal orthonormal coordinates and their transforms. Compute
   the real symmetric commutant subspace there as a distinct internal object.
-- [ ] Extract the full center and its orthogonal complement. Handle absent
+- [x] Extract the full center and its orthogonal complement. Handle absent
   center and absent semisimple part without constructing an empty OperatorFamily.
 
 **Completion gate:** returned commutant matrices commute with every adjoint
@@ -254,3 +254,50 @@ primitive/index Clone, Dimension, or state traits.
 Verification ran locally on aarch64 macOS with Nix OpenBLAS. GitHub-hosted
 Linux CI was not executed in this session. Existing warnings about both license
 manifest fields remain. Center, commutant, and decomposition are subsequent steps.
+
+
+## Step 4 results: 2026-11-09
+
+Implemented the full real `AdjointCommutant` from row-major homogeneous
+commuting constraints in original coordinates. `CenterSplit` extracts the
+full common adjoint kernel in internal HS-orthonormal coordinates, retains
+forward/inverse transforms, maps center and complementary SVD directions back
+to original coordinates, and reconstructs optional operator families. Zero
+center/complement dimensions use `(n,0)` arrays and `None`, never empty families.
+Methods on retained adjoints reuse coefficients/settings; family convenience
+methods first enforce Hermiticity, independence, and closure.
+
+`ConstraintDiagnostics` retains SVD shape, rank, singular values, cutoffs, and
+residual checks. Candidates classified as null must also pass the residual
+bound; otherwise `ConstraintResidual` identifies the failed candidate. Center
+columns are additionally checked against the original adjoints. The SVD kernel
+now retains its complementary right singular vectors, preserving a complete
+orthogonal split under a single rank decision. The distinct internal
+`SymmetricCommutant` uses normalized symmetric parameters in orthonormal
+coordinates; it is tested and staged for Step 5's sampling algorithm.
+No dependencies or core/export APIs changed. Contracts are in
+[the current design](../../design/lie.md#6-adjoint-commutant-and-center).
+
+Twelve new public tests and four internal tests cover f32/f64 independent su(2)
+block constraints, full commutant spans/dimensions, purely abelian and multiple
+center directions, two simple factors, absent components, reconstruction,
+HS orthogonality and complete span, basis-change covariance, graded generators,
+precondition failures, and independent rank/residual settings. Internal tests
+explicitly distinguish dimensions six versus nine for the symmetric versus full
+commutant of a three-dimensional abelian algebra, and four versus five for
+su(2) plus a two-dimensional center. Existing numerical/capability tests also
+cover SVD complements and APIs without primitive/index Clone, Dimension, or states.
+
+| Check | Result |
+| --- | --- |
+| `cargo test -p syntaqs-lie` under stable and Rust 1.85.0 | 26 unit tests, 12 invariant tests, 27 family tests, 16 representation tests, and one doctest passed in each. |
+| `cargo test --workspace --all-features` | Passed, including doctests. |
+| `cargo build --workspace --all-features`; `cargo check --workspace --all-targets --no-default-features` | Passed. |
+| Workspace formatting, all-target/all-feature Clippy and rustdoc with `-D warnings` | Passed. |
+
+Verification ran locally on aarch64 macOS with Nix OpenBLAS. GitHub-hosted
+Linux CI was not executed in this session. Existing warnings about both license
+manifest fields remain. Full default/no-default workspace test runs and independent
+backend/provider checks were not repeated for this crate-local change; the
+complete integration/release verification remains Step 6. Simple-ideal
+decomposition remains Step 5.

@@ -119,6 +119,8 @@ pub(crate) struct RankAnalysis<R> {
     pub threshold: R,
     /// Orthonormal right-nullspace vectors in columns, including wide-matrix nullity.
     pub nullspace: Array2<R>,
+    /// Remaining right singular vectors; orthogonal complement of the nullspace.
+    pub complement: Array2<R>,
 }
 
 pub(crate) fn rank_nullspace<R>(
@@ -139,6 +141,7 @@ where
             relative_cutoff,
             threshold: R::zero(),
             nullspace: Array2::eye(n),
+            complement: Array2::zeros((n, 0)),
         });
     }
     // gesvd returns the complete n-by-n Vt; an economy SVD would lose the
@@ -155,12 +158,17 @@ where
     let rank = n - null_indices.len();
     let nullspace =
         Array2::from_shape_fn((n, null_indices.len()), |(i, j)| vt[(null_indices[j], i)]);
+    let range_indices: Vec<_> = (0..singular_values.len())
+        .filter(|&i| singular_values[i] > threshold)
+        .collect();
+    let complement = Array2::from_shape_fn((n, rank), |(i, j)| vt[(range_indices[j], i)]);
     Ok(RankAnalysis {
         rank,
         singular_values,
         relative_cutoff,
         threshold,
         nullspace,
+        complement,
     })
 }
 

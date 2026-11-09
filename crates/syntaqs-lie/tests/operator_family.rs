@@ -549,6 +549,10 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
     let local = OperatorFamily::new([x.clone(), Local::identity()]).unwrap();
     assert!(local.validate(&options).unwrap().passed());
     assert!(local.project(&x.scaled(0.3), &options).unwrap().in_span());
+    assert_eq!(local.commutant(&options).unwrap().dimension(), 4);
+    let center = local.center(&options).unwrap();
+    assert_eq!(center.center().unwrap().len(), 2);
+    assert!(center.complement().is_none());
     assert!(
         local
             .structure_constants(&options)
@@ -569,6 +573,10 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
     let placed =
         OperatorFamily::new_in(&space, local.iter().map(|op| op.at(&space).unwrap())).unwrap();
     assert!(placed.validate(&options).unwrap().passed());
+    assert_eq!(placed.commutant(&options).unwrap().dimension(), 4);
+    let center = placed.center(&options).unwrap();
+    assert_eq!(center.center().unwrap().len(), 2);
+    assert!(center.complement().is_none());
     assert!(
         placed
             .structure_constants(&options)

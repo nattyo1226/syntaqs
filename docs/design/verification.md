@@ -61,8 +61,13 @@ numerical data. Family tests cover validation/projection.
 [Representation tests](../../crates/syntaqs-lie/tests/representations.rs) cover
 brackets, closure, adjoint matrices, Killing forms, and family transformations
 against independent dense references at both precisions, including an ordinary
-bracket of odd operators on a graded space. Center, commutant, and decomposition
-remain subsequent steps.
+bracket of odd operators on a graded space.
+[Invariant tests](../../crates/syntaqs-lie/tests/invariants.rs) compare adjoint
+commutants and centers with independent real block matrices, including complete
+spans, original-coordinate residuals, basis-change covariance, absent components,
+and rank/residual overrides. Unit tests distinguish internal symmetric commuting
+subspaces from the public full real commutant. Simple-ideal decomposition remains
+a subsequent step.
 
 Dedicated no_std target builds for core, geometry, spin-half, and fermion remain unverified. Source/dependency-feature inspection and host builds do not establish dedicated-target success. Shared Arc requires pointer-width atomic operations on the target.
 

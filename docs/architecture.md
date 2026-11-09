@@ -18,7 +18,7 @@ integration tests, and shared internal BLAS/LAPACK support.
 | `syntaqs-geometry` | Chains, boundaries, site relations, and borrowing connections to caller-owned data and space sequences. |
 | `syntaqs-normalize` | Extension traits for norms, state normalization, and normalized expectations. |
 | `syntaqs-export` | Vec, ndarray, and sprs output with interpretation metadata. |
-| `syntaqs-lie` | Operator families, real HS projection, Lie brackets and closure diagnostics, retained adjoint/Killing representations, real family transformations, and dense numerical foundations; center and ideal decomposition remain pending. |
+| `syntaqs-lie` | Operator families, real HS projection, Lie brackets and closure diagnostics, retained adjoint/Killing representations, real family transformations, full real adjoint commutants, center/complement extraction, and dense numerical foundations; simple-ideal decomposition remains pending. |
 | `syntaqs-spin-half` | Spin-1/2 primitives and bases, XYZ/Heisenberg models, and Neel construction. |
 | `syntaqs-spin-one` | Spin-1 primitives and bases, and XYZ/Heisenberg/BLBQ construction. |
 | `syntaqs-fermion` | Single-mode fermion primitives and bases, and standard/symmetric Hubbard construction. |

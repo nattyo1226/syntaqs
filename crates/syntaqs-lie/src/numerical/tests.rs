@@ -69,6 +69,15 @@ macro_rules! precision_tests {
                     let result = rank_nullspace(&a, &options).unwrap();
                     assert_eq!(result.rank, expected_rank);
                     assert_eq!(result.nullspace.ncols(), a.ncols() - expected_rank);
+                    assert_eq!(result.complement.dim(), (a.ncols(), expected_rank));
+                    let identity = result.nullspace.dot(&result.nullspace.t())
+                        + result.complement.dot(&result.complement.t());
+                    for ((i, j), &x) in identity.indexed_iter() {
+                        close(x, if i == j { 1. } else { 0. });
+                    }
+                    for &x in &result.nullspace.t().dot(&result.complement) {
+                        close(x, 0.);
+                    }
                     close(
                         result.threshold,
                         result.relative_cutoff * result.singular_values[0],
@@ -91,6 +100,7 @@ macro_rules! precision_tests {
                     let result = rank_nullspace(&a, &options).unwrap();
                     assert_eq!(result.rank, 0);
                     assert_eq!(result.nullspace, Array2::eye(n));
+                    assert_eq!(result.complement.dim(), (n, 0));
                 }
                 assert!(
                     solve(&Array2::<R>::zeros((0, 0)), &Array1::zeros(0), &options)

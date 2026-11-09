@@ -43,6 +43,16 @@ pub enum NumericalError {
 /// Invalid family context or failed operator-analysis precondition.
 #[derive(Debug, thiserror::Error)]
 pub enum LieError<R> {
+    /// A computed constraint-nullspace vector fails the residual tolerance.
+    #[error("{operation} candidate {index} exceeds the constraint residual tolerance")]
+    ConstraintResidual {
+        /// Operation whose linear constraints were checked.
+        operation: &'static str,
+        /// Index of the returned candidate basis vector or matrix.
+        index: usize,
+        /// Aggregate residual norm, reference scale, and effective bound.
+        check: crate::ToleranceCheck<R>,
+    },
     /// A bracket lies outside the family span under the recorded tolerance.
     #[error("bracket of family elements {left} and {right} is outside the span")]
     NonClosedPair {
