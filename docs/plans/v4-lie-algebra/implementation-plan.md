@@ -1,6 +1,6 @@
 # Implementation plan
 
-Status: Steps 1–2 complete; Steps 3–6 pending. Continue in order against
+Status: Steps 1–3 complete; Steps 4–6 pending. Continue in order against
 [the specification](spec.md). Each step includes its feature tests. Record
 actual commands/results when completed, not as prospective successes.
 
@@ -54,13 +54,13 @@ remaining in ordinary expressions.
 
 ## Step 3: Brackets and retained Lie representations
 
-- [ ] Add the Lie bracket, pairwise closure diagnostics, bracket coefficients,
+- [x] Add the Lie bracket, pairwise closure diagnostics, bracket coefficients,
   and retained structure constants and adjoint matrices with explicit metadata.
-- [ ] Add the classical Killing form, transformation/component selection,
+- [x] Add the classical Killing form, transformation/component selection,
   orthogonalization, and orthonormality checks for families.
-- [ ] Ensure operations needing a Lie algebra check the required properties;
+- [x] Ensure operations needing a Lie algebra check the required properties;
   do not turn projected nonclosed brackets into structure constants.
-- [ ] Finalize supporting result names and array/metadata accessors within
+- [x] Finalize supporting result names and array/metadata accessors within
   syntaqs-lie; do not introduce general map abstractions in core/export.
 
 **Completion gate:** Pauli su(2) gives cyclic structure constants 2 and
@@ -218,3 +218,39 @@ nonfinite data, tiny positive residuals, and non-Clone primitives/indices withou
 state/basis/Dimension capabilities. Verification ran locally on aarch64 macOS
 with Nix OpenBLAS. GitHub-hosted Linux CI has not run in this session. Closure,
 brackets, retained Lie representations, and decomposition remain later steps.
+
+## Step 3 results: 2026-11-09
+
+Implemented ordinary `lie_bracket`, family bracket expressions and projection
+coordinates, ordered pairwise closure diagnostics, retained `StructureConstants`,
+`AdjointRepresentation`, and classical `KillingForm`. Closure/coefficients reuse
+explicit Gram factorizations. Constants require Hermiticity, independence, and
+passing closure; failed closure remains a report or `NonClosedPair` error.
+Arrays borrow the exact source family and retain numerical settings.
+
+Added real rectangular family transformations and selections retaining column
+coordinates, Gram-eigenvector orthogonalization/orthonormalization, and explicit
+orthonormality reports. Concrete API contracts and numerical scales are in
+[the current design](../../design/lie.md). No general core/export map abstraction
+or production dependency was added. Fermion is a development dependency for
+the graded reference test.
+
+Sixteen new public tests cover f32/f64 Pauli su(2), `K=-8I`, abelian zero
+Killing forms, nonorthonormal dense references, antisymmetry, Jacobi, adjoint
+column order and action, Killing covariance, transforms and reconstruction,
+orthogonalization, closure failures, setting overrides, bad inputs, and graded
+odd-Majorana brackets compared with independent Jordan–Wigner matrices.
+Existing capability tests now exercise constants and orthonormalization without
+primitive/index Clone, Dimension, or state traits.
+
+| Check | Result |
+| --- | --- |
+| `cargo test -p syntaqs-lie` under stable and Rust 1.85.0 | 22 numerical tests, 27 family tests, 16 representation tests, and one doctest passed in each. |
+| `cargo test --workspace` with default, all, and no default features | Passed, including doctests. |
+| `cargo build --workspace --all-features` | Passed. |
+| `cargo check --workspace --all-targets --no-default-features` | Passed. |
+| Workspace formatting, all-target/all-feature Clippy with `-D warnings`, rustdoc with `-D warnings` | Passed. |
+
+Verification ran locally on aarch64 macOS with Nix OpenBLAS. GitHub-hosted
+Linux CI was not executed in this session. Existing warnings about both license
+manifest fields remain. Center, commutant, and decomposition are subsequent steps.

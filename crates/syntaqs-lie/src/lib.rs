@@ -3,7 +3,8 @@
 //! Coefficients retain their real precision. Native BLAS/LAPACK implementations
 //! are selected by the application through `blas-src`; this crate selects none.
 //! Ordered operator families support explicit validation and real HS projection.
-//! Lie brackets and decomposition are subsequent implementation steps.
+//! Lie brackets, closure diagnostics, retained representations, and real basis
+//! transformations are supported. Center and ideal decomposition are subsequent steps.
 //!
 //! ```
 //! # extern crate blas_provider as _;
@@ -25,6 +26,13 @@
 //! assert_eq!(projection.coordinates().values().as_slice().unwrap(), &[1., 0.]);
 //! assert_eq!(projection.residual_norm(), 1.);
 //! assert!(!projection.in_span());
+//! let full = OperatorFamily::new([
+//!     Op::primitive(Pauli::Sx), Op::primitive(Pauli::Sy), Op::primitive(Pauli::Sz),
+//! ])?;
+//! let constants = full.structure_constants(&options)?;
+//! assert_eq!(constants.values()[(2, 0, 1)], 2.);
+//! let killing = constants.adjoint().killing_form()?;
+//! assert_eq!(killing.values()[(0, 0)], -8.);
 //! # Ok::<(), LieError<f64>>(())
 //! ```
 
@@ -39,6 +47,8 @@ extern crate blas_provider as _;
 mod error;
 mod expression;
 mod family;
+mod representation;
+mod transform;
 // Some kernels are reserved for subsequent Lie-representation operations.
 #[allow(dead_code)]
 mod numerical;
@@ -50,4 +60,9 @@ pub use family::{
     FamilyCoordinates, FamilyValidation, GramFactorization, GramMatrix, IndependenceReport,
     OperatorFamily, Projection,
 };
+pub use representation::{
+    AdjointRepresentation, BracketClosureCheck, ClosureReport, KillingForm, StructureConstants,
+    lie_bracket,
+};
 pub use tolerance::{NumericalOptions, Tolerance, ToleranceCheck};
+pub use transform::{FamilyTransform, OrthonormalityReport};

@@ -37,6 +37,8 @@ pub trait FamilyExpression: private::Sealed + Clone {
     #[doc(hidden)]
     fn adjoint_expression(&self) -> Self;
     #[doc(hidden)]
+    fn lie_bracket_expression(&self, rhs: &Self) -> Result<Self, ExpressionError>;
+    #[doc(hidden)]
     fn hs_in(
         &self,
         rhs: &Self,
@@ -70,6 +72,11 @@ where
     }
     fn adjoint_expression(&self) -> Self {
         self.adjoint()
+    }
+    fn lie_bracket_expression(&self, rhs: &Self) -> Result<Self, ExpressionError> {
+        Ok(self
+            .commutator(rhs)
+            .scaled(Complex::new(R::zero(), -R::one())))
     }
     fn hs_in(&self, rhs: &Self, _: &()) -> Result<Complex<R>, ExpressionError> {
         Ok(self.collect_terms().hs_inner_product(&rhs.collect_terms()))
@@ -116,6 +123,11 @@ where
     }
     fn adjoint_expression(&self) -> Self {
         self.adjoint()
+    }
+    fn lie_bracket_expression(&self, rhs: &Self) -> Result<Self, ExpressionError> {
+        Ok(self
+            .commutator(rhs)?
+            .scaled(Complex::new(R::zero(), -R::one())))
     }
     fn hs_in(&self, rhs: &Self, context: &Self::Context) -> Result<Complex<R>, ExpressionError> {
         self.collect_terms_in(context)?

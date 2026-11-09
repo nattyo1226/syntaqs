@@ -1,6 +1,6 @@
 # Verification structure and commands
 
-Updated: 2026-11-04
+Updated: 2026-11-09
 
 ## 1. Verification responsibilities
 
@@ -57,8 +57,12 @@ application-selected dependency features with `cargo tree`; the same shell
 check can be run locally under the development environment. The crate's unit
 tests cover solves, complete right nullspaces, symmetric spectra, Gram cutoffs,
 tolerance overrides, and invalid
-numerical data. Family tests cover the current validation/projection API;
-brackets, closure, and decomposition remain unverified subsequent steps.
+numerical data. Family tests cover validation/projection.
+[Representation tests](../../crates/syntaqs-lie/tests/representations.rs) cover
+brackets, closure, adjoint matrices, Killing forms, and family transformations
+against independent dense references at both precisions, including an ordinary
+bracket of odd operators on a graded space. Center, commutant, and decomposition
+remain subsequent steps.
 
 Dedicated no_std target builds for core, geometry, spin-half, and fermion remain unverified. Source/dependency-feature inspection and host builds do not establish dedicated-target success. Shared Arc requires pointer-width atomic operations on the target.
 

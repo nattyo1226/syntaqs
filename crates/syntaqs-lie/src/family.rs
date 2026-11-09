@@ -333,7 +333,7 @@ where
         })
     }
 
-    /// Checks candidate Hermiticity and independence; closure is a later operation.
+    /// Checks candidate Hermiticity and independence; use `closure` separately.
     /// Dependent and non-Hermitian candidates return failed diagnostics, not errors.
     pub fn validate(
         &self,

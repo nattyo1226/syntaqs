@@ -549,10 +549,42 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
     let local = OperatorFamily::new([x.clone(), Local::identity()]).unwrap();
     assert!(local.validate(&options).unwrap().passed());
     assert!(local.project(&x.scaled(0.3), &options).unwrap().in_span());
+    assert!(
+        local
+            .structure_constants(&options)
+            .unwrap()
+            .closure()
+            .passed()
+    );
+    assert!(
+        local
+            .orthonormalize(&options)
+            .unwrap()
+            .family()
+            .orthonormality(&options)
+            .unwrap()
+            .passed()
+    );
     let space = HilbertSpace::factor(Index(0));
     let placed =
         OperatorFamily::new_in(&space, local.iter().map(|op| op.at(&space).unwrap())).unwrap();
     assert!(placed.validate(&options).unwrap().passed());
+    assert!(
+        placed
+            .structure_constants(&options)
+            .unwrap()
+            .closure()
+            .passed()
+    );
+    assert!(
+        placed
+            .orthonormalize(&options)
+            .unwrap()
+            .family()
+            .orthonormality(&options)
+            .unwrap()
+            .passed()
+    );
     assert!(
         placed
             .project(&x.at(&space).unwrap().scaled(0.3), &options)

@@ -1,8 +1,8 @@
 # syntaqs v4: Lie algebra implementation
 
-Updated: 2026-11-04
-Status: Steps 1–2 complete; brackets, representations, and decomposition remain pending.
-Next action: [Step 3](implementation-plan.md#step-3-brackets-and-retained-lie-representations).
+Updated: 2026-11-09
+Status: Steps 1–3 complete; commutant, center, and decomposition remain pending.
+Next action: [Step 4](implementation-plan.md#step-4-adjoint-commutant-and-center).
 
 Implement the agreed LieAlgebra.jl functionality on syntaqs in the dedicated
 `syntaqs-lie` crate. This directory is the temporary implementation workspace.
@@ -25,10 +25,11 @@ step under the agreed contracts. No further broad design review is a prerequisit
 | 2026-11-03, initial investigation | `direnv exec . cargo test -p syntaqs-core -p syntaqs-tests --all-features` | Passed, including integration tests and doctests. Existing manifest warnings about both license fields were emitted. |
 | 2026-11-03, document consolidation | Local links/anchors, Markdown structure/whitespace, stale-reference search, and final scope review | Passed. Six implementation steps remain pending; changes are confined to this workspace. |
 
-Numerical and family API tests, local workspace feature checks, Rust 1.85,
-application linkage, and provider-isolation checks are recorded in
-[the implementation plan](implementation-plan.md#step-2-results-2026-11-04).
-Later bracket/representation/decomposition features and the reference's Julia suite remain
+Numerical, family, and representation tests, workspace feature checks, and
+Rust 1.85 results are recorded in
+[the implementation plan](implementation-plan.md#step-3-results-2026-11-09).
+Earlier step results also record application linkage and provider isolation.
+Later commutant/center/decomposition features and the reference's Julia suite remain
 unverified. GitHub-hosted CI was configured but not executed in this session.
 
 ## Maintenance

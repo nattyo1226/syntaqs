@@ -1,7 +1,7 @@
 # syntaqs-lie
 
-Operator families and numerical foundations for Lie algebra analysis using
-syntaqs expressions. Lie brackets and decomposition remain subsequent steps.
+Operator families, numerical foundations, and Lie representations using syntaqs
+expressions. Center, commutant, and ideal decomposition remain subsequent steps.
 
 `OperatorFamily<E>` retains a nonempty ordered family of `LocalOperator` or
 placed `Operator` expressions with complex f32/f64 coefficients. `new` infers a
@@ -39,6 +39,28 @@ right nullspaces (including wide/empty matrices), and independent Gram checks.
 Norms use scaled accumulation; small positive values are not pruned. Gram
 eigenvalue cutoffs apply to Gram eigenvalues themselves, not to their roots.
 
+## Lie brackets and representations
+
+`lie_bracket(A,B)` constructs `-i(AB-BA)`, including on graded spaces. On a
+family, `bracket(i,j)` uses its common context. `bracket_coefficients` and
+`bracket_projection` obtain projected coordinates and diagnostics; `closure`
+checks every ordered pair using a reusable Gram factorization. These numerical
+operations require independent Hermitian family elements.
+
+`structure_constants` requires closure and retains `f[k,i,j]`, output index
+first, with the source family and full pairwise diagnostics. Its `adjoint()`
+returns matrices `ad_i[k,j]=f[k,i,j]`; their `killing_form()` computes classical
+`K[i,j]=Tr(ad_i ad_j)`. The result arrays refer to the selected operator family,
+not physical action matrices. Nonclosed families return diagnostics or a
+`NonClosedPair` error rather than silently promoting projections to constants.
+All validity checks use the recorded numerical settings.
+
+`transform(U)` retains a new family and its real column coordinates in the
+original family. `select(indices)` retains a selection matrix. `orthogonalize`
+and `orthonormalize` use the Gram eigensystem and reject dependent or
+non-Hermitian inputs. `orthonormality` reports the Gram defect from identity,
+Hermiticity, and independence. See the [API contract](../../docs/design/lie.md).
+
 ## Native linkage
 
 This library enables ndarray BLAS and uses ndarray-linalg without provider
@@ -64,5 +86,5 @@ direnv exec . cargo run --manifest-path tests/fixtures/lie-blas/Cargo.toml
 ```
 
 The crate uses std and preserves the existing core's no_std and exact-zero
-contracts. The [implementation workspace](../../docs/plans/v4-lie-algebra/README.md)
-records scope, numerical rules, progress, and verification limits.
+contracts. See the [verification guide](../../docs/design/verification.md) for
+checks and verification limits.

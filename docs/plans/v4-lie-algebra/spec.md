@@ -1,7 +1,8 @@
 # Implementation specification
 
-Status: numerical foundations and Step 2 operator-family/projection APIs are
-implemented. Bracket, representation, and decomposition operations remain target behavior.
+Status: numerical foundations, operator-family/projection APIs, brackets,
+representations, and family transformations are implemented. Commutant, center,
+and decomposition operations remain target behavior.
 Implementation order and checks are in [the plan](implementation-plan.md).
 
 ## Scope and boundaries

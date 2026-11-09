@@ -43,6 +43,16 @@ pub enum NumericalError {
 /// Invalid family context or failed operator-analysis precondition.
 #[derive(Debug, thiserror::Error)]
 pub enum LieError<R> {
+    /// A bracket lies outside the family span under the recorded tolerance.
+    #[error("bracket of family elements {left} and {right} is outside the span")]
+    NonClosedPair {
+        /// Left input index.
+        left: usize,
+        /// Right input index.
+        right: usize,
+        /// Residual norm, bracket norm scale, and effective bound.
+        check: crate::ToleranceCheck<R>,
+    },
     /// A family must retain at least one input operator.
     #[error("operator family is empty")]
     EmptyFamily,
