@@ -21,7 +21,6 @@ edition = "2024"
 version = "0.3.0"
 rust-version = "1.85"
 license = "MIT"
-license-file = "LICENSE"
 repository = "https://github.com/nattyo1226/syntaqs"
 
 [workspace.dependencies]
