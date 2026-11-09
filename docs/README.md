@@ -1,6 +1,6 @@
 # Documentation guide
 
-Updated: 2026-11-02
+Updated: 2026-11-09
 
 ## 1. Document responsibilities
 
@@ -10,6 +10,7 @@ Updated: 2026-11-02
 | [architecture](architecture.md) | An overview of what it provides: the overall structure and allocation of responsibilities. |
 | [future-work](future-work.md) | Features to implement and candidates not yet adopted. Details belong in `future-work/`. |
 | `design/` | The API, mathematical contracts, constraints, and implementation of each feature currently provided. |
+| `decisions/` | Consequential design choices, their rationale, and reference baselines. |
 | `plans/` | Plans and progress for work currently being implemented. |
 
 Keep detailed current specifications in the corresponding design documents and link to them from requirements and architecture. Separate proposals for unimplemented features from current specifications, and create a plan in `plans/` when implementation starts. Completed steps within an active plan remain part of its progress record. Once the work is complete and merged, move any lasting specifications and conventions into the appropriate permanent documents, update incoming references, and remove the completed plan. Create `plans/` as needed; it need not exist when no plans are active.
@@ -31,6 +32,7 @@ Keep detailed current specifications in the corresponding design documents and l
 | Geometry, relations, and site connections | [geometry](design/geometry.md) |
 | Spin and Hubbard model construction | [models](design/models.md) |
 | Export to numerical containers | [export](design/export.md) |
+| Operator families, HS projection, Lie representations, and center/simple-ideal decomposition | [lie](design/lie.md) |
 | Verification structure and commands | [verification](design/verification.md) |
 
 ## 3. Language and maintenance
@@ -41,7 +43,7 @@ When moving documents or changing headings, update incoming repository links, in
 
 ## 4. Presentation order
 
-Present project crates from shared foundations to concrete local algebras, following the [architecture crate table](architecture.md#2-crates-and-responsibilities): `syntaqs-core`, `syntaqs-basic`, `syntaqs-geometry`, `syntaqs-normalize`, `syntaqs-export`, `syntaqs-spin-half`, `syntaqs-spin-one`, and `syntaqs-fermion`.
+Present project crates from shared foundations to concrete local algebras, following the [architecture crate table](architecture.md#2-crates-and-responsibilities): `syntaqs-core`, `syntaqs-basic`, `syntaqs-geometry`, `syntaqs-normalize`, `syntaqs-export`, `syntaqs-lie`, `syntaqs-spin-half`, `syntaqs-spin-one`, and `syntaqs-fermion`.
 
 Use this relative order in the root README crate list and dependency examples, workspace members, and every Cargo.toml dependency section. Workspace members list `examples` and `tests` after the library crates. The dependency convention applies to `[workspace.dependencies]`, `[dependencies]`, `[dev-dependencies]`, `[build-dependencies]`, and target-specific dependency sections in all packages, including examples and tests.
 

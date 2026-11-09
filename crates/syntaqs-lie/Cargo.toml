@@ -1,0 +1,27 @@
+[package]
+name = "syntaqs-lie"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+description = "Lie algebra analysis on syntaqs operator expressions"
+
+[dependencies]
+syntaqs-core.workspace = true
+
+thiserror.workspace = true
+
+num-traits.workspace = true
+num-complex.workspace = true
+
+ndarray = { workspace = true, features = ["blas"] }
+ndarray-linalg.workspace = true
+blas-src.workspace = true
+
+[dev-dependencies]
+syntaqs-spin-half.workspace = true
+syntaqs-fermion.workspace = true
+
+blas-provider = { path = "../../support/blas-provider" }

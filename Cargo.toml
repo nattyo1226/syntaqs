@@ -6,12 +6,15 @@ members = [
     "crates/syntaqs-geometry",
     "crates/syntaqs-normalize",
     "crates/syntaqs-export",
+    "crates/syntaqs-lie",
     "crates/syntaqs-spin-half",
     "crates/syntaqs-spin-one",
     "crates/syntaqs-fermion",
     "examples",
     "tests",
+    "support/blas-provider",
 ]
+exclude = ["tests/fixtures/lie-blas"]
 
 [workspace.package]
 edition = "2024"
@@ -27,6 +30,7 @@ syntaqs-basic = { path = "crates/syntaqs-basic" }
 syntaqs-geometry = { path = "crates/syntaqs-geometry" }
 syntaqs-normalize = { path = "crates/syntaqs-normalize" }
 syntaqs-export = { path = "crates/syntaqs-export" }
+syntaqs-lie = { path = "crates/syntaqs-lie" }
 syntaqs-spin-half = { path = "crates/syntaqs-spin-half" }
 syntaqs-spin-one = { path = "crates/syntaqs-spin-one" }
 syntaqs-fermion = { path = "crates/syntaqs-fermion" }
@@ -42,3 +46,10 @@ num-complex = { version = "0.4.6", default-features = false }
 # Dense and sparse numerical containers.
 ndarray = { version = "0.17.2", default-features = false, features = ["std"] }
 sprs = { version = "=0.11.4", default-features = false }
+
+# Dense factorizations and provider-neutral native linkage.
+ndarray-linalg = { version = "0.18.1", default-features = false, features = ["blas"] }
+blas-src = { version = "0.14.0", default-features = false }
+
+# Development provider, selected by support/blas-provider.
+openblas-src = { version = "0.10" }

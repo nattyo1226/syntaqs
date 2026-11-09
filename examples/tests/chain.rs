@@ -1,3 +1,6 @@
+#[cfg(feature = "export")]
+extern crate blas_provider as _;
+
 use num_complex::Complex;
 #[cfg(feature = "normalize")]
 use num_traits::Float;

@@ -12,7 +12,8 @@ publish = false
 [features]
 default = ["normalize"]
 normalize = ["dep:syntaqs-normalize"]
-export = ["dep:syntaqs-export"]
+export = ["dep:syntaqs-export", "dep:blas-provider"]
+lie = ["dep:syntaqs-lie", "dep:blas-provider"]
 libm = ["normalize"]
 
 [dependencies]
@@ -21,11 +22,18 @@ syntaqs-basic.workspace = true
 syntaqs-geometry.workspace = true
 syntaqs-normalize = { workspace = true, optional = true }
 syntaqs-export = { workspace = true, optional = true, features = ["ndarray", "sprs"] }
+syntaqs-lie = { workspace = true, optional = true }
 syntaqs-spin-half.workspace = true
 syntaqs-spin-one.workspace = true
 syntaqs-fermion.workspace = true
+blas-provider = { path = "../support/blas-provider", optional = true }
 
 num-complex.workspace = true
 
 [dev-dependencies]
 num-traits.workspace = true
+
+[[bin]]
+name = "lie_algebra"
+path = "src/bin/lie_algebra.rs"
+required-features = ["lie"]
