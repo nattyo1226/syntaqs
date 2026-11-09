@@ -47,6 +47,10 @@ jobs:
       # Keep doctests, including compile_fail cases, in the test suite.
       - name: Test workspace
         run: cargo test --workspace ${{ matrix.configuration.args }}
+      - name: Run Lie analysis example without export backends
+        run: cargo run -p examples --no-default-features --features lie --bin lie_algebra
+      - name: Test shared Lie workflow without export backends
+        run: cargo test -p syntaqs-tests --no-default-features --features lie --test lie_analysis
       - name: Test downstream blas-src linkage
         run: cargo run --manifest-path tests/fixtures/lie-blas/Cargo.toml
       - name: Verify provider selection is isolated

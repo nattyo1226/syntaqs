@@ -24,8 +24,9 @@ Coordinates, Gram matrices, and projections borrow the exact originating family.
 Expressions remain shared core handles; no physical action matrix, state basis,
 or custom inner product is used. Primitives need `PartialEq` for exact collection
 of equal terms before HS contraction. This reduces cancellation in residuals
-without tolerance-based pruning. See the [current API contract](../../docs/design/lie.md)
-and the crate-level Rust example.
+without tolerance-based pruning. See the [current API contract](../../docs/design/lie.md),
+the crate-level Rust example, and the runnable
+[Lie analysis example](../../examples/src/bin/lie_algebra.rs).
 
 `NumericalOptions<f32/f64>` exposes independent residual, Hermiticity, imaginary,
 negative-squared-norm roundoff, rank, Gram-eigenvalue, and eigenvalue-gap settings.
@@ -82,7 +83,7 @@ Both results borrow their source family and retain settings and SVD rank
 diagnostics. Constraint candidates must pass the residual tolerance as well as
 the singular-value cutoff; failures return `ConstraintResidual`. Center residuals
 are also checked in original coordinates. The symmetric commuting subspace used
-for later decomposition is a separate internal object in orthonormal coordinates.
+for decomposition is a separate internal object in orthonormal coordinates.
 See the [API contract](../../docs/design/lie.md#6-adjoint-commutant-and-center).
 
 ## Center and simple-ideal decomposition
@@ -129,6 +130,16 @@ blas-src = { version = "0.14.0", features = ["openblas"] }
 openblas-src = { version = "0.10", features = ["system"] }
 ```
 
+Retain that provider in the application binary with:
+
+```rust
+extern crate blas_src as _;
+```
+
+The library does not expose provider-selection features. The linked source must
+supply LAPACK as well as BLAS. For a system provider, pkg-config and linker search
+paths must find the installed implementation.
+
 For Nix development, include `pkgs.openblas` and `pkgs.pkg-config` in the
 devShell with the Rust toolchain. CI installs their system equivalents. Workspace
 tests and examples select that provider through the internal
@@ -139,6 +150,8 @@ without ndarray-linalg provider features.
 
 ```sh
 direnv exec . cargo test -p syntaqs-lie
+direnv exec . cargo run -p examples --no-default-features --features lie --bin lie_algebra
+direnv exec . cargo test -p syntaqs-tests --no-default-features --features lie --test lie_analysis
 direnv exec . cargo run --manifest-path tests/fixtures/lie-blas/Cargo.toml
 ```
 

@@ -65,8 +65,7 @@ roundoff use squared units. Residual squared-norm roundoff uses
 `(||A||+||project(A)||)^2`; Hermiticity squared-norm roundoff uses `(2||B||)^2`.
 Self-contractions also use their scalar magnitude as a minimum squared scale.
 Invalid or overflowing bounds error. Small positive values and reconstruction
-coefficients are not pruned. See the
-[numerical settings](../../crates/syntaqs-lie/README.md).
+coefficients are not pruned.
 
 Before contraction, Lie operations explicitly collect equal natural primitives
 using core's `collect_terms`/`collect_terms_in`. Local sums remain factored;
@@ -75,6 +74,37 @@ cancellation before squaring without changing ordinary evaluation or imposing an
 policy. Collection uses primitive equality, not a complete independent operator
 basis; distinct natural primitives may still have linear relations. No general
 accuracy guarantee beyond the recorded numerical checks is asserted.
+
+### 3.1. Numerical settings and defaults
+
+`NumericalOptions` keeps residual, Hermiticity, imaginary-part, negative-norm
+roundoff, SVD rank, Gram-eigenvalue, and eigenvalue-gap decisions independent.
+The defaults use the actual real coefficient precision:
+
+| Decision | f32 | f64 |
+| --- | --- | --- |
+| Residual, Hermiticity, imaginary part | `atol=rtol=2e-5` | `atol=rtol=1e-12` |
+| Negative squared-norm roundoff | `atol=0, rtol=64*epsilon` | `atol=0, rtol=64*epsilon` |
+| Relative SVD rank/nullspace cutoff | `max(2e-5,d*epsilon)` | `max(1e-12,d*epsilon)` |
+| Relative Gram-eigenvalue cutoff | `max(2e-5,n*epsilon)` | `max(1e-12,n*epsilon)` |
+| Relative symmetric eigenvalue gap | `max(2e-5,n*epsilon)` | `max(1e-12,n*epsilon)` |
+
+Here d is `max(rows,columns)` of the constraint/solve matrix and n is the relevant
+Gram/eigenproblem dimension. A spectral `None` selects the default formula;
+`Some(r)` overrides it exactly, including zero. Rank treats
+`sigma <= cutoff*sigma_max` as null. Gram rank applies its separate threshold to
+Gram eigenvalues directly, not to their square roots. Eigenvalue grouping uses
+the maximum absolute eigenvalue as its reference magnitude.
+
+All fields are validated even when a particular call does not use every field.
+Settings, numerical data, measurements, scales, and effective bounds must be
+finite, with nonnegative allowances. Overflowing bounds error. Dense symmetric
+eigensolves check the Frobenius symmetry defect at the matrix Frobenius scale
+before averaging triangles. Complex values required to be real use the separately
+configured imaginary check and operation-specific scale. Negative squared norms
+are clamped only within the explicit roundoff bound; small positive values remain.
+These are configurable numerical decisions and representative tested defaults,
+not general accuracy guarantees for arbitrary expression contractions.
 
 ## 4. Brackets, closure, and retained representations
 
@@ -296,3 +326,12 @@ residual overrides are both covered. Internal tests inject an accidental spectra
 collision, verify retry/exhaustion behavior, and reject invariant unsplit direct
 sums and nonideal partitions. Capability tests also exercise decomposition
 without primitive/index Clone, Dimension, or state traits.
+
+The runnable [lie_algebra example](../../examples/src/bin/lie_algebra.rs) exercises
+the public workflow on su(2) + su(2) + u(1), including explicit residual and seed
+settings and application-owned native linkage. Shared
+[Lie integration tests](../../tests/tests/lie_analysis.rs) compare complete
+workflows for spin, fermion, three-level, and graded algebras against independent
+matrices at both precisions. Operator-only adapters lack Clone, Dimension, Basis,
+state, and action capabilities; an 80-factor spectator case exercises projection,
+representations, center, and decomposition without a physical action matrix.

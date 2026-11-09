@@ -1,22 +1,22 @@
 # syntaqs v4: Lie algebra implementation
 
 Updated: 2026-11-09
-Status: Steps 1–5 complete; final public integration and full verification remain pending.
-Next action: [Step 6](implementation-plan.md#step-6-public-integration-and-full-verification).
+Status: Steps 1–6 complete; implementation and local full verification finished.
+Next action: review and merge. Retain this workspace until merge.
 
-Implement the agreed LieAlgebra.jl functionality on syntaqs in the dedicated
-`syntaqs-lie` crate. This directory is the temporary implementation workspace.
+The agreed LieAlgebra.jl functionality is implemented in `syntaqs-lie`. This
+directory retains the agreed target and verification history pending merge.
+Current contracts belong to [the permanent Lie design](../../design/lie.md).
 
 | Document | Responsibility |
 | --- | --- |
-| [Specification](spec.md) | Single source of truth for agreed behavior and numerical defaults. |
-| [Implementation plan](implementation-plan.md) | Six ordered steps, deliverables, acceptance checks, and remaining implementation choices. |
+| [Specification](spec.md) | Agreed implementation target and numerical defaults; current contracts are in the permanent design. |
+| [Implementation plan](implementation-plan.md) | Completed steps, deliverables, acceptance checks, and dated verification results. |
 | [References](references.md) | Existing extension points, pinned Julia sources, and intentional compatibility differences. |
 
-Read the specification, then execute the plan in order. Record completed steps
-and dated checks in the plan; do not duplicate specifications in progress logs.
-Concrete Rust signatures and supporting type names can be settled within each
-step under the agreed contracts. No further broad design review is a prerequisite.
+Use the permanent design and crate documentation for current public APIs.
+This workspace preserves implementation decisions and actual check results;
+no implementation steps remain pending.
 
 ## Verification record
 
@@ -27,10 +27,10 @@ step under the agreed contracts. No further broad design review is a prerequisit
 
 Numerical, family, representation, invariant, and decomposition tests, workspace checks, and
 Rust 1.85 results are recorded in
-[the implementation plan](implementation-plan.md#step-5-results-2026-11-09).
+[the implementation plan](implementation-plan.md#step-6-results-2026-11-09).
 Earlier step results also record application linkage and provider isolation.
-Final public integration and the reference's Julia suite remain unverified.
-GitHub-hosted CI was configured but not executed in this session.
+The public workflow and full local matrix passed; the reference's Julia suite
+and GitHub-hosted Linux CI were not run in this session.
 
 ## Maintenance
 

@@ -12,11 +12,14 @@ description = "Shared test algebras and workspace integration tests for syntaqs"
 
 [features]
 default = []
+lie = ["dep:syntaqs-lie", "dep:blas-provider"]
 ndarray = ["syntaqs-export/ndarray"]
 sprs = ["syntaqs-export/sprs"]
 
 [dependencies]
 syntaqs-core.workspace = true
+syntaqs-lie = { workspace = true, optional = true }
+blas-provider = { path = "../support/blas-provider", optional = true }
 
 num-traits.workspace = true
 num-complex.workspace = true
@@ -24,3 +27,5 @@ num-complex.workspace = true
 [dev-dependencies]
 syntaqs-normalize.workspace = true
 syntaqs-export.workspace = true
+syntaqs-spin-half.workspace = true
+syntaqs-fermion.workspace = true

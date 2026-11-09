@@ -2,8 +2,9 @@
 
 Status: numerical foundations, operator-family/projection APIs, brackets,
 representations, family transformations, the full adjoint commutant, center
-extraction, and complete simple-ideal decomposition are implemented. Final public
-integration and full verification remain Step 6.
+extraction, complete simple-ideal decomposition, and final public integration are
+implemented. Local full verification is complete; results and environment limits
+are recorded in the implementation plan.
 Implementation order and checks are in [the plan](implementation-plan.md).
 
 ## Scope and boundaries

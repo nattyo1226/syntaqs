@@ -14,11 +14,28 @@ Run from the repository root. Prefix commands with `direnv exec .` when developm
 
 ```sh
 cargo build --workspace --all-features
+cargo test --workspace
 cargo test --workspace --all-features
+cargo test --workspace --no-default-features
 cargo check --workspace --all-targets --no-default-features
 cargo fmt --all -- --check
+cargo fmt --manifest-path tests/fixtures/lie-blas/Cargo.toml -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
+```
+
+Run the workspace default/all/no-default-feature tests, the all-feature build,
+and the all-target no-default-feature check with both Rust 1.85.0 and stable.
+Formatting, Clippy, and rustdoc checks use stable, matching CI.
+
+Run the Lie example and shared integration tests independently of export backends,
+and verify the downstream application-owned native link:
+
+```sh
+cargo run -p examples --no-default-features --features lie --bin lie_algebra
+cargo run -p examples --all-features --bin lie_algebra
+cargo test -p syntaqs-tests --no-default-features --features lie --test lie_analysis
+cargo run --manifest-path tests/fixtures/lie-blas/Cargo.toml
 ```
 
 For independent optional-backend checks, use `cargo test -p syntaqs-export --no-default-features` and `cargo test -p syntaqs-tests --no-default-features` with no backend, `--features ndarray`, and `--features sprs`. Workspace all-features covers both together. Keep separate package checks because workspace runs may unify features from other packages.
@@ -35,6 +52,7 @@ Maintain the following coverage alongside the detailed verification targets in e
 | Basis and numerical integration | [core_basis_expansion.rs](../../tests/tests/core_basis_expansion.rs), [export_tensor_products.rs](../../tests/tests/export_tensor_products.rs), and [normalize_tensor_products.rs](../../tests/tests/normalize_tensor_products.rs) cover intrinsic coordinates, re-expansion, nonorthonormal bases, empty bases, metadata, all output backends, normalization, and expectations at both precisions. |
 | Dimension-normalized HS inner products | [core_hs_inner_product.rs](../../tests/tests/core_hs_inner_product.rs) compares against explicit `Tr(A†B)/D`, including empty spaces, spectators, explicit-space binding overrides, extreme coefficient scales, and `⟨I,I⟩=1` on 2048 factors whose total dimension overflows. Verify no state type, Dimension, or integer conversion is required and ordinary trace gains no division bound. |
 | Operator families and exact collection | [operator_family.rs](../../crates/syntaqs-lie/tests/operator_family.rs) checks ordered contexts, Hermiticity, real independence, nonorthonormal projection/reconstruction, residuals, singularity, and numerical overrides against small matrices. [core_collect_terms.rs](../../tests/tests/core_collect_terms.rs) checks exact primitive collection and ordinary/graded signs without primitive Clone or Dimension. Both cover f32/f64; see [Lie contracts](lie.md). |
+| Complete Lie workflow | [lie_analysis.rs](../../tests/tests/lie_analysis.rs), enabled by the shared package's `lie` feature, compares all public stages against independent spin/fermion/three-level/graded matrices at f32/f64. Operator-only adapters have no Clone, Dimension, Basis, state, or action traits. An 80-factor case checks the complete workflow without physical matrices. The [example](../../examples/src/bin/lie_algebra.rs) runs with Lie alone or all example features. |
 | Sharing, capabilities, and large spaces | Capability tests cover borrowed and non-Clone primitives, operation-specific numeric bounds, and action without primitive Product. [core_tensor_products.rs](../../tests/tests/core_tensor_products.rs) includes separated states and local traces on 80 factors without dense intermediates, and evaluation and destruction through 20,000 graded wrappers on a 128 KiB stack. |
 | Formatting | [formatting.rs](../../crates/syntaqs-core/tests/formatting.rs) covers all expression node kinds, parentheses, multiline output, complete Debug identifiers, output errors, shared-subexpression classification, and display and destruction at depth 20,000 on a 128 KiB stack. Standard-index and builtin-primitive tests check identities and labels. |
 | Local algebras and physical models | Follow [local algebra](local-structure.md), [geometry](geometry.md), and [model](models.md) verification targets: independent local matrices, algebraic laws, normalized Gram matrices, physical coupling scales, constant shifts, many-body placement order, and model energies. Keep exact-zero rules and preservation of tiny nonzero coefficients separate from approximate comparisons. |
@@ -43,11 +61,11 @@ Reference values for graded tests come from the [test-only two-state algebra](..
 
 ## 3. CI and verification limits
 
-The [CI workflow](../../.github/workflows/ci.yml) runs on pushes to `main`, pull requests, and manual dispatch on 64-bit Linux. Rust 1.85.0 and stable each test the workspace with default, all, and no default features, including doctests and compile_fail cases.
+The [CI workflow](../../.github/workflows/ci.yml) runs on pushes to `main`, pull requests, and manual dispatch on 64-bit Linux. Rust 1.85.0 and stable each test the workspace with default, all, and no default features, including doctests and compile_fail cases. Each configuration also runs the Lie-only example and shared Lie integration tests without enabling export backends.
 
 Stable also runs backend-specific export/shared tests, format, Clippy, and API documentation with warnings denied. Dependency caching and cancellation of older runs for the same PR/branch are configured.
 
-Lie numerical tests and export examples share the internal
+Lie numerical tests, shared Lie integration tests, and Lie/export examples share the internal
 [blas-provider package](../../support/blas-provider/README.md).
 CI installs system OpenBLAS and pkg-config. The standalone application in
 `tests/fixtures/lie-blas` executes f32/f64 BLAS/LAPACK calculations and checks
@@ -72,6 +90,14 @@ and complete simple-ideal spans, basis-change covariance, emitted-expression
 reconstruction/validation, independent block invariants, seeded reproducibility,
 explicit tolerance overrides, and finite exhaustion at f32/f64. Internal tests
 force collisions/retries and reject unsplit or nonideal candidates.
+
+Family analysis inherits the expression-contraction cancellation limits documented
+in [Lie contracts](lie.md#3-projection-and-numerical-scales). Some cyclic
+nonorthonormal inputs need explicit residual overrides; no validation stage
+silently relaxes them. Dedicated-target no_std builds, cross-platform bitwise
+seed reproducibility, and equivalence with an upstream Julia test suite are not
+established by host test success. Dated execution evidence belongs in active
+plans; workflow configuration alone does not establish a GitHub-hosted run.
 
 Dedicated no_std target builds for core, geometry, spin-half, and fermion remain unverified. Source/dependency-feature inspection and host builds do not establish dedicated-target success. Shared Arc requires pointer-width atomic operations on the target.
 

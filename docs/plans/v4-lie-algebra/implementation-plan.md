@@ -1,8 +1,9 @@
 # Implementation plan
 
-Status: Steps 1–5 complete; Step 6 pending. Continue in order against
-[the specification](spec.md). Each step includes its feature tests. Record
-actual commands/results when completed, not as prospective successes.
+Status: Steps 1–6 complete, including local full verification. Retain this
+workspace pending review and merge; retire it after merge under the
+[documentation guide](../../README.md). Lasting contracts are in
+[the Lie design](../../design/lie.md) and [verification](../../design/verification.md).
 
 ## Step 1: Crate and numerical foundation
 
@@ -111,17 +112,17 @@ successful complete decomposition.
 
 ## Step 6: Public integration and full verification
 
-- [ ] Add a runnable syntaqs-lie example covering family construction,
+- [x] Add a runnable syntaqs-lie example covering family construction,
   validation, projection, retained coefficients, and center/ideal decomposition.
   Show blas-src linkage, the required native libraries, and tolerance/seed
   overrides; avoid ndarray-linalg provider-selection instructions.
-- [ ] Add public-API integration coverage using existing spin/fermion and shared
+- [x] Add public-API integration coverage using existing spin/fermion and shared
   test algebras as appropriate; confirm Gram/bracket evaluation needs neither
   full physical matrices nor a state basis.
-- [ ] Update crate/root READMEs, workspace ordering, examples documentation,
+- [x] Update crate/root READMEs, workspace ordering, examples documentation,
   permanent requirements/architecture/designs, and CI to reflect implemented
   behavior. Preserve existing crate/backend coverage and no_std boundaries.
-- [ ] Run the applicable complete repository checks and record results below.
+- [x] Run the applicable complete repository checks and record results below.
   Release numbering, commits, publication, and merging are separate tasks.
 
 **Completion gate:** independent small-system references agree with direct
@@ -361,3 +362,61 @@ CI was not executed in this session. Existing warnings about both license fields
 remain. Full default/no-default workspace tests and independent backend/provider
 checks were not repeated for this crate-local change. Step 6 still owns the
 runnable integration example and final complete repository verification.
+
+## Step 6 results: 2026-11-09
+
+Added the runnable `lie_algebra` example on su(2) + su(2) + u(1), covering
+family construction, validation, reusable Gram projection/coefficients/closure,
+retained structure constants, adjoint/Killing forms, commutant, full center, and
+simple-ideal decomposition. It demonstrates explicit residual and seed settings
+and selects the centralized application provider through blas-src. Both
+Lie-only and all-feature executions check the known residual, constants, Killing
+diagonal, center dimension, and two three-dimensional simple ideals.
+
+Added ten shared public-workflow tests at f32/f64. They compare spin, fermion,
+custom three-level, and graded algebras with independent matrix/HS/bracket
+references, and verify emitted center/ideal projectors and reconstruction.
+Operator-only shared adapters have no Clone, Dimension, Basis, state, or action
+traits; an 80-factor case runs the whole workflow without physical matrices.
+The shared package's optional `lie` feature selects Lie and its development
+provider. Its backend-only configurations preserve provider separation.
+The example likewise uses an optional `lie` feature, independent of normalize
+and export.
+
+CI now runs the isolated Lie example and shared Lie workflow in every toolchain/
+configuration job, preserving all existing workspace, backend, provider, quality,
+and documentation coverage. Root/crate/example/test READMEs, requirements,
+architecture, the design guide, Lie numerical defaults, and verification
+instructions now describe the implemented behavior and native linkage.
+Workspace and dependency ordering were reviewed and already followed conventions.
+
+| Check | stable 1.99.1 | Rust 1.85.0 |
+| --- | --- | --- |
+| `cargo test --workspace` | 399 tests passed, including doctests. | 399 passed. |
+| `cargo test --workspace --all-features` | 412 tests passed, including doctests. | 412 passed. |
+| `cargo test --workspace --no-default-features` | 398 tests passed, including doctests. | 398 passed. |
+| `cargo build --workspace --all-features` | Passed. | Passed. |
+| `cargo check --workspace --all-targets --no-default-features` | Passed. | Passed. |
+| `cargo run -p examples --no-default-features --features lie --bin lie_algebra` | Passed: center 1, ideals [3,3], commutant 3. | Passed. |
+| `cargo run -p examples --all-features --bin lie_algebra` | Passed. | Passed. |
+| `cargo test -p syntaqs-tests --no-default-features --features lie --test lie_analysis` | 10 tests passed. | 10 passed. |
+| Standalone `cargo run --manifest-path tests/fixtures/lie-blas/Cargo.toml` | f32/f64 BLAS and LAPACK solve/eigen linkage passed. | Passed. |
+| Standalone neutral/system-provider `cargo tree --edges normal` checks matching CI | No library-selected native provider; application selects system OpenBLAS via blas-src, without ndarray-linalg provider features. | Passed. |
+| Independent export and shared tests with Vec, ndarray, and sprs | All six package/backend combinations passed. | Stable-only backend CI matrix. |
+| Workspace and standalone-fixture formatting | Passed. | Stable-only quality CI. |
+| All-target/all-feature Clippy with `-D warnings` | Passed. | Stable-only quality CI. |
+| All-feature rustdoc with `RUSTDOCFLAGS=-D warnings` | Passed. | Stable-only documentation CI. |
+
+The verification batch completed 21 stable checks and 11 Rust 1.85 checks, all
+successfully, on aarch64 macOS with Nix system OpenBLAS. Commands ran locally;
+GitHub-hosted Linux jobs were configured but were not triggered in this session.
+Source/host checks preserve the existing no_std boundaries but do not establish
+dedicated-target no_std success. Existing manifest warnings about both license
+fields remain.
+
+The Step 5 expression-contraction cancellation limit remains documented, with
+explicit residual overrides and no silent tolerance relaxation. No upstream
+Julia suite, cross-platform bitwise seed equivalence, or performance benchmark
+was run. Release numbering, commits, merging, and publication remain separate
+actions. This implementation workspace is retained until merge; lasting
+contracts and check instructions are already in permanent documents.
