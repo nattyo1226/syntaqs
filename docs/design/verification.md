@@ -6,7 +6,7 @@ Updated: 2026-11-09
 
 Feature designs define mathematical contracts and boundary cases. This document describes test placement, common commands, regression coverage, and environment limitations. Dated execution results and progress belong in active implementation plans; completed plans are removed after lasting specifications are recorded as described in the [documentation guide](../README.md#1-document-responsibilities).
 
-Production-library tests live in each crate's `tests/` and unit tests. [syntaqs-tests](../../tests/README.md) holds shared three-level and graded two-state algebras, non-orthonormal bases, independent references, and core/normalize/export integration tests. [Examples](../../examples/README.md) include end-to-end model tests. Production crates do not depend on test packages.
+Production-library tests live in each crate's `tests/` and unit tests. [syntaqs-tests](../../tests/README.md) holds shared three-level and graded two-state algebras, non-orthonormal bases, independent references, and core/normalize/export/Lie integration tests. [Examples](../../examples/README.md) include end-to-end model and Lie workflows. Production crates do not depend on test packages.
 
 ## 2. Common checks
 
@@ -95,9 +95,11 @@ Family analysis inherits the expression-contraction cancellation limits document
 in [Lie contracts](lie.md#3-projection-and-numerical-scales). Some cyclic
 nonorthonormal inputs need explicit residual overrides; no validation stage
 silently relaxes them. Dedicated-target no_std builds, cross-platform bitwise
-seed reproducibility, and equivalence with an upstream Julia test suite are not
-established by host test success. Dated execution evidence belongs in active
-plans; workflow configuration alone does not establish a GitHub-hosted run.
+seed reproducibility, and equivalence with the
+[pinned Julia reference](../decisions/lie-analysis.md#context) are not established
+by host test success. Workflow configuration alone does not establish a
+GitHub-hosted run. Residual-accuracy investigation is tracked in
+[future work](../future-work.md#31-lie-residual-accuracy).
 
 Dedicated no_std target builds for core, geometry, spin-half, and fermion remain unverified. Source/dependency-feature inspection and host builds do not establish dedicated-target success. Shared Arc requires pointer-width atomic operations on the target.
 

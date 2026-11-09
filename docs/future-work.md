@@ -1,6 +1,6 @@
 # Future work
 
-Updated: 2026-11-02
+Updated: 2026-11-09
 
 This document collects future features, required design reviews, and candidates not yet adopted. Current specifications belong in [architecture](architecture.md) and [design](README.md#2-feature-details). Follow the [documentation guide](README.md#1-document-responsibilities) when starting an implementation plan or completing work.
 
@@ -52,3 +52,15 @@ Do not create crates solely for prospective features before their independent re
 Dedicated no_std target builds, benchmarks, speed comparisons, and further allocation optimization remain unverified. See [verification](design/verification.md) for current checks and limits.
 
 Distributing sums inside operator products can increase term counts even when the result is sparse. Future investigations include combining local sums earlier, comparing caching with recomputation, and retaining interval parity as unevaluated structure.
+
+### 3.1. Lie residual accuracy
+
+Investigate reducing cancellation in projection, closure, and Hermiticity
+residuals for nonorthonormal operator expressions. The current implementation
+uses explicit exact term collection; strict tolerances can still reject some
+mathematically valid families. Any improvement must preserve small positive
+residuals, avoid tolerance-based coefficient pruning, and retain factored local
+sums without global Cartesian expansion. No additional accuracy guarantee or
+specific replacement algorithm is adopted. See the
+[current numerical contract](design/lie.md#3-projection-and-numerical-scales)
+and [verification limits](design/verification.md#3-ci-and-verification-limits).

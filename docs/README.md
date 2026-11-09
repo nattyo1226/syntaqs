@@ -10,6 +10,7 @@ Updated: 2026-11-09
 | [architecture](architecture.md) | An overview of what it provides: the overall structure and allocation of responsibilities. |
 | [future-work](future-work.md) | Features to implement and candidates not yet adopted. Details belong in `future-work/`. |
 | `design/` | The API, mathematical contracts, constraints, and implementation of each feature currently provided. |
+| `decisions/` | Consequential design choices, their rationale, and reference baselines. |
 | `plans/` | Plans and progress for work currently being implemented. |
 
 Keep detailed current specifications in the corresponding design documents and link to them from requirements and architecture. Separate proposals for unimplemented features from current specifications, and create a plan in `plans/` when implementation starts. Completed steps within an active plan remain part of its progress record. Once the work is complete and merged, move any lasting specifications and conventions into the appropriate permanent documents, update incoming references, and remove the completed plan. Create `plans/` as needed; it need not exist when no plans are active.

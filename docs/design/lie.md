@@ -8,8 +8,10 @@ Updated: 2026-11-09
 and independence diagnostics, Gram factorizations, real projection coordinates,
 reconstruction, residuals, span membership, ordinary Lie brackets, closure
 diagnostics, retained Lie representations, real family transformations, the
-full real adjoint commutant, and the full center with its HS-orthogonal
-complement, and complete center/simple-ideal decomposition.
+full real adjoint commutant, the full center with its HS-orthogonal complement,
+and complete center/simple-ideal decomposition. The
+[design decision](../decisions/lie-analysis.md) records the reference baseline,
+intentional compatibility differences, and dependency choices.
 
 `OperatorFamily<E>` uses the sealed `FamilyExpression` adapter for core's
 `LocalOperator<O,Complex<R>>` and `Operator<I,O,Complex<R>>`, with R=f32/f64.
@@ -73,7 +75,9 @@ compatible tensor terms merge without Cartesian expansion. This reduces
 cancellation before squaring without changing ordinary evaluation or imposing an approximate-zero
 policy. Collection uses primitive equality, not a complete independent operator
 basis; distinct natural primitives may still have linear relations. No general
-accuracy guarantee beyond the recorded numerical checks is asserted.
+accuracy guarantee beyond the covered numerical cases is asserted. Candidate
+[residual-accuracy improvements](../future-work.md#31-lie-residual-accuracy)
+remain future work.
 
 ### 3.1. Numerical settings and defaults
 
