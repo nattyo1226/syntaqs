@@ -66,8 +66,12 @@ bracket of odd operators on a graded space.
 commutants and centers with independent real block matrices, including complete
 spans, original-coordinate residuals, basis-change covariance, absent components,
 and rank/residual overrides. Unit tests distinguish internal symmetric commuting
-subspaces from the public full real commutant. Simple-ideal decomposition remains
-a subsequent step.
+subspaces from the public full real commutant.
+[Decomposition tests](../../crates/syntaqs-lie/tests/decomposition.rs) check center
+and complete simple-ideal spans, basis-change covariance, emitted-expression
+reconstruction/validation, independent block invariants, seeded reproducibility,
+explicit tolerance overrides, and finite exhaustion at f32/f64. Internal tests
+force collisions/retries and reject unsplit or nonideal candidates.
 
 Dedicated no_std target builds for core, geometry, spin-half, and fermion remain unverified. Source/dependency-feature inspection and host builds do not establish dedicated-target success. Shared Arc requires pointer-width atomic operations on the target.
 

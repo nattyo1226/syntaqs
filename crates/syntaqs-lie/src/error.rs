@@ -43,6 +43,14 @@ pub enum NumericalError {
 /// Invalid family context or failed operator-analysis precondition.
 #[derive(Debug, thiserror::Error)]
 pub enum LieError<R> {
+    /// Sampling failed to produce a validated complete simple-ideal split.
+    #[error("decomposition exhausted its configured attempt budget (seed {seed})")]
+    DecompositionExhausted {
+        /// Seed used by the deterministic sampling stream.
+        seed: u64,
+        /// Spectral grouping and validation diagnostics for every failed attempt.
+        attempts: Vec<crate::DecompositionAttempt<R>>,
+    },
     /// A computed constraint-nullspace vector fails the residual tolerance.
     #[error("{operation} candidate {index} exceeds the constraint residual tolerance")]
     ConstraintResidual {

@@ -1,8 +1,8 @@
 # syntaqs-lie
 
 Operator families, numerical foundations, and Lie representations using syntaqs
-expressions, including adjoint commutants and centers. Simple-ideal decomposition
-remains a subsequent step.
+expressions, including adjoint commutants, centers, and complete decomposition
+into the full center and nonabelian simple ideals.
 
 `OperatorFamily<E>` retains a nonempty ordered family of `LocalOperator` or
 placed `Operator` expressions with complex f32/f64 coefficients. `new` infers a
@@ -84,6 +84,39 @@ the singular-value cutoff; failures return `ConstraintResidual`. Center residual
 are also checked in original coordinates. The symmetric commuting subspace used
 for later decomposition is a separate internal object in orthonormal coordinates.
 See the [API contract](../../docs/design/lie.md#6-adjoint-commutant-and-center).
+
+## Center and simple-ideal decomposition
+
+`decompose` on an `AdjointRepresentation` uses its retained numerical settings;
+on a family, `decompose(&numerical, &sampling)` first validates the Lie
+preconditions. `DecompositionOptions` supplies `seed` (default zero) and
+`max_attempts` (default 32, required positive). Sampling uses a deterministic
+internal stream without another production dependency. Reproducibility is
+within the same numerical environment, not across LAPACK implementations.
+
+`LieDecomposition::center()` returns the full center as one optional
+`LieComponent`; `simple_ideals()` returns the nonabelian simple components.
+Each component exposes its reconstructed `family()` and column `coordinates()`
+in the original source family. Output is HS-orthonormal; signs, basis vectors,
+and ideal order are not canonical. `orthogonalize` and `orthonormalize` on a
+component compose its coordinates back to the original source.
+
+The algorithm separates the center first, samples the symmetric commutant on
+its complement, and groups a sampled eigensystem. `eigenvalue_relative` controls
+the gap threshold. Every proposed split must pass full-span/orthonormality,
+centrality, ideal invariance, cross-ideal commutation, nonabelianness, centerless
+block, and restricted symmetric-commutant checks. An unsplit direct sum never
+becomes a simple ideal. Failed candidates retry; `DecompositionExhausted` retains
+all failed attempts when the budget is used up. Purely abelian input returns
+only the center and needs no sampled attempts. Diagnostics retain effective
+gaps, constraint cutoffs, retry history, and final invariant checks.
+
+Reconstruction collects exact terms without coefficient pruning, and returned
+families are checked again. Family decomposition still uses the existing
+projection/closure residual evaluator: some nonorthonormal expressions can
+suffer cancellation under strict tolerances. Any residual override is explicit;
+decomposition never loosens a caller's settings. See the
+[decomposition contract](../../docs/design/lie.md#7-complete-center-and-simple-ideal-decomposition).
 
 ## Native linkage
 

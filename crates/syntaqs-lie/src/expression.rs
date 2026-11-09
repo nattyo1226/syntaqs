@@ -33,6 +33,8 @@ pub trait FamilyExpression: private::Sealed + Clone {
     #[doc(hidden)]
     fn sum_in(operators: Vec<Self>, context: &Self::Context) -> Result<Self, ExpressionError>;
     #[doc(hidden)]
+    fn collected_in(&self, context: &Self::Context) -> Result<Self, ExpressionError>;
+    #[doc(hidden)]
     fn scaled_real(&self, coefficient: Self::Real) -> Self;
     #[doc(hidden)]
     fn adjoint_expression(&self) -> Self;
@@ -66,6 +68,9 @@ where
     }
     fn sum_in(operators: Vec<Self>, _: &()) -> Result<Self, ExpressionError> {
         Ok(Self::sum(operators))
+    }
+    fn collected_in(&self, _: &()) -> Result<Self, ExpressionError> {
+        Ok(self.collect_terms())
     }
     fn scaled_real(&self, coefficient: R) -> Self {
         self.scaled(Complex::new(coefficient, R::zero()))
@@ -117,6 +122,9 @@ where
     }
     fn sum_in(operators: Vec<Self>, context: &Self::Context) -> Result<Self, ExpressionError> {
         Self::sum(operators)?.bind(context)
+    }
+    fn collected_in(&self, context: &Self::Context) -> Result<Self, ExpressionError> {
+        self.in_context(context)?.collect_terms_in(context)
     }
     fn scaled_real(&self, coefficient: R) -> Self {
         self.scaled(Complex::new(coefficient, R::zero()))

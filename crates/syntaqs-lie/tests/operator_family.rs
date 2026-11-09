@@ -553,6 +553,11 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
     let center = local.center(&options).unwrap();
     assert_eq!(center.center().unwrap().len(), 2);
     assert!(center.complement().is_none());
+    let decomposition = local
+        .decompose(&options, &syntaqs_lie::DecompositionOptions::default())
+        .unwrap();
+    assert_eq!(decomposition.center().unwrap().family().len(), 2);
+    assert!(decomposition.simple_ideals().is_empty());
     assert!(
         local
             .structure_constants(&options)
@@ -577,6 +582,11 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
     let center = placed.center(&options).unwrap();
     assert_eq!(center.center().unwrap().len(), 2);
     assert!(center.complement().is_none());
+    let decomposition = placed
+        .decompose(&options, &syntaqs_lie::DecompositionOptions::default())
+        .unwrap();
+    assert_eq!(decomposition.center().unwrap().family().len(), 2);
+    assert!(decomposition.simple_ideals().is_empty());
     assert!(
         placed
             .structure_constants(&options)

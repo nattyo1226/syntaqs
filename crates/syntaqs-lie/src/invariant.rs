@@ -76,7 +76,9 @@ pub struct CenterSplit<'a, E: FamilyExpression> {
     complement: Option<OperatorFamily<E>>,
     center_coordinates: Array2<E::Real>,
     complement_coordinates: Array2<E::Real>,
-    orthonormal: OrthonormalCoordinates<E::Real>,
+    pub(crate) orthonormal: OrthonormalCoordinates<E::Real>,
+    pub(crate) center_axes: Array2<E::Real>,
+    pub(crate) complement_axes: Array2<E::Real>,
     diagnostics: ConstraintDiagnostics<E::Real>,
     centrality: Vec<ToleranceCheck<E::Real>>,
     options: NumericalOptions<E::Real>,
@@ -125,7 +127,7 @@ impl<'a, E: FamilyExpression> CenterSplit<'a, E> {
     }
 }
 
-fn vector_norm<R: Float>(values: impl IntoIterator<Item = R>) -> R {
+pub(crate) fn vector_norm<R: Float>(values: impl IntoIterator<Item = R>) -> R {
     values
         .into_iter()
         .fold(R::zero(), |norm, value| norm.hypot(value))
@@ -163,7 +165,7 @@ where
     Ok(checks)
 }
 
-fn diagnostics<R>(
+pub(crate) fn diagnostics<R>(
     constraints: &Array2<R>,
     analysis: &RankAnalysis<R>,
     options: &NumericalOptions<R>,
@@ -184,7 +186,7 @@ where
     })
 }
 
-fn adjoint_kernel<R: Float>(matrices: &[Array2<R>], n: usize) -> Array2<R> {
+pub(crate) fn adjoint_kernel<R: Float>(matrices: &[Array2<R>], n: usize) -> Array2<R> {
     Array2::from_shape_fn((matrices.len() * n, n), |(row, col)| {
         matrices[row / n][(row % n, col)]
     })
@@ -324,6 +326,8 @@ where
             center_coordinates,
             complement_coordinates,
             orthonormal,
+            center_axes: analysis.nullspace,
+            complement_axes: analysis.complement,
             diagnostics,
             centrality,
             options: *self.options(),
@@ -351,15 +355,12 @@ where
     }
 }
 
-// Staged for Step 5's spectral ideal splitting; intentionally distinct from the
-// public full real commutant. Unit tests exercise it before decomposition lands.
-#[allow(dead_code)]
+// Intentionally distinct from the public full real commutant.
 pub(crate) struct SymmetricCommutant<R> {
     pub matrices: Vec<Array2<R>>,
     pub diagnostics: ConstraintDiagnostics<R>,
 }
 
-#[allow(dead_code)]
 pub(crate) fn symmetric_commutant<R>(
     orthonormal_adjoints: &[Array2<R>],
     n: usize,

@@ -4,14 +4,14 @@
 //! are selected by the application through `blas-src`; this crate selects none.
 //! Ordered operator families support explicit validation and real HS projection.
 //! Lie brackets, closure diagnostics, retained representations, and real basis
-//! transformations, adjoint commutants, and centers are supported. Simple-ideal
-//! decomposition is a subsequent step.
+//! transformations, adjoint commutants, centers, and complete simple-ideal
+//! decomposition are supported.
 //!
 //! ```
 //! # extern crate blas_provider as _;
 //! use num_complex::Complex;
 //! use syntaqs_core::LocalOperator;
-//! use syntaqs_lie::{LieError, NumericalOptions, OperatorFamily};
+//! use syntaqs_lie::{DecompositionOptions, LieError, NumericalOptions, OperatorFamily};
 //! use syntaqs_spin_half::SpinHalfOperator as Pauli;
 //!
 //! type Op = LocalOperator<Pauli, Complex<f64>>;
@@ -39,6 +39,11 @@
 //! let split = adjoint.center()?;
 //! assert!(split.center().is_none());
 //! assert_eq!(split.complement().unwrap().len(), 3);
+//! let settings = DecompositionOptions { seed: 7, max_attempts: 16 };
+//! let decomposition = adjoint.decompose(&settings)?;
+//! assert!(decomposition.center().is_none());
+//! assert_eq!(decomposition.simple_ideals().len(), 1);
+//! assert!(decomposition.diagnostics().validation.passed());
 //! # Ok::<(), LieError<f64>>(())
 //! ```
 
@@ -50,6 +55,7 @@ extern crate blas_src as _;
 #[cfg(test)]
 extern crate blas_provider as _;
 
+mod decomposition;
 mod error;
 mod expression;
 mod family;
@@ -61,6 +67,10 @@ mod transform;
 mod numerical;
 mod tolerance;
 
+pub use decomposition::{
+    DecompositionAttempt, DecompositionDiagnostics, DecompositionFailure, DecompositionOptions,
+    DecompositionValidation, LieComponent, LieDecomposition,
+};
 pub use error::{LieError, NumericalError};
 pub use expression::FamilyExpression;
 pub use family::{

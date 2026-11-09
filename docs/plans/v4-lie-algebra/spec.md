@@ -1,8 +1,9 @@
 # Implementation specification
 
 Status: numerical foundations, operator-family/projection APIs, brackets,
-representations, family transformations, the full adjoint commutant, and center
-extraction are implemented. Simple-ideal decomposition remains target behavior.
+representations, family transformations, the full adjoint commutant, center
+extraction, and complete simple-ideal decomposition are implemented. Final public
+integration and full verification remain Step 6.
 Implementation order and checks are in [the plan](implementation-plan.md).
 
 ## Scope and boundaries

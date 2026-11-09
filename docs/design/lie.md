@@ -9,7 +9,7 @@ and independence diagnostics, Gram factorizations, real projection coordinates,
 reconstruction, residuals, span membership, ordinary Lie brackets, closure
 diagnostics, retained Lie representations, real family transformations, the
 full real adjoint commutant, and the full center with its HS-orthogonal
-complement. Simple-ideal decomposition remains unimplemented.
+complement, and complete center/simple-ideal decomposition.
 
 `OperatorFamily<E>` uses the sealed `FamilyExpression` adapter for core's
 `LocalOperator<O,Complex<R>>` and `Operator<I,O,Complex<R>>`, with R=f32/f64.
@@ -152,8 +152,8 @@ centerless input has no center family, and purely abelian input has no complemen
 family. Absent coordinate matrices retain n rows and zero columns. No empty
 `OperatorFamily` is constructed. The split retains forward/inverse orthonormal
 transforms and centrality checks in original coordinates. In the accepted
-Hermitian compact domain, this complement is the semisimple part; simple-ideal
-splitting is not performed here.
+Hermitian compact domain, this complement is the semisimple part; `decompose`
+performs its simple-ideal splitting separately.
 
 Family convenience methods `commutant(options)` and `center(options)` require
 Hermiticity, independence, and closure before obtaining the adjoint representation.
@@ -174,12 +174,87 @@ All dimensions and validity claims are relative to the recorded tolerances.
 
 The internal `SymmetricCommutant` solves constraints restricted to real symmetric
 matrices in HS-orthonormal coordinates, with Frobenius-orthonormal parameter basis
-`E_aa` and `(E_ab+E_ba)/sqrt(2)`. It is a distinct internal object for subsequent
+`E_aa` and `(E_ab+E_ba)/sqrt(2)`. It is a distinct internal object for
 spectral ideal splitting and is not exposed as the public full commutant. Its
 kernel uses the same rank/residual diagnostics. For a three-dimensional abelian
 algebra its dimension is six, whereas the public full commutant has dimension nine.
 
-## 7. Verification
+## 7. Complete center and simple-ideal decomposition
+
+`OperatorFamily::decompose(numerical,sampling)` verifies Hermiticity,
+independence, and closure before using the retained adjoint representation.
+`AdjointRepresentation::decompose(sampling)` reuses its coefficients and numerical
+settings. `DecompositionOptions` contains a caller-supplied u64 seed and a finite,
+positive `max_attempts` budget; defaults are seed zero and 32 attempts. A zero
+budget errors even for purely abelian input.
+
+The center-first algorithm reuses `CenterSplit` and its retained internal center
+and complementary axes. Let `A_k` be the adjoints of an internal HS-orthonormal
+family, and let `Q` contain orthonormal columns for a subspace. Its own generator
+adjoints in component coordinates are
+`Q^T (sum_k Q[k,j] A_k) Q`. Apply this formula first to the semisimple complement,
+and compute its real symmetric commutant. That commutant's dimension is the
+required number of nonabelian simple ideals in this compact centerless domain.
+
+For each attempt, form a real linear combination of the Frobenius-orthonormal
+symmetric commutant basis with pseudorandom coefficients in `[-1,1]`
+(precision-rounded 53-bit samples). An internal SplitMix64 stream supplies
+deterministic samples without a new
+production dependency. Diagonalize the sampled real symmetric matrix. With
+ascending eigenvalues, join adjacent gaps less than or equal to
+`eigenvalue_cutoff(d) * max(abs(eigenvalues))`, where d is the semisimple dimension.
+Retain eigenvalues, the effective relative and absolute gap, and group ranges.
+Group counts disagreeing with the symmetric commutant dimension are rejected.
+
+Map candidate eigenspace columns back to the full internal orthonormal family.
+`DecompositionValidation` checks all of the following using the residual tolerance:
+
+- The combined center/ideal coordinate Gram matrix and projector agree with
+  identity, both at Frobenius scale `sqrt(n)`. This checks direct-sum span and
+  overlap independently.
+- Stacked ambient adjoints annihilate the full center. The scale is the combined
+  adjoint Frobenius norm times the center-column Frobenius norm. The center is
+  retained in full from the initial common-kernel rank decision.
+- Every ideal is invariant under every ambient adjoint: residuals are
+  `A_k Q-Q Q^T A_k Q`, aggregated over generators, at the combined adjoint norm
+  times `||Q||_F`.
+- Different ideals commute: for each left basis vector x, evaluate `ad_x Q_right`.
+  Aggregate residuals and the scales `||ad_x||_F ||Q_right||_F` over left vectors.
+- Each block has demonstrably nonzero own bracket action, using its combined
+  restricted-adjoint norm checked against zero at the full ambient-adjoint norm
+  scale. A passing zero check identifies an abelian candidate and rejects it.
+- Each block's own adjoints have zero-dimensional common kernel, and their
+  symmetric commutant has exactly one dimension, the scalar identity. A larger
+  symmetric commutant indicates an incomplete split, even if all other checks
+  pass. Both restrictions retain SVD rank/cutoff diagnostics.
+
+Failed invariants and restricted constraint residuals reject the candidate and
+retry. Invalid/nonfinite numerical data and backend failures remain immediate
+errors. Exhausting the finite budget returns `DecompositionExhausted`, with the
+seed and every failed `DecompositionAttempt`; no incomplete result is returned
+as a successful decomposition. Purely abelian input bypasses sampling and
+returns the full center with zero simple ideals, after centrality and full-span
+validation. No empty operator family is constructed.
+
+`LieDecomposition` borrows the exact source family, retains numerical and sampling
+settings, and exposes the full center as `Option<LieComponent>` separately from
+its simple-ideal slice. Components own reconstructed families and retain their
+columns in the original source coordinates. They initially form HS-orthonormal
+families. Reconstruction explicitly collects exact natural terms before returning
+them, with no tolerance-based pruning or global tensor-sum expansion, and checks
+Hermiticity, independence, and orthonormality of the emitted expressions.
+Component `orthogonalize`/`orthonormalize` methods compose the new transformation
+with the retained source coordinates.
+
+Numerical settings govern validity. In particular family decomposition inherits
+the projection/closure residual evaluator described above: cancellation in some
+nonorthonormal expressions can exceed strict default tolerances, and any override
+must be explicit. Internal decomposition never relaxes them. Seeds reproduce the
+sampling path within the same numerical environment; no bitwise guarantee across
+LAPACK implementations or platforms is asserted. Different valid runs may change
+component order or eigenvectors; compare component spans/projectors and invariants.
+
+## 8. Verification
 
 [Public family tests](../../crates/syntaqs-lie/tests/operator_family.rs) compare
 against independent small matrices at both precisions, covering nonorthonormal
@@ -210,3 +285,14 @@ preconditions at f32/f64. Internal tests distinguish symmetric/full dimensions
 and verify orthonormal generator/action transforms and symmetric constraints.
 Capability tests also cover these APIs without primitive/index Clone, Dimension,
 state, or state-basis traits.
+
+[Decomposition tests](../../crates/syntaqs-lie/tests/decomposition.rs) compare
+center and ideal projectors with independent su(2) blocks at f32/f64, including
+one to three simple factors, purely abelian input, one- and multidimensional
+centers, real nonorthonormal changes, graded generators, coordinate reconstruction,
+component orthogonalization, seed reproducibility, invalid settings, and exhausted
+spectral grouping. Default-tolerance shears and cyclic changes with explicit
+residual overrides are both covered. Internal tests inject an accidental spectral
+collision, verify retry/exhaustion behavior, and reject invariant unsplit direct
+sums and nonideal partitions. Capability tests also exercise decomposition
+without primitive/index Clone, Dimension, or state traits.

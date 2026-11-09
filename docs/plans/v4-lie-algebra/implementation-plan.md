@@ -1,6 +1,6 @@
 # Implementation plan
 
-Status: Steps 1–4 complete; Steps 5–6 pending. Continue in order against
+Status: Steps 1–5 complete; Step 6 pending. Continue in order against
 [the specification](spec.md). Each step includes its feature tests. Record
 actual commands/results when completed, not as prospective successes.
 
@@ -89,16 +89,16 @@ subspace results must not be mislabeled as the full commutant.
 
 ## Step 5: Complete center and simple-ideal decomposition
 
-- [ ] Implement the specified center-first Julia-style sampling/eigenspace
+- [x] Implement the specified center-first Julia-style sampling/eigenspace
   algorithm and reconstruct results as LieDecomposition.
-- [ ] Add caller-supplied seeds, finite retry settings, eigenvalue grouping,
+- [x] Add caller-supplied seeds, finite retry settings, eigenvalue grouping,
   exhaustion errors, and effective-setting diagnostics.
-- [ ] Validate the full center, direct-sum span, ideal invariance, cross-ideal
+- [x] Validate the full center, direct-sum span, ideal invariance, cross-ideal
   commutation, and complete splitting. For the compact centerless blocks,
   check that no further symmetric commuting projector can split a block;
   a restricted symmetric commutant larger than scalar identity signals an
   incomplete split rather than a simple ideal.
-- [ ] Support orthogonalizing decomposition components. Resolve zero-center
+- [x] Support orthogonalizing decomposition components. Resolve zero-center
   layout and result accessor signatures without adding validated-basis types.
 
 **Completion gate:** recover su(2), two commuting su(2) factors, su(2) plus
@@ -301,3 +301,63 @@ manifest fields remain. Full default/no-default workspace test runs and independ
 backend/provider checks were not repeated for this crate-local change; the
 complete integration/release verification remains Step 6. Simple-ideal
 decomposition remains Step 5.
+
+## Step 5 results: 2026-11-09
+
+Implemented center-first `LieDecomposition`, with the full center as one optional
+`LieComponent` and a separate list of nonabelian simple ideals. Components retain
+original coordinate columns, reconstruct in the common expression context, and
+support orthogonalization/orthonormalization with composed source coordinates.
+Centerless and purely abelian layouts construct no empty families.
+
+The algorithm reuses the center split's retained orthonormal axes and computes
+the symmetric commutant of the semisimple complement. A deterministic internal
+SplitMix64 stream samples real symmetric combinations. `DecompositionOptions`
+provides seed zero and 32 attempts by default; caller overrides are explicit and
+a zero budget errors. Eigenvalue grouping uses the numerical eigenvalue-gap
+setting. Candidate group counts must match the commutant dimension. Full-span,
+orthonormality, centrality, ideal invariance, cross-ideal commutation, nonabelian
+bracket action, block centers, and scalar-only restricted symmetric commutants
+must all pass. Incomplete candidates and restricted constraint residual failures
+retry; exhaustion retains every failed attempt and its effective diagnostics.
+The [current design](../../design/lie.md#7-complete-center-and-simple-ideal-decomposition)
+owns the API and numerical-scale contracts.
+
+Reconstructed components explicitly collect exact natural terms before returning
+expressions. This avoids cancellation in subsequent Hermiticity checks without
+coefficient pruning or global tensor expansion. Emitted families are checked for
+Hermiticity, independence, and orthonormality as well as the coefficient-space
+invariants. Core and export APIs and all production dependencies remain unchanged.
+
+Sixteen new public tests and six internal tests cover f32/f64 examples with one
+to three su(2) factors, one- and multidimensional centers, purely abelian input,
+real nonorthonormal transformations, independent projector/block invariants,
+graded generators, reconstructed expressions, component orthogonalization, seeded
+reproducibility, invalid preconditions, effective gap overrides, retries, and
+exhaustion. Forced collisions verify recovery or finite failure; unsplit invariant
+direct sums and nonideal partitions fail validation. Existing capability tests
+also cover decomposition without primitive/index Clone, Dimension, or state types.
+
+| Check | Result |
+| --- | --- |
+| `cargo test -p syntaqs-lie` under stable and Rust 1.85.0 | 32 unit tests, 16 decomposition tests, 12 invariant tests, 27 family tests, 16 representation tests, and one doctest passed in each. |
+| `cargo test --workspace --all-features` | Passed, including doctests. |
+| `cargo build --workspace --all-features`; `cargo check --workspace --all-targets --no-default-features` | Passed. |
+| Workspace formatting, all-target/all-feature Clippy and rustdoc with `-D warnings` | Passed. |
+
+An additional cyclic nonorthonormal change exposed an inherited closure-residual
+limitation before decomposition: the existing f64 `structure_constants` check
+reported a residual of about `5.82e-11` against a bound of `3.25e-12` for a
+mathematically closed example. This is expression-contraction cancellation, not
+an incomplete spectral split; no closure or residual kernel changed here.
+Tests therefore cover both default-tolerance shears and the cyclic changes with
+explicit residual overrides (`max(default,1e-8)` for absolute and relative).
+Independent projector checks still use the default comparison tolerance.
+Decomposition never silently loosens numerical settings. General residual
+accuracy beyond the existing collection contract remains unclaimed.
+
+Verification ran locally on aarch64 macOS with Nix OpenBLAS. GitHub-hosted Linux
+CI was not executed in this session. Existing warnings about both license fields
+remain. Full default/no-default workspace tests and independent backend/provider
+checks were not repeated for this crate-local change. Step 6 still owns the
+runnable integration example and final complete repository verification.
