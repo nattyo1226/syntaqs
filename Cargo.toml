@@ -18,7 +18,7 @@ exclude = ["tests/fixtures/lie-blas"]
 
 [workspace.package]
 edition = "2024"
-version = "0.3.0"
+version = "0.4.0"
 rust-version = "1.85"
 license = "MIT"
 repository = "https://github.com/nattyo1226/syntaqs"
@@ -47,7 +47,9 @@ ndarray = { version = "0.17.2", default-features = false, features = ["std"] }
 sprs = { version = "=0.11.4", default-features = false }
 
 # Dense factorizations and provider-neutral native linkage.
-ndarray-linalg = { version = "0.18.1", default-features = false, features = ["blas"] }
+ndarray-linalg = { version = "0.18.1", default-features = false, features = [
+    "blas",
+] }
 blas-src = { version = "0.14.0", default-features = false }
 
 # Development provider, selected by support/blas-provider.
