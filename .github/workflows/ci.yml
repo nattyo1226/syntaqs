@@ -47,13 +47,18 @@ jobs:
       # Keep doctests, including compile_fail cases, in the test suite.
       - name: Test workspace
         run: cargo test --workspace ${{ matrix.configuration.args }}
+      # These commands select their own features; run once per toolchain.
       - name: Run Lie analysis example without export backends
+        if: matrix.configuration.name == 'default'
         run: cargo run -p examples --no-default-features --features lie --bin lie_algebra
       - name: Test shared Lie workflow without export backends
+        if: matrix.configuration.name == 'default'
         run: cargo test -p syntaqs-tests --no-default-features --features lie --test lie_analysis
       - name: Test downstream blas-src linkage
+        if: matrix.configuration.name == 'default'
         run: cargo run --manifest-path tests/fixtures/lie-blas/Cargo.toml
       - name: Verify provider selection is isolated
+        if: matrix.configuration.name == 'default'
         shell: bash
         run: |
           for selection in neutral system-openblas; do

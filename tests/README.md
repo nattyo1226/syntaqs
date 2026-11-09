@@ -43,3 +43,7 @@ public workflow at f32/f64. It compares spin/fermion and custom three-level/grad
 algebras with independently assembled matrices. Operator-only adapters provide
 no primitive Clone, Dimension, Basis, state, or action capabilities. An 80-factor
 case verifies that the full workflow needs no full physical action matrix.
+
+[lie_decomposition.rs](tests/lie_decomposition.rs) covers su(3) and mixed
+su(3) + su(2) decomposition at f32/f64 with independent ideal projectors.
+Run it alone with `cargo test -p syntaqs-tests --no-default-features --features lie --test lie_decomposition`.
