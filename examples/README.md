@@ -11,6 +11,7 @@ cargo run -p examples --bin expression_formatting
 cargo run -p examples --bin two_spins
 cargo run -p examples --bin tensor_products
 cargo run -p examples --bin basis_expansion
+cargo run -p examples --no-default-features --features lie --bin lie_algebra
 cargo run -p examples --bin heisenberg
 cargo run -p examples --bin heisenberg --features export
 cargo run -p examples --bin hubbard
@@ -22,6 +23,21 @@ cargo run -p examples --bin pauli_strings
 ```
 
 `expression_formatting` demonstrates Tag and Id128 indices, ordinary Display, and multiline formatting with `{:#}`. It prints product-state kets, tensors containing local superpositions, the three-factor GHZ state `(|up,up,up> + |down,down,down>)/√2`, and a delayed action on that state. It covers coefficients, actions, adjoints, and the eight-character index limit used only in expression Display. It also constructs a four-site open Heisenberg chain with tags `s0` through `s3` and a transverse field, `H = -(1/4) Σ⟨i,j⟩ S_i·S_j - 0.2 Σᵢ Sx_i`, and compares ordinary and multiline formatting of the same expression. Here Sx, Sy, and Sz are Pauli matrices. The example does not print Debug output. It needs no additional features and also runs with `--no-default-features`. See the [expression formatting design](../docs/design/expression-formatting.md) for the formatting contract.
+
+`lie_algebra` runs the full public Lie workflow on two commuting Pauli triples
+and the identity, representing su(2) + su(2) + u(1). It constructs and validates
+the family, reuses a Gram factorization for projection/closure/structure
+constants, obtains the adjoint commutant and Killing form, and decomposes the full
+center and simple ideals. It checks projection residual 1, cyclic constant 2,
+Killing diagonal `[-8,-8,-8,-8,-8,-8,0]`, center dimension 1, and ideal dimensions
+`[3,3]`. The example explicitly sets residual tolerances and seed 816 with a
+finite attempt budget. It uses no physical action matrix or state basis.
+
+Enable its optional `lie` feature, which imports the internal `blas-provider`
+through `blas-src`. System OpenBLAS supplying both BLAS and LAPACK, plus
+pkg-config, must be available in the development environment. This feature is
+independent of `export` and `normalize`. For a separate application, select your
+provider as described in [syntaqs-lie's native linkage](../crates/syntaqs-lie/README.md#native-linkage).
 
 `two_spins` constructs two-spin singlet and triplet states and the exchange Hamiltonian `H = J_a · J_b = (S_a · S_b)/4` using `Spin::product_state`, `Spin::operator_product_at`, and `Spin::try_operator_sum`. It computes and checks squared norms, energy expectations (−0.75 for the singlet and 0.25 for the triplet), eigenstate residuals, and the overlap between the states. It needs no additional features and also runs with `--no-default-features`.
 
@@ -40,7 +56,7 @@ cargo test -p examples --no-default-features --bin geometry_relations --bin paul
 cargo test -p examples --features export --bin geometry_relations --bin pauli_strings
 ```
 
-`normalize` is enabled by default; `export` is optional. You can also run without normalization:
+`normalize` is enabled by default; `export` and `lie` are optional. You can also run without normalization:
 
 ```sh
 cargo run -p examples --bin heisenberg --no-default-features

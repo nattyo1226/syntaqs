@@ -1,6 +1,6 @@
 # syntaqs requirements
 
-Updated: 2026-11-02
+Updated: 2026-11-09
 
 ## 1. Purpose
 
@@ -14,7 +14,7 @@ This document defines what the project builds. See [architecture](architecture.m
 - Distinguish geometry, factor identity, factor order, local algebra, and the selected basis. Allow spaces and expressions to be constructed without geometry.
 - Connect concrete local rules to shared expression and evaluation machinery. Custom algebras must not need their own expression trees or evaluators.
 - Separate algebraic computation from numerical containers so matrix-free, dense, and sparse calculations use consistent conventions.
-- Delegate arithmetic, rounding, and special values to the numeric type. Automatic differentiation, eigensolvers, and time evolution are outside the current scope.
+- Delegate arithmetic, rounding, and special values to the numeric type. Automatic differentiation, physical Hamiltonian eigensolvers, and time evolution are outside the current scope; dense eigensolvers on selected Lie coordinates support Lie analysis.
 
 Within one system, every factor currently uses the same state and operator primitive types. A composite basis applies one local basis to all factors. Effective mixtures of ordinary and graded products after removing unit and singleton wrappers, implicit factor reordering, and implicit projection onto subspaces are unsupported.
 
@@ -78,6 +78,35 @@ See [bases](design/basis.md) and [export](design/export.md).
 
 See [geometry](design/geometry.md) and [models](design/models.md).
 
+### 3.6. Lie algebra analysis
+
+- Analyze the real span of an ordered, nonempty family of Hermitian local or
+  placed operator expressions under the fixed normalized Hilbert–Schmidt metric.
+  Do not require a state basis or physical action-matrix export.
+- Construct compatible candidate families before mathematical validation. Report
+  Hermiticity, independence, closure, residuals, and effective numerical settings;
+  reject singular bases in operations requiring unique coordinates.
+- Support real projection/reconstruction in nonorthonormal families, ordinary
+  Lie brackets `-i(AB-BA)` including on graded spaces, and real basis changes.
+- Retain structure constants, adjoint matrices, and the classical Killing form
+  with their source family, context, precision, and coordinate conventions.
+- Compute the full real adjoint commutant and the full center with its orthogonal
+  complement. Distinguish the commutant from physical centralizers and its
+  symmetric internal subspace.
+- Decompose compact Hermitian algebras into their full center and nonabelian
+  simple ideals. Validate complete direct-sum span, ideal invariance, mutual
+  commutation, and complete splitting; unresolved candidates must not become
+  successful complete decompositions. Accept seeds and finite attempt budgets.
+- Preserve f32/f64 precision, explicit tolerance overrides, source-coordinate
+  reconstruction, and exact-zero behavior. Numerical checks are relative to
+  their recorded tolerances, with expression-cancellation limits documented.
+- Keep Lie analysis in its own std crate and leave native BLAS/LAPACK provider
+  selection to the application. Do not change core's dependency direction.
+
+General complex Lie algebras, superbrackets, custom inner products, physical
+centralizers, and automatic Lie closure generation are outside this scope.
+See [Lie contracts](design/lie.md) and [native linkage](../crates/syntaqs-lie/README.md#native-linkage).
+
 ## 4. Non-functional requirements
 
 - Support single- and double-precision complex coefficients without implicit precision mixing or promotion. Connect custom coefficients through the required capabilities.
@@ -94,5 +123,11 @@ See [numeric conventions](design/numerics.md) for numerical contracts and [verif
 The representative end-to-end scenario constructs a one-dimensional spin-1/2 chain and factor spaces, builds its Heisenberg Hamiltonian and a Neel product state, and evaluates the energy without generating a matrix. It then exports the same state and operator to dense and sparse forms and compares algebraic results, independent small-system reference matrices, and numerical backends within explicit tolerances.
 
 For physical spins `J_i=S_i/2` and real coupling `g`, the Hamiltonian is `H=-g Σ⟨i,j⟩ J_i·J_j=-(g/4) Σ⟨i,j⟩ S_i·S_j`. On an open chain of length L≥1, the Neel expectation is `g(L−1)/4`; it is zero for zero sites. Positive g is ferromagnetic.
+
+Lie acceptance also compares the complete public workflow with independent small
+matrices at both precisions, including nonorthonormal bases, graded brackets, full
+centers and simple ideals, finite retry/exhaustion behavior, and application-owned
+BLAS/LAPACK linkage. Operator-only and large-spectator cases must not need a state
+basis, Dimension, or full physical matrices.
 
 Also verify all local rules, a custom finite-dimensional algebra, non-orthonormal bases, graded CAR and signs, basis round trips, spaces, bindings, errors, sharing, deep trees, and preservation of small coefficients. Record executed checks in the progress of active plans rather than putting command results or migration history in this document.

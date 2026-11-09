@@ -1,6 +1,6 @@
 # Local expressions and algebraic evaluation
 
-Updated: 2026-11-02
+Updated: 2026-11-04
 
 ## 1. Scope and responsibilities
 
@@ -74,6 +74,14 @@ These laws do not require eager expansion during construction. Retain products/a
 state.act builds an Act node; state.evaluate resolves pending actions to ordinary state syntax using local Act. `ψ.act(&b).act(&a)` means A(Bψ). Evaluate takes no basis and performs no coordinate or matrix conversion.
 
 Local evaluation and explicit basis expansion/coordinates exist; selecting individual simplification rules does not. Distribution, local products, and coefficient combination remain internal steps when needed.
+
+`LocalOperator::collect_terms()` explicitly evaluates products/adjoints and
+combines equal natural primitives using PartialEq. It shares primitive handles,
+needs no primitive Clone or Dimension, and removes exact zeros only. Unlike
+complete basis expansion, it does not resolve linear relations between distinct
+natural primitives. Ordinary construction and evaluation retain their existing
+duplicate/zero behavior. Lie residual calculations use this explicit operation
+to reduce cancellation before normalized HS contraction.
 
 Common ScaleExpr/SumExpr/ProductExpr/ActExpr/AdjointExpr store node contents. Zero is an empty sum. LinearCombination<P,C> stores `SumExpr<ScaleExpr<P,C>>`. Owned map/common constructors move rule/basis outputs into expressions, preserving coefficients, order, duplicates, and zero coefficients without Clone on elements or coefficients for that conversion.
 

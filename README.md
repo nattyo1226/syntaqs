@@ -12,6 +12,7 @@ The name stands for **synta**x for **q**uantum **s**ystems. Build local expressi
 - Basis expansion, re-expansion, and sparse coordinates for states and operators.
 - Chain geometries and helpers for XYZ, Heisenberg, BLBQ, and Hubbard models.
 - State normalization and dense/sparse export to Vec, ndarray, and sprs containers.
+- Lie analysis on operator expressions: real HS projection, brackets, adjoint representations, centers, and complete simple-ideal decomposition.
 
 Each system currently uses one pair of state/operator primitive types across its factors. Partial trace, heterogeneous local algebras, and further extensions are tracked in [future work](docs/future-work.md).
 
@@ -29,14 +30,20 @@ num-complex = "0.4.6"
 
 These dependencies follow the repository's default branch. To use a fixed revision, add the same `rev` value to each syntaqs Git dependency. Publishing to crates.io is planned; the setup above uses Git.
 
-Normalization and numerical export are separate crates. Add these entries to the same dependency table when needed:
+Normalization, numerical export, and Lie analysis are separate crates. Add these entries to the same dependency table when needed:
 
 ```toml
 syntaqs-normalize = { git = "https://github.com/nattyo1226/syntaqs" }
 syntaqs-export = { git = "https://github.com/nattyo1226/syntaqs", features = ["ndarray", "sprs"] }
+syntaqs-lie = { git = "https://github.com/nattyo1226/syntaqs" }
 ```
 
 `syntaqs-export` always supports Vec output. Its default feature set is empty; `ndarray` and `sprs` independently enable the corresponding external containers. See its [crate README](crates/syntaqs-export/README.md) for the output types.
+
+`syntaqs-lie` analyzes the real span of Hermitian operator expressions using
+normalized Hilbert–Schmidt contractions, without a state basis or physical action
+matrices. It requires an application-selected BLAS/LAPACK provider; see its
+[native linkage instructions](crates/syntaqs-lie/README.md#native-linkage).
 
 ## Quick start
 
@@ -79,6 +86,7 @@ The coefficient type is selected once through `Spin`. The spin-1/2 Cartesian pri
 | [syntaqs-geometry](crates/syntaqs-geometry/README.md) | Site geometries, relations, and connections to caller-owned data. |
 | [syntaqs-normalize](crates/syntaqs-normalize/README.md) | Norms, state normalization, and normalized expectations. |
 | [syntaqs-export](crates/syntaqs-export/README.md) | Numerical containers and the metadata needed to interpret them. |
+| [syntaqs-lie](crates/syntaqs-lie/README.md) | Operator families, HS projection, Lie representations, adjoint commutants, centers, and simple-ideal decomposition. |
 | [syntaqs-spin-half](crates/syntaqs-spin-half/README.md) | Spin-1/2 primitives, bases, and spin-chain models. |
 | [syntaqs-spin-one](crates/syntaqs-spin-one/README.md) | Spin-1 dipoles and quadrupoles, bases, and spin-chain models. |
 | [syntaqs-fermion](crates/syntaqs-fermion/README.md) | Single-mode fermions, Majorana bases, and Hubbard chains. |
@@ -94,6 +102,7 @@ cargo run -p examples --bin two_spins
 cargo run -p examples --bin heisenberg --features export
 cargo run -p examples --bin hubbard --features export
 cargo run -p examples --bin spin_one --features export
+cargo run -p examples --no-default-features --features lie --bin lie_algebra
 ```
 
 The [examples README](examples/README.md) covers basis expansion, expression formatting, tensor products, and custom geometric relations as well.
@@ -107,6 +116,11 @@ The design documents are in English. Generate the API documentation locally with
 
 ## Development
 
+Linked workspace checks use system OpenBLAS (including LAPACK) and pkg-config.
+Provide both in the development environment; the internal
+[blas-provider](support/blas-provider/README.md) selects them for tests/examples.
+Production `syntaqs-lie` leaves provider selection to its caller.
+
 ```sh
 cargo build --workspace --all-features
 cargo test --workspace --all-features
@@ -115,6 +129,8 @@ cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 ```
+
+Run the isolated shared Lie workflow with `cargo test -p syntaqs-tests --no-default-features --features lie --test lie_analysis`.
 
 Test optional export backends independently with `cargo test -p syntaqs-export --no-default-features`, adding `--features ndarray` or `--features sprs` for each backend.
 

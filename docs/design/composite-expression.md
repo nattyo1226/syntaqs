@@ -1,6 +1,6 @@
 # Composite expressions, placement, binding, and evaluation
 
-Last updated: 2026-11-02
+Last updated: 2026-11-04
 
 ## 1. Scope and responsibilities
 
@@ -76,6 +76,15 @@ Composite bases are tensor products of local bases for elementary factors, follo
 Construction does not expand or evaluate an entire expression. Requested results evaluate only necessary parts, preserve inputs, and share immutable substructures. Action, inner products, and trace require no complete numerical matrix, common fully expanded form, or cached evaluation result.
 
 Distribution and local multiplication are internal evaluation or expansion steps; there is no independent operation for selecting individual simplification rules.
+
+`Operator::collect_terms_in(&ambient)` collects equal local primitives and merges
+tensor terms differing in at most one factor after resolving products/adjoints.
+Local sums remain factored, avoiding Cartesian expansion. It uses the existing
+ordinary/graded traversal, including Koszul signs, and retains the selected
+space even for zero. Primitive/coefficient PartialEq is required; primitive
+Clone, Dimension, and a state basis are not required. It removes exact zero
+coefficients, does not select a
+complete operator basis, and leaves ordinary construction/evaluation unchanged.
 
 ## 4. Relations preserved by placement and embedding
 

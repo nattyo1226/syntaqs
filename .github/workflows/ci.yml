@@ -34,6 +34,10 @@ jobs:
             args: --no-default-features
     steps:
       - uses: actions/checkout@v6
+      - name: Install development BLAS/LAPACK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev pkg-config
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
@@ -43,6 +47,40 @@ jobs:
       # Keep doctests, including compile_fail cases, in the test suite.
       - name: Test workspace
         run: cargo test --workspace ${{ matrix.configuration.args }}
+      # These commands select their own features; run once per toolchain.
+      - name: Run Lie analysis example without export backends
+        if: matrix.configuration.name == 'default'
+        run: cargo run -p examples --no-default-features --features lie --bin lie_algebra
+      - name: Test shared Lie workflow without export backends
+        if: matrix.configuration.name == 'default'
+        run: cargo test -p syntaqs-tests --no-default-features --features lie --test lie_analysis
+      - name: Test downstream blas-src linkage
+        if: matrix.configuration.name == 'default'
+        run: cargo run --manifest-path tests/fixtures/lie-blas/Cargo.toml
+      - name: Verify provider selection is isolated
+        if: matrix.configuration.name == 'default'
+        shell: bash
+        run: |
+          for selection in neutral system-openblas; do
+            args=()
+            if [[ "$selection" == neutral ]]; then
+              args+=(--no-default-features)
+            fi
+            dependencies=$(cargo tree --manifest-path tests/fixtures/lie-blas/Cargo.toml \
+              --edges normal --prefix none --no-dedupe --format '{p} features=[{f}]' "${args[@]}")
+            grep -E '^ndarray-linalg v[^ ]+ features=\[blas\]$' <<< "$dependencies"
+            grep -E '^lax v[^ ]+ features=\[\]$' <<< "$dependencies"
+            if [[ "$selection" == neutral ]]; then
+              grep -E '^blas-src v[^ ]+ features=\[\]$' <<< "$dependencies"
+              if grep -E '^(openblas-src|netlib-src|intel-mkl-src|blas-provider) ' <<< "$dependencies"; then
+                echo 'Provider-neutral dependencies unexpectedly select a native provider.' >&2
+                exit 1
+              fi
+            else
+              grep -E '^blas-src v[^ ]+ features=\[([^]]*,)?openblas(,|\])' <<< "$dependencies"
+              grep -E '^openblas-src v[^ ]+ features=\[([^]]*,)?system(,|\])' <<< "$dependencies"
+            fi
+          done
 
   export:
     name: Export (${{ matrix.backend.name }})
@@ -76,12 +114,18 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
+      - name: Install development BLAS/LAPACK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev pkg-config
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Check formatting
         run: cargo fmt --all -- --check
+      - name: Check downstream formatting
+        run: cargo fmt --manifest-path tests/fixtures/lie-blas/Cargo.toml -- --check
       - name: Run Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
@@ -93,6 +137,10 @@ jobs:
       RUSTDOCFLAGS: -D warnings
     steps:
       - uses: actions/checkout@v6
+      - name: Install development BLAS/LAPACK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev pkg-config
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Build documentation

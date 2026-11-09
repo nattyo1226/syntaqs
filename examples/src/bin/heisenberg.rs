@@ -1,3 +1,6 @@
+#[cfg(feature = "export")]
+extern crate blas_provider as _;
+
 use num_complex::Complex;
 use syntaqs_basic::Id128;
 #[cfg(not(feature = "normalize"))]
