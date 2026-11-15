@@ -1,0 +1,15 @@
+[package]
+name = "syntaqs-perf-probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Keep the investigation outside the production workspace.
+[workspace]
+
+[dependencies]
+syntaqs-core = { path = "../../../../crates/syntaqs-core" }
+syntaqs-geometry = { path = "../../../../crates/syntaqs-geometry" }
+syntaqs-spin-half = { path = "../../../../crates/syntaqs-spin-half" }
+
+num-complex = "=0.4.6"
