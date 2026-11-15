@@ -2,8 +2,9 @@
 
 Date: 2026-11-15  
 Baseline: `8b18d8b`  
-Status: investigation complete; the local-grouping direction below is agreed.
-Implementation has not started; the other optimization proposals remain unadopted.
+Status: investigation complete; local-operator grouping and repeated-action
+aggregation directions are agreed. Implementation has not started; the other
+optimization proposals remain unadopted.
 
 ## Objective, scope, and progress
 
@@ -18,13 +19,16 @@ producing an intrinsically large result.
 | Check equivalent representations, analytic results, and operation counts | Complete |
 | Run relevant existing tests and record findings | Complete |
 | Agree on the local-operator grouping direction | Complete; design details remain open |
+| Agree on repeated-action aggregation and its initial equivalence scope | Complete; implementation details remain open |
 
 Completion criteria were met: examples have explicit definitions, measurements
 have a recorded method, source paths explain the findings, and proposals are
 distinguished from verified behavior. Implementation requires a separate task.
 
-This record does not change expression contracts or provide performance
-guarantees. Ordinary evaluation intentionally retains duplicate and zero terms.
+This record does not change the implemented expression contracts or provide
+performance guarantees. At the investigated baseline, ordinary evaluation
+intentionally retains duplicate and zero terms. The agreed direction in finding
+2 would change that behavior and its capability requirements.
 See [local expressions](../../design/primitive-expression.md),
 [composite expressions](../../design/composite-expression.md), and
 [basis expansion](../../design/basis.md).
@@ -217,10 +221,111 @@ distributes sums and retains duplicates.
 completes `state.evaluate()` before aggregating coordinates. Final aggregation
 does not bound the intermediate evaluated expression.
 
-Candidate improvement: interleave basis-aware actions and coordinate aggregation,
-preserving the basis-free `evaluate()` contract and capability bounds.
-Per-step expansion already provides a caller-side option, with the cost of
-materializing basis syntax between actions.
+Agreed direction: make `evaluate()` aggregate repeated contributions between
+actions without selecting a basis. Then let `coordinates(basis)` expand the
+evaluated result in the requested basis and aggregate basis indices. This
+replaces the earlier candidate of requiring a basis-aware evaluation path for
+intermediate aggregation while preserving the old `evaluate()` bounds.
+Per-step `expand()` remains the measured caller-side workaround; those timings
+do not measure the agreed evaluator design.
+
+### Agreed repeated-action aggregation direction
+
+The evaluator should resolve an action, normalize its result within the scope
+below, and combine matching terms before applying the next operator. This is
+collection in the natural primitive representation, not basis expansion.
+
+```text
+evaluate():
+    action -> normalize and collect -> action -> normalize and collect -> ...
+
+coordinates(basis):
+    evaluate() -> expand in the selected basis -> collect equal basis indices
+```
+
+For example, two action paths producing the same primitive state combine
+`a |Down> + b |Down>` into `(a+b) |Down>`. Distinct primitives need not be
+recognized as linearly dependent: the selected basis can resolve those relations
+later. The number of genuinely distinct nonzero states may still grow.
+
+#### Collection boundaries and capability requirements
+
+For an operator sum A+B, apply both operands to the same input state and add
+their contributions to a common result collector. Do not feed A's output into
+B. Collect contributions as they arrive rather than retaining the entire
+uncollected result tree until the end of the sum.
+
+For an ordered product AB, apply B first, collect its result, and then apply A.
+Apply the same principle to an explicit chain of delayed actions. Local and
+composite evaluation must agree on this behavior; collection at the composite
+boundary alone must not leave local repeated actions expanding unchecked.
+
+Requiring `PartialEq` on state primitives for `evaluate()` is accepted as a
+natural requirement of this responsibility. Coefficient capabilities must also
+support collection, including coefficient addition, multiplication when
+normalizing nested scales, and exact-zero detection. The exact Rust bounds and
+their propagation to callers remain to be specified. This is an intended
+capability change, not a promise to preserve the baseline's weaker bounds.
+Do not silently replace `PartialEq` with an `Eq`, `Ord`, or `Hash` requirement.
+
+#### Initial scope of matching terms
+
+Normalize tensor grouping and coefficient placement while preserving factor
+order, then collect terms whose remaining structure matches using primitive
+equality. Writing a, b, and c for local states, the initial scope includes:
+
+| Case | Intended treatment |
+| --- | --- |
+| `2 a + 3 a` | Combine into `5 a` |
+| `2 (a tensor b) + 3 (a tensor b)` | Combine coefficients of the matching product state |
+| `(a tensor b) tensor c` versus `a tensor (b tensor c)` | Recognize the same ordered factors after internal tensor regrouping |
+| `(2 a) tensor b` versus `2 (a tensor b)` | Normalize the coefficient position before comparison |
+
+Internal regrouping does not permute factors, add a graded sign, or replace the
+state's containing space and its grouping. Existing compatibility validation
+still applies.
+
+Do not search for distributive equivalence or factorize multi-term expressions
+to determine equality. In particular, the initial collector need not identify
+`(|a> + |b>) tensor |c>` with
+`|a> tensor |c> + |b> tensor |c>`. Preserve existing product-of-sums structure;
+do not distribute it solely to obtain a uniform sum-of-products representation.
+This avoids expanding `tensor_i(|a_i> + |b_i>)` into 2^n terms just to compare
+states. General distributive matching and common-factor extraction are outside
+the agreed initial scope.
+
+#### Zero handling, grading, and remaining design work
+
+Remove coefficients only when they are exactly zero. Retain small nonzero
+coefficients; tolerance-based pruning would be a separate, explicitly approximate
+feature. Changed addition order can change floating-point rounding, so numerical
+verification must not require bitwise agreement with the old evaluation path.
+
+Keep the existing action order, each delayed Act's selected space, and parity
+operator actions on preceding factors. Structural collection must not move an
+operator across another factor or replace a parity action by an assumed scalar
+sign. Preserve validation of original references even if collected contributions
+cancel to zero.
+
+The remaining design work includes:
+
+- The collector representation and matching algorithm under `PartialEq`,
+  including comparison of retained factored sums and their coefficients.
+- Normalization boundaries for local versus composite sums, including equivalent
+  local-state content stored inside or outside a placement.
+- Required coefficient bounds and effects on dependent APIs and capability tests.
+- Handling inputs with no pending actions: the existing ready-subtree shortcut
+  does not by itself establish that a subtree has already been collected.
+- Reuse of normalized/shared subtrees and control of comparison costs without
+  requiring full expansion or persistent caches.
+
+Before accepting an implementation, verify repeated rotations and Heisenberg
+powers against analytic or independent small-system results. Test the matching
+cases above, cancellation, retained tiny coefficients, noncommuting operator
+order, graded Act scope and parity actions, and deep/shared trees. Confirm that
+product-of-sums inputs stay factored. Measure local and composite evaluation,
+coordinate extraction, allocation counts, and cases with few duplicates; the
+effect of comparison overhead remains unmeasured.
 
 ## 3. W-state norms evaluate all pairs and all factors
 
@@ -312,10 +417,10 @@ the output-size lower bound.
 ## Candidate priorities and limitations
 
 The measured cases suggest the following tentative investigation order. The
-local-grouping direction in finding 1 is agreed, but this overall order and an
-integrated implementation plan have not been approved:
+directions in findings 1 and 2 are agreed, but this overall order and an integrated
+implementation plan have not been approved:
 
-1. Aggregate basis-aware state actions before intermediate terms proliferate.
+1. Aggregate matching natural-state terms within `evaluate()` between actions.
 2. Preserve or recover same-factor structure before composite distribution.
 3. Improve sparse-sum contraction, with optional basis-aware paths.
 4. Reduce identity expansion, intermediate maps, and spectator traversal.
