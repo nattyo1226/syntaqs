@@ -3,9 +3,10 @@
 Date: 2026-11-15  
 Baseline: `8b18d8b`  
 Status: investigation complete; directions for all four findings are agreed.
-Implementation has not started. The proposed change map, stage order, and
-acceptance criteria are recorded in the [integrated implementation plan](implementation-plan.md).
-Detailed implementation choices and performance verification remain open.
+Stage 0 is complete: [implementation contracts](stage-0-contracts.md) and an
+[audited baseline](stage-0-baseline.md) are recorded. Production optimization
+implementation has not started. The change map, remaining stage order, and
+acceptance criteria are in the [integrated implementation plan](implementation-plan.md).
 
 ## Objective, scope, and progress
 
@@ -24,6 +25,7 @@ producing an intrinsically large result.
 | Bound the inner-product improvement to local contraction and exact-zero short-circuiting | Complete; further acceleration deferred |
 | Agree on sparse coordinate generation with shared identity expansion | Complete; implementation details remain open |
 | Consolidate changes, dependencies, stages, and acceptance criteria | Plan recorded; implementation not started |
+| Stage 0: contracts, probe audit, semantic fixtures, and current-revision baseline | Complete; Stages 1–5 not started |
 
 Completion criteria were met: examples have explicit definitions, measurements
 have a recorded method, source paths explain the findings, and proposals are
@@ -38,6 +40,11 @@ See [local expressions](../../design/primitive-expression.md),
 [basis expansion](../../design/basis.md).
 
 ### Agreed directions at a glance
+
+The following sections retain the investigation and initial design discussion.
+Where they identify implementation choices, the later
+[Stage 0 contracts](stage-0-contracts.md) now resolve those choices for the first
+implementation. Their behaviors remain unimplemented.
 
 | Finding | Adopted scope |
 | --- | --- |
@@ -84,6 +91,11 @@ expansion, and W states. `count` checks W-state primitive inner-product counts;
 `h2-count` counts basis calls for the 64-site squared Hamiltonian.
 Add `--offline` when dependencies are cached, as in the original investigation.
 The package resolves dependencies separately from the root lockfile.
+
+The five-single-call-sample method and tables in this investigation are historical.
+Stage 0 subsequently audited the probe to use seven batched samples and added
+regression controls. See its [baseline record](stage-0-baseline.md) for the
+current measurement method, dependency snapshot, raw samples, and reproduction.
 
 The tables preserve original timing runs. Analytic assertions for rotations
 and product-state norms were added afterward and passed on a rerun.

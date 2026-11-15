@@ -39,14 +39,33 @@ unsafe impl GlobalAlloc for Alloc {
 }
 #[global_allocator]
 static GLOBAL: Alloc = Alloc;
+// A sample batches short operations; construction and destruction are included
+// only where they occur inside the supplied closure. Counting is a separate run.
 fn bench<T>(name: &str, mut f: impl FnMut() -> T) {
+    const SAMPLES: usize = 7;
+    const TARGET: std::time::Duration = std::time::Duration::from_millis(10);
+    const MAX_ITERATIONS: usize = 65_536;
     drop(black_box(f()));
-    let mut times = Vec::new();
-    for _ in 0..5 {
+    let mut iterations = 1;
+    loop {
         let start = Instant::now();
-        drop(black_box(f()));
-        times.push(start.elapsed().as_secs_f64() * 1000.);
+        for _ in 0..iterations {
+            drop(black_box(f()));
+        }
+        if start.elapsed() >= TARGET || iterations == MAX_ITERATIONS {
+            break;
+        }
+        iterations *= 2;
     }
+    let mut times = Vec::with_capacity(SAMPLES);
+    for _ in 0..SAMPLES {
+        let start = Instant::now();
+        for _ in 0..iterations {
+            drop(black_box(f()));
+        }
+        times.push(start.elapsed().as_secs_f64() * 1000. / iterations as f64);
+    }
+    let samples = times.clone();
     times.sort_by(f64::total_cmp);
     ALLOCS.store(0, Relaxed);
     BYTES.store(0, Relaxed);
@@ -54,8 +73,8 @@ fn bench<T>(name: &str, mut f: impl FnMut() -> T) {
     drop(black_box(f()));
     COUNT.store(false, Relaxed);
     println!(
-        "{name},median_ms={:.6},allocs={},allocated_bytes={}",
-        times[2],
+        "{name},median_ms={:.9},allocs={},allocated_bytes={},iterations={iterations},samples_ms={samples:?}",
+        times[SAMPLES / 2],
         ALLOCS.load(Relaxed),
         BYTES.load(Relaxed)
     );
@@ -110,6 +129,7 @@ fn original() {
             assert_eq!(a, b);
             assert!((*c - *d).norm() < 1e-10);
         }
+        assert_eq!(raw.len(), short.len());
         assert_eq!(raw.len(), 2);
         for (digits, c) in raw.entries() {
             let expected = if digits[0] == 0 {
@@ -201,28 +221,7 @@ fn original() {
     }
 }
 
-fn main() {
-    let mode = std::env::args().nth(1).unwrap_or_default();
-    if mode == "count" {
-        count_w();
-        return;
-    }
-    if mode == "h2-count" {
-        let (h, _, _, _) = model(64);
-        let hh = (h.clone() * &h).unwrap();
-        let c = hh.coordinates(&CountBasis).unwrap();
-        println!(
-            "H2 n=64 nnz={} basis_calls={} identity_calls={}",
-            c.len(),
-            BASIS_CALLS.load(Relaxed),
-            ID_CALLS.load(Relaxed)
-        );
-        return;
-    }
-    if mode != "extra" {
-        original();
-        return;
-    }
+fn extra() {
     for n in [4, 6, 8] {
         let sites: Vec<_> = (0..n).map(HilbertSpace::factor).collect();
         let space = HilbertSpace::tensor_all(sites.clone()).unwrap();
@@ -311,16 +310,13 @@ fn main() {
         });
         let coordinates = w.coordinates(&SzBasis).unwrap();
         assert_eq!(coordinates.len(), n);
-        bench(&format!("W n={n} coordinate_norm_only"), || {
-            coordinates
-                .entries()
-                .map(|(_, v)| v.norm_sqr())
-                .sum::<f64>()
-        });
+        let coordinate_norm: f64 = coordinates.entries().map(|(_, v)| v.norm_sqr()).sum();
+        assert!((coordinate_norm - 1.).abs() < 1e-12);
     }
 }
 
 static INNER_CALLS: AtomicUsize = AtomicUsize::new(0);
+#[derive(PartialEq)]
 struct CountState(S);
 impl syntaqs_core::InnerProduct<C> for CountState {
     fn inner_product(&self, rhs: &Self) -> C {
@@ -362,6 +358,84 @@ fn count_w() {
             "W n={n} local_inner_product_calls={}",
             INNER_CALLS.load(Relaxed)
         );
-        assert_eq!(INNER_CALLS.load(Relaxed), n * n * n);
+        // Counts are observations: later stages are expected to reduce them.
+    }
+}
+
+mod controls;
+
+fn h2_count() {
+    let (h, _, _, _) = model(64);
+    let hh = (h.clone() * &h).unwrap();
+    BASIS_CALLS.store(0, Relaxed);
+    ID_CALLS.store(0, Relaxed);
+    let c = hh.coordinates(&CountBasis).unwrap();
+    println!(
+        "H2 n=64 nnz={} basis_calls={} identity_calls={}",
+        c.len(),
+        BASIS_CALLS.load(Relaxed),
+        ID_CALLS.load(Relaxed)
+    );
+}
+
+fn provenance() {
+    use std::process::Command;
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(4)
+        .expect("probe is four levels below repository root");
+    for (label, program, args) in [
+        ("revision", "git", vec!["rev-parse", "HEAD"]),
+        (
+            "source_status",
+            "git",
+            vec!["status", "--short", "--", "crates", "tests", "examples"],
+        ),
+        ("rustc", "rustc", vec!["-vV"]),
+        ("cargo", "cargo", vec!["--version"]),
+    ] {
+        let result = Command::new(program)
+            .args(args)
+            .current_dir(root)
+            .output()
+            .unwrap();
+        assert!(result.status.success(), "failed to collect {label}");
+        println!(
+            "# {label}: {:?}",
+            String::from_utf8(result.stdout).unwrap().trim()
+        );
+    }
+    println!(
+        "# host: {}-{}; samples=7; target_batch_ms=10; max_iterations=65536; output_drop=included",
+        std::env::consts::ARCH,
+        std::env::consts::OS
+    );
+}
+
+fn main() {
+    let mode = std::env::args().nth(1).unwrap_or_default();
+    if ![
+        "", "original", "extra", "count", "h2-count", "controls", "all",
+    ]
+    .contains(&mode.as_str())
+    {
+        eprintln!("unknown mode: {mode}; use original, extra, count, h2-count, controls, or all");
+        std::process::exit(2);
+    }
+    provenance();
+    match mode.as_str() {
+        "" | "original" => original(),
+        "extra" => extra(),
+        "count" => count_w(),
+        "h2-count" => h2_count(),
+        "controls" => controls::run(),
+        "all" => {
+            original();
+            extra();
+            count_w();
+            h2_count();
+            controls::run();
+        }
+        _ => unreachable!(),
     }
 }

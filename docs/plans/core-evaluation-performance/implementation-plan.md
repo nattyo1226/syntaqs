@@ -1,8 +1,8 @@
 # Integrated core evaluation performance plan
 
-Status: proposed implementation sequence for the four agreed directions.
-Production implementation has not started. This document plans the work; it does
-not report completed changes or authorize implementation.
+Status: Stage 0 complete; Stages 1–5 remain planned. Stage 0 fixed the contracts
+and recorded an audited pre-optimization baseline. Production optimization
+implementation has not started.
 
 ## 1. Objective and boundaries
 
@@ -102,10 +102,10 @@ operations across callers.
 State evaluation will require primitive `PartialEq` and coefficient operations
 needed for collection. Coefficient `PartialEq` is accepted where evaluation
 compares retained factored structures, but not on construction or unrelated
-operations. Resolve the remaining exact bounds before coding: coefficient
-addition and zero detection, multiplication for scale normalization, implicit
-ones, and any coefficient comparison needed inside retained factored sums.
-Local collection may need fewer bounds than composite structural matching.
+operations. Stage 0 fixed the evaluator bounds, implicit-one treatment,
+normalization rules, and query-local collection index in
+[the implementation contracts](stage-0-contracts.md).
+Local collection has fewer bounds than composite structural matching.
 Do not impose Eq/Ord/Hash or primitive/index Clone merely to implement collection.
 
 Propagate intentional changes through state inner products, norms, expectations,
@@ -147,41 +147,34 @@ otherwise independent; the order supports review and measurement attribution.
 
 | Stage | Deliverable | Completion gate | Current status |
 | --- | --- | --- | --- |
-| 0. Contracts and baseline | Exact API/bounds and collector rules; repeatable benchmark inputs | Resolve the implementation decisions below and record pre-change values at the actual starting revision | Planned |
+| 0. Contracts and baseline | Exact API/bounds and collector rules; repeatable benchmark inputs | Contracts fixed; 74 measured cases and 19 existing integration tests plus 3 new semantic fixtures recorded at a070071 | Complete |
 | 1. Local grouping | Shared rewrites, construction integration, explicit API, operator-query preparation | Same-factor equivalence and graded-order tests pass; Hadamard placed sums avoid the old global distribution | Planned |
 | 2. State collection | Local/composite per-action collection and caller-bound migration | Rotations and Hamiltonian powers agree with references; matching normalization and factored-input tests pass | Planned |
 | 3. Inner-product stopping | On-demand product contraction and exact-zero propagation | Call-count tests prove later factors are skipped while other sum branches run; graded HS remains correct | Planned |
 | 4. Coordinate generation | Shared spectator expansion and direct key emission for both outputs | Single/multi-component identity cases pass; spectator basis calls no longer scale with terms times spectators | Planned |
 | 5. Integration and documentation | Combined regressions, performance comparison, current API docs | Required workspace checks pass or pre-existing/environment failures are identified; acceptance criteria below are met | Planned |
 
-### Stage 0: resolve implementation choices
+### Stage 0: completed contracts and baseline
 
-The accepted explicit API is `Operator::group_local(&self) -> Self`. It supports
-unbound operators, preserves its input and binding, and performs structural
-grouping without primitive evaluation. Ambient validation remains at
-binding/evaluation time and no original factor reference may be erased.
-Before production edits, settle its exact capability bounds and treatment of
-scalars/empty expressions. Define the construction-time rewrite coverage without
-recursive scans.
+The [Stage 0 contracts](stage-0-contracts.md) fix API/bounds, direct-child
+construction rewrites, scalar/empty-expression handling, the normalized
+state-term representation, first-occurrence matching order, and query-local
+interning/memoization. No persistent collected/grouped flag is introduced in the
+initial implementation. Action-free inputs are collected too; re-evaluation
+has stable shape but is not promised O(1).
 
-Define a normalized state-term representation and matching algorithm using
-primitive equality. Settle how retained local sums and their coefficients are
-compared, using coefficient `PartialEq` where needed. Action-free inputs are
-also collected: `Up + Up` must evaluate to `2 Up`, and re-evaluation of normalized
-results should leave their structure stable. The existing
-`has_action`/`pending_action` flags indicate pending actions, not collected
-normal form; they cannot serve as collection markers without additional design.
-Avoid blindly recollecting every ready spectator subtree. Measure any need for
-additional metadata before introducing a persistent grouped/normalized marker.
+The [baseline record](stage-0-baseline.md), [raw samples](stage-0-baseline.txt),
+and [dependency snapshot](stage-0-probe.lock) identify the production starting
+revision and the audited harness. The new controls measure construction, ready
+inputs, low-duplicate actions, nonzero contractions, and operator HS products.
+Independent semantic fixtures cover normalization examples, Heisenberg powers,
+and nontrivial identity expansions. Existing graded and malformed-basis
+integration tests passed.
 
-Use stable, basis-free structural matching within the agreed initial scope.
-Do not adopt a hash-based canonical form or search over algebraic equivalence
-as an incidental implementation shortcut.
-
-Record a baseline with the retained probe at the actual starting revision and
-toolchain. Audit its repetitions and result checks and add missing test cases
-needed for attribution. Historical timings in the investigation are evidence,
-not fixed thresholds for other machines or revisions.
+Stages 1–4 must implement the fixed contracts and add structural/call-count
+assertions that require those implementations. Stage 0 does not claim new
+production behavior. Historical and Stage 0 timings are machine-specific
+references, not universal thresholds.
 
 ### Stages 1–2: prevent avoidable intermediate terms
 
@@ -272,6 +265,6 @@ for [local expressions](../../design/primitive-expression.md),
 Keep deferred optimizations in future work and dated measurements in this task.
 Close out the plan only after implementation, validation, and review are complete.
 
-At creation of this plan, only documentation inspection and consistency checks
-have been performed for this planning task; no production changes, new test runs,
-or new performance measurements are claimed.
+Stage 0 test and measurement outcomes are recorded separately in its baseline
+record. No production optimization, new public API implementation, or completion
+of Stages 1–5 is claimed.
