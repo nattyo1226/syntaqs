@@ -2,7 +2,8 @@
 
 Date: 2026-11-15  
 Baseline: `8b18d8b`  
-Status: investigation complete; optimization proposals are unadopted and unimplemented.
+Status: investigation complete; the local-grouping direction below is agreed.
+Implementation has not started; the other optimization proposals remain unadopted.
 
 ## Objective, scope, and progress
 
@@ -16,6 +17,7 @@ producing an intrinsically large result.
 | Measure realistic cases and allocation requests | Complete |
 | Check equivalent representations, analytic results, and operation counts | Complete |
 | Run relevant existing tests and record findings | Complete |
+| Agree on the local-operator grouping direction | Complete; design details remain open |
 
 Completion criteria were met: examples have explicit definitions, measurements
 have a recorded method, source paths explain the findings, and proposals are
@@ -91,9 +93,90 @@ clones branches at composite sums, distributing into 4^n branches before local
 multiplication and basis aggregation cancel them. Local sums allow cancellation
 per factor before the global tensor product grows.
 
-Candidate improvement: group compatible same-factor sums/products before global
-distribution. Callers can already avoid this cost by completing local gates
-before placement.
+Agreed direction: group compatible same-factor sums/products before global
+distribution, using the three entry points below. Callers can already avoid
+this cost by completing local gates before placement.
+
+### Agreed local-grouping direction
+
+Use limited grouping during construction, a more comprehensive traversal before
+evaluation, and an explicit API that lets callers retain and reuse the grouped
+expression. This agreement concerns finding 1 only; it does not approve
+implementation or settle the overall optimization plan.
+
+“Same factor” means the same single indexed leaf, not merely the same ambient
+space. Operators on different factors of one bound space are not eligible for
+direct local grouping.
+
+| Entry point | Responsibility | Initial scope |
+| --- | --- | --- |
+| Construction | Preserve immediately visible local structure at low cost | Group direct local operands on the same factor, especially sums and products; do not scan arbitrary subtrees |
+| Before evaluation | Recover local structure missed during construction | Traverse subtrees before composite distribution; start with operator basis expansion and coordinates |
+| Explicit API | Let callers obtain and reuse the grouped expression | Apply the same subtree-grouping rules as the evaluation preparation |
+
+Share the eligibility and transformation rules across these entry points.
+Construction applies them to immediate children; evaluation preparation and the
+explicit API apply them throughout the expression. Avoid three independent
+normalizers with different semantics.
+
+Grouping changes representation only: move sums, ordered products, scales, and
+adjoints into a `LocalOperator` where supported. Do not invoke primitive product
+rules, expand a basis, collect equal primitives, remove zero contributions, or
+extract common factors from multi-factor sums. The explicit API is distinct from
+`collect_terms_in()`, which evaluates primitive products and collects terms.
+
+#### Ordering, grading, and validation
+
+Only group a subtree whose factor references all belong to one factor.
+Preserve left-to-right product order within that factor. Do not gather separated
+occurrences across another factor: transforming B_1 A_0 C_1 into A_0 (BC)_1
+requires a minus sign when all three operands are odd.
+
+Same-factor embedding preserves sums, products, and adjoints in both ordinary
+and graded spaces, including mixed-parity local expressions. Grouping therefore
+adds no exchange sign and needs no construction-time parity classification.
+Keep the existing evaluation sequence afterward: `HomogeneousTerms` splits local
+expressions into even/odd parts, and `IntrinsicOpTerms` computes crossing signs
+using the selected space's factor order. Do not enable unrestricted same-factor
+grouping in the raw graded traversal or apply exchange signs twice.
+
+For automatic evaluation preparation, select the ambient space and validate the
+original expression before grouping, then run the grouped expression through
+`OpTerms` and the existing grading path. Keep the original expression unchanged
+and share unchanged subtrees. Use an iterative traversal and perform preparation
+once per query, not once per iterator item.
+
+Preserve construction-time binding compatibility checks. Grouping must not erase
+factor references that later validation needs, including references under zero
+coefficients. Handling scalar identity within a single-factor subtree must
+respect existing capability bounds and must not introduce a new indexed factor.
+
+#### Intended explicit API and open details
+
+The API should return a grouped expression without changing its input, retain
+the original binding, preserve factor order, and make no further structural
+changes when reapplied to an already grouped result. `group_local()` is a
+working name, not an accepted public signature.
+
+The remaining design choices are:
+
+- Exact construction-time coverage beyond direct local sums/products, especially
+  scales, adjoints, scalar identities, and empty expressions.
+- Public API name, ownership convention, capability bounds, and support for
+  unbound expressions. If unbound expressions are supported, ambient validation
+  remains deferred and original factor references must be preserved.
+- How much of the preparation helper to reuse in trace and `collect_terms_in()`.
+  State action has different capability requirements and needs separate analysis.
+- Whether an internal grouped marker is worthwhile to avoid rescanning explicit
+  API results. Measure repeated traversal before adding persistent metadata.
+
+Verification before accepting an implementation should compare grouped and
+ungrouped coordinates, actions, traces, and adjoints in ordinary and graded
+spaces; include noncommuting same-factor products, odd crossings, mixed parity,
+scalar identities, rebinding, invalid references, non-Clone primitives/indices,
+and deep/shared trees. Measure construction time, evaluation time, allocation
+counts, and already-local inputs separately. Re-run the Hadamard case to check
+that the placed-sum penalty is removed without material construction overhead.
 
 ## 2. Repeated actions retain many contributions to small states
 
@@ -228,8 +311,9 @@ the output-size lower bound.
 
 ## Candidate priorities and limitations
 
-The measured cases suggest this investigation order; it is a proposal, not an
-approved implementation plan:
+The measured cases suggest the following tentative investigation order. The
+local-grouping direction in finding 1 is agreed, but this overall order and an
+integrated implementation plan have not been approved:
 
 1. Aggregate basis-aware state actions before intermediate terms proliferate.
 2. Preserve or recover same-factor structure before composite distribution.
