@@ -144,8 +144,9 @@ where
     O: crate::HomogeneousParity + Identity + Product<C, Term = O> + Adjoint<C, Term = O>,
     B: Basis<O, C>,
 {
+    let expression = op.expression.group_local();
     let mut result = BTreeMap::new();
-    for (coefficient, locals) in IntrinsicOpTerms::new(&op.expression, ambient) {
+    for (coefficient, locals) in IntrinsicOpTerms::new(&expression, ambient) {
         let mut product =
             BTreeMap::from([(Vec::new(), (coefficient.unwrap_or_else(C::one), V::unit()))]);
         for factor in factors {

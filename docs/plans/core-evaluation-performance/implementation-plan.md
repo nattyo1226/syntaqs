@@ -1,8 +1,8 @@
 # Integrated core evaluation performance plan
 
-Status: Stage 0 complete; Stages 1–5 remain planned. Stage 0 fixed the contracts
-and recorded an audited pre-optimization baseline. Production optimization
-implementation has not started.
+Status: Stages 0 and 1 complete; Stages 2–5 remain planned. Stage 0 fixed the
+contracts and recorded an audited pre-optimization baseline. Stage 1 implemented
+local grouping; its [results and validation](stage-1-results.md) are recorded.
 
 ## 1. Objective and boundaries
 
@@ -148,7 +148,7 @@ otherwise independent; the order supports review and measurement attribution.
 | Stage | Deliverable | Completion gate | Current status |
 | --- | --- | --- | --- |
 | 0. Contracts and baseline | Exact API/bounds and collector rules; repeatable benchmark inputs | Contracts fixed; 74 measured cases and 19 existing integration tests plus 3 new semantic fixtures recorded at a070071 | Complete |
-| 1. Local grouping | Shared rewrites, construction integration, explicit API, operator-query preparation | Same-factor equivalence and graded-order tests pass; Hadamard placed sums avoid the old global distribution | Planned |
+| 1. Local grouping | Shared rewrites, construction integration, explicit API, operator-query preparation | Same-factor equivalence and graded-order tests pass; Hadamard placed sums avoid the old global distribution | Complete; [results](stage-1-results.md) |
 | 2. State collection | Local/composite per-action collection and caller-bound migration | Rotations and Hamiltonian powers agree with references; matching normalization and factored-input tests pass | Planned |
 | 3. Inner-product stopping | On-demand product contraction and exact-zero propagation | Call-count tests prove later factors are skipped while other sum branches run; graded HS remains correct | Planned |
 | 4. Coordinate generation | Shared spectator expansion and direct key emission for both outputs | Single/multi-component identity cases pass; spectator basis calls no longer scale with terms times spectators | Planned |
@@ -171,7 +171,7 @@ Independent semantic fixtures cover normalization examples, Heisenberg powers,
 and nontrivial identity expansions. Existing graded and malformed-basis
 integration tests passed.
 
-Stages 1–4 must implement the fixed contracts and add structural/call-count
+Stages 2–4 must implement the remaining fixed contracts and add structural/call-count
 assertions that require those implementations. Stage 0 does not claim new
 production behavior. Historical and Stage 0 timings are machine-specific
 references, not universal thresholds.
@@ -266,5 +266,6 @@ Keep deferred optimizations in future work and dated measurements in this task.
 Close out the plan only after implementation, validation, and review are complete.
 
 Stage 0 test and measurement outcomes are recorded separately in its baseline
-record. No production optimization, new public API implementation, or completion
-of Stages 1–5 is claimed.
+record. Stage 1 implements the grouping API, shared construction rules, and
+operator-query preparation; its results include semantic checks and 92 measured
+cases. No completion of Stages 2–5 is claimed.

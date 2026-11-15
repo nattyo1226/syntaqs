@@ -104,8 +104,9 @@ impl<I: Eq, O, C> Operator<I, O, C> {
         O: Identity + crate::HomogeneousParity + crate::ParityOperator,
         O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
     {
+        let expression = self.expression.group_local();
         let mut result = zero();
-        for (coefficient, factors) in OrdinaryOpTerms::new(&self.expression, ambient) {
+        for (coefficient, factors) in OrdinaryOpTerms::new(&expression, ambient) {
             let mut value = one();
             for index in ambient.indices() {
                 let local_trace_value = match factors

@@ -363,6 +363,7 @@ fn count_w() {
 }
 
 mod controls;
+mod grouping;
 
 fn h2_count() {
     let (h, _, _, _) = model(64);
@@ -415,11 +416,13 @@ fn provenance() {
 fn main() {
     let mode = std::env::args().nth(1).unwrap_or_default();
     if ![
-        "", "original", "extra", "count", "h2-count", "controls", "all",
+        "", "original", "extra", "count", "h2-count", "controls", "grouping", "all",
     ]
     .contains(&mode.as_str())
     {
-        eprintln!("unknown mode: {mode}; use original, extra, count, h2-count, controls, or all");
+        eprintln!(
+            "unknown mode: {mode}; use original, extra, count, h2-count, controls, grouping, or all"
+        );
         std::process::exit(2);
     }
     provenance();
@@ -429,12 +432,14 @@ fn main() {
         "count" => count_w(),
         "h2-count" => h2_count(),
         "controls" => controls::run(),
+        "grouping" => grouping::run(),
         "all" => {
             original();
             extra();
             count_w();
             h2_count();
             controls::run();
+            grouping::run();
         }
         _ => unreachable!(),
     }

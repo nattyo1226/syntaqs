@@ -50,6 +50,7 @@ pub mod parts;
 mod arithmetic;
 pub mod composite;
 mod format;
+mod group;
 pub(crate) mod local;
 pub(crate) mod traversal;
 
@@ -61,3 +62,6 @@ mod tests;
 
 #[cfg(test)]
 mod composite_tests;
+
+#[cfg(test)]
+mod group_tests;

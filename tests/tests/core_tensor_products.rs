@@ -96,6 +96,103 @@ fn matrix_of<T: Real>(op: &OperatorOf<T>, space: &H<u8>) -> Vec<num_complex::Com
     }
     result
 }
+
+fn check_local_grouping<T: Real>() {
+    for kind in [TensorKind::Ordinary, TensorKind::Graded] {
+        let factors: Vec<_> = [9, 1, 4].into_iter().map(H::factor).collect();
+        let h = H::tensor_all_with(kind, factors.clone()).unwrap();
+        for (i, factor) in factors.iter().enumerate() {
+            for a in OPS {
+                for b in OPS {
+                    let alpha = c::<T>(0.3, 0.4);
+                    let beta = c::<T>(-0.2, 0.1);
+                    let delta = c::<T>(0.7, -0.3);
+                    let x =
+                        (placed::<T>(a, factor).scaled(alpha) + OperatorOf::scalar(beta)).unwrap();
+                    let y = (placed::<T>(b, factor).adjoint()
+                        + placed(Op::P, factor).scaled(delta))
+                    .unwrap();
+                    let original = (x * &y).unwrap().adjoint().scaled(beta);
+                    assert!(original.space().is_none());
+                    let grouped = original.group_local();
+                    assert!(grouped.space().is_none());
+                    let mx: Vec<_> = embedding::<T>(a, i, 3, kind)
+                        .iter()
+                        .zip(embedding::<T>(Op::I, i, 3, kind))
+                        .map(|(v, id)| *v * alpha + id * beta)
+                        .collect();
+                    let my: Vec<_> = adjoint(&embedding::<T>(b, i, 3, kind))
+                        .iter()
+                        .zip(embedding::<T>(Op::P, i, 3, kind))
+                        .map(|(v, p)| *v + p * delta)
+                        .collect();
+                    let expected: Vec<_> = adjoint(&product(&mx, &my))
+                        .into_iter()
+                        .map(|v| v * beta)
+                        .collect();
+                    for candidate in [&original, &grouped, &grouped.group_local()] {
+                        values(&matrix_of(candidate, &h), &expected);
+                        values(
+                            &matrix_of(&candidate.expand_in(&Units, &h).unwrap(), &h),
+                            &expected,
+                        );
+                        close(candidate.trace_in(&h).unwrap(), trace(&expected));
+                        close(
+                            candidate.hs_inner_product_in(candidate, &h).unwrap(),
+                            trace(&product(&adjoint(&expected), &expected)) / c::<T>(8., 0.),
+                        );
+                    }
+                    let bound = grouped.bind(&h).unwrap();
+                    assert!(bound.group_local().space().unwrap().shares_node_with(&h));
+                }
+            }
+        }
+        // Odd factors separated by another factor must retain their order and signs.
+        let a = placed::<T>(A, &factors[0]);
+        let b = placed::<T>(CREATE, &factors[1]);
+        let expression = ((b.scaled(c(1., 0.)) * &a).unwrap() * &placed::<T>(Op::P, &factors[1]))
+            .unwrap()
+            .adjoint();
+        let expected = adjoint(&product(
+            &product(
+                &embedding::<T>(CREATE, 1, 3, kind),
+                &embedding::<T>(A, 0, 3, kind),
+            ),
+            &embedding::<T>(Op::P, 1, 3, kind),
+        ));
+        values(&matrix_of(&expression.group_local(), &h), &expected);
+        values(
+            &matrix_of(&expression.expand_in(&Units, &h).unwrap(), &h),
+            &expected,
+        );
+
+        let bad = (OperatorOf::<T>::zero() * placed(A, &H::factor(99))).unwrap();
+        assert!(matches!(
+            bad.group_local().bind(&h),
+            Err(ExpressionError::MissingIndex)
+        ));
+        assert!(bad.expand_in(&Units, &h).is_err());
+        assert!(bad.trace_in(&h).is_err());
+        // The original binding must not be used in place of an explicit query space.
+        let rebound = expression.bind(&h).unwrap().group_local();
+        let reverse = H::tensor_all_with(kind, factors.iter().rev().cloned()).unwrap();
+        values(
+            &matrix_of(&rebound.expand_in(&Units, &reverse).unwrap(), &reverse),
+            &matrix_of(&expression, &reverse),
+        );
+    }
+}
+
+#[test]
+fn local_grouping_f64() {
+    check_local_grouping::<f64>();
+}
+
+#[test]
+fn local_grouping_f32() {
+    check_local_grouping::<f32>();
+}
+
 fn check<T: Real>() {
     for kind in [TensorKind::Ordinary, TensorKind::Graded] {
         for n in [2, 3] {

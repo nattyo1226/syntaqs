@@ -1,6 +1,6 @@
 # Basis expansion, coordinates, and enumeration
 
-Updated: 2026-11-02
+Updated: 2026-11-15
 
 ## 1. Scope and contract
 
@@ -155,6 +155,13 @@ Expanded syntax works without metadata: expand Sx into Sp+Sm, then back into Car
 All return `Result<_,BasisError>`, applying the same local basis to all factors and aggregating indices after evaluating local rules. States use their own space; operators prefer explicit space, then binding. A local basis never implies an unbound operator's ambient space. No primitive comparison/Clone or index Clone/Hash/Ord is required. Expand identity spectators too, even when identity is not itself a basis member. Zero retains its selected space as an empty sum; zero-factor states/operators use unit/scalar identity syntax.
 
 State evaluation reuses existing action without primitive Product. Operator expansion requires Identity/Product/Adjoint. Coefficients need operation-specific Clone/Zero/multiplication/conjugation, and composite unit coefficients use One. Shared processing needs neither Float nor division, though concrete rules/bases may. Ordinary action/inner-product/trace paths gain no basis dependency.
+
+Composite operator queries first validate the original expression, then apply
+[structural local grouping](composite-expression.md#91-structural-local-operator-grouping)
+before distributing composite sums or resolving intrinsic graded signs.
+This preparation introduces no new query bounds, does not change the public
+coordinate format, and preserves later basis-error checks. Identity spectators
+and tensor-coordinate aggregation retain their existing expansion path.
 
 ### 7.2. Coordinate interpretation and indices
 

@@ -1,6 +1,6 @@
 # Verification structure and commands
 
-Updated: 2026-11-09
+Updated: 2026-11-15
 
 ## 1. Verification responsibilities
 
@@ -58,6 +58,17 @@ Maintain the following coverage alongside the detailed verification targets in e
 | Local algebras and physical models | Follow [local algebra](local-structure.md), [geometry](geometry.md), and [model](models.md) verification targets: independent local matrices, algebraic laws, normalized Gram matrices, physical coupling scales, constant shifts, many-body placement order, and model energies. Keep exact-zero rules and preservation of tiny nonzero coefficients separate from approximate comparisons. |
 
 Reference values for graded tests come from the [test-only two-state algebra](../../tests/src/graded.rs) and independently assembled ordinary matrices. They must not depend on production fermion rules or the evaluator under test. Resource and depth regression sizes are specific test cases, not general performance bounds.
+
+Core `expr::group_tests` covers structural grouping without coefficient
+arithmetic or primitive evaluation capabilities, index equality across distinct
+handles, binding/error preservation, sharing and idempotence, and iterative
+grouping/destruction of deep single-factor, scalar, and multi-factor syntax.
+The local-grouping cases in
+[core_tensor_products.rs](../../tests/tests/core_tensor_products.rs) check
+mixed parity, complex scales, scalar identity, product order, adjoints,
+rebinding, and automatic basis/trace/HS preparation against independent ordinary
+matrices in both precisions and tensor kinds. Formatting tests follow the
+retained local structure after same-factor construction grouping.
 
 ## 3. CI and verification limits
 

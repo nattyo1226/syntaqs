@@ -563,13 +563,19 @@ fn all_binary_ownership_forms_preserve_results_and_shared_operands() {
     for sum in forms!(op, +, op) {
         let sum = sum.unwrap();
         assert!(sum.space().unwrap().shares_node_with(&factor));
-        let OpNode::Sum(parts) = sum.expression.node() else {
-            panic!("sum")
+        let OpNode::Local(_, local_sum) = sum.expression.node() else {
+            panic!("same-factor local sum")
+        };
+        let crate::expr::local::OperatorNode::Sum(parts) = local_sum.node() else {
+            panic!("local sum")
+        };
+        let OpNode::Local(_, original_local) = op.expression.node() else {
+            unreachable!()
         };
         assert!(
             parts
                 .iter()
-                .all(|p| core::ptr::eq(p.node(), op.expression.node()))
+                .all(|p| core::ptr::eq(p.node(), original_local.node()))
         );
         let result = state.act(&sum).unwrap();
         assert_eq!(

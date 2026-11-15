@@ -4,8 +4,8 @@ Date: 2026-11-15
 Baseline: `8b18d8b`  
 Status: investigation complete; directions for all four findings are agreed.
 Stage 0 is complete: [implementation contracts](stage-0-contracts.md) and an
-[audited baseline](stage-0-baseline.md) are recorded. Production optimization
-implementation has not started. The change map, remaining stage order, and
+[audited baseline](stage-0-baseline.md) are recorded. Stage 1 local grouping is
+implemented; see its [results and validation](stage-1-results.md). The change map, remaining stage order, and
 acceptance criteria are in the [integrated implementation plan](implementation-plan.md).
 
 ## Objective, scope, and progress
@@ -20,19 +20,19 @@ producing an intrinsically large result.
 | Measure realistic cases and allocation requests | Complete |
 | Check equivalent representations, analytic results, and operation counts | Complete |
 | Run relevant existing tests and record findings | Complete |
-| Agree on the local-operator grouping direction | Complete; design details remain open |
+| Agree on the local-operator grouping direction | Complete; Stage 1 implemented |
 | Agree on repeated-action aggregation and its initial equivalence scope | Complete; implementation details remain open |
 | Bound the inner-product improvement to local contraction and exact-zero short-circuiting | Complete; further acceleration deferred |
 | Agree on sparse coordinate generation with shared identity expansion | Complete; implementation details remain open |
-| Consolidate changes, dependencies, stages, and acceptance criteria | Plan recorded; implementation not started |
-| Stage 0: contracts, probe audit, semantic fixtures, and current-revision baseline | Complete; Stages 1–5 not started |
+| Consolidate changes, dependencies, stages, and acceptance criteria | Plan recorded; Stages 0 and 1 complete |
+| Stage 0: contracts, probe audit, semantic fixtures, and current-revision baseline | Complete |
+| Stage 1: local construction/grouping API and query preparation | Complete; Stages 2–5 not started |
 
 Completion criteria were met: examples have explicit definitions, measurements
 have a recorded method, source paths explain the findings, and proposals are
-distinguished from verified behavior. Implementation requires a separate task.
+distinguished from verified behavior. Subsequent implementation is tracked by stage.
 
-This record does not change the implemented expression contracts or provide
-performance guarantees. At the investigated baseline, ordinary evaluation
+The historical investigation below provides no performance guarantees. At the investigated baseline, ordinary evaluation
 intentionally retains duplicate and zero terms. The agreed direction in finding
 2 would change that behavior and its capability requirements.
 See [local expressions](../../design/primitive-expression.md),
@@ -44,7 +44,8 @@ See [local expressions](../../design/primitive-expression.md),
 The following sections retain the investigation and initial design discussion.
 Where they identify implementation choices, the later
 [Stage 0 contracts](stage-0-contracts.md) now resolve those choices for the first
-implementation. Their behaviors remain unimplemented.
+implementation. Section 1 is now implemented by Stage 1; Sections 2–4 remain
+planned.
 
 | Finding | Adopted scope |
 | --- | --- |
@@ -53,10 +54,9 @@ implementation. Their behaviors remain unimplemented.
 | 3. Inner products | Preserve local factorization and short-circuit unnecessary work on exact zeros; further acceleration is deferred |
 | 4. Operator basis coordinates | Share the identity's local expansion within a query and emit complete coordinates directly from sparse factor data |
 
-These are agreed design directions, not implemented behavior. The sections below
-retain baseline measurements, describe each adopted scope, and identify remaining
-design and verification work. The implementation plan proposes a combined
-sequence; it does not report implementation completion.
+Direction 1 is implemented; directions 2–4 remain planned. The sections below
+retain baseline measurements and describe each adopted scope. The implementation
+plan tracks the combined sequence and current completion status.
 
 ## Method and reproduction
 
@@ -185,7 +185,7 @@ factor references that later validation needs, including references under zero
 coefficients. Handling scalar identity within a single-factor subtree must
 respect existing capability bounds and must not introduce a new indexed factor.
 
-#### Accepted explicit API and remaining details
+#### Accepted explicit API and resolved details
 
 The accepted API is `Operator::group_local(&self) -> Self`, subject to the
 capability bounds needed for structural grouping. It returns a grouped
@@ -195,24 +195,26 @@ already grouped result. It also accepts unbound operators and invokes no
 primitive evaluation. Ambient-space validation remains at binding/evaluation
 time; original factor references must be preserved.
 
-The remaining design choices are:
+Stage 0 fixed these details, and Stage 1 now implements them:
 
-- Exact construction-time coverage beyond direct local sums/products, especially
-  scales, adjoints, scalar identities, and empty expressions.
-- Exact capability bounds for the accepted API, including scalar-identity
-  handling without strengthening general construction bounds.
-- How much of the preparation helper to reuse in trace and `collect_terms_in()`.
-  State action has different capability requirements and needs separate analysis.
-- Whether an internal grouped marker is worthwhile to avoid rescanning explicit
-  API results. Measure repeated traversal before adding persistent metadata.
+- Construction groups direct local sums/products only, with unchanged bounds.
+  Scales, adjoints, and scalar identities are handled by whole-expression
+  grouping; pure scalar roots and empty scalar sums remain scalar.
+- The explicit API requires only `I: Eq`, `O: Identity`, and `C: Clone`.
+- Operator basis queries, trace/HS, and `collect_terms_in()` share query
+  preparation after original-reference validation. State action retains its
+  existing evaluation path and capability requirements.
+- There is no persistent marker. A bounded candidate scan avoids unnecessary
+  memo setup on small unchanged expressions, with query-local memoized postorder
+  traversal for larger or potentially groupable trees.
 
-Verification before accepting an implementation should compare grouped and
+The [Stage 1 record](stage-1-results.md) reports verification comparing grouped and
 ungrouped coordinates, actions, traces, and adjoints in ordinary and graded
-spaces; include noncommuting same-factor products, odd crossings, mixed parity,
+spaces, including noncommuting same-factor products, odd crossings, mixed parity,
 scalar identities, rebinding, invalid references, non-Clone primitives/indices,
-and deep/shared trees. Measure construction time, evaluation time, allocation
-counts, and already-local inputs separately. Re-run the Hadamard case to check
-that the placed-sum penalty is removed without material construction overhead.
+and deep/shared trees. Construction time, query time, allocation counts, and
+already-local controls are measured separately. The Hadamard comparison shows
+the placed-sum penalty is removed, with construction costs recorded explicitly.
 
 ## 2. Repeated actions retain many contributions to small states
 
@@ -602,8 +604,8 @@ the output-size lower bound.
 
 ## Integration status and limitations
 
-All four directions in the overview are agreed. The
-[implementation plan](implementation-plan.md) proposes their implementation
+All four directions in the overview are agreed, and local grouping is implemented.
+The [implementation plan](implementation-plan.md) proposes their implementation
 stages, order, compatibility work, and verification gates. Local grouping should
 feed the existing grading path before the coordinate generator; state-term collection and inner
 products must agree on the normalized state representation and preserve Act
@@ -618,7 +620,7 @@ time in individual functions. Results depend on representation, basis, compiler,
 allocator, and host. Graded fermion evaluation, Hubbard models, other scalars,
 and production application workloads were not timed.
 
-## Verification record
+## Historical investigation verification record
 
 - `cargo test --offline -p syntaqs-core -p syntaqs-spin-half` passed at the
   investigated baseline, including doctests.
@@ -627,4 +629,6 @@ and production application workloads were not timed.
 - W primitive calls and Hamiltonian basis calls were counted separately from timing.
 - After relocating the probe into this directory, its release build and `count`
   mode passed again. Formatting, local links, and dependency paths were checked.
-- No production fixes, API changes, or optimization regression tests were introduced.
+- The initial investigation introduced no production fixes, API changes, or
+  optimization regression tests. Later Stage 1 changes and checks are recorded
+  [separately](stage-1-results.md).

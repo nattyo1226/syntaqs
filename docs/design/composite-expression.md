@@ -1,6 +1,6 @@
 # Composite expressions, placement, binding, and evaluation
 
-Last updated: 2026-11-04
+Last updated: 2026-11-15
 
 ## 1. Scope and responsibilities
 
@@ -226,6 +226,46 @@ Equalities concern mathematical meaning rather than bitwise floating-point equal
 
 Evaluation by local rules and expansion in a selected basis are separate operations; there is no shared fully expanded representation across all paths. Public types are `State<I,S,O,C>` and `Operator<I,O,C>`, with dedicated state and operator nodes. Neither a separate composite-structure type nor composite-specific local primitives are required.
 
+### 9.1. Structural local-operator grouping
+
+Operator construction groups immediate local sum operands on the same factor,
+and pairs of same-factor local product operands, after binding checks. It
+preserves operand order without arithmetic or primitive rules; constructors
+gain no capability bounds. A common ambient space alone is insufficient:
+the indexed leaf must match. Nested composite scales and adjoints are left
+for whole-expression grouping.
+
+`Operator::group_local(&self) -> Self` requires `I: Eq`, `O: Identity`, and
+`C: Clone`. It groups any subtree whose references all belong to one factor,
+translating scales, ordered sums/products, and adjoints into local syntax.
+Scalar children use local identity/zero syntax in that factor's context.
+Entirely scalar roots remain scalar. It preserves binding, supports unbound
+operators, leaves the input unchanged, and is structurally stable on reapplication.
+It does not evaluate primitive products/adjoints, collect equal terms, simplify
+zeros, choose a basis, or exchange operators on different factors. In particular,
+zero products keep references needed for later ambient validation.
+
+Grouping uses a bounded candidate scan to avoid a full memo for small trees
+that cannot need a rewrite, then iterative postorder traversal with a query-local
+node memo. The scan falls back to memoized traversal after its fixed work budget,
+so shared DAGs cannot make it expand indefinitely. Leaf classifications are
+read directly; the memo retains replacements only for changed containers.
+Scalar conversion to local syntax is lazy and shared across uses. Already-local
+roots are reused directly; unchanged multi-factor paths share their original
+nodes. No persistent grouping flag or public support cache is stored.
+
+Operator expand/coordinates, `collect_terms_in`, full trace, and HS queries
+validate the original expression against the selected space before applying
+this same preparation. Graded traversal still decomposes homogeneous components
+and owns all crossing signs; ordinary trace lowering still inserts parity strings.
+Grouping never gathers separated same-factor occurrences across another factor.
+State action retains its existing basis-free, operator-Product-free evaluator.
+
+Structural grouping differs from exact primitive collection in
+[local expressions](primitive-expression.md): it changes expression placement,
+not primitive algebra. Display reflects the retained structure, so constructing
+a same-factor sum may display `(A + B)[i]` rather than `A[i] + B[i]`.
+
 ## 10. Current public API
 
 | Subject | Main APIs and contracts |
@@ -234,7 +274,7 @@ Evaluation by local rules and expansion in a selected basis are separate operati
 | `State<I, S, O, C>` construction and spaces | `place`, `zero(&space)`, `unit()`, `sum`, `try_sum`, `tensor_in(&space, states)`, `try_tensor_in(&space, states)`, `scaled`, and `space`, `domain`, `codomain` |
 | `State<I, S, O, C>` operations and evaluation | `act`, `act_in`, `evaluate`, `inner_product`, `norm_squared`, `expectation`, and `expectation_in`; action construction is delayed |
 | `Operator<I, O, C>` construction and spaces | `place`, `zero()`, `identity()`, `scalar`, `sum`, `try_sum`, `product`, `try_product`, `scaled`, `adjoint`, `bind`, and `space`, `domain`, `codomain`; space queries return `None` when unbound |
-| `Operator<I, O, C>` operations and evaluation | `commutator`, `anticommutator`, `trace`, `trace_in`, `hs_inner_product`, and `hs_inner_product_in`; commutator construction is delayed |
+| `Operator<I, O, C>` operations and evaluation | `group_local`, `commutator`, `anticommutator`, `trace`, `trace_in`, `hs_inner_product`, and `hs_inner_product_in`; grouping is structural and commutator construction is delayed |
 | Errors | `SpaceError` for duplicate factors, `ExpressionError` for composite connection and evaluation, and `DimensionOverflow` for dimension queries |
 
 Named sum and product constructors are sequence-based `sum` / `product`; binary operations use standard `+` / `*`. Index matching and numeric capabilities are required only by operations that need them. Validating composite operations return `Result`; state-action evaluation requires no operator-primitive `Product`. Basis expansion and coordinates follow [basis design](basis.md); norms, normalization, and normalized expectations follow [normalization API contracts](normalization.md#1-norm-and-normalization-apis-and-features). Hilbert-space APIs are in [space design](hilbert-space.md#9-public-apis).

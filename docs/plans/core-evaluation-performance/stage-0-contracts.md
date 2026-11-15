@@ -2,6 +2,8 @@
 
 Status: contracts fixed for Stages 1–4; none of these new production behaviors
 is implemented by Stage 0. The starting revision is `a070071`.
+Section 1 was subsequently implemented in [Stage 1](stage-1-results.md);
+Sections 2–4 remain planned.
 The [integrated plan](implementation-plan.md) owns scope and sequencing; the
 [baseline record](stage-0-baseline.md) owns the new measurements and checks.
 

@@ -124,19 +124,19 @@ fn composite_operator_and_state_variants_use_the_same_syntax() {
         (O::product([]).unwrap(), "I"),
         (O::scalar("2"), "(2) * I"),
         (a.scaled("0"), "(0) * A[a]"),
-        (sum.clone(), "A[a] + B[a]"),
-        ((&a * &b).unwrap(), "A[a] * B[a]"),
+        (sum.clone(), "(A + B)[a]"),
+        ((&a * &b).unwrap(), "(A * B)[a]"),
         (
             O::product([a.clone(), b.clone(), a.clone()]).unwrap(),
-            "A[a] * B[a] * A[a]",
+            "(A * B * A)[a]",
         ),
-        ((&a * (&b * &a).unwrap()).unwrap(), "A[a] * (B[a] * A[a])"),
-        ((&sum * &a).unwrap(), "(A[a] + B[a]) * A[a]"),
-        ((&a * &sum).unwrap(), "A[a] * (A[a] + B[a])"),
-        (sum.scaled("2"), "(2) * (A[a] + B[a])"),
+        ((&a * (&b * &a).unwrap()).unwrap(), "(A * (B * A))[a]"),
+        ((&sum * &a).unwrap(), "((A + B) * A)[a]"),
+        ((&a * &sum).unwrap(), "(A * (A + B))[a]"),
+        (sum.scaled("2"), "(2) * (A + B)[a]"),
         (
             O::sum([a.clone(), sum.clone()]).unwrap(),
-            "A[a] + (A[a] + B[a])",
+            "(A + (A + B))[a]",
         ),
         (a.scaled("3").scaled("2"), "(2) * ((3) * A[a])"),
         ((&a * b.scaled("2")).unwrap(), "A[a] * ((2) * B[a])"),
@@ -157,11 +157,8 @@ fn composite_operator_and_state_variants_use_the_same_syntax() {
         (states.clone(), "|up[a]> + |down[a]>"),
         (states.scaled("2"), "(2) * (|up[a]> + |down[a]>)"),
         (states.act(&a).unwrap(), "A[a] (|up[a]> + |down[a]>)"),
-        (up.act(&sum).unwrap(), "(A[a] + B[a]) |up[a]>"),
-        (
-            up.act(&(&a * &b).unwrap()).unwrap(),
-            "(A[a] * B[a]) |up[a]>",
-        ),
+        (up.act(&sum).unwrap(), "(A + B)[a] |up[a]>"),
+        (up.act(&(&a * &b).unwrap()).unwrap(), "(A * B)[a] |up[a]>"),
         (up.act(&a.scaled("2")).unwrap(), "((2) * A[a]) |up[a]>"),
         (up.act(&b).unwrap().act(&a).unwrap(), "A[a] (B[a] |up[a]>)"),
         (up.scaled("2").act(&a).unwrap(), "A[a] ((2) * |up[a]>)"),
@@ -533,7 +530,7 @@ fn deep_local_and_composite_syntax_formats_and_drops_on_a_small_stack() {
             assert_eq!(length(&action), 7 * DEPTH + 5);
             assert_eq!(length(&scale), 8 * DEPTH + 5);
             assert_eq!(length(&sum), 6 * DEPTH + 5);
-            assert_eq!(length(&product), 7 * DEPTH + 4);
+            assert_eq!(length(&product), 4 * DEPTH + 6);
             assert_eq!(length(&adjoint), 5 * DEPTH + 4);
             assert_eq!(length(&op_scale), 8 * DEPTH + 2);
             assert_eq!(length(&op_sum), 6 * DEPTH + 2);
