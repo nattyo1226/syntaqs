@@ -1,6 +1,6 @@
 # Future work
 
-Updated: 2026-11-09
+Updated: 2026-11-15
 
 This document collects future features, required design reviews, and candidates not yet adopted. Current specifications belong in [architecture](architecture.md) and [design](README.md#2-feature-details). Follow the [documentation guide](README.md#1-document-responsibilities) when starting an implementation plan or completing work.
 
@@ -64,3 +64,17 @@ sums without global Cartesian expansion. No additional accuracy guarantee or
 specific replacement algorithm is adopted. See the
 [current numerical contract](design/lie.md#3-projection-and-numerical-scales)
 and [verification limits](design/verification.md#3-ci-and-verification-limits).
+
+### 3.2. Inner-product acceleration
+
+Further state and operator Hilbert–Schmidt inner-product acceleration is deferred
+beyond incremental local contraction and exact-zero short-circuiting. Candidate
+approaches include sparse-coordinate contraction with suitable basis information,
+prefiltering term pairs using guaranteed orthogonality or conserved sectors, and
+reuse of partial contractions. Public APIs and algorithms are undecided.
+
+Distinct primitives are not necessarily orthogonal, and an arbitrary basis need
+not be orthonormal. Any coordinate-based method must account for the relevant
+Gram matrix unless orthonormality is guaranteed. Structural pruning must preserve
+ordinary/graded semantics and must not imply approximate component truncation.
+Any caches require explicit ownership, scope, reuse criteria, and resource limits.

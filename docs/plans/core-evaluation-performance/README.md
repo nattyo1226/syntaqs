@@ -2,9 +2,9 @@
 
 Date: 2026-11-15  
 Baseline: `8b18d8b`  
-Status: investigation complete; local-operator grouping and repeated-action
-aggregation directions are agreed. Implementation has not started; the other
-optimization proposals remain unadopted.
+Status: investigation complete; local-operator grouping, repeated-action
+aggregation, and exact-zero short-circuiting for inner products are agreed.
+Implementation has not started; other optimization proposals remain unadopted.
 
 ## Objective, scope, and progress
 
@@ -20,6 +20,7 @@ producing an intrinsically large result.
 | Run relevant existing tests and record findings | Complete |
 | Agree on the local-operator grouping direction | Complete; design details remain open |
 | Agree on repeated-action aggregation and its initial equivalence scope | Complete; implementation details remain open |
+| Bound the inner-product improvement to local contraction and exact-zero short-circuiting | Complete; further acceleration deferred |
 
 Completion criteria were met: examples have explicit definitions, measurements
 have a recorded method, source paths explain the findings, and proposals are
@@ -349,10 +350,56 @@ distributes into all n^2 pairs and contracts all n factors before multiplying
 their values. Off-diagonal pairs are orthogonal, but a zero overlap does not
 stop the remaining factor tasks.
 
-Candidates include a basis-enabled sparse-coordinate inner product and partial
-contraction reuse. Zero short-circuiting reduces unnecessary work but alone does
-not generally remove cubic scaling for this representation. Basis-free
-contraction must remain available.
+Agreed direction: preserve local contraction structure and stop a product branch
+as soon as an exact zero makes its remaining work unnecessary. Apply this to
+state inner products and operator Hilbert–Schmidt inner products. More advanced
+acceleration is deferred to [future work](../../future-work.md#32-inner-product-acceleration).
+
+### Agreed local-contraction and early-stopping scope
+
+Use conjugate linearity on the left and linearity on the right to decompose only
+the sums that a contraction needs. Contract independent tensor factors first;
+do not globally distribute products of sums merely to expose term pairs.
+Existing factorization and local rules remain the basis of evaluation.
+
+Evaluate product factors incrementally. If a local overlap, local trace, or
+partial product satisfies `Zero::is_zero()`, return zero for that product branch
+without evaluating its remaining factors. Also skip coefficient arithmetic and
+downstream contractions made unnecessary by that zero. A zero term pair does
+not terminate the other branches of a sum; cancellation of a partial sum to zero
+does not justify skipping its remaining summands.
+
+The current state contractor schedules all factor contractions before multiplying
+their results. Adding a zero check only to the final product reduction would
+not save those contractions. The implementation must delay remaining work using
+continuations or an equivalent incremental traversal. Operator HS contractions
+should likewise avoid computing all local traces before deciding to stop.
+
+For graded operators, use the existing lowering to the ordinary representation,
+including parity strings, before testing local trace factors. Preserve HS
+normalization and existing local multiplication order; do not infer orthogonality
+from unequal primitive values or add grading signs to state inner products.
+Validate spaces and original references before skipping numeric work.
+
+Use exact zero only, without tolerance-based pruning or a new finite-value
+restriction. Numerical behavior follows the existing
+[numeric conventions](../../design/numerics.md); changed evaluation order does
+not promise identical floating-point rounding or nonfinite-value propagation.
+
+The initial scope excludes basis-aware sparse inner products, prefiltering term
+pairs with orthogonality metadata, and partial-contraction caches. All-pairs
+enumeration may remain, and zero short-circuiting alone does not generally remove
+cubic scaling in the W-state case. Each W-state summand is distinct, so the
+repeated-action collection in finding 2 does not itself resolve this bottleneck.
+
+Before accepting an implementation, count local rule calls to verify that a
+zero factor suppresses later factors and that other sum branches still run.
+Cover state and HS products, zero factors at different positions, no-zero inputs,
+retained tiny nonzero values, preserved independent tensor sums, graded parity
+strings, and invalid references even when another factor is zero. Compare values
+with analytic or independent small-system results and measure both zero-heavy
+and no-zero cases. These checks and performance gains remain unimplemented and
+unmeasured.
 
 ## 4. Sparse Hamiltonians repeatedly process spectator identities
 
@@ -417,12 +464,12 @@ the output-size lower bound.
 ## Candidate priorities and limitations
 
 The measured cases suggest the following tentative investigation order. The
-directions in findings 1 and 2 are agreed, but this overall order and an integrated
+directions in findings 1–3 are agreed, but this overall order and an integrated
 implementation plan have not been approved:
 
 1. Aggregate matching natural-state terms within `evaluate()` between actions.
 2. Preserve or recover same-factor structure before composite distribution.
-3. Improve sparse-sum contraction, with optional basis-aware paths.
+3. Short-circuit inner-product branches on exact local zeros while preserving factorization.
 4. Reduce identity expansion, intermediate maps, and spectator traversal.
 
 Comparisons and operation counts identify costly paths, not percentages of CPU
