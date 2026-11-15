@@ -3,8 +3,9 @@
 Date: 2026-11-15  
 Baseline: `8b18d8b`  
 Status: investigation complete; directions for all four findings are agreed.
-Implementation has not started. Detailed design, integration order, and
-performance verification remain open.
+Implementation has not started. The proposed change map, stage order, and
+acceptance criteria are recorded in the [integrated implementation plan](implementation-plan.md).
+Detailed implementation choices and performance verification remain open.
 
 ## Objective, scope, and progress
 
@@ -22,6 +23,7 @@ producing an intrinsically large result.
 | Agree on repeated-action aggregation and its initial equivalence scope | Complete; implementation details remain open |
 | Bound the inner-product improvement to local contraction and exact-zero short-circuiting | Complete; further acceleration deferred |
 | Agree on sparse coordinate generation with shared identity expansion | Complete; implementation details remain open |
+| Consolidate changes, dependencies, stages, and acceptance criteria | Plan recorded; implementation not started |
 
 Completion criteria were met: examples have explicit definitions, measurements
 have a recorded method, source paths explain the findings, and proposals are
@@ -46,7 +48,8 @@ See [local expressions](../../design/primitive-expression.md),
 
 These are agreed design directions, not implemented behavior. The sections below
 retain baseline measurements, describe each adopted scope, and identify remaining
-design and verification work. No integrated implementation sequence is settled.
+design and verification work. The implementation plan proposes a combined
+sequence; it does not report implementation completion.
 
 ## Method and reproduction
 
@@ -170,20 +173,22 @@ factor references that later validation needs, including references under zero
 coefficients. Handling scalar identity within a single-factor subtree must
 respect existing capability bounds and must not introduce a new indexed factor.
 
-#### Intended explicit API and open details
+#### Accepted explicit API and remaining details
 
-The API should return a grouped expression without changing its input, retain
-the original binding, preserve factor order, and make no further structural
-changes when reapplied to an already grouped result. `group_local()` is a
-working name, not an accepted public signature.
+The accepted API is `Operator::group_local(&self) -> Self`, subject to the
+capability bounds needed for structural grouping. It returns a grouped
+expression without changing its input, retains the original binding, preserves
+factor order, and makes no further structural changes when reapplied to an
+already grouped result. It also accepts unbound operators and invokes no
+primitive evaluation. Ambient-space validation remains at binding/evaluation
+time; original factor references must be preserved.
 
 The remaining design choices are:
 
 - Exact construction-time coverage beyond direct local sums/products, especially
   scales, adjoints, scalar identities, and empty expressions.
-- Public API name, ownership convention, capability bounds, and support for
-  unbound expressions. If unbound expressions are supported, ambient validation
-  remains deferred and original factor references must be preserved.
+- Exact capability bounds for the accepted API, including scalar-identity
+  handling without strengthening general construction bounds.
 - How much of the preparation helper to reuse in trace and `collect_terms_in()`.
   State action has different capability requirements and needs separate analysis.
 - Whether an internal grouped marker is worthwhile to avoid rescanning explicit
@@ -247,8 +252,10 @@ do not measure the agreed evaluator design.
 ### Agreed repeated-action aggregation direction
 
 The evaluator should resolve an action, normalize its result within the scope
-below, and combine matching terms before applying the next operator. This is
-collection in the natural primitive representation, not basis expansion.
+below, and combine matching terms before applying the next operator. Inputs
+without pending actions are also normalized and collected: `Up + Up` evaluates
+to `2 Up`. Re-evaluating a normalized result should not change its structure.
+This is collection in the natural primitive representation, not basis expansion.
 
 ```text
 evaluate():
@@ -276,7 +283,10 @@ composite evaluation must agree on this behavior; collection at the composite
 boundary alone must not leave local repeated actions expanding unchecked.
 
 Requiring `PartialEq` on state primitives for `evaluate()` is accepted as a
-natural requirement of this responsibility. Coefficient capabilities must also
+natural requirement of this responsibility. Coefficient `PartialEq` is also
+accepted on evaluation paths that need to compare coefficients inside retained
+factored structures; do not add it to construction or operations that need no
+such comparison. Coefficient capabilities must also
 support collection, including coefficient addition, multiplication when
 normalizing nested scales, and exact-zero detection. The exact Rust bounds and
 their propagation to callers remain to be specified. This is an intended
@@ -329,8 +339,9 @@ The remaining design work includes:
 - Normalization boundaries for local versus composite sums, including equivalent
   local-state content stored inside or outside a placement.
 - Required coefficient bounds and effects on dependent APIs and capability tests.
-- Handling inputs with no pending actions: the existing ready-subtree shortcut
-  does not by itself establish that a subtree has already been collected.
+- Avoiding repeated normalization of already collected subtrees while also
+  collecting action-free inputs. The existing ready-subtree shortcut does not
+  by itself establish collected form.
 - Reuse of normalized/shared subtrees and control of comparison costs without
   requiring full expansion or persistent caches.
 
@@ -579,9 +590,10 @@ the output-size lower bound.
 
 ## Integration status and limitations
 
-All four directions in the overview are agreed. Detailed implementation stages
-and their order remain to be planned. Local grouping should feed the existing
-grading path before the coordinate generator; state-term collection and inner
+All four directions in the overview are agreed. The
+[implementation plan](implementation-plan.md) proposes their implementation
+stages, order, compatibility work, and verification gates. Local grouping should
+feed the existing grading path before the coordinate generator; state-term collection and inner
 products must agree on the normalized state representation and preserve Act
 scope. Query-local identity reuse is separate from the deferred general result
 and partial-contraction caching proposals.
