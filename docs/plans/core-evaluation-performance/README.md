@@ -2,9 +2,9 @@
 
 Date: 2026-11-15  
 Baseline: `8b18d8b`  
-Status: investigation complete; local-operator grouping, repeated-action
-aggregation, and exact-zero short-circuiting for inner products are agreed.
-Implementation has not started; other optimization proposals remain unadopted.
+Status: investigation complete; directions for all four findings are agreed.
+Implementation has not started. Detailed design, integration order, and
+performance verification remain open.
 
 ## Objective, scope, and progress
 
@@ -21,6 +21,7 @@ producing an intrinsically large result.
 | Agree on the local-operator grouping direction | Complete; design details remain open |
 | Agree on repeated-action aggregation and its initial equivalence scope | Complete; implementation details remain open |
 | Bound the inner-product improvement to local contraction and exact-zero short-circuiting | Complete; further acceleration deferred |
+| Agree on sparse coordinate generation with shared identity expansion | Complete; implementation details remain open |
 
 Completion criteria were met: examples have explicit definitions, measurements
 have a recorded method, source paths explain the findings, and proposals are
@@ -33,6 +34,19 @@ intentionally retains duplicate and zero terms. The agreed direction in finding
 See [local expressions](../../design/primitive-expression.md),
 [composite expressions](../../design/composite-expression.md), and
 [basis expansion](../../design/basis.md).
+
+### Agreed directions at a glance
+
+| Finding | Adopted scope |
+| --- | --- |
+| 1. Composite sum distribution | Same-factor local grouping at construction, before evaluation, and through an explicit API, using shared rules |
+| 2. Repeated state actions | Collect matching natural-state terms between actions in `evaluate()`, normalizing tensor grouping and coefficient placement without distributive-equivalence checks |
+| 3. Inner products | Preserve local factorization and short-circuit unnecessary work on exact zeros; further acceleration is deferred |
+| 4. Operator basis coordinates | Share the identity's local expansion within a query and emit complete coordinates directly from sparse factor data |
+
+These are agreed design directions, not implemented behavior. The sections below
+retain baseline measurements, describe each adopted scope, and identify remaining
+design and verification work. No integrated implementation sequence is settled.
 
 ## Method and reproduction
 
@@ -427,8 +441,18 @@ The 64-site H² coordinates caused 25,135,284 allocation requests and
 
 Mechanism: [`operator_expansion`](../../../crates/syntaqs-core/src/basis/expansion/composite.rs)
 visits every ambient factor per intrinsic term and repeatedly constructs and
-expands spectator identities. Its `tensor` helper repeatedly allocates digit
-vectors and intermediate `BTreeMap` values when appending factors.
+expands spectator identities. The source Hamiltonian does not contain those
+spectator identity nodes: they are temporary local expressions created by the
+`None` branch when an intrinsic term has no operator for the current factor.
+Its `tensor` helper repeatedly allocates digit vectors and intermediate
+`BTreeMap` values when appending factors.
+
+The multiplicity comes from processing many intrinsic terms, not from identities
+growing inside the source tree. At 64 sites H has 189 two-factor terms, each
+with 62 spectators, hence 11,718 spectator identity expansions. H² has 35,721
+term pairs before collection, each referring to at most four factors. The
+identity-call count also includes identities obtained from local products such
+as XX = I.
 
 There is a related action cost:
 [`Task::Local`](../../../crates/syntaqs-core/src/evaluate/composite.rs) visits
@@ -436,10 +460,102 @@ spectator state factors for each local action. Applying H once to the Neel state
 and evaluating took 0.062708, 0.198417, 0.613792, and 2.118667 ms at 16, 32, 64,
 and 128 sites. Spectators are shared in the result but still traversed.
 
-Candidates: reuse identity expansion within a query, avoid intermediate maps for
-single-entry factors, reduce coordinate-prefix copying, and route local actions
-to affected subtrees. Identity need not be one basis element; the generic basis
-contract allows a multi-term expansion.
+Agreed direction: retain sparse factor data, share the identity's local expansion
+within a query, and generate completed basis coordinates without factor-by-factor
+intermediate maps. Routing state actions directly to affected subtrees is a
+related candidate, not part of this adopted coordinate-generation scope.
+
+### Agreed sparse coordinate-generation direction
+
+Preserve the public output format. `Coordinates` stores a map from one local
+basis-index digit per ambient factor to a coefficient:
+`BTreeMap<Vec<usize>, C>`. The index tuple is the coordinate key; these are not
+two separately stored index representations. This query represents an operator
+in a tensor-product operator basis, rather than applying it to a state.
+
+#### Sparse inputs and shared spectator information
+
+`IntrinsicOpTerms` already returns only specified factors after resolving the
+ordinary/graded product semantics. Preserve that sparse representation:
+
+```text
+Ambient factors: 0, 1, 2, 3
+Term coefficient: 2
+Specified factors: {1: X, 3: Z}
+Unspecified factors: use the shared identity expansion
+```
+
+When a spectator is first needed, compute the identity's expansion and validate
+its basis indices using the existing local expansion rules. Reuse that result
+for the rest of the query. Do not construct an identity or invoke its basis
+expansion separately for each spectator of each term. Do not eagerly expand it
+when there are no spectators, including the zero-factor unit space.
+
+Expand the specified local expressions normally. The shared spectator expansion
+is private query-local data, not a persistent cache or a new public sparse
+operator type.
+
+#### Direct coordinate generation
+
+For CartesianBasis = [I, X, Y, Z], the identity expansion is index 0 with
+coefficient 1. Initialize a working key with zeros, then place the indices of
+specified factors at their positions. The example emits:
+
+```text
+Default key:  [0, 0, 0, 0]
+Factor 1:    [0, 1, 0, 0]
+Factor 3:    [0, 1, 0, 3]
+Contribution: [0, 1, 0, 3] -> 2
+```
+
+These intermediate key states are updates to working storage, not successive
+maps. For multi-component specified factors, enumerate their local choices and
+emit each completed key and coefficient directly into the shared result
+accumulator. Combine contributions with equal keys and remove exact zeros.
+Avoid a separate full-space expansion map per intrinsic term.
+
+The single-component case must be determined from the identity's actual
+expansion. Do not assume its index is zero or its coefficient is one. If
+I = gamma B_q, fill spectator positions with q and include the spectator
+coefficient factors in the emitted coefficient. Handling this case must not
+introduce a scalar division requirement.
+
+If identity has multiple components, such as I = E_00 + E_11 in a matrix-unit
+basis, reuse the same local choices at every spectator and enumerate their
+combinations incrementally with those of specified factors. Do not precompute a
+full spectator tensor-product map. The final coordinate count can still grow
+exponentially in the number of spectators; that is required by this explicit
+output basis, not removable identity-generation overhead.
+
+#### Output, grading, and remaining work
+
+Run this generation after the existing intrinsic ordering and exchange-sign
+processing. Preserve factor order and the signed coefficient, and do not insert
+parity strings or apply crossing signs again. Spectator identity is even.
+
+`coordinates()` emits only keys and coefficients, not identity expression nodes.
+`expand()` can use the same generation scheme with shared local basis-expression
+handles, then construct the required result syntax. In CartesianBasis that
+syntax still contains explicit identity factors. Preserve support for other
+bases where identity is represented by several basis elements, and avoid adding
+Clone/Eq/Ord requirements on primitives merely for this optimization.
+
+Remaining work is to choose the working-key and local-choice traversal layout,
+resolve and reuse ambient factor positions efficiently, account for spectator
+coefficients, and share generation between coordinate-only and expression
+outputs. The current full-length public keys, intrinsic term count, map
+comparisons, and final expression-node creation still have costs. This design
+does not itself solve composite term proliferation or guarantee a particular
+speedup.
+
+Verify single-component identity at a nonzero index and with a non-unit
+coefficient, multi-component identity, no-spectator inputs, unit spaces, exact
+cancellation, basis errors, explicit rebinding, non-Clone primitives/indices,
+and graded products/adjoints. Compare coordinates and expanded expressions with
+independent small-system results. Re-run the H and H² cases with basis-call and
+allocation counts to establish that repeated spectator expansion and prefix-map
+construction are removed. These implementation checks and gains are not yet
+measured.
 
 ## Control: output-size growth can be necessary
 
@@ -461,16 +577,17 @@ already be contracted without global expansion, as the fast norm illustrates.
 tree when only coefficients are needed. Allocation improvements do not remove
 the output-size lower bound.
 
-## Candidate priorities and limitations
+## Integration status and limitations
 
-The measured cases suggest the following tentative investigation order. The
-directions in findings 1–3 are agreed, but this overall order and an integrated
-implementation plan have not been approved:
+All four directions in the overview are agreed. Detailed implementation stages
+and their order remain to be planned. Local grouping should feed the existing
+grading path before the coordinate generator; state-term collection and inner
+products must agree on the normalized state representation and preserve Act
+scope. Query-local identity reuse is separate from the deferred general result
+and partial-contraction caching proposals.
 
-1. Aggregate matching natural-state terms within `evaluate()` between actions.
-2. Preserve or recover same-factor structure before composite distribution.
-3. Short-circuit inner-product branches on exact local zeros while preserving factorization.
-4. Reduce identity expansion, intermediate maps, and spectator traversal.
+Further inner-product acceleration remains in
+[future work](../../future-work.md#32-inner-product-acceleration).
 
 Comparisons and operation counts identify costly paths, not percentages of CPU
 time in individual functions. Results depend on representation, basis, compiler,

@@ -51,7 +51,11 @@ Do not create crates solely for prospective features before their independent re
 
 Dedicated no_std target builds, benchmarks, speed comparisons, and further allocation optimization remain unverified. See [verification](design/verification.md) for current checks and limits.
 
-Distributing sums inside operator products can increase term counts even when the result is sparse. Future investigations include combining local sums earlier, comparing caching with recomputation, and retaining interval parity as unevaluated structure.
+Distributing sums inside operator products can increase term counts even when
+the result is sparse. Further investigations beyond same-factor local grouping
+include comparing general result caching with recomputation and retaining
+interval parity as unevaluated structure. Query-local reuse of an identity's
+basis expansion is separate from general result caching.
 
 ### 3.1. Lie residual accuracy
 
