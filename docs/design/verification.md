@@ -102,6 +102,13 @@ and a 20,000-axis enumeration case checks iterative traversal on a small stack.
 Existing independent ordinary/graded matrix and nonorthogonal-basis tests verify
 both precisions and reconstructed expression semantics.
 
+[core_evaluation_pipeline.rs](../../tests/tests/core_evaluation_pipeline.rs)
+combines local potential grouping, repeated hopping-model actions and collection,
+state and operator HS contractions, and operator coordinates/expanded syntax.
+Independent three-site matrices check ordinary and graded inputs at f32/f64,
+including singleton and multi-component spectator identity bases. This complements
+the workstream-specific call-count and capability tests above.
+
 ## 3. CI and verification limits
 
 The [CI workflow](../../.github/workflows/ci.yml) runs on pushes to `main`, pull requests, and manual dispatch on 64-bit Linux. Rust 1.85.0 and stable each test the workspace with default, all, and no default features, including doctests and compile_fail cases. For each toolchain, only the default-configuration job runs the additional Lie-only example and shared Lie integration tests without export backends, downstream linkage fixture, and provider-selection checks. These commands select their own features independently of the workspace test configuration.

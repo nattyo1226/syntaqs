@@ -1,6 +1,7 @@
 # Integrated core evaluation performance plan
 
-Status: Stages 0–4 complete; Stage 5 remains planned. Stage 0 fixed the
+Status: Stages 0–5 complete; integration acceptance is recorded in
+[Stage 5 results](stage-5-results.md). Stage 0 fixed the
 contracts and recorded an audited pre-optimization baseline. Stage 1 implemented
 local grouping; its [results and validation](stage-1-results.md) are recorded.
 Stage 2 [results and validation](stage-2-results.md) cover per-action collection
@@ -164,7 +165,7 @@ otherwise independent; the order supports review and measurement attribution.
 | 2. State collection | Local/composite per-action collection and caller-bound migration | Rotations and Hamiltonian powers agree with references; matching normalization and factored-input tests pass | Complete; [results](stage-2-results.md) |
 | 3. Inner-product stopping | On-demand product contraction and exact-zero propagation | Call-count tests prove later factors are skipped while other sum branches run; graded HS remains correct | Complete; [results](stage-3-results.md) |
 | 4. Coordinate generation | Shared spectator expansion and direct key emission for both outputs | Single/multi-component identity cases pass; spectator basis calls no longer scale with terms times spectators | Complete; [results](stage-4-results.md) |
-| 5. Integration and documentation | Combined regressions, performance comparison, current API docs | Required workspace checks pass or pre-existing/environment failures are identified; acceptance criteria below are met | Planned |
+| 5. Integration and documentation | Combined regressions, performance comparison, current API docs | Required workspace checks pass or pre-existing/environment failures are identified; acceptance criteria below are met | Complete; [results](stage-5-results.md) |
 
 ### Stage 0: completed contracts and baseline
 
@@ -283,4 +284,7 @@ operator-query preparation; its results include semantic checks and 92 measured
 cases. Stage 2 implements per-action natural-state collection and caller-bound
 migration; see its [implementation record](stage-2-results.md). Stage 3 results are recorded
 [separately](stage-3-results.md). Stage 4 [results](stage-4-results.md) cover shared
-identity expansion and direct key generation; Stage 5 remains pending.
+identity expansion and direct key generation. Stage 5 adds the combined
+ordinary/graded pipeline regression, completes the supported-toolchain/backend
+command matrix locally, and records all 102 final measurements with regressions
+and remaining limits in its [acceptance record](stage-5-results.md).

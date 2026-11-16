@@ -1,6 +1,6 @@
 # Future work
 
-Updated: 2026-11-15
+Updated: 2026-11-16
 
 This document collects future features, required design reviews, and candidates not yet adopted. Current specifications belong in [architecture](architecture.md) and [design](README.md#2-feature-details). Follow the [documentation guide](README.md#1-document-responsibilities) when starting an implementation plan or completing work.
 
@@ -49,7 +49,11 @@ Do not create crates solely for prospective features before their independent re
 
 ## 3. Outstanding verification and performance
 
-Dedicated no_std target builds, benchmarks, speed comparisons, and further allocation optimization remain unverified. See [verification](design/verification.md) for current checks and limits.
+Dedicated no_std target builds and performance across workloads and targets
+remain unverified. Targeted host measurements cover local grouping, repeated
+state actions, exact-zero contractions, and sparse operator coordinates; they
+do not establish general speed or memory guarantees. See
+[verification](design/verification.md) for current checks and limits.
 
 Distributing sums inside operator products can increase term counts even when
 the result is sparse. Further investigations beyond same-factor local grouping
@@ -82,3 +86,15 @@ not be orthonormal. Any coordinate-based method must account for the relevant
 Gram matrix unless orthonormality is guaranteed. Structural pruning must preserve
 ordinary/graded semantics and must not imply approximate component truncation.
 Any caches require explicit ownership, scope, reuse criteria, and resource limits.
+
+### 3.3. Natural-state collection overhead
+
+Per-query normalization and equality-based interning can dominate a single local
+action or a small factored norm even when they prevent explosive growth during
+repeated actions. Investigate reducing context initialization and allocation,
+and avoiding repeated preparation within one query. Preserve action-free
+collection, first-occurrence order, nonreflexive PartialEq behavior, minimal
+public bounds, and retained products of sums. A persistent normalized marker or
+cross-query cache is not adopted; either would require an explicit validity and
+ownership design. Distinct terms and intrinsically large coordinate output remain
+separate costs.

@@ -8,7 +8,8 @@ Stage 0 is complete: [implementation contracts](stage-0-contracts.md) and an
 implemented; see its [results and validation](stage-1-results.md). Stage 2 state
 collection is complete; see its [results and validation](stage-2-results.md). Stage 3
 incremental contractions are complete; see their [results and validation](stage-3-results.md). Stage 4 coordinate generation
-is complete; see its [results and validation](stage-4-results.md). The change map, remaining stage order, and
+is complete; see its [results and validation](stage-4-results.md). Stage 5 integration is complete; see its
+[combined results and validation](stage-5-results.md). The change map, stages, and
 acceptance criteria are in the [integrated implementation plan](implementation-plan.md).
 
 ## Objective, scope, and progress
@@ -27,12 +28,13 @@ producing an intrinsically large result.
 | Agree on repeated-action aggregation and its initial equivalence scope | Complete; implementation details fixed in Stage 0 |
 | Bound the inner-product improvement to local contraction and exact-zero short-circuiting | Complete; further acceleration deferred |
 | Agree on sparse coordinate generation with shared identity expansion | Complete; Stage 4 implemented |
-| Consolidate changes, dependencies, stages, and acceptance criteria | Plan recorded; Stages 0–4 complete |
+| Consolidate changes, dependencies, stages, and acceptance criteria | Complete; Stages 0–5 implemented and validated locally |
 | Stage 0: contracts, probe audit, semantic fixtures, and current-revision baseline | Complete |
 | Stage 1: local construction/grouping API and query preparation | Complete |
 | Stage 2: per-action state collection and caller-bound migration | Complete |
 | Stage 3: local contraction and exact-zero stopping | Complete |
-| Stage 4: shared identity expansion and direct operator-coordinate keys | Complete; Stage 5 remains planned |
+| Stage 4: shared identity expansion and direct operator-coordinate keys | Complete |
+| Stage 5: integrated regression, final performance comparison, and documentation | Complete; [results](stage-5-results.md) |
 
 Completion criteria were met: examples have explicit definitions, measurements
 have a recorded method, source paths explain the findings, and proposals are
