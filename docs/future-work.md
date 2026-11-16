@@ -81,6 +81,12 @@ approaches include sparse-coordinate contraction with suitable basis information
 prefiltering term pairs using guaranteed orthogonality or conserved sectors, and
 reuse of partial contractions. Public APIs and algorithms are undecided.
 
+Incremental contraction still prepares structural group metadata eagerly and
+considers every pair of summands. Investigate generating later tensor groups
+only when a nonzero prefix needs them. Separate this preparation cost from
+operand collection and primitive contraction counts; preserve independent tensor
+boundaries, original validation, and continuation of other sum branches.
+
 Distinct primitives are not necessarily orthogonal, and an arbitrary basis need
 not be orthonormal. Any coordinate-based method must account for the relevant
 Gram matrix unless orthonormality is guaranteed. Structural pruning must preserve

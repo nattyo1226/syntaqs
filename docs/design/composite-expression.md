@@ -213,6 +213,10 @@ Equalities concern mathematical meaning rather than bitwise floating-point equal
 
 ## 9. Storage and evaluation implementation
 
+The [evaluation performance decision](../decisions/core-evaluation-performance.md)
+records the rationale, alternatives, and dated workload comparisons for these
+processing boundaries. The contracts below describe the current implementation.
+
 | Subject | Implemented policy |
 | --- | --- |
 | Composite `State` | Always has a determined containing space. Zero and empty sums require a space; an empty tensor product is state `1` on a zero-factor space |

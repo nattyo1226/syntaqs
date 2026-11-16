@@ -159,3 +159,8 @@ Tests for sharing, sparse output without dense intermediates, and iterative
 deep-tree processing are not general speed/memory guarantees. Task-specific
 timings, allocation counts, and skipped-call assertions do not establish
 performance across all workloads, toolchains, or targets. Track further verification and optimization in [future work](../future-work.md#3-outstanding-verification-and-performance).
+
+The [core evaluation performance decision](../decisions/core-evaluation-performance.md)
+preserves reference workloads, measurement methodology, comparative results,
+and Git provenance for the accepted grouping, collection, contraction, and
+coordinate-generation changes. These dated observations are not CI thresholds.
