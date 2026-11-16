@@ -239,8 +239,8 @@ impl Basis<Ket, Complex<f64>> for BrokenBasis {
 }
 
 #[test]
-fn malformed_expansion_and_enumeration_are_errors_even_under_zero_scale() {
-    let state = Ls::<f64>::primitive(Ket::Phase).scaled(c(0.0, 0.0));
+fn malformed_expansion_of_retained_states_and_enumeration_are_errors() {
+    let state = Ls::<f64>::primitive(Ket::Phase);
     assert!(matches!(
         state.coordinates(&BrokenBasis(0)),
         Err(BasisError::NonBasisElement)
@@ -264,7 +264,7 @@ fn malformed_expansion_and_enumeration_are_errors_even_under_zero_scale() {
 }
 
 #[test]
-fn zero_state_factor_does_not_hide_invalid_basis_expansion_in_another_factor() {
+fn zero_state_factor_is_removed_before_basis_expansion() {
     let a = HilbertSpace::factor(0u8);
     let b = HilbertSpace::factor(1u8);
     let state = syntaqs_core::State::tensor_in(
@@ -275,14 +275,29 @@ fn zero_state_factor_does_not_hide_invalid_basis_expansion_in_another_factor() {
         ],
     )
     .unwrap();
-    assert!(matches!(
-        state.coordinates(&BrokenBasis(0)),
-        Err(BasisError::NonBasisElement)
-    ));
-    assert!(matches!(
-        state.expand(&BrokenBasis(1)),
-        Err(BasisError::IndexOutOfBounds { .. })
-    ));
+    assert_eq!(
+        state
+            .coordinates(&BrokenBasis(0))
+            .unwrap()
+            .entries()
+            .count(),
+        0
+    );
+    assert_eq!(
+        state
+            .expand(&BrokenBasis(1))
+            .unwrap()
+            .coordinates(&BrokenBasis(0))
+            .unwrap()
+            .entries()
+            .count(),
+        0
+    );
+    let zero = Ls::<f64>::primitive(Ket::Phase).scaled(c(0.0, 0.0));
+    assert_eq!(
+        zero.coordinates(&BrokenBasis(0)).unwrap().entries().count(),
+        0
+    );
 }
 
 struct BrokenOperatorBasis;

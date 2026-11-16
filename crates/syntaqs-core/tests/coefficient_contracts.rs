@@ -7,6 +7,7 @@ use syntaqs_core::{
     LocalState,
 };
 
+#[derive(PartialEq)]
 struct Primitive;
 impl syntaqs_core::HomogeneousParity for Primitive {
     fn parity(&self) -> syntaqs_core::Parity {
@@ -55,7 +56,7 @@ fn opaque_whole_coefficients_move_through_map_and_shared_local_and_composite_syn
 
 // No Num, Float, Copy, PartialEq, Neg, Div or RealPart. Real-part extraction is
 // deliberately absent: scalar quotients do not need a real projection.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct Weight(f64);
 impl Add for Weight {
     type Output = Self;
@@ -144,7 +145,7 @@ fn normalized_hs_needs_no_dimension_float_cast_or_general_div_trait() {
 }
 
 #[test]
-fn expectation_quotients_require_neither_real_part_nor_float_or_general_comparison() {
+fn expectation_quotients_require_neither_real_part_nor_float_or_ordering() {
     let state =
         LocalState::<Primitive, Primitive, Weight>::primitive(Primitive).scaled(Weight(2.0));
     let op = LocalOperator::primitive(Primitive).scaled(Weight(3.0));

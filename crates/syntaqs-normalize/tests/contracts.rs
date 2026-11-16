@@ -10,13 +10,19 @@ use syntaqs_core::{
 };
 use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
 
+#[derive(PartialEq)]
 struct Primitive<'a>(&'a Cell<usize>);
 
-// A coefficient with a floating real projection, but without One, From<f64>,
+// A coefficient with a floating real projection, but without From<f64>,
 // division, Copy, PartialEq or Float. Norm alone must not need normalization's
 // real-embedding capability.
 #[derive(Clone)]
 struct NormOnly(f64);
+impl num_traits::One for NormOnly {
+    fn one() -> Self {
+        Self(1.0)
+    }
+}
 impl Add for NormOnly {
     type Output = Self;
     fn add(self, rhs: Self) -> Self {

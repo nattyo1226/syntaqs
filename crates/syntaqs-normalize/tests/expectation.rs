@@ -9,6 +9,7 @@ use syntaqs_core::{
 
 use syntaqs_normalize::{NormalizationError, NormalizedExpectation, NormalizedExpectationIn};
 
+#[derive(PartialEq)]
 struct Primitive;
 impl syntaqs_core::HomogeneousParity for Primitive {
     fn parity(&self) -> syntaqs_core::Parity {
@@ -42,7 +43,7 @@ impl<C: One> InnerProduct<C> for Primitive {
 
 // No Num, Float, Copy, PartialEq, Neg, Div or RealPart. Real-part extraction is
 // deliberately absent: normalized expectations divide the whole coefficient.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct Weight(f64);
 impl Add for Weight {
     type Output = Self;
@@ -83,7 +84,7 @@ impl Divide for Weight {
 }
 
 #[test]
-fn normalized_expectations_require_neither_real_part_nor_float_or_general_comparison() {
+fn normalized_expectations_require_neither_real_part_nor_float_or_ordering() {
     let state =
         LocalState::<Primitive, Primitive, Weight>::primitive(Primitive).scaled(Weight(2.0));
     let op = LocalOperator::primitive(Primitive).scaled(Weight(3.0));
@@ -146,7 +147,7 @@ complex_regressions!(
 );
 
 #[test]
-fn large_superposition_with_a_roundoff_imaginary_norm_has_finite_expectations() {
+fn large_collected_superposition_has_finite_expectations() {
     type C = Complex<f64>;
     let state = LocalState::sum([(5.0, 7.0), (5.0, 2.0), (7.0, 1.0)].map(|(re, im)| {
         LocalState::<Primitive, Primitive, C>::primitive(Primitive)
@@ -154,7 +155,7 @@ fn large_superposition_with_a_roundoff_imaginary_norm_has_finite_expectations() 
     }));
     let norm = state.inner_product(&state);
     assert!(norm.re.is_finite() && norm.re > 0.0);
-    assert_ne!(norm.im, 0.0); // Exercise complex division, not its real shortcut.
+    assert!(norm.im.is_finite()); // Collection can eliminate the old rounding residual.
     let op = LocalOperator::primitive(Primitive);
     let close = |value: C| {
         assert!(

@@ -1,6 +1,6 @@
 # Basis expansion, coordinates, and enumeration
 
-Updated: 2026-11-15
+Updated: 2026-11-16
 
 ## 1. Scope and contract
 
@@ -154,7 +154,9 @@ Expanded syntax works without metadata: expand Sx into Sp+Sm, then back into Car
 
 All return `Result<_,BasisError>`, applying the same local basis to all factors and aggregating indices after evaluating local rules. States use their own space; operators prefer explicit space, then binding. A local basis never implies an unbound operator's ambient space. No primitive comparison/Clone or index Clone/Hash/Ord is required. Expand identity spectators too, even when identity is not itself a basis member. Zero retains its selected space as an empty sum; zero-factor states/operators use unit/scalar identity syntax.
 
-State evaluation reuses existing action without primitive Product. Operator expansion requires Identity/Product/Adjoint. Coefficients need operation-specific Clone/Zero/multiplication/conjugation, and composite unit coefficients use One. Shared processing needs neither Float nor division, though concrete rules/bases may. Ordinary action/inner-product/trace paths gain no basis dependency.
+State evaluation collects natural-state terms using PartialEq before basis
+expansion, without primitive Product. Local state queries require coefficient
+One; composite state queries additionally require coefficient PartialEq. Operator expansion requires Identity/Product/Adjoint. Coefficients need operation-specific Clone/Zero/multiplication/conjugation, and composite unit coefficients use One. Shared processing needs neither Float nor division, though concrete rules/bases may. Ordinary action/inner-product/trace paths gain no basis dependency.
 
 Composite operator queries first validate the original expression, then apply
 [structural local grouping](composite-expression.md#91-structural-local-operator-grouping)
@@ -177,7 +179,9 @@ Coordinates does not retain a primitive type parameter. If B implements Basis fo
 
 For `2(Up⊗Down)+3(Up⊗Down)−(Down⊗Up)`, SzBasis coordinates are 5 at `[0,1]` and −1 at `[1,0]`, with flat indices 1 and 2.
 
-Internally, BTreeMap aggregates sparse digit keys. Remove exact zeros during aggregation and composite state scaling before later tensor products, without approximate pruning or stopping later basis rules because a coefficient is zero. LinearCombination's order/duplicate/zero-preserving contract stays unchanged. Aggregated sparse coefficients are stored, but no full basis, dense vector, or matrix is materialized.
+Internally, BTreeMap aggregates sparse digit keys. Remove exact zeros during aggregation and composite state scaling before later tensor products, without approximate pruning. State evaluation can eliminate terms before basis
+expansion; reached operator-coordinate terms still validate specified local
+expansions even when a numerical coefficient is zero. LinearCombination's order/duplicate/zero-preserving contract stays unchanged. Aggregated sparse coefficients are stored, but no full basis, dense vector, or matrix is materialized.
 
 Operator coordinates are operator-basis coefficients, distinct from action matrices. [Export](export.md) stores coordinates numerically and generates action-matrix columns by applying operators to state-basis inputs.
 
@@ -189,7 +193,12 @@ Generation needs Dimension/Basis, not index Eq/Clone, primitive Clone, local act
 
 ### 7.4. Errors, re-exports, and examples
 
-BasisError distinguishes non-basis outputs (NonBasisElement), out-of-range local indices (IndexOutOfBounds), inconsistent enumeration/counts (InvalidEnumeration), dimension overflow (Dimension), and incompatible/unbound spaces (Expression). Check available information without automatically proving full independence/completeness. Zero coefficients do not hide invalid references or expansions.
+BasisError distinguishes non-basis outputs (NonBasisElement), out-of-range local indices (IndexOutOfBounds), inconsistent enumeration/counts (InvalidEnumeration), dimension overflow (Dimension), and incompatible/unbound spaces (Expression). Check available information without automatically proving full independence/completeness. Zero coefficients do not hide invalid space references. State queries evaluate
+and collect first: primitives removed by exact cancellation or zero tensor
+factors do not run basis rules and therefore cannot raise expansion errors.
+Retained primitives still undergo basis checks. Operator queries preserve
+expansion checks for reached intrinsic terms even under zero coefficients;
+enumeration checks are independent of numerical state collection.
 
 Basis, BasisError, and Coordinates are re-exported at core's root. See [basis_expansion.rs](../../examples/src/bin/basis_expansion.rs) and section 6 for verification.
 

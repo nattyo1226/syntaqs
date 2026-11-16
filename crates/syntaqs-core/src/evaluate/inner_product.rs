@@ -238,8 +238,8 @@ impl<S, O, C> LocalState<S, O, C> {
     /// is needed. Coefficients require arithmetic but no division or remainder.
     pub fn inner_product(&self, rhs: &Self) -> C
     where
-        C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
-        S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+        C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
+        S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
         O: Adjoint<C, Term = O>,
     {
         let lhs = self.evaluate();
@@ -273,8 +273,8 @@ impl<S, O, C> LocalState<S, O, C> {
     /// Returns the real part of the self-inner-product, without clamping.
     pub fn norm_squared(&self) -> C::Real
     where
-        C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + RealPart,
-        S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+        C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + RealPart,
+        S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
         O: Adjoint<C, Term = O>,
     {
         self.inner_product(self).real_part()
@@ -283,8 +283,8 @@ impl<S, O, C> LocalState<S, O, C> {
     /// Computes the unnormalized expectation `self† operator self`.
     pub fn expectation(&self, operator: &LocalOperator<O, C>) -> C
     where
-        C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
-        S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+        C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
+        S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
         O: Adjoint<C, Term = O>,
     {
         self.inner_product(&self.act(operator))
@@ -298,8 +298,8 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// grouping need not agree, and no global product-of-sums expansion is built.
     pub fn inner_product(&self, rhs: &Self) -> Result<C, ExpressionError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C>,
-        S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+        C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
+        S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
         O: Adjoint<C, Term = O> + crate::HomogeneousParity + crate::ParityOperator,
     {
         if !self.space.is_compatible_with(&rhs.space) {
@@ -316,8 +316,8 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// Returns the real part of the self-inner-product, without clamping.
     pub fn norm_squared(&self) -> Result<C::Real, ExpressionError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C> + RealPart,
-        S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+        C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + RealPart,
+        S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
         O: Adjoint<C, Term = O> + crate::HomogeneousParity + crate::ParityOperator,
     {
         Ok(self.inner_product(self)?.real_part())
@@ -326,8 +326,8 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// Computes the unnormalized expectation without requiring prior evaluation.
     pub fn expectation(&self, operator: &Operator<I, O, C>) -> Result<C, ExpressionError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C>,
-        S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+        C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
+        S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
         O: Adjoint<C, Term = O> + crate::HomogeneousParity + crate::ParityOperator,
     {
         self.inner_product(&self.act(operator)?)
@@ -340,8 +340,8 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         ambient: &HilbertSpace<I>,
     ) -> Result<C, ExpressionError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C>,
-        S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+        C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
+        S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
         O: Adjoint<C, Term = O> + crate::HomogeneousParity + crate::ParityOperator,
     {
         self.inner_product(&self.act_in(operator, ambient)?)

@@ -13,6 +13,7 @@ use syntaqs_core::{
 
 // No Clone, Eq, ordering or hashing on either primitive. In particular, the
 // operator implements Adjoint but deliberately has no Product or Identity.
+#[derive(PartialEq)]
 struct Ket(bool);
 struct Action;
 impl syntaqs_core::HomogeneousParity for Action {
@@ -70,9 +71,14 @@ impl<C: From<i16>> Basis<Ket, C> for CountingBasis {
     }
 }
 
-// No One, Float, Num, division, subtraction, negation, or approximate comparison.
+// No Float, Num, division, subtraction, negation, or approximate comparison.
 #[derive(Clone, Debug, PartialEq)]
 struct Coefficient(i32);
+impl num_traits::One for Coefficient {
+    fn one() -> Self {
+        Self(1)
+    }
+}
 impl From<i16> for Coefficient {
     fn from(n: i16) -> Self {
         Self(i32::from(n))
@@ -106,7 +112,7 @@ impl Conjugate for Coefficient {
 }
 
 #[test]
-fn local_expansion_needs_no_primitive_clone_product_float_or_coefficient_one() {
+fn local_expansion_needs_no_primitive_clone_product_float_or_division() {
     type S = LocalState<Ket, Action, Coefficient>;
     let basis = CountingBasis::new();
     let state = S::primitive(Ket(true));
@@ -378,6 +384,7 @@ fn placed_expansion_shares_nonclone_indices_and_does_not_enumerate_all_basis_ele
     );
 }
 
+#[derive(PartialEq)]
 struct Large;
 impl Dimension for Large {
     fn dim() -> Result<NonZeroUsize, DimensionOverflow> {
@@ -391,6 +398,7 @@ impl Act<f64> for Large {
         LinearCombination::term(1.0, Large)
     }
 }
+#[derive(PartialEq)]
 struct LargeBasis;
 impl Basis<Large, f64> for LargeBasis {
     fn expand(&self, _: &Large) -> LinearCombination<Large, f64> {

@@ -465,10 +465,35 @@ fn constructors_fallibility_and_deep_graded_trees() {
 }
 
 #[test]
-fn graded_action_needs_neither_product_nor_numeric_coefficient_operations() {
+fn graded_action_needs_no_product_clone_or_numeric_ordering() {
     use std::cell::Cell;
-    #[derive(Clone)]
-    struct Scalar;
+    #[derive(Clone, PartialEq)]
+    struct Scalar(i32);
+    impl std::ops::Add for Scalar {
+        type Output = Self;
+        fn add(self, rhs: Self) -> Self {
+            Self(self.0 + rhs.0)
+        }
+    }
+    impl std::ops::Mul for Scalar {
+        type Output = Self;
+        fn mul(self, rhs: Self) -> Self {
+            Self(self.0 * rhs.0)
+        }
+    }
+    impl num_traits::Zero for Scalar {
+        fn zero() -> Self {
+            Self(0)
+        }
+        fn is_zero(&self) -> bool {
+            self.0 == 0
+        }
+    }
+    impl num_traits::One for Scalar {
+        fn one() -> Self {
+            Self(1)
+        }
+    }
     impl Conjugate for Scalar {
         type Output = Self;
         fn conjugate(&self) -> Self {
@@ -496,7 +521,7 @@ fn graded_action_needs_neither_product_nor_numeric_coefficient_operations() {
         type Term = Self;
         fn adjoint(&self) -> LinearCombination<Self, Scalar> {
             LinearCombination::term(
-                Scalar,
+                Scalar(1),
                 match self {
                     Self::Flip => Self::Flip,
                     Self::P => Self::P,
@@ -504,6 +529,7 @@ fn graded_action_needs_neither_product_nor_numeric_coefficient_operations() {
             )
         }
     }
+    #[derive(PartialEq)]
     struct Borrowed<'a>(&'a Cell<usize>);
     impl<'a> Act<Scalar> for Borrowed<'a> {
         type Operator = Action;
@@ -512,7 +538,7 @@ fn graded_action_needs_neither_product_nor_numeric_coefficient_operations() {
             if matches!(op, Action::P) {
                 self.0.set(self.0.get() + 1);
             }
-            LinearCombination::term(Scalar, Self(self.0))
+            LinearCombination::term(Scalar(1), Self(self.0))
         }
     }
     let count = Cell::new(0);

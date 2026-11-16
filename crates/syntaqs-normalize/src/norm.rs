@@ -27,9 +27,9 @@ pub trait Normalize: Sized {
 
 impl<S, O, C> Norm for LocalState<S, O, C>
 where
-    C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + RealPart,
+    C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + RealPart,
     C::Real: Float,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
     O: Adjoint<C, Term = O>,
 {
     type Output = C::Real;
@@ -40,9 +40,9 @@ where
 
 impl<S, O, C> Normalize for LocalState<S, O, C>
 where
-    C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + RealPart + From<C::Real>,
+    C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + RealPart + From<C::Real>,
     C::Real: Float,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
     O: Adjoint<C, Term = O>,
 {
     fn normalized(&self) -> Result<Self, NormalizationError> {
@@ -54,9 +54,9 @@ where
 
 impl<I: Eq, S, O, C> Norm for State<I, S, O, C>
 where
-    C: Clone + Zero + One + Conjugate<Output = C> + RealPart,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + RealPart,
     C::Real: Float,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
     O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
 {
     type Output = Result<C::Real, ExpressionError>;
@@ -67,9 +67,9 @@ where
 
 impl<I: Eq, S, O, C> Normalize for State<I, S, O, C>
 where
-    C: Clone + Zero + One + Conjugate<Output = C> + RealPart + From<C::Real>,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + RealPart + From<C::Real>,
     C::Real: Float,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
     O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
 {
     fn normalized(&self) -> Result<Self, NormalizationError> {

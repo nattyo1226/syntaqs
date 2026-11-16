@@ -138,6 +138,7 @@ fn local_identity_uses_primitive_rules_without_dimension_queries() {
     static ACTIONS: AtomicUsize = AtomicUsize::new(0);
     static PRODUCTS: AtomicUsize = AtomicUsize::new(0);
     static ADJOINTS: AtomicUsize = AtomicUsize::new(0);
+    #[derive(PartialEq)]
     struct UnitState;
     struct UnitOperator;
     impl syntaqs_core::HomogeneousParity for UnitOperator {

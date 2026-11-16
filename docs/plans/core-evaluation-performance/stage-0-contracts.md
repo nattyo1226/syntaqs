@@ -2,8 +2,8 @@
 
 Status: contracts fixed for Stages 1–4; none of these new production behaviors
 is implemented by Stage 0. The starting revision is `a070071`.
-Section 1 was subsequently implemented in [Stage 1](stage-1-results.md);
-Sections 2–4 remain planned.
+Section 1 was subsequently implemented in [Stage 1](stage-1-results.md) and
+Section 2 in [Stage 2](stage-2-results.md); Sections 3–4 remain planned.
 The [integrated plan](implementation-plan.md) owns scope and sequencing; the
 [baseline record](stage-0-baseline.md) owns the new measurements and checks.
 
@@ -182,11 +182,15 @@ factors gamma. Use multiplication, not division. Multi-component identities
 share choices, not a precomputed spectator tensor map. Expand output additionally
 shares local basis-expression handles and constructs the required placed syntax.
 
-Preserve existing basis-error visibility. In particular,
+Preserve operator basis-error visibility. In particular,
 [core_basis_expansion](../../../tests/tests/core_basis_expansion.rs) checks that
-zero coefficients or a zero factor do not hide malformed expansion in another
-factor. Expand/validate all specified local factors and required spectator
-choices of a reached intrinsic term before suppressing its numeric combinations.
+zero operator coefficients or a zero operator factor do not hide malformed
+expansion in another factor. Stage 2 clarified the state-query boundary: state
+queries expand the evaluated result, so removed zero states do not run basis
+rules. The historical state-zero expectation in this test was updated, while
+retained-state, operator-expansion, and enumeration errors remain covered.
+Expand/validate all specified local factors and required spectator choices of a
+reached intrinsic term before suppressing its numeric combinations.
 A zero partial product must not skip a later basis validation that the existing
 query would perform. Never request identity expansion for a query with no
 spectators or for the zero-factor unit space.

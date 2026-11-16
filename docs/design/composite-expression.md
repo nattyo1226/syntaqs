@@ -1,6 +1,6 @@
 # Composite expressions, placement, binding, and evaluation
 
-Last updated: 2026-11-15
+Last updated: 2026-11-16
 
 ## 1. Scope and responsibilities
 
@@ -265,6 +265,59 @@ Structural grouping differs from exact primitive collection in
 [local expressions](primitive-expression.md): it changes expression placement,
 not primitive algebra. Display reflects the retained structure, so constructing
 a same-factor sum may display `(A + B)[i]` rather than `A[i] + B[i]`.
+
+### 9.2. Natural-state collection between actions
+
+`State::evaluate()` evaluates an operator product right to left and collects
+matching state terms before the next action. Operator sums contribute from the
+same normalized input to one incremental accumulator. The same boundaries apply
+inside local actions. Action-free inputs are normalized as well.
+
+Each normalized contribution has an outer coefficient and an action-free shape:
+unit, placed local polynomial, ordered tensor, or retained sum. Local polynomials
+flatten additive nesting and scales, combine `PartialEq`-matching primitives in
+first-occurrence order, and remove exact-zero coefficients. A singleton's
+coefficient moves to the enclosing contribution; a scale of a multi-term local
+polynomial is absorbed into its coefficients. Tensor normalization flattens
+parentheses, removes units, and pulls child outer coefficients to the tensor's
+outer coefficient. A zero factor makes the tensor zero while retaining the
+state's selected space. Factor order and delayed Act scope never change.
+
+Composite matching uses the resulting structure, primitive equality, and
+coefficient equality inside retained polynomials/sums. Ordered retained sums
+are not permuted for matching. Products of sums stay factored: no distributive
+search or common-factor extraction equates factored and distributed states.
+Distinct but linearly dependent primitives remain distinct until basis expansion.
+Only exact `Zero::is_zero()` removes numerical terms; tiny nonzero values remain.
+
+Evaluation uses iterative tasks, a per-call source-node memo, and internal
+normalized-result wrappers. Equality-only interning assigns scratch primitive,
+coefficient, and structural IDs for a query-local index, with output order stored
+separately. These IDs are not basis coordinates and add no user `Ord`/`Hash`
+requirement. Pointer memoization reuses normalization work, but never certifies
+term equality: nonreflexive primitives or retained coefficients cannot be merged
+merely because a source handle or ID is shared. No persistent collected marker
+is stored; action-presence flags do not certify normalization. Re-evaluation is
+structurally stable, with no O(1) guarantee for action-free inputs.
+
+| State evaluation | Required capabilities |
+| --- | --- |
+| Local | `S: PartialEq + Act<C, Operator=O, Term=S>`; `O: Adjoint<C, Term=O>`; `C: Clone + Zero + One + Conjugate<Output=C>` |
+| Composite | Local bounds plus `I: Eq`, `C: PartialEq`, and `O: HomogeneousParity + ParityOperator` |
+
+`Zero` and `One` supply addition and multiplication. No primitive/index Clone,
+primitive Eq/Ord/Hash, coefficient ordering, or primitive operator Product is
+required. Construction bounds are unchanged. State inner products, norms,
+expectations, basis queries, normalization, vector export and action-matrix
+export inherit the corresponding evaluation bounds. Operator-only trace/HS and
+operator-basis queries retain their existing bounds.
+
+State coordinates follow `evaluate -> basis expansion -> basis-index collection`.
+Validation of spaces/references precedes removal of zero states. Basis expansion
+checks primitives retained by evaluation; removed terms no longer run basis rules,
+including a tensor annihilated by a zero state factor. This boundary differs from
+operator coordinates, which still validate expansions of reached intrinsic terms.
+See [basis errors](basis.md#74-errors-re-exports-and-examples).
 
 ## 10. Current public API
 

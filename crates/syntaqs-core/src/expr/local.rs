@@ -38,8 +38,7 @@ use crate::{ExpressionError, Identity, Term};
 #[derive(Debug)]
 pub struct LocalState<S, O, C> {
     pub(crate) root: Option<Arc<StateNode<S, O, C>>>,
-    // A structural property, not an evaluation cache. It permits O(1) reuse of
-    // already evaluated subtrees without rescanning long expression chains.
+    // Records action presence only, not whether state terms are collected.
     pub(crate) has_action: bool,
 }
 

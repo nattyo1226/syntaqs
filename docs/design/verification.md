@@ -1,6 +1,6 @@
 # Verification structure and commands
 
-Updated: 2026-11-15
+Updated: 2026-11-16
 
 ## 1. Verification responsibilities
 
@@ -69,6 +69,16 @@ mixed parity, complex scales, scalar identity, product order, adjoints,
 rebinding, and automatic basis/trace/HS preparation against independent ordinary
 matrices in both precisions and tensor kinds. Formatting tests follow the
 retained local structure after same-factor construction grouping.
+
+Core `evaluate::state_tests` checks per-action collection and call counts,
+shared-input memoization, coefficient/tensor normalization, exact cancellation,
+first-occurrence order, nonreflexive PartialEq, retained factored sums, and
+space preservation. [core_state_collection.rs](../../tests/tests/core_state_collection.rs)
+checks 128 repeated rotations and eight six-site Heisenberg actions against
+analytic/bit-state references at f32/f64. Capability fixtures distinguish local
+coefficient equality from composite equality. Basis tests distinguish errors in
+retained state primitives from state terms removed before expansion; operator
+expansion and original-reference validation retain their checks.
 
 ## 3. CI and verification limits
 

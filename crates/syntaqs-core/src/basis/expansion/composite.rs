@@ -2,7 +2,7 @@
 
 use super::{
     accumulate,
-    local::{local_operator, local_state},
+    local::{evaluated_local_state, local_operator},
 };
 use crate::basis::enumeration::{collect_leaves, local_size};
 use crate::{
@@ -68,8 +68,8 @@ fn state_expansion<I: Eq, S, O, C, B, V: TensorValue>(
     make: impl Fn(S) -> V,
 ) -> Result<Expansion<V, C>, BasisError>
 where
-    C: Clone + Zero + One + Conjugate<Output = C>,
-    S: Act<C, Operator = O, Term = S>,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
+    S: PartialEq + Act<C, Operator = O, Term = S>,
     O: Adjoint<C, Term = O> + crate::HomogeneousParity + crate::ParityOperator,
     B: Basis<S, C>,
 {
@@ -80,7 +80,12 @@ where
         match task {
             StateTask::Visit(node) => match node.node() {
                 StateNode::Local(_, local) => {
-                    let terms = local_state(local, basis, dimension.expect("local factor"), &make)?;
+                    let terms = evaluated_local_state(
+                        local,
+                        basis,
+                        dimension.expect("local factor"),
+                        &make,
+                    )?;
                     values.push(terms.into_iter().map(|(i, v)| (vec![i], v)).collect());
                 }
                 StateNode::Unit => {
@@ -179,10 +184,11 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     ///
     /// Returns state syntax preserving the tensor kind on the original shared space. No global
     /// dimension, primitive clone, or primitive operator product is required.
+    /// Evaluates/collects first; removed zero states do not run basis rules.
     pub fn expand<B>(&self, basis: &B) -> Result<Self, BasisError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C>,
-        S: Dimension + Act<C, Operator = O, Term = S>,
+        C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
+        S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,
         O: Adjoint<C, Term = O> + crate::HomogeneousParity + crate::ParityOperator,
         B: Basis<S, C>,
     {
@@ -219,8 +225,8 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         basis: &'b B,
     ) -> Result<Coordinates<'b, B, C, HilbertSpace<I>>, BasisError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C>,
-        S: Dimension + Act<C, Operator = O, Term = S>,
+        C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
+        S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,
         O: Adjoint<C, Term = O> + crate::HomogeneousParity + crate::ParityOperator,
         B: Basis<S, C>,
     {
