@@ -14,8 +14,8 @@ use syntaqs_core::{
 impl<'b, S, O, C, B, D> Export<Exported<D, MatrixMetadata<'b, S, B>>, MatrixArgs<'b, S, B>>
     for &LocalOperator<O, C>
 where
-    C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
-    S: Dimension + Act<C, Operator = O, Term = S>,
+    C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
+    S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,
     O: Adjoint<C, Term = O>,
     B: Basis<S, C>,
     D: MatrixStorage<C>,
@@ -59,8 +59,8 @@ impl<'b, I: Eq, S, O, C, B, A, D>
     Export<Exported<D, MatrixMetadata<'b, S, B, HilbertSpace<I>>>, MatrixArgs<'b, S, B, A>>
     for &Operator<I, O, C>
 where
-    C: Clone + Zero + One + Conjugate<Output = C>,
-    S: Dimension + Act<C, Operator = O, Term = S>,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
+    S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,
     O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
     B: Basis<S, C>,
     A: Ambient<I>,

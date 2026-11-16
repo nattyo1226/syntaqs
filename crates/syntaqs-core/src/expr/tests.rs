@@ -18,6 +18,11 @@ struct Counts {
 }
 // Neither primitives nor metadata are Clone. Primitives borrow non-Send data.
 struct State<'a>(u8, &'a Counts);
+impl PartialEq for State<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 impl Drop for State<'_> {
     fn drop(&mut self) {
         self.1.drops.set(self.1.drops.get() + 1)
@@ -228,10 +233,7 @@ fn action_order_no_product_and_immutable_reusable_results() {
         coefficients(&result)
     );
     let again = result.evaluate();
-    assert!(Arc::ptr_eq(
-        result.root.as_ref().unwrap(),
-        again.root.as_ref().unwrap()
-    ));
+    assert_eq!(coefficients(&result), coefficients(&again));
     assert_eq!(
         coefficients(&again.act(&b).evaluate()),
         vec![(5, Complex::new(1.0, 0.0))]
@@ -240,27 +242,20 @@ fn action_order_no_product_and_immutable_reusable_results() {
 }
 
 #[test]
-fn ordered_zero_and_duplicate_terms_survive_mapping_and_evaluation() {
+fn ordered_zero_and_duplicate_terms_are_collected_during_evaluation() {
     let counts = Counts::default();
     let terms = LinearCombination::term(Complex::new(0.0, 0.0), State(2, &counts))
         + LinearCombination::term(Complex::new(3.0, 4.0), State(1, &counts))
         + LinearCombination::term(Complex::new(1.0, 0.0), State(1, &counts));
     let state = S::from_terms(terms.map(S::primitive));
     let result = state.act(&O::primitive(Operator(0, &counts))).evaluate();
-    assert_eq!(
-        coefficients(&result),
-        vec![
-            (2, Complex::new(0.0, 0.0)),
-            (1, Complex::new(3.0, 4.0)),
-            (1, Complex::new(1.0, 0.0))
-        ]
-    );
-    assert_eq!(counts.actions.get(), 3);
+    assert_eq!(coefficients(&result), vec![(1, Complex::new(4.0, 4.0))]);
+    assert_eq!(counts.actions.get(), 1);
     let zero = S::zero()
         .act(&O::primitive(Operator(0, &counts)))
         .evaluate();
     assert!(coefficients(&zero).is_empty());
-    assert_eq!(counts.actions.get(), 3);
+    assert_eq!(counts.actions.get(), 1);
     assert!(!zero.has_action);
 }
 
@@ -281,7 +276,7 @@ fn operator_sum_and_state_sum_preserve_left_to_right_term_order() {
             .into_iter()
             .map(|(label, _)| label)
             .collect::<Vec<_>>(),
-        vec![2, 3, 2, 4]
+        vec![2, 3, 4]
     );
     assert_eq!(counts.actions.get(), 4);
 }
@@ -334,9 +329,34 @@ fn send_and_sync_follow_stored_primitive_types() {
 }
 
 #[test]
-fn delayed_evaluation_needs_no_coefficient_arithmetic() {
+fn delayed_evaluation_needs_no_coefficient_equality() {
     #[derive(Clone)]
     struct Scalar(i32);
+    impl core::ops::Add for Scalar {
+        type Output = Self;
+        fn add(self, rhs: Self) -> Self {
+            Self(self.0 + rhs.0)
+        }
+    }
+    impl core::ops::Mul for Scalar {
+        type Output = Self;
+        fn mul(self, rhs: Self) -> Self {
+            Self(self.0 * rhs.0)
+        }
+    }
+    impl num_traits::Zero for Scalar {
+        fn zero() -> Self {
+            Self(0)
+        }
+        fn is_zero(&self) -> bool {
+            self.0 == 0
+        }
+    }
+    impl num_traits::One for Scalar {
+        fn one() -> Self {
+            Self(1)
+        }
+    }
     impl crate::Conjugate for Scalar {
         type Output = Self;
         fn conjugate(&self) -> Self {
@@ -369,13 +389,18 @@ fn delayed_evaluation_needs_no_coefficient_arithmetic() {
 }
 
 #[test]
-fn scalar_reductions_need_no_num_division_remainder_one_or_copy() {
+fn scalar_reductions_need_no_num_division_remainder_or_copy() {
     use crate::test_coefficient::MinimalComplex;
     use crate::{Identity, InnerProduct, Product, Trace};
     use core::ops::{Add, Mul, Neg, Sub};
     use num_traits::Zero;
     #[derive(Clone)]
     struct Ring(i32);
+    impl num_traits::One for Ring {
+        fn one() -> Self {
+            Self(1)
+        }
+    }
     impl Add for Ring {
         type Output = Self;
         fn add(self, rhs: Self) -> Self {
@@ -408,6 +433,7 @@ fn scalar_reductions_need_no_num_division_remainder_one_or_copy() {
             self.0 == 0
         }
     }
+    #[derive(PartialEq)]
     struct Primitive;
 
     fn one() -> LinearCombination<Primitive, MinimalComplex<Ring>> {
@@ -526,13 +552,9 @@ fn term_iterators_preserve_zero_duplicates_and_delayed_actions() {
     assert_eq!(counts.actions.get(), 0);
     assert_eq!(
         coefficients(&sum.evaluate()),
-        [
-            (2, Complex::new(0.0, 0.0)),
-            (2, Complex::new(2.0, 0.0)),
-            (1, Complex::new(-1.0, 0.0)),
-        ]
+        [(2, Complex::new(2.0, 0.0)), (1, Complex::new(-1.0, 0.0)),]
     );
-    assert_eq!(counts.actions.get(), 2);
+    assert_eq!(counts.actions.get(), 1);
     assert!(coefficients(&S::from_terms([]).evaluate()).is_empty());
     let single = S::from_terms([Term {
         coefficient: Complex::new(3.0, 0.0),

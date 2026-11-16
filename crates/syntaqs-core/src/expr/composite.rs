@@ -499,10 +499,7 @@ impl<I: Eq, O, C> Operator<I, O, C> {
     fn sum_collected(operators: SumExpr<Self>) -> Result<Self, ExpressionError> {
         let ambient = Self::combined_space(operators.as_slice())?;
         let parts: SumExpr<_> = operators.into_iter().map(|o| o.expression).collect();
-        let expression = match parts {
-            SumExpr::One(op) => op,
-            parts => OpExpr::new(OpNode::Sum(parts)),
-        };
+        let expression = super::group::sum(parts);
         Ok(Self {
             expression,
             ambient,
@@ -530,9 +527,7 @@ impl<I: Eq, O, C> Operator<I, O, C> {
         let mut parts = operators.into_iter().map(|o| o.expression);
         let expression = match parts.next() {
             None => OpExpr::new(OpNode::Identity),
-            Some(first) => parts.fold(first, |lhs, rhs| {
-                OpExpr::new(OpNode::Product(ProductExpr { lhs, rhs }))
-            }),
+            Some(first) => parts.fold(first, super::group::product),
         };
         Ok(Self {
             expression,

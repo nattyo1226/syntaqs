@@ -53,8 +53,8 @@ impl<'b, B, C: Clone, H: Clone, D: VectorStorage<C>> Export<Exported<D, VectorMe
 impl<'b, S, O, C, B, D> Export<Exported<D, VectorMetadata<'b, B, (), S>>, &'b B>
     for &LocalState<S, O, C>
 where
-    C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
-    S: Dimension + Act<C, Operator = O, Term = S>,
+    C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
+    S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,
     O: Adjoint<C, Term = O>,
     B: Basis<S, C>,
     D: VectorStorage<C>,
@@ -75,8 +75,8 @@ where
 impl<'b, I: Eq, S, O, C, B, D> Export<Exported<D, VectorMetadata<'b, B, HilbertSpace<I>, S>>, &'b B>
     for &State<I, S, O, C>
 where
-    C: Clone + Zero + One + Conjugate<Output = C>,
-    S: Dimension + Act<C, Operator = O, Term = S>,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
+    S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,
     O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
     B: Basis<S, C>,
     D: VectorStorage<C>,

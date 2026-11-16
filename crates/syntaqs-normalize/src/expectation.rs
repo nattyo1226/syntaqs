@@ -33,8 +33,8 @@ pub trait NormalizedExpectationIn<O, H> {
 
 impl<S, O, C> NormalizedExpectation<LocalOperator<O, C>> for LocalState<S, O, C>
 where
-    C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + Divide<Output = C>,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + Divide<Output = C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
     O: Adjoint<C, Term = O>,
 {
     type Output = C;
@@ -50,8 +50,8 @@ where
 
 impl<I: Eq, S, O, C> NormalizedExpectation<Operator<I, O, C>> for State<I, S, O, C>
 where
-    C: Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
     O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
 {
     type Output = C;
@@ -69,8 +69,8 @@ where
 impl<I: Eq, S, O, C> NormalizedExpectationIn<Operator<I, O, C>, HilbertSpace<I>>
     for State<I, S, O, C>
 where
-    C: Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
     O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
 {
     type Output = C;

@@ -1,6 +1,6 @@
 # Local expressions and algebraic evaluation
 
-Updated: 2026-11-04
+Updated: 2026-11-16
 
 ## 1. Scope and responsibilities
 
@@ -71,7 +71,19 @@ Inner products are conjugate-linear in the first input and linear in the second.
 
 These laws do not require eager expansion during construction. Retain products/actions/adjoints until inner products, traces, action results, or basis expansion/coordinates require the relevant parts; primitive rules run then.
 
-state.act builds an Act node; state.evaluate resolves pending actions to ordinary state syntax using local Act. `ψ.act(&b).act(&a)` means A(Bψ). Evaluate takes no basis and performs no coordinate or matrix conversion.
+state.act builds an Act node; state.evaluate resolves pending actions to ordinary state syntax using local Act. `ψ.act(&b).act(&a)` means A(Bψ). Evaluate takes no basis and performs no coordinate or matrix conversion. It
+collects matching primitive terms between actions and on action-free inputs,
+retaining first-occurrence order and removing exact-zero coefficients. Local
+evaluation requires primitive PartialEq and coefficient Clone/Zero/One/conjugation,
+with no coefficient equality or operator Product. Composite normalization and
+matching follow [natural-state collection](composite-expression.md#92-natural-state-collection-between-actions).
+
+Local inner products and traces remove exact-zero scalar contributions before
+unnecessary coefficient multiplication or conjugation. HS skips normalization
+division for zero primitive traces; nonzero traces retain per-primitive
+normalization before coefficient arithmetic. A zero contribution never terminates
+a sum. Composite product stopping follows
+[incremental contractions](composite-expression.md#93-incremental-scalar-contractions).
 
 Local evaluation and explicit basis expansion/coordinates exist; selecting individual simplification rules does not. Distribution, local products, and coefficient combination remain internal steps when needed.
 
@@ -79,8 +91,8 @@ Local evaluation and explicit basis expansion/coordinates exist; selecting indiv
 combines equal natural primitives using PartialEq. It shares primitive handles,
 needs no primitive Clone or Dimension, and removes exact zeros only. Unlike
 complete basis expansion, it does not resolve linear relations between distinct
-natural primitives. Ordinary construction and evaluation retain their existing
-duplicate/zero behavior. Lie residual calculations use this explicit operation
+natural primitives. Construction retains duplicate/zero syntax; state evaluation
+collects terms automatically. Operator collection remains explicit. Lie residual calculations use this explicit operation
 to reduce cancellation before normalized HS contraction.
 
 Common ScaleExpr/SumExpr/ProductExpr/ActExpr/AdjointExpr store node contents. Zero is an empty sum. LinearCombination<P,C> stores `SumExpr<ScaleExpr<P,C>>`. Owned map/common constructors move rule/basis outputs into expressions, preserving coefficients, order, duplicates, and zero coefficients without Clone on elements or coefficients for that conversion.
@@ -91,7 +103,8 @@ Evaluators separate state evaluation, operator application, and operator-term tr
 
 Evaluation and final-owner node destruction use explicit work stacks, avoiding depth-proportional recursion. Verify long product/action chains and surviving shared subtrees. Performance criteria cover sharing, avoiding unnecessary primitive clones, and allocation-free empty/single-term containers, not allocation-free map in general or guaranteed execution times.
 
-Arc shares immutable nodes and their primitives, so repeated handles do not clone whole trees/primitives. Independently constructed equal-shaped expressions are not automatically merged. Inputs stay unchanged; no common fully expanded representation or evaluation cache is required. Source retention/structural comparison are unavailable. [Formatting](expression-formatting.md) has independent Display/Debug bounds and concrete algebras need no separate expression trees.
+Arc shares immutable nodes and their primitives, so repeated handles do not clone whole trees/primitives. Independently constructed equal-shaped expressions are not automatically merged
+during construction; state evaluation performs the collection described above. Inputs stay unchanged; no common fully expanded representation or evaluation cache is required. There is no public source-retention or structural-comparison API. [Formatting](expression-formatting.md) has independent Display/Debug bounds and concrete algebras need no separate expression trees.
 
 ## 4. Derived operations
 

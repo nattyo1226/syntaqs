@@ -8,7 +8,7 @@ use crate::{
 };
 use alloc::{collections::BTreeMap, vec};
 use core::ops::Mul;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 
 type LocalExpansion<V, C> = BTreeMap<usize, (C, V)>;
 fn local_expansion<'a, P: 'a, C, B, V>(
@@ -47,13 +47,27 @@ pub(super) fn local_state<S, O, C, B, V>(
     make: impl Fn(S) -> V,
 ) -> Result<LocalExpansion<V, C>, BasisError>
 where
-    C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
-    S: Act<C, Operator = O, Term = S>,
+    C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
+    S: PartialEq + Act<C, Operator = O, Term = S>,
     O: Adjoint<C, Term = O>,
     B: Basis<S, C>,
 {
     let state = state.evaluate();
-    local_expansion(LinearTerms::new(&state, state_view), basis, dimension, make)
+    evaluated_local_state(&state, basis, dimension, make)
+}
+
+// Composite expansion already owns a normalized action-free local state.
+pub(super) fn evaluated_local_state<S, O, C, B, V>(
+    state: &LocalState<S, O, C>,
+    basis: &B,
+    dimension: usize,
+    make: impl Fn(S) -> V,
+) -> Result<LocalExpansion<V, C>, BasisError>
+where
+    C: Clone + Zero + Mul<Output = C>,
+    B: Basis<S, C>,
+{
+    local_expansion(LinearTerms::new(state, state_view), basis, dimension, make)
 }
 
 pub(super) fn local_operator<O, C, B, V>(
@@ -90,10 +104,11 @@ impl<S, O, C> LocalState<S, O, C> {
     ///
     /// The input is unchanged. No basis metadata, dense coordinates, operator
     /// multiplication capability, or primitive cloning is required.
+    /// Evaluates/collects first; removed zero terms do not run basis rules.
     pub fn expand<B>(&self, basis: &B) -> Result<Self, BasisError>
     where
-        C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
-        S: Dimension + Act<C, Operator = O, Term = S>,
+        C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
+        S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,
         O: Adjoint<C, Term = O>,
         B: Basis<S, C>,
     {
@@ -104,10 +119,11 @@ impl<S, O, C> LocalState<S, O, C> {
     }
 
     /// Obtains aggregated sparse basis coordinates, without building an expanded tree.
+    /// State terms removed by evaluation do not run basis rules.
     pub fn coordinates<'b, B>(&self, basis: &'b B) -> Result<Coordinates<'b, B, C>, BasisError>
     where
-        C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
-        S: Dimension + Act<C, Operator = O, Term = S>,
+        C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
+        S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,
         O: Adjoint<C, Term = O>,
         B: Basis<S, C>,
     {

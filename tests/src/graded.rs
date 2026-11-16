@@ -27,6 +27,11 @@ pub fn c<T: Real>(re: f64, im: f64) -> Complex<T> {
 }
 #[derive(Clone, Copy, Debug)]
 pub struct Ket(pub u8);
+impl PartialEq for Ket {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 #[derive(Clone, Copy, Debug)]
 pub enum Op {
     I,

@@ -8,6 +8,7 @@ use syntaqs_core::{
 use syntaqs_export::{Export, ExportError, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
 
 // These primitives deliberately lack Clone/Eq, and the operator lacks Product/Identity.
+#[derive(PartialEq)]
 struct Ket(u8);
 enum Op {
     Flip,
@@ -139,7 +140,7 @@ fn malformed_bases_and_unbound_or_invalid_spaces_are_errors_even_for_zero() {
             Err(ExportError::Basis(BasisError::InvalidEnumeration))
         ));
     }
-    let state = LocalState::<Ket, Op, f64>::primitive(Ket(0)).scaled(0.);
+    let state = LocalState::<Ket, Op, f64>::primitive(Ket(0));
     let basis = Broken(3);
     let result: Result<Exported<Vec<_>, VectorMetadata<'_, _, (), Ket>>, _> =
         (&state).export(&basis);

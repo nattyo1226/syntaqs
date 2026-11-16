@@ -1,6 +1,6 @@
 # Type selection and expression construction
 
-Updated: 2026-11-02
+Updated: 2026-11-15
 
 This document specifies common construction and coefficient inputs. See [local expressions](primitive-expression.md) for evaluation and [composite expressions](composite-expression.md) for space-aware operations.
 
@@ -28,7 +28,21 @@ The `_at` in operator_product_at means it also places primitives: inputs are an 
 
 State::try_sum/try_tensor_in and Operator::try_sum/try_product are the underlying public APIs; ExpressionFactory delegates to them. Binding is decided from the entire operator sequence. A later unbound item makes the result unbound even if earlier bound items are incompatible; do not replace this with an early-rejecting binary fold.
 
-These entry points only construct; they do not evaluate, simplify, expand, normalize, or reorder factors. Reuse construction and sharing without extra collection or copying just for try_ variants. Unprovided helpers belong in the [candidate backlog](../future-work/api-usability.md).
+These entry points do not evaluate primitive rules, perform coefficient
+arithmetic, expand bases, normalize states, or reorder factors. They preserve
+duplicates and zero coefficients. After binding checks, operator sums whose
+immediate children are all local to the same factor become one local sum;
+products of two such operands become a local product. Named product constructors
+apply that rule while folding in input order. Factor matching uses index
+equality, not handle identity. This structural grouping adds no coefficient
+Clone/arithmetic or primitive Identity/evaluation bounds and does not inspect
+through composite scales, adjoints, or other previously built subtrees.
+See [local grouping](composite-expression.md#91-structural-local-operator-grouping)
+for explicit and query-time grouping.
+
+Reuse construction and sharing without extra collection or copying just for
+try_ variants. Unprovided helpers belong in the
+[candidate backlog](../future-work/api-usability.md).
 
 ## 2. Coefficient inputs and inference
 

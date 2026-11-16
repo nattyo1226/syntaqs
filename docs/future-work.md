@@ -1,6 +1,6 @@
 # Future work
 
-Updated: 2026-11-09
+Updated: 2026-11-16
 
 This document collects future features, required design reviews, and candidates not yet adopted. Current specifications belong in [architecture](architecture.md) and [design](README.md#2-feature-details). Follow the [documentation guide](README.md#1-document-responsibilities) when starting an implementation plan or completing work.
 
@@ -49,9 +49,17 @@ Do not create crates solely for prospective features before their independent re
 
 ## 3. Outstanding verification and performance
 
-Dedicated no_std target builds, benchmarks, speed comparisons, and further allocation optimization remain unverified. See [verification](design/verification.md) for current checks and limits.
+Dedicated no_std target builds and performance across workloads and targets
+remain unverified. Targeted host measurements cover local grouping, repeated
+state actions, exact-zero contractions, and sparse operator coordinates; they
+do not establish general speed or memory guarantees. See
+[verification](design/verification.md) for current checks and limits.
 
-Distributing sums inside operator products can increase term counts even when the result is sparse. Future investigations include combining local sums earlier, comparing caching with recomputation, and retaining interval parity as unevaluated structure.
+Distributing sums inside operator products can increase term counts even when
+the result is sparse. Further investigations beyond same-factor local grouping
+include comparing general result caching with recomputation and retaining
+interval parity as unevaluated structure. Query-local reuse of an identity's
+basis expansion is separate from general result caching.
 
 ### 3.1. Lie residual accuracy
 
@@ -64,3 +72,35 @@ sums without global Cartesian expansion. No additional accuracy guarantee or
 specific replacement algorithm is adopted. See the
 [current numerical contract](design/lie.md#3-projection-and-numerical-scales)
 and [verification limits](design/verification.md#3-ci-and-verification-limits).
+
+### 3.2. Inner-product acceleration
+
+Further state and operator Hilbert–Schmidt inner-product acceleration is deferred
+beyond incremental local contraction and exact-zero short-circuiting. Candidate
+approaches include sparse-coordinate contraction with suitable basis information,
+prefiltering term pairs using guaranteed orthogonality or conserved sectors, and
+reuse of partial contractions. Public APIs and algorithms are undecided.
+
+Incremental contraction still prepares structural group metadata eagerly and
+considers every pair of summands. Investigate generating later tensor groups
+only when a nonzero prefix needs them. Separate this preparation cost from
+operand collection and primitive contraction counts; preserve independent tensor
+boundaries, original validation, and continuation of other sum branches.
+
+Distinct primitives are not necessarily orthogonal, and an arbitrary basis need
+not be orthonormal. Any coordinate-based method must account for the relevant
+Gram matrix unless orthonormality is guaranteed. Structural pruning must preserve
+ordinary/graded semantics and must not imply approximate component truncation.
+Any caches require explicit ownership, scope, reuse criteria, and resource limits.
+
+### 3.3. Natural-state collection overhead
+
+Per-query normalization and equality-based interning can dominate a single local
+action or a small factored norm even when they prevent explosive growth during
+repeated actions. Investigate reducing context initialization and allocation,
+and avoiding repeated preparation within one query. Preserve action-free
+collection, first-occurrence order, nonreflexive PartialEq behavior, minimal
+public bounds, and retained products of sums. A persistent normalized marker or
+cross-query cache is not adopted; either would require an explicit validity and
+ownership design. Distinct terms and intrinsically large coordinate output remain
+separate costs.

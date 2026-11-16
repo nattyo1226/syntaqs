@@ -16,6 +16,11 @@ struct Counts {
     drops: Cell<usize>,
 }
 struct Primitive<'a>(u8, &'a Counts);
+impl PartialEq for Primitive<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 impl Drop for Primitive<'_> {
     fn drop(&mut self) {
         self.1.drops.set(self.1.drops.get() + 1);
@@ -411,27 +416,52 @@ fn binding_merges_and_explicit_contexts_follow_the_selected_space() {
 }
 
 #[test]
-fn evaluate_does_not_require_coefficient_arithmetic() {
-    #[derive(Clone)]
-    struct Scalar;
+fn evaluate_does_not_require_operator_product_or_numeric_ordering() {
+    #[derive(Clone, PartialEq)]
+    struct Scalar(u8);
+    impl core::ops::Add for Scalar {
+        type Output = Self;
+        fn add(self, rhs: Self) -> Self {
+            Self(self.0 + rhs.0)
+        }
+    }
+    impl core::ops::Mul for Scalar {
+        type Output = Self;
+        fn mul(self, rhs: Self) -> Self {
+            Self(self.0 * rhs.0)
+        }
+    }
+    impl num_traits::Zero for Scalar {
+        fn zero() -> Self {
+            Self(0)
+        }
+        fn is_zero(&self) -> bool {
+            self.0 == 0
+        }
+    }
+    impl num_traits::One for Scalar {
+        fn one() -> Self {
+            Self(1)
+        }
+    }
     impl crate::Conjugate for Scalar {
         type Output = Self;
         fn conjugate(&self) -> Self {
-            Self
+            Self(self.0)
         }
     }
     impl<'a> Act<Scalar> for Primitive<'a> {
         type Operator = Op;
         type Term = Self;
         fn act(&self, _: &Op) -> Lc<Self, Scalar> {
-            Lc::term(Scalar, Primitive(self.0, self.1))
+            Lc::term(Scalar(1), Primitive(self.0, self.1))
         }
     }
     impl Adjoint<Scalar> for Op {
         type Term = Self;
         fn adjoint(&self) -> Lc<Self, Scalar> {
             Lc::term(
-                Scalar,
+                Scalar(1),
                 match self {
                     Self::Flip => Self::Flip,
                     Self::Parity => Self::Parity,
@@ -563,13 +593,19 @@ fn all_binary_ownership_forms_preserve_results_and_shared_operands() {
     for sum in forms!(op, +, op) {
         let sum = sum.unwrap();
         assert!(sum.space().unwrap().shares_node_with(&factor));
-        let OpNode::Sum(parts) = sum.expression.node() else {
-            panic!("sum")
+        let OpNode::Local(_, local_sum) = sum.expression.node() else {
+            panic!("same-factor local sum")
+        };
+        let crate::expr::local::OperatorNode::Sum(parts) = local_sum.node() else {
+            panic!("local sum")
+        };
+        let OpNode::Local(_, original_local) = op.expression.node() else {
+            unreachable!()
         };
         assert!(
             parts
                 .iter()
-                .all(|p| core::ptr::eq(p.node(), op.expression.node()))
+                .all(|p| core::ptr::eq(p.node(), original_local.node()))
         );
         let result = state.act(&sum).unwrap();
         assert_eq!(
@@ -779,6 +815,7 @@ fn composite_scalar_reductions_require_neither_num_float_copy_nor_division() {
             Self(1)
         }
     }
+    #[derive(PartialEq)]
     struct Primitive;
     impl syntaqs_core::HomogeneousParity for Primitive {
         fn parity(&self) -> syntaqs_core::Parity {

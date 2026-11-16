@@ -1,6 +1,6 @@
 # Export to numerical containers
 
-Last updated: 2026-11-02
+Last updated: 2026-11-16
 
 ## 1. Status and responsibilities
 
@@ -82,6 +82,13 @@ let array: Exported<ndarray::Array1<_>, _> = dense.export(())?;
 // Direct output shares the same Vec export and conversion internally.
 let direct: Exported<ndarray::Array1<_>, _> = (&psi).export(&basis)?;
 ```
+
+State-vector and action-matrix export inherit
+[state-evaluation capabilities](composite-expression.md#92-natural-state-collection-between-actions):
+primitive PartialEq and coefficient One, plus coefficient PartialEq for composite
+outputs. Exporting existing Coordinates adds no evaluation/equality requirements.
+State terms removed during evaluation do not run basis expansion; original
+space validation and matrix-basis enumeration checks remain in force.
 
 ### 3.2. Operator arguments and space selection
 

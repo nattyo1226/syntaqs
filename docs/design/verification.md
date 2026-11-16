@@ -1,6 +1,6 @@
 # Verification structure and commands
 
-Updated: 2026-11-09
+Updated: 2026-11-16
 
 ## 1. Verification responsibilities
 
@@ -59,6 +59,56 @@ Maintain the following coverage alongside the detailed verification targets in e
 
 Reference values for graded tests come from the [test-only two-state algebra](../../tests/src/graded.rs) and independently assembled ordinary matrices. They must not depend on production fermion rules or the evaluator under test. Resource and depth regression sizes are specific test cases, not general performance bounds.
 
+Core `expr::group_tests` covers structural grouping without coefficient
+arithmetic or primitive evaluation capabilities, index equality across distinct
+handles, binding/error preservation, sharing and idempotence, and iterative
+grouping/destruction of deep single-factor, scalar, and multi-factor syntax.
+The local-grouping cases in
+[core_tensor_products.rs](../../tests/tests/core_tensor_products.rs) check
+mixed parity, complex scales, scalar identity, product order, adjoints,
+rebinding, and automatic basis/trace/HS preparation against independent ordinary
+matrices in both precisions and tensor kinds. Formatting tests follow the
+retained local structure after same-factor construction grouping.
+
+Core `evaluate::state_tests` checks per-action collection and call counts,
+shared-input memoization, coefficient/tensor normalization, exact cancellation,
+first-occurrence order, nonreflexive PartialEq, retained factored sums, and
+space preservation. [core_state_collection.rs](../../tests/tests/core_state_collection.rs)
+checks 128 repeated rotations and eight six-site Heisenberg actions against
+analytic/bit-state references at f32/f64. Capability fixtures distinguish local
+coefficient equality from composite equality. Basis tests distinguish errors in
+retained state primitives from state terms removed before expansion; operator
+expansion and original-reference validation retain their checks.
+
+Core `evaluate::stopping_tests` checks exact-zero contraction stopping at the
+first/middle/last factor, nonzero controls, underflow and tiny/NaN values,
+independent and overlapping tensor groups, zero summands/partial sums, skipped
+coefficient multiplication/conjugation/HS division, ordinary/graded trace factors,
+and original space/reference checks. An equality-free coefficient fixture and
+operator primitives without Clone/PartialEq/Dimension check unchanged bounds.
+A 20,000-level action-free contraction/destruction case runs on a small stack.
+Existing matrix/Gram references continue to check mathematical values at both
+precisions. These call-count assertions do not establish general asymptotic
+improvements for W-state norms or other inner products.
+
+Core `basis::expansion::operator::tests` checks once-per-query identity expansion,
+queries with no spectators or no factors, ordinary encounter-order placement,
+nonzero identity digits and non-unit coefficients, multi-component identity and
+specified choices, working-key restoration, exact cancellation, original-reference
+and basis-error visibility after zero/empty factors, and unchanged minimal bounds.
+Payload counters and node-sharing checks cover expanded syntax without primitive
+cloning. Extreme spectator coefficients check ambient-order multiplication,
+and a 20,000-axis enumeration case checks iterative traversal on a small stack.
+Existing independent ordinary/graded matrix and nonorthogonal-basis tests verify
+both precisions and reconstructed expression semantics.
+
+[core_evaluation_pipeline.rs](../../tests/tests/core_evaluation_pipeline.rs)
+combines local potential grouping, repeated hopping-model actions and collection,
+state and operator HS contractions, and operator coordinates/expanded syntax.
+Independent three-site matrices check ordinary and graded inputs at f32/f64,
+including singleton and multi-component spectator identity bases. This complements
+the workstream-specific call-count and capability tests above.
+
 ## 3. CI and verification limits
 
 The [CI workflow](../../.github/workflows/ci.yml) runs on pushes to `main`, pull requests, and manual dispatch on 64-bit Linux. Rust 1.85.0 and stable each test the workspace with default, all, and no default features, including doctests and compile_fail cases. For each toolchain, only the default-configuration job runs the additional Lie-only example and shared Lie integration tests without export backends, downstream linkage fixture, and provider-selection checks. These commands select their own features independently of the workspace test configuration.
@@ -105,4 +155,12 @@ GitHub-hosted run. Residual-accuracy investigation is tracked in
 
 Dedicated no_std target builds for core, geometry, spin-half, and fermion remain unverified. Source/dependency-feature inspection and host builds do not establish dedicated-target success. Shared Arc requires pointer-width atomic operations on the target.
 
-Benchmarks, speed comparisons, and additional allocation optimization are also unverified. Tests for sharing, sparse output without dense intermediates, and iterative deep-tree processing are not general speed/memory guarantees. Track further verification and optimization in [future work](../future-work.md#3-outstanding-verification-and-performance).
+Tests for sharing, sparse output without dense intermediates, and iterative
+deep-tree processing are not general speed/memory guarantees. Task-specific
+timings, allocation counts, and skipped-call assertions do not establish
+performance across all workloads, toolchains, or targets. Track further verification and optimization in [future work](../future-work.md#3-outstanding-verification-and-performance).
+
+The [core evaluation performance decision](../decisions/core-evaluation-performance.md)
+preserves reference workloads, measurement methodology, comparative results,
+and Git provenance for the accepted grouping, collection, contraction, and
+coordinate-generation changes. These dated observations are not CI thresholds.
