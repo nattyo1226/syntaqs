@@ -9,7 +9,4 @@ mod trace;
 mod state_terms;
 
 #[cfg(test)]
-mod state_tests;
-
-#[cfg(test)]
-mod stopping_tests;
+mod tests;

@@ -364,3 +364,6 @@ impl<O: Identity, C> Identity for LocalOperator<O, C> {
         Self::new(OperatorNode::identity())
     }
 }
+
+#[cfg(test)]
+mod tests;

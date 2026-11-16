@@ -129,6 +129,8 @@ Use the same location for any other shared integration-test helpers identified d
 
 ## Unit tests
 
+The moves below are complete. The local-expression tests were reviewed and kept together under `expr::local`; evaluation tests remain under their shared parent. All 54 core unit-test function names were preserved.
+
 All paths in this section are under `crates/syntaqs-core/src/` unless stated otherwise. Change declarations and relative imports with the moves; a child test can access ancestor-private items but cannot assume a former sibling's private items are accessible.
 
 | Current | Proposed destination and ownership |
@@ -140,7 +142,7 @@ All paths in this section are under `crates/syntaqs-core/src/` unless stated oth
 | `evaluate/stopping_tests.rs` | `evaluate/tests/stopping.rs`: stopping across inner product and trace. Update direct `super::inner_product` access for the extra nesting. |
 | `basis/expansion/operator_tests.rs` | `basis/expansion/operator/tests.rs`: already declared as `operator::tests`; remove its explicit `#[path]`. |
 
-Introduce `evaluate/tests.rs` as the test-only parent declaring `state` and `stopping`. Existing inline tests in `expr/format.rs`, `expr/traversal.rs`, `geometry/relation/consecutive.rs`, and example binaries already belong to their containing modules; existing `syntaqs-lie` tests in `decomposition/tests.rs`, `invariant/tests.rs`, and `numerical/tests.rs` already follow the intended relationship. Keep integration tests as separate crate roots: their public-facing contracts do not require moving into implementation modules.
+`evaluate/tests.rs` is the test-only parent declaring `state` and `stopping`. Existing inline tests in `expr/format.rs`, `expr/traversal.rs`, `geometry/relation/consecutive.rs`, and example binaries already belong to their containing modules; existing `syntaqs-lie` tests in `decomposition/tests.rs`, `invariant/tests.rs`, and `numerical/tests.rs` already follow the intended relationship. Keep integration tests as separate crate roots: their public-facing contracts do not require moving into implementation modules.
 
 ## Responsibility boundaries
 

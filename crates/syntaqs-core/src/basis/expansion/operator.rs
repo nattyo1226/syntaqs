@@ -266,5 +266,4 @@ where
 }
 
 #[cfg(test)]
-#[path = "operator_tests.rs"]
 mod tests;

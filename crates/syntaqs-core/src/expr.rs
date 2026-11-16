@@ -56,12 +56,3 @@ pub(crate) mod traversal;
 
 pub use composite::{ExpressionError, Operator, State};
 pub use local::{LocalOperator, LocalState};
-
-#[cfg(test)]
-mod tests;
-
-#[cfg(test)]
-mod composite_tests;
-
-#[cfg(test)]
-mod group_tests;

@@ -3,7 +3,7 @@ use core::ops::{Add, Mul};
 use num_traits::{One, Zero};
 use std::cell::RefCell;
 
-use super::inner_product::contract;
+use super::super::inner_product::contract;
 use crate::{
     Act, Adjoint, Conjugate, Divide, ExpressionError, HilbertSpace as H, HomogeneousParity,
     Identity, InnerProduct, LinearCombination as Lc, LocalOperator, LocalState, Operator, Parity,

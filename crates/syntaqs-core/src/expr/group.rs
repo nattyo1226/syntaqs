@@ -329,3 +329,6 @@ impl<I: Eq, O: Identity, C: Clone> Operator<I, O, C> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

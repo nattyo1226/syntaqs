@@ -2,11 +2,8 @@ use alloc::{vec, vec::Vec};
 use core::cell::Cell;
 use std::{sync::Arc, thread};
 
-use super::{
-    LocalOperator, LocalState,
-    local::{OperatorNode, StateNode},
-    parts::*,
-};
+use super::{LocalOperator, LocalState, OperatorNode, StateNode};
+use crate::expr::parts::*;
 use crate::{Act, Adjoint, LinearCombination};
 use num_complex::Complex;
 

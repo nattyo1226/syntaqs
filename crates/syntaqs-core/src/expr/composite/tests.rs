@@ -1,4 +1,4 @@
-use super::composite::{OpNode, StateNode};
+use super::{OpNode, StateNode};
 use crate::{
     Act, Adjoint, ExpressionError as E, HilbertSpace, InnerProduct, LinearCombination as Lc,
     LocalOperator, LocalState, Operator, State,

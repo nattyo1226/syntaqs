@@ -657,3 +657,6 @@ impl<I, O, C> Identity for Operator<I, O, C> {
         Self::identity()
     }
 }
+
+#[cfg(test)]
+mod tests;
