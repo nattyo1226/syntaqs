@@ -31,9 +31,22 @@ impl<O, C> LocalOperator<O, C> {
         let evaluated = self.evaluate();
         let mut result = zero();
         for (coefficient, primitive) in LinearTerms::new(&evaluated, operator_view) {
-            let mut value = primitive_trace(primitive.trace());
+            if coefficient.as_ref().is_some_and(Zero::is_zero) {
+                continue;
+            }
+            let value = primitive.trace();
+            if value.is_zero() {
+                continue;
+            }
+            let mut value = primitive_trace(value);
+            if value.is_zero() {
+                continue;
+            }
             if let Some(c) = coefficient {
                 value = multiply(c, value);
+                if value.is_zero() {
+                    continue;
+                }
             }
             result = add(result, value);
         }
@@ -61,6 +74,7 @@ fn one<C: One>() -> C {
 
 impl<I: Eq, O, C> Operator<I, O, C> {
     /// Computes the ordinary full trace using the existing binding.
+    /// An exact-zero local trace stops that tensor term, not the enclosing sum.
     pub fn trace(&self) -> Result<C, ExpressionError>
     where
         C: Clone + Zero + One + Conjugate<Output = C>,
@@ -107,6 +121,9 @@ impl<I: Eq, O, C> Operator<I, O, C> {
         let expression = self.expression.group_local();
         let mut result = zero();
         for (coefficient, factors) in OrdinaryOpTerms::new(&expression, ambient) {
+            if coefficient.as_ref().is_some_and(Zero::is_zero) {
+                continue;
+            }
             let mut value = one();
             for index in ambient.indices() {
                 let local_trace_value = match factors
@@ -116,10 +133,23 @@ impl<I: Eq, O, C> Operator<I, O, C> {
                     Some((_, local)) => local_trace(local),
                     None => local_trace(&LocalOperator::<O, C>::identity()),
                 };
+                if local_trace_value.is_zero() {
+                    value = local_trace_value;
+                    break;
+                }
                 value = multiply(value, local_trace_value);
+                if value.is_zero() {
+                    break;
+                }
+            }
+            if value.is_zero() {
+                continue;
             }
             if let Some(c) = coefficient {
                 value = multiply(c, value);
+                if value.is_zero() {
+                    continue;
+                }
             }
             result = add(result, value);
         }
@@ -143,6 +173,8 @@ impl<I: Eq, O, C> Operator<I, O, C> {
     /// Each ordinary local trace is divided by `Tr(I)` before contraction, so
     /// no integer total dimension or large unnormalized trace is constructed.
     /// Local dimensions must be nonzero and support mathematical division.
+    /// Exact-zero local contractions skip later factors and redundant scaling;
+    /// zero primitive traces need no normalization division.
     pub fn hs_inner_product(&self, rhs: &Self) -> Result<C, ExpressionError>
     where
         C: Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,

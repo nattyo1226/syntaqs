@@ -6,7 +6,8 @@ Status: investigation complete; directions for all four findings are agreed.
 Stage 0 is complete: [implementation contracts](stage-0-contracts.md) and an
 [audited baseline](stage-0-baseline.md) are recorded. Stage 1 local grouping is
 implemented; see its [results and validation](stage-1-results.md). Stage 2 state
-collection is complete; see its [results and validation](stage-2-results.md). The change map, remaining stage order, and
+collection is complete; see its [results and validation](stage-2-results.md). Stage 3
+incremental contractions are complete; see their [results and validation](stage-3-results.md). The change map, remaining stage order, and
 acceptance criteria are in the [integrated implementation plan](implementation-plan.md).
 
 ## Objective, scope, and progress
@@ -25,10 +26,11 @@ producing an intrinsically large result.
 | Agree on repeated-action aggregation and its initial equivalence scope | Complete; implementation details fixed in Stage 0 |
 | Bound the inner-product improvement to local contraction and exact-zero short-circuiting | Complete; further acceleration deferred |
 | Agree on sparse coordinate generation with shared identity expansion | Complete; implementation details remain open |
-| Consolidate changes, dependencies, stages, and acceptance criteria | Plan recorded; Stages 0 and 1 complete; Stage 2 complete |
+| Consolidate changes, dependencies, stages, and acceptance criteria | Plan recorded; Stages 0–3 complete |
 | Stage 0: contracts, probe audit, semantic fixtures, and current-revision baseline | Complete |
 | Stage 1: local construction/grouping API and query preparation | Complete |
-| Stage 2: per-action state collection and caller-bound migration | Complete; Stages 3–5 not started |
+| Stage 2: per-action state collection and caller-bound migration | Complete |
+| Stage 3: local contraction and exact-zero stopping | Complete; Stages 4–5 not started |
 
 Completion criteria were met: examples have explicit definitions, measurements
 have a recorded method, source paths explain the findings, and proposals are
@@ -46,8 +48,7 @@ See [local expressions](../../design/primitive-expression.md),
 The following sections retain the investigation and initial design discussion.
 Where they identify implementation choices, the later
 [Stage 0 contracts](stage-0-contracts.md) now resolve those choices for the first
-implementation. Sections 1 and 2 are implemented by Stages 1 and 2; Sections 3–4 remain
-planned.
+implementation. Sections 1–3 are implemented by Stages 1–3; Section 4 remains planned.
 
 | Finding | Adopted scope |
 | --- | --- |
@@ -56,7 +57,7 @@ planned.
 | 3. Inner products | Preserve local factorization and short-circuit unnecessary work on exact zeros; further acceleration is deferred |
 | 4. Operator basis coordinates | Share the identity's local expansion within a query and emit complete coordinates directly from sparse factor data |
 
-Directions 1 and 2 are implemented; directions 3–4 remain planned. The sections below
+Directions 1–3 are implemented; direction 4 remains planned. The sections below
 retain baseline measurements and describe each adopted scope. The implementation
 plan tracks the combined sequence and current completion status.
 
@@ -390,7 +391,7 @@ wrapper confirmed exactly n^3 local inner-product calls: 512, 4,096, 32,768,
 and 262,144 respectively. The 64-site direct norm caused 2,439,023 allocation
 requests and 133,692,128 requested bytes.
 
-Mechanism: [composite contraction](../../../crates/syntaqs-core/src/evaluate/inner_product.rs)
+Baseline mechanism: [composite contraction](../../../crates/syntaqs-core/src/evaluate/inner_product.rs)
 distributes into all n^2 pairs and contracts all n factors before multiplying
 their values. Off-diagonal pairs are orthogonal, but a zero overlap does not
 stop the remaining factor tasks.
@@ -414,7 +415,7 @@ downstream contractions made unnecessary by that zero. A zero term pair does
 not terminate the other branches of a sum; cancellation of a partial sum to zero
 does not justify skipping its remaining summands.
 
-The current state contractor schedules all factor contractions before multiplying
+The baseline state contractor schedules all factor contractions before multiplying
 their results. Adding a zero check only to the final product reduction would
 not save those contractions. The implementation must delay remaining work using
 continuations or an equivalent incremental traversal. Operator HS contractions
@@ -443,8 +444,9 @@ Cover state and HS products, zero factors at different positions, no-zero inputs
 retained tiny nonzero values, preserved independent tensor sums, graded parity
 strings, and invalid references even when another factor is zero. Compare values
 with analytic or independent small-system results and measure both zero-heavy
-and no-zero cases. These checks and performance gains remain unimplemented and
-unmeasured.
+and no-zero cases. The [Stage 3 record](stage-3-results.md) reports the
+implementation, targeted assertions, and repeated measurements; the tables above
+remain historical.
 
 ## 4. Sparse Hamiltonians repeatedly process spectator identities
 
@@ -610,8 +612,8 @@ the output-size lower bound.
 
 ## Integration status and limitations
 
-All four directions in the overview are agreed. Local grouping and state
-collection are implemented.
+All four directions in the overview are agreed. Local grouping, state
+collection, and incremental scalar contractions are implemented.
 The [implementation plan](implementation-plan.md) proposes their implementation
 stages, order, compatibility work, and verification gates. Local grouping should
 feed the existing grading path before the coordinate generator; state-term collection and inner

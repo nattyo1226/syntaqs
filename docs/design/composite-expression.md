@@ -319,6 +319,41 @@ including a tensor annihilated by a zero state factor. This boundary differs fro
 operator coordinates, which still validate expansions of reached intrinsic terms.
 See [basis errors](basis.md#74-errors-re-exports-and-examples).
 
+### 9.3. Incremental scalar contractions
+
+State inner products validate compatible spaces, evaluate/collect both operands,
+and align independent tensor groups. Contraction distributes sums only where
+needed inside those groups. A product continuation retains its accumulated value
+and remaining groups, schedules one group, and proceeds only while the value is
+nonzero. An exact-zero local contraction or underflowed running product discards
+the remaining contractions and pending coefficient scaling for that product.
+A zero summand or zero partial sum never stops the enclosing sum.
+
+Local state contractions skip coefficient multiplication and left conjugation
+after a zero primitive overlap; explicit zero term coefficients can skip the
+corresponding primitive call. Nonzero local contributions still accumulate in
+order. Primitive equality is not used to infer orthogonality: each visited
+primitive overlap comes from its InnerProduct rule.
+
+Full trace and normalized HS use the existing ordinary lowering, including
+parity strings. They contract local factors in selected ambient order and stop
+only the current tensor term on an exact-zero local value or running product.
+A zero primitive trace skips its HS normalization division and coefficient work;
+nonzero primitive traces are still divided by `Tr(I)` before coefficient
+multiplication and summation. The identity trace establishing the local dimension
+remains separate from the per-factor work. No total dimension, basis, state type,
+orthogonality metadata, or result cache is introduced for operator HS.
+
+Space/reference validation precedes these shortcuts. Operand evaluation, graded
+lowering, and structural group discovery retain their existing responsibilities;
+a shortcut does not imply that all preparation of a later factor was avoided.
+The test for zero is exactly `Zero::is_zero()`, with no threshold or finite-value
+rejection. Nonzero tiny values continue; NaN alone does not stop a product.
+Avoiding arithmetic after a proven zero follows mathematical zero propagation,
+without promising the old IEEE sequence's signed-zero or NaN/inf propagation.
+Inner-product helpers gain no coefficient equality bound; public state paths
+inherit only the [evaluation bounds](#92-natural-state-collection-between-actions).
+
 ## 10. Current public API
 
 | Subject | Main APIs and contracts |

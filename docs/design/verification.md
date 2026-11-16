@@ -80,6 +80,17 @@ coefficient equality from composite equality. Basis tests distinguish errors in
 retained state primitives from state terms removed before expansion; operator
 expansion and original-reference validation retain their checks.
 
+Core `evaluate::stopping_tests` checks exact-zero contraction stopping at the
+first/middle/last factor, nonzero controls, underflow and tiny/NaN values,
+independent and overlapping tensor groups, zero summands/partial sums, skipped
+coefficient multiplication/conjugation/HS division, ordinary/graded trace factors,
+and original space/reference checks. An equality-free coefficient fixture and
+operator primitives without Clone/PartialEq/Dimension check unchanged bounds.
+A 20,000-level action-free contraction/destruction case runs on a small stack.
+Existing matrix/Gram references continue to check mathematical values at both
+precisions. These call-count assertions do not establish general asymptotic
+improvements for W-state norms or other inner products.
+
 ## 3. CI and verification limits
 
 The [CI workflow](../../.github/workflows/ci.yml) runs on pushes to `main`, pull requests, and manual dispatch on 64-bit Linux. Rust 1.85.0 and stable each test the workspace with default, all, and no default features, including doctests and compile_fail cases. For each toolchain, only the default-configuration job runs the additional Lie-only example and shared Lie integration tests without export backends, downstream linkage fixture, and provider-selection checks. These commands select their own features independently of the workspace test configuration.
@@ -126,4 +137,7 @@ GitHub-hosted run. Residual-accuracy investigation is tracked in
 
 Dedicated no_std target builds for core, geometry, spin-half, and fermion remain unverified. Source/dependency-feature inspection and host builds do not establish dedicated-target success. Shared Arc requires pointer-width atomic operations on the target.
 
-Benchmarks, speed comparisons, and additional allocation optimization are also unverified. Tests for sharing, sparse output without dense intermediates, and iterative deep-tree processing are not general speed/memory guarantees. Track further verification and optimization in [future work](../future-work.md#3-outstanding-verification-and-performance).
+Tests for sharing, sparse output without dense intermediates, and iterative
+deep-tree processing are not general speed/memory guarantees. Task-specific
+timings, allocation counts, and skipped-call assertions do not establish
+performance across all workloads, toolchains, or targets. Track further verification and optimization in [future work](../future-work.md#3-outstanding-verification-and-performance).

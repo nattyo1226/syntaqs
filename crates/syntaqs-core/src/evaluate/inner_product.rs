@@ -68,15 +68,18 @@ enum Task<'a, I, S, O, C> {
     Contract(Pair<'a, I, S, O, C>),
     Scale(&'a C, bool),
     Sum(usize),
-    Product(usize),
+    Product {
+        remaining: alloc::vec::IntoIter<Pair<'a, I, S, O, C>>,
+        accumulated: C,
+    },
 }
 
 // Flatten tensor grouping only. Sums stay intact until a contraction needs them.
-fn tensor_factors<'a, I, S, O, C>(
+fn tensor_factors<'a, I, S, O, C: Zero>(
     mut pending: Factors<'a, I, S, O, C>,
     tasks: &mut Vec<Task<'a, I, S, O, C>>,
     conjugated: bool,
-) -> Factors<'a, I, S, O, C> {
+) -> Option<Factors<'a, I, S, O, C>> {
     pending.reverse();
     let mut factors = Vec::new();
     while let Some(state) = pending.pop() {
@@ -84,6 +87,9 @@ fn tensor_factors<'a, I, S, O, C>(
             StateNode::Tensor(s) => pending.extend(s.iter().rev()),
             StateNode::Unit => {}
             StateNode::Scale(s) => {
+                if s.coefficient.is_zero() {
+                    return None;
+                }
                 tasks.push(Task::Scale(&s.coefficient, conjugated));
                 pending.push(&s.operand);
             }
@@ -91,7 +97,7 @@ fn tensor_factors<'a, I, S, O, C>(
             StateNode::Act(_) => unreachable!("evaluated state"),
         }
     }
-    factors
+    Some(factors)
 }
 
 // Root-space compatibility already verifies every Index and its order. Within
@@ -161,8 +167,14 @@ where
                     values.push(zero());
                     continue;
                 }
-                let lhs = tensor_factors(lhs, &mut tasks, true);
-                let rhs = tensor_factors(rhs, &mut tasks, false);
+                let Some(lhs) = tensor_factors(lhs, &mut tasks, true) else {
+                    values.push(zero());
+                    continue;
+                };
+                let Some(rhs) = tensor_factors(rhs, &mut tasks, false) else {
+                    values.push(zero());
+                    continue;
+                };
                 let mut groups = matching_groups(lhs, rhs, &counts);
                 match groups.len() {
                     0 => values.push(C::one()),
@@ -206,25 +218,59 @@ where
                             tasks.push(Task::Contract(pair));
                         }
                     }
-                    count => {
-                        tasks.push(Task::Product(count));
-                        tasks.extend(groups.into_iter().rev().map(Task::Contract));
+                    _ => {
+                        let mut remaining = groups.into_iter();
+                        let first = remaining.next().expect("multiple subsystems");
+                        tasks.push(Task::Product {
+                            remaining,
+                            accumulated: C::one(),
+                        });
+                        tasks.push(Task::Contract(first));
                     }
                 }
             }
             Task::Scale(coefficient, conjugated) => {
                 let value = values.pop().expect("scaled contraction");
+                if value.is_zero() {
+                    values.push(value);
+                    continue;
+                }
                 let c = coefficient.clone();
                 values.push(multiply(if conjugated { conjugate(c) } else { c }, value));
             }
-            Task::Sum(count) | Task::Product(count) => {
+            Task::Sum(count) => {
                 let parts = values.split_off(values.len() - count);
-                let value = if matches!(task, Task::Sum(_)) {
-                    parts.into_iter().fold(zero(), add)
+                values.push(
+                    parts
+                        .into_iter()
+                        .filter(|value| !value.is_zero())
+                        .fold(zero(), add),
+                );
+            }
+            Task::Product {
+                mut remaining,
+                accumulated,
+            } => {
+                let value = values.pop().expect("next subsystem contraction");
+                // Stop this product only; enclosing sum tasks remain scheduled.
+                if value.is_zero() {
+                    values.push(value);
+                    continue;
+                }
+                let accumulated = multiply(accumulated, value);
+                if accumulated.is_zero() {
+                    values.push(accumulated);
+                    continue;
+                }
+                if let Some(next) = remaining.next() {
+                    tasks.push(Task::Product {
+                        remaining,
+                        accumulated,
+                    });
+                    tasks.push(Task::Contract(next));
                 } else {
-                    parts.into_iter().fold(C::one(), multiply)
-                };
-                values.push(value);
+                    values.push(accumulated);
+                }
             }
         }
     }
@@ -256,13 +302,28 @@ impl<S, O, C> LocalState<S, O, C> {
     {
         let mut result = zero();
         for (a, left) in LinearTerms::new(self, state_view) {
+            if a.as_ref().is_some_and(Zero::is_zero) {
+                continue;
+            }
             for (b, right) in LinearTerms::new(rhs, state_view) {
+                if b.as_ref().is_some_and(Zero::is_zero) {
+                    continue;
+                }
                 let mut value = left.inner_product(right);
+                if value.is_zero() {
+                    continue;
+                }
                 if let Some(b) = b {
                     value = multiply(value, b);
+                    if value.is_zero() {
+                        continue;
+                    }
                 }
-                if let Some(a) = a.clone() {
-                    value = multiply(conjugate(a), value);
+                if let Some(a) = &a {
+                    value = multiply(conjugate(a.clone()), value);
+                    if value.is_zero() {
+                        continue;
+                    }
                 }
                 result = add(result, value);
             }
@@ -296,6 +357,8 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     ///
     /// Contracts matching tensor factors before distributing sums. Tensor
     /// grouping need not agree, and no global product-of-sums expansion is built.
+    /// Contracts one independent group at a time; an exact-zero product skips
+    /// remaining groups, while every summand is still considered.
     pub fn inner_product(&self, rhs: &Self) -> Result<C, ExpressionError>
     where
         C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,

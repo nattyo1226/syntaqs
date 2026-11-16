@@ -78,6 +78,13 @@ evaluation requires primitive PartialEq and coefficient Clone/Zero/One/conjugati
 with no coefficient equality or operator Product. Composite normalization and
 matching follow [natural-state collection](composite-expression.md#92-natural-state-collection-between-actions).
 
+Local inner products and traces remove exact-zero scalar contributions before
+unnecessary coefficient multiplication or conjugation. HS skips normalization
+division for zero primitive traces; nonzero traces retain per-primitive
+normalization before coefficient arithmetic. A zero contribution never terminates
+a sum. Composite product stopping follows
+[incremental contractions](composite-expression.md#93-incremental-scalar-contractions).
+
 Local evaluation and explicit basis expansion/coordinates exist; selecting individual simplification rules does not. Distribution, local products, and coefficient combination remain internal steps when needed.
 
 `LocalOperator::collect_terms()` explicitly evaluates products/adjoints and
