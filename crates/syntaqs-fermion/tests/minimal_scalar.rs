@@ -1,8 +1,8 @@
-mod support;
+mod common;
+use common::*;
 use core::ops::{Add, Div, Mul, Neg};
 use num_complex::Complex;
 use num_traits::{One, Zero};
-use support::*;
 use syntaqs_core::{
     Act, Adjoint, Basis, HilbertSpace, Identity, ImaginaryUnit, InnerProduct,
     LinearCombination as Lc, Product, Trace,

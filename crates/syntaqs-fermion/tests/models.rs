@@ -1,6 +1,6 @@
-mod support;
+mod common;
+use common::*;
 use num_complex::Complex;
-use support::*;
 use syntaqs_core::{HilbertSpace as H, SpaceError, TensorKind};
 use syntaqs_fermion::{
     Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,

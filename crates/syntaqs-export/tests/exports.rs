@@ -4,8 +4,8 @@ use syntaqs_export::{Export, Exported, Layout, MatrixArgs, MatrixMetadata, Vecto
 use syntaqs_spin_half::{
     CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis,
 };
-mod support;
-use support::*;
+mod common;
+use common::*;
 
 type Ls<T> = LocalState<Ket, Op, Complex<T>>;
 type Lo<T> = LocalOperator<Op, Complex<T>>;

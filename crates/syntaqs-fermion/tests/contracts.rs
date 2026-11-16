@@ -1,6 +1,6 @@
-mod support;
+mod common;
+use common::*;
 use num_complex::Complex;
-use support::*;
 use syntaqs_core::{
     Act, Adjoint, Basis, Dimension, HomogeneousParity, Identity, InnerProduct, LinearCombination,
     Parity, ParityOperator, Product, Trace,
@@ -43,10 +43,10 @@ fn primitive_rules<T: Real>() {
                     (op.parity() == Parity::Odd) != (rhs.parity() == Parity::Odd)
                 );
             }
-            values::<T>(&combination(product), &support::product(&m, &matrix(rhs)));
+            values::<T>(&combination(product), &common::product(&m, &matrix(rhs)));
             close::<T>(
-                trace(&support::product(&m, &matrix(rhs))),
-                trace(&support::product(&matrix(rhs), &m)),
+                trace(&common::product(&m, &matrix(rhs))),
+                trace(&common::product(&matrix(rhs), &m)),
             );
         }
     }
@@ -60,7 +60,7 @@ fn laws<T: Real>() {
             close::<T>(to64(ab.trace()), to64((op(b).clone() * &op(a)).trace()));
             close::<T>(
                 to64(ab.trace()),
-                trace(&support::product(&matrix(a), &matrix(b))),
+                trace(&common::product(&matrix(a), &matrix(b))),
             );
             values::<T>(
                 &local_value(&ab.adjoint()),

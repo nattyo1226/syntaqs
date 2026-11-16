@@ -1,8 +1,7 @@
 use std::{cell::Cell, iter::FusedIterator, ops, rc::Rc};
 
-#[path = "support/coefficient.rs"]
-mod coefficient;
-use coefficient::MinimalComplex;
+mod common;
+use common::MinimalComplex;
 
 use num_complex::Complex;
 use num_traits::One;

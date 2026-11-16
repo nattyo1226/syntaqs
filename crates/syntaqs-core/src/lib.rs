@@ -80,7 +80,7 @@ extern crate self as syntaqs_core;
 #[cfg(test)]
 extern crate std;
 #[cfg(test)]
-#[path = "../tests/support/coefficient.rs"]
+#[path = "../tests/common/mod.rs"]
 mod test_coefficient;
 
 pub mod coefficient;

@@ -99,6 +99,8 @@ Integration tests remain separate crate roots and use `mod common;` for shared h
 
 ## Module entry files
 
+The moves in this section, including the core coefficient fixture below, have been completed. Test ownership moves and responsibility splits in later sections remain pending.
+
 Move each entry file below to the indicated path; its existing child directory stays in place. Shared integration-test helpers are the explicit `mod.rs` exception described below.
 
 | Current | Destination |

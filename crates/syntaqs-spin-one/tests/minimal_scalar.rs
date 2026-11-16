@@ -1,9 +1,9 @@
-mod support;
+mod common;
 
+use common::*;
 use core::ops::{Add, Div, Mul, Neg};
 use num_complex::Complex;
 use num_traits::One;
-use support::*;
 use syntaqs_core::{
     Adjoint, Basis, HilbertSpace, Identity, ImaginaryUnit, InnerProduct, LinearCombination as Lc,
     Trace,

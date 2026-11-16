@@ -1,7 +1,7 @@
-mod support;
+mod common;
 
+use common::*;
 use num_complex::Complex;
-use support::*;
 use syntaqs_core::{
     Act, Adjoint, Basis, Dimension, HomogeneousParity, Identity, InnerProduct,
     LinearCombination as Lc, Parity, ParityOperator, Product, Trace,
@@ -125,7 +125,7 @@ fn laws<T: Real>() {
                 let ket = Lc::primitive(s);
                 let lhs = lc_action(&ab, &ket);
                 let rhs = lc_action(&al, &lc_action(&bl, &ket));
-                let expected = apply(&product(&am, &bm), &support::ket(s));
+                let expected = apply(&product(&am, &bm), &common::ket(s));
                 values::<T>(&state_combination(lhs), &expected);
                 values::<T>(&state_combination(rhs), &expected);
             }

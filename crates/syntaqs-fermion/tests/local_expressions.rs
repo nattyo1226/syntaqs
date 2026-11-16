@@ -1,6 +1,6 @@
-mod support;
+mod common;
+use common::*;
 use num_complex::Complex;
-use support::*;
 use syntaqs_core::{LocalOperator, LocalState};
 use syntaqs_export::{Export, Exported, MatrixArgs};
 use syntaqs_fermion::{

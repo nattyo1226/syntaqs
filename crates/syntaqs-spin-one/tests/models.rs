@@ -1,7 +1,7 @@
-mod support;
+mod common;
 
+use common::*;
 use num_complex::Complex;
-use support::*;
 use syntaqs_core::{ExpressionError, HilbertSpace as H, OperatorOf, SpaceError};
 use syntaqs_export::{Export, Exported, MatrixArgs};
 use syntaqs_geometry::{Boundary, Chain, MappingError};

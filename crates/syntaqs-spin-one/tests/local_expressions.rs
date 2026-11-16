@@ -1,7 +1,7 @@
-mod support;
+mod common;
 
+use common::*;
 use num_complex::Complex;
-use support::*;
 use syntaqs_export::{Export, Exported, MatrixArgs};
 use syntaqs_normalize::{Norm, NormalizationError, Normalize, NormalizedExpectation};
 use syntaqs_spin_one::{

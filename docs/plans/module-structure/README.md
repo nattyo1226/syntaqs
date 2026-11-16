@@ -18,8 +18,8 @@ Do not implement the proposed broad renames and public API reshaping (`ops`/`exp
 ## Execution plan
 
 - [x] Inspect representative module layouts and record candidate moves, ownership, and exceptions.
-- [ ] Before implementation, check the current worktree and verify that each listed source and destination still matches the inventory; resolve path collisions and path-sensitive references.
-- [ ] Convert module entry files and integration-test helper locations by crate; verify Cargo test-target discovery and run affected tests.
+- [x] Before implementation, check the current worktree and verify that each listed source and destination still matches the inventory; resolve path collisions and path-sensitive references.
+- [x] Convert module entry files and integration-test helper locations by crate; verify Cargo test-target discovery and run affected tests. Workspace all-features tests, all-target no-default-features check, formatting, Clippy, and export no-default-features tests passed; Cargo target names and kinds were unchanged.
 - [ ] Rehome unit tests by responsibility, adjusting imports and privacy; run affected unit tests and relevant integration tests.
 - [ ] Split cohesive implementation responsibilities in core and Lie where justified by the actual dependency boundaries; update local consumers and run relevant tests, including relevant feature combinations.
 - [ ] Apply the agreed Neel and model-error changes; update affected tests, example, and current documentation, and run affected crate tests and example checks.
