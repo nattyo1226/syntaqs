@@ -354,6 +354,18 @@ without promising the old IEEE sequence's signed-zero or NaN/inf propagation.
 Inner-product helpers gain no coefficient equality bound; public state paths
 inherit only the [evaluation bounds](#92-natural-state-collection-between-actions).
 
+### 9.4. Sparse operator basis generation
+
+Operator expand/coordinates consume signed intrinsic factors and use
+[direct coordinate generation](basis.md#operator-coordinate-generation):
+query-local spectator identity choices, sparse specified-factor data, a working
+full-length key, and one final accumulator. The single-component identity path
+uses its actual basis digit and coefficient; general identities share their
+local choices across spectator positions. Expression expansion additionally
+shares local basis payloads. This introduces no new public bounds or public
+coordinate representation, and leaves state basis expansion and trace/HS
+contraction on their own paths.
+
 ## 10. Current public API
 
 | Subject | Main APIs and contracts |

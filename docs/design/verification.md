@@ -91,6 +91,17 @@ Existing matrix/Gram references continue to check mathematical values at both
 precisions. These call-count assertions do not establish general asymptotic
 improvements for W-state norms or other inner products.
 
+Core `basis::expansion::operator::tests` checks once-per-query identity expansion,
+queries with no spectators or no factors, ordinary encounter-order placement,
+nonzero identity digits and non-unit coefficients, multi-component identity and
+specified choices, working-key restoration, exact cancellation, original-reference
+and basis-error visibility after zero/empty factors, and unchanged minimal bounds.
+Payload counters and node-sharing checks cover expanded syntax without primitive
+cloning. Extreme spectator coefficients check ambient-order multiplication,
+and a 20,000-axis enumeration case checks iterative traversal on a small stack.
+Existing independent ordinary/graded matrix and nonorthogonal-basis tests verify
+both precisions and reconstructed expression semantics.
+
 ## 3. CI and verification limits
 
 The [CI workflow](../../.github/workflows/ci.yml) runs on pushes to `main`, pull requests, and manual dispatch on 64-bit Linux. Rust 1.85.0 and stable each test the workspace with default, all, and no default features, including doctests and compile_fail cases. For each toolchain, only the default-configuration job runs the additional Lie-only example and shared Lie integration tests without export backends, downstream linkage fixture, and provider-selection checks. These commands select their own features independently of the workspace test configuration.

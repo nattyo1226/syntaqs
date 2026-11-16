@@ -363,6 +363,7 @@ fn count_w() {
 }
 
 mod controls;
+mod coordinate_generation;
 mod grouping;
 
 fn h2_count() {
@@ -416,12 +417,20 @@ fn provenance() {
 fn main() {
     let mode = std::env::args().nth(1).unwrap_or_default();
     if ![
-        "", "original", "extra", "count", "h2-count", "controls", "grouping", "all",
+        "",
+        "original",
+        "extra",
+        "count",
+        "h2-count",
+        "controls",
+        "grouping",
+        "coordinates",
+        "all",
     ]
     .contains(&mode.as_str())
     {
         eprintln!(
-            "unknown mode: {mode}; use original, extra, count, h2-count, controls, grouping, or all"
+            "unknown mode: {mode}; use original, extra, count, h2-count, controls, grouping, coordinates, or all"
         );
         std::process::exit(2);
     }
@@ -433,6 +442,7 @@ fn main() {
         "h2-count" => h2_count(),
         "controls" => controls::run(),
         "grouping" => grouping::run(),
+        "coordinates" => coordinate_generation::run(),
         "all" => {
             original();
             extra();
@@ -440,6 +450,7 @@ fn main() {
             h2_count();
             controls::run();
             grouping::run();
+            coordinate_generation::run();
         }
         _ => unreachable!(),
     }

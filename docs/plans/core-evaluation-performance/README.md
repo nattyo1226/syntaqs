@@ -7,7 +7,8 @@ Stage 0 is complete: [implementation contracts](stage-0-contracts.md) and an
 [audited baseline](stage-0-baseline.md) are recorded. Stage 1 local grouping is
 implemented; see its [results and validation](stage-1-results.md). Stage 2 state
 collection is complete; see its [results and validation](stage-2-results.md). Stage 3
-incremental contractions are complete; see their [results and validation](stage-3-results.md). The change map, remaining stage order, and
+incremental contractions are complete; see their [results and validation](stage-3-results.md). Stage 4 coordinate generation
+is complete; see its [results and validation](stage-4-results.md). The change map, remaining stage order, and
 acceptance criteria are in the [integrated implementation plan](implementation-plan.md).
 
 ## Objective, scope, and progress
@@ -25,12 +26,13 @@ producing an intrinsically large result.
 | Agree on the local-operator grouping direction | Complete; Stage 1 implemented |
 | Agree on repeated-action aggregation and its initial equivalence scope | Complete; implementation details fixed in Stage 0 |
 | Bound the inner-product improvement to local contraction and exact-zero short-circuiting | Complete; further acceleration deferred |
-| Agree on sparse coordinate generation with shared identity expansion | Complete; implementation details remain open |
-| Consolidate changes, dependencies, stages, and acceptance criteria | Plan recorded; Stages 0–3 complete |
+| Agree on sparse coordinate generation with shared identity expansion | Complete; Stage 4 implemented |
+| Consolidate changes, dependencies, stages, and acceptance criteria | Plan recorded; Stages 0–4 complete |
 | Stage 0: contracts, probe audit, semantic fixtures, and current-revision baseline | Complete |
 | Stage 1: local construction/grouping API and query preparation | Complete |
 | Stage 2: per-action state collection and caller-bound migration | Complete |
-| Stage 3: local contraction and exact-zero stopping | Complete; Stages 4–5 not started |
+| Stage 3: local contraction and exact-zero stopping | Complete |
+| Stage 4: shared identity expansion and direct operator-coordinate keys | Complete; Stage 5 remains planned |
 
 Completion criteria were met: examples have explicit definitions, measurements
 have a recorded method, source paths explain the findings, and proposals are
@@ -48,7 +50,7 @@ See [local expressions](../../design/primitive-expression.md),
 The following sections retain the investigation and initial design discussion.
 Where they identify implementation choices, the later
 [Stage 0 contracts](stage-0-contracts.md) now resolve those choices for the first
-implementation. Sections 1–3 are implemented by Stages 1–3; Section 4 remains planned.
+implementation. Sections 1–4 are implemented by Stages 1–4.
 
 | Finding | Adopted scope |
 | --- | --- |
@@ -57,7 +59,8 @@ implementation. Sections 1–3 are implemented by Stages 1–3; Section 4 remain
 | 3. Inner products | Preserve local factorization and short-circuit unnecessary work on exact zeros; further acceleration is deferred |
 | 4. Operator basis coordinates | Share the identity's local expansion within a query and emit complete coordinates directly from sparse factor data |
 
-Directions 1–3 are implemented; direction 4 remains planned. The sections below
+All four directions are implemented; their stage records distinguish validation
+results from historical measurements. The sections below
 retain baseline measurements and describe each adopted scope. The implementation
 plan tracks the combined sequence and current completion status.
 
@@ -472,7 +475,7 @@ Instrumented basis-rule calls identify spectator processing:
 The 64-site H² coordinates caused 25,135,284 allocation requests and
 4,896,265,824 requested bytes.
 
-Mechanism: [`operator_expansion`](../../../crates/syntaqs-core/src/basis/expansion/composite.rs)
+Baseline mechanism: [`operator_expansion`](../../../crates/syntaqs-core/src/basis/expansion/composite.rs)
 visits every ambient factor per intrinsic term and repeatedly constructs and
 expands spectator identities. The source Hamiltonian does not contain those
 spectator identity nodes: they are temporary local expressions created by the
@@ -573,13 +576,11 @@ syntax still contains explicit identity factors. Preserve support for other
 bases where identity is represented by several basis elements, and avoid adding
 Clone/Eq/Ord requirements on primitives merely for this optimization.
 
-Remaining work is to choose the working-key and local-choice traversal layout,
-resolve and reuse ambient factor positions efficiently, account for spectator
-coefficients, and share generation between coordinate-only and expression
-outputs. The current full-length public keys, intrinsic term count, map
-comparisons, and final expression-node creation still have costs. This design
-does not itself solve composite term proliferation or guarantee a particular
-speedup.
+Stage 4 implements the working key, iterative local-choice traversal, ambient
+position mapping, spectator coefficients, and shared generation for both outputs.
+Full-length public keys, intrinsic term count, map comparisons, and final
+expression-node creation still have costs. These changes do not solve general
+composite term proliferation or guarantee a particular speedup.
 
 Verify single-component identity at a nonzero index and with a non-unit
 coefficient, multi-component identity, no-spectator inputs, unit spaces, exact
@@ -587,8 +588,8 @@ cancellation, basis errors, explicit rebinding, non-Clone primitives/indices,
 and graded products/adjoints. Compare coordinates and expanded expressions with
 independent small-system results. Re-run the H and H² cases with basis-call and
 allocation counts to establish that repeated spectator expansion and prefix-map
-construction are removed. These implementation checks and gains are not yet
-measured.
+construction are removed. The [Stage 4 record](stage-4-results.md) reports these
+checks and repeated measurements; the tables above remain historical.
 
 ## Control: output-size growth can be necessary
 
@@ -613,7 +614,8 @@ the output-size lower bound.
 ## Integration status and limitations
 
 All four directions in the overview are agreed. Local grouping, state
-collection, and incremental scalar contractions are implemented.
+collection, incremental scalar contractions, and direct operator-coordinate
+generation are implemented.
 The [implementation plan](implementation-plan.md) proposes their implementation
 stages, order, compatibility work, and verification gates. Local grouping should
 feed the existing grading path before the coordinate generator; state-term collection and inner
