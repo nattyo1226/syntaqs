@@ -2,6 +2,8 @@
 
 ## Policy and precedence
 
+For the next implementation phase, the [semantic refactoring plan](semantic-refactoring.md) takes precedence on scope and preserves existing public paths with temporary compatibility re-exports where needed. Final API cleanup and preludes remain deferred.
+
 The user chose semantic module paths as the canonical public API and permits public re-exports only in `prelude`. The [recommendations](module-api-recommendations.md) are design input; their suggestions to use semantic `pub use` outside preludes do not override that choice. Public items are defined in their canonical module, including when this requires moving definitions. A type alias defining a concept is not a re-export. Internal `use` and restricted-visibility imports are unaffected.
 
 Crate roots are themselves meaningful namespaces: central crate-wide abstractions may be defined there without a redundant module. The user requested a prelude as a convenient entry point; provide one per public library crate, including small crates, with a deliberately limited selection. Prelude exports are public API too.

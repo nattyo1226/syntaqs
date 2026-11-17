@@ -1,5 +1,9 @@
 # Module structure
 
+## Current phase
+
+The earlier file-convention and test-ownership pass is complete apart from its handoff record. The next agreed work is the [semantic module refactoring plan](semantic-refactoring.md), which preserves current public reachability as far as possible and defers the full API and prelude reorganization. The earlier scope and checklist below describe the completed pass and do not prohibit the new planned renames.
+
 ## Objective and scope
 
 Organize workspace modules and test ownership in coherent batches. This is a plan only; implementation requires a separate request. Public API paths may change when necessary for the work below. Preserve behavior, public capabilities, feature gates and supported environments except for the explicitly agreed removal of the dedicated Neel constructor and `UtilityError` rename.
