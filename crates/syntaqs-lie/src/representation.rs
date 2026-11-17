@@ -5,16 +5,9 @@ use num_traits::Zero;
 
 use crate::{
     FamilyCoordinates, FamilyExpression, GramFactorization, LieError, NumericalError,
-    NumericalOptions, OperatorFamily, Projection, ToleranceCheck, numerical::finite,
+    NumericalOptions, OperatorFamily, Projection, ToleranceCheck, lie_bracket,
+    numerical::kernels::finite,
 };
-
-/// Constructs `-i(AB-BA)`, including on graded spaces (an ordinary bracket).
-///
-/// This constructs an expression without numerical validation. Core resolves
-/// physical grading signs and rejects incompatible placed contexts.
-pub fn lie_bracket<E: FamilyExpression>(left: &E, right: &E) -> Result<E, LieError<E::Real>> {
-    Ok(left.lie_bracket_expression(right)?)
-}
 
 /// Span diagnosis for one ordered pair of family elements.
 pub struct BracketClosureCheck<R> {

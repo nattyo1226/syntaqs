@@ -2,8 +2,9 @@ use crate::{Boundary, Geometry};
 
 /// Immutable site count and boundary condition, without indices or assignments.
 ///
-/// Use [`crate::NearestNeighbors`] or [`crate::Consecutive`] to select sites,
-/// and [`crate::SiteMapper`] to connect them to caller-owned data.
+/// Use [`crate::relation::nearest_neighbor::NearestNeighbors`] or
+/// [`crate::relation::consecutive::Consecutive`] to select sites, and
+/// [`crate::mapping::SiteMapper`] to connect them to caller-owned data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Chain {
     num_sites: usize,

@@ -4,6 +4,11 @@ Operator families, numerical foundations, and Lie representations using syntaqs
 expressions, including adjoint commutants, centers, and complete decomposition
 into the full center and nonabelian simple ideals.
 
+Public analysis types are organized under `family`, `representation`, `invariant`,
+`decomposition`, and `numerical`. The prelude supplies `OperatorFamily`,
+`NumericalOptions`, and `lie_bracket`; `FamilyExpression` and `LieError` are
+defined at the crate root.
+
 `OperatorFamily<E>` retains a nonempty ordered family of `LocalOperator` or
 placed `Operator` expressions with complex f32/f64 coefficients. `new` infers a
 local context or a bound input's ambient space; `new_in` supplies the space for

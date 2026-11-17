@@ -1,9 +1,24 @@
 //! Immutable ordinary and graded tensor spaces, generic over an equality-comparable index.
 
 use alloc::{sync::Arc, vec, vec::Vec};
-use core::{iter::FusedIterator, slice};
+use core::{iter::FusedIterator, num::NonZeroUsize, slice};
 
-use crate::{Dimension, DimensionOverflow, expr::parts::SumExpr};
+use crate::expression::parts::SumExpr;
+
+/// Dimension of the linear space spanned by all values of a primitive type.
+///
+/// For a complete state space this is `d`; for its full operator space it is
+/// `d²`. It is not the number of primitive variants or the span of one value.
+/// Dimensions must agree with the algebra, action, and complete basis contracts.
+pub trait Dimension {
+    /// Returns the positive dimension, or an error if it does not fit in usize.
+    fn dim() -> Result<NonZeroUsize, DimensionOverflow>;
+}
+
+/// A state-space or operator-space dimension does not fit in `usize`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[error("space dimension overflows usize")]
+pub struct DimensionOverflow;
 
 /// Composition rule for an ordered tensor product.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,7 +53,7 @@ enum Node<I> {
 ///
 /// ```
 /// use core::num::NonZeroUsize;
-/// use syntaqs_core::HilbertSpace;
+/// use syntaqs_core::space::HilbertSpace;
 /// let a = HilbertSpace::factor("a");
 /// let b = HilbertSpace::factor("b");
 /// let h = a.tensor(&b)?;

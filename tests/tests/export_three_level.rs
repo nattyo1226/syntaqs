@@ -1,7 +1,13 @@
 use fixture::*;
 use num_complex::Complex;
-use syntaqs_core::{Basis, HilbertSpace, LocalOperator, LocalState};
-use syntaqs_export::{Export, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
+use syntaqs_core::{
+    basis::Basis, expression::local::LocalOperator, expression::local::LocalState,
+    space::HilbertSpace,
+};
+use syntaqs_export::{
+    Export, Exported, matrix::args::MatrixArgs, matrix::metadata::MatrixMetadata,
+    vector::metadata::VectorMetadata,
+};
 use syntaqs_tests::three_level as fixture;
 
 // Follow the required complex-magnitude atol/rtol comparison, independently of
@@ -75,24 +81,20 @@ fn check<T: Real>() {
         }
         #[cfg(feature = "ndarray")]
         {
-            let direct: Exported<
-                syntaqs_export::ndarray::Array2<_>,
-                MatrixMetadata<'_, Ket, _, ()>,
-            > = (&op).export(MatrixArgs::new(&basis)).unwrap();
+            let direct: Exported<ndarray::Array2<_>, MatrixMetadata<'_, Ket, _, ()>> =
+                (&op).export(MatrixArgs::new(&basis)).unwrap();
             for (i, row) in expected.iter().enumerate() {
                 for (j, &value) in row.iter().enumerate() {
                     close(direct.data()[[i, j]], value);
                 }
             }
-            let converted: Exported<
-                syntaqs_export::ndarray::Array2<_>,
-                MatrixMetadata<'_, Ket, _, ()>,
-            > = output.export(()).unwrap();
+            let converted: Exported<ndarray::Array2<_>, MatrixMetadata<'_, Ket, _, ()>> =
+                output.export(()).unwrap();
             assert_eq!(direct.data(), converted.data());
         }
         #[cfg(feature = "sprs")]
         {
-            let sparse: Exported<syntaqs_export::sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, ()>> =
+            let sparse: Exported<sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, ()>> =
                 (&op).export(MatrixArgs::new(&basis)).unwrap();
             for (i, row) in expected.iter().enumerate() {
                 for (j, &value) in row.iter().enumerate() {
@@ -143,9 +145,10 @@ fn check<T: Real>() {
         }
     }
     // Identity is not itself a MatrixUnits basis element; export remains valid.
-    let identity = syntaqs_core::Operator::<u8, Operator, Complex<T>>::identity()
-        .bind(&space)
-        .unwrap();
+    let identity =
+        syntaqs_core::expression::composite::Operator::<u8, Operator, Complex<T>>::identity()
+            .bind(&space)
+            .unwrap();
     let output: Exported<Vec<_>, MatrixMetadata<'_, Ket, _, _>> =
         (&identity).export(MatrixArgs::new(&basis)).unwrap();
     for row in 0..9 {

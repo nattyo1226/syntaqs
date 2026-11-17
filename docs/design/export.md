@@ -4,7 +4,7 @@ Last updated: 2026-11-16
 
 ## 1. Status and responsibilities
 
-`syntaqs-export` provides vectors for states and coordinates, and action matrices for operators. Public types are available at the crate root.
+`syntaqs-export` provides vectors for states and coordinates, and action matrices for operators. `Export`, `Exported`, and `ExportError` are defined at the crate root; representation-specific types are defined under `matrix` and `vector`.
 
 Basis enumeration and coordinates follow [basis design](basis.md); action and space selection follow [composite expressions](composite-expression.md); coefficients and zeros follow [numeric conventions](numerics.md).
 
@@ -22,6 +22,8 @@ Basis enumeration and coordinates follow [basis design](basis.md); action and sp
 Both dense vectors and matrices store numerical data in `Vec<C>`. Matrix shape (rows and columns) and storage order belong in metadata; there is no dedicated dense-matrix container. Users can connect Vec or slices and metadata to other external crates.
 
 The API exposes Vec output with metadata, direct ndarray output from inputs, and conversion of existing Vec output to ndarray. Direct ndarray output internally shares Vec output and conversion. Sparse output constructs sprs containers from Coordinates without an intermediate dense result.
+
+The `ndarray` and `sprs` features enable their respective containers independently. These crates are not re-exported; consumers using their types declare compatible direct dependencies.
 
 ### 2.2. Exported and metadata
 
@@ -145,13 +147,13 @@ Dense output checks `nrows * ncols` and storable size before allocation; sparse 
 
 Space-construction and algebraic-evaluation contracts remain unchanged. Export validates sizes required by numerical containers at its boundary. Existing sparse-coordinate storage and basis expansion remain usable even when total dimension overflows.
 
-## 6. Features, re-exports, and dependencies
+## 6. Features and dependencies
 
 ### 6.1. Enabling and accessing APIs
 
 `syntaqs-export` has no default features; Export, Vec output, and metadata are always available. `ndarray` and `sprs` features enable their APIs and optional dependencies. The ndarray feature enables both direct expression / Coordinates output and conversion from owned Vec output.
 
-Users select `syntaqs-export` features directly. Backend types are re-exported as `syntaqs_export::ndarray` and `syntaqs_export::sprs` under their respective features. The `examples` package's optional `export` feature enables both backends.
+Users select `syntaqs-export` features directly and depend on `ndarray` or `sprs` directly when using their container types. The `examples` package's optional `export` feature enables both backends.
 
 sprs depends on ndarray, so enabling sprs alone still includes the ndarray dependency. Feature separation selects the public conversion APIs. sprs defaults alga and multi_thread are disabled; ndarray uses std only. Initial integration includes no BLAS, rayon, or persistence features.
 
@@ -185,7 +187,7 @@ Numerical, type, and memory contracts have the following verification targets:
 
 ## 8. Types and module structure
 
-Public types are at the `syntaqs_export` root. Alongside basis, space, and shape, `VectorMetadata<'b, B, H = (), P = ()>` records the state primitive type in P for state export, and uses P = `()` for direct Coordinates export. `MatrixMetadata<'b, S, B, H = ()>` records state type S and the selected space. H is `()` for local expressions and `HilbertSpace<I>` for composite expressions.
+`VectorMetadata` is defined in `vector::metadata`, and `MatrixMetadata` in `matrix::metadata`. Alongside basis, space, and shape, `VectorMetadata<'b, B, H = (), P = ()>` records the state primitive type in P for state export, and uses P = `()` for direct Coordinates export. `MatrixMetadata<'b, S, B, H = ()>` records state type S and the selected space. H is `()` for local expressions and `HilbertSpace<I>` for composite expressions.
 
 Specify destinations as `Exported<Vec<C>, M>`, `Exported<ndarray::Array1<C>, M>`, `Exported<ndarray::Array2<C>, M>`, `Exported<sprs::CsVec<C>, M>`, or `Exported<sprs::CsMat<C>, M>`. There are no aliases for particular combinations. Local variables can infer metadata with `_`. Matrix state type is specified through `MatrixArgs::<S, _>::new(&basis)`. Rust API documentation provides complete type parameters and methods.
 

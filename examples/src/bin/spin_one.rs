@@ -1,10 +1,11 @@
 //! Spin-1 dipoles, quadrupoles, chain models and common expression APIs.
 
 use num_complex::Complex;
-use syntaqs_core::HilbertSpace;
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_core::space::HilbertSpace;
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 use syntaqs_spin_one::{
-    CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as Op, SpinOneState as Ket,
+    SpinOne, basis::CartesianBasis, basis::LadderBasis, operator::SpinOneOperator as Op,
+    state::SpinOneState as Ket,
 };
 
 fn assert_close(actual: Complex<f64>, expected: Complex<f64>) {
@@ -66,7 +67,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(feature = "normalize")]
     {
-        use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+        use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
         let normalized = psi.normalized()?;
         assert!((normalized.norm() - 1.0).abs() < 1e-12);
         let energy = psi.normalized_expectation(&h)?;
@@ -75,11 +76,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     #[cfg(feature = "export")]
     {
-        use syntaqs_export::{Export, Exported, MatrixArgs};
-        use syntaqs_spin_one::SzBasis;
+        use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
+        use syntaqs_spin_one::basis::SzBasis;
         let dense: Exported<Vec<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
-        let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<f64>>, _> =
+        let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
         assert_eq!(dense.metadata().shape(), [3, 3]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {
@@ -92,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let dense: Exported<Vec<Complex<f64>>, _> =
             blbq.export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
-        let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<f64>>, _> =
+        let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =
             blbq.export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
         assert_eq!(dense.metadata().shape(), [9, 9]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {

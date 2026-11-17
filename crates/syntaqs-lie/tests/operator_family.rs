@@ -4,9 +4,15 @@ extern crate blas_provider as _;
 
 use ndarray::{Array2, array};
 use num_complex::Complex;
-use syntaqs_core::{ExpressionError, HilbertSpace, LocalOperator, Operator, TensorKind};
-use syntaqs_lie::{LieError, NumericalError, NumericalOptions, OperatorFamily, Tolerance};
-use syntaqs_spin_half::SpinHalfOperator as Pauli;
+use syntaqs_core::{
+    expression::composite::Operator, expression::error::ExpressionError,
+    expression::local::LocalOperator, space::HilbertSpace, space::TensorKind,
+};
+use syntaqs_lie::{
+    LieError, family::OperatorFamily, numerical::error::NumericalError,
+    numerical::options::NumericalOptions, numerical::tolerance::Tolerance,
+};
+use syntaqs_spin_half::operator::SpinHalfOperator as Pauli;
 
 macro_rules! precision_tests {
     ($module:ident, $real:ty) => {
@@ -502,8 +508,9 @@ precision_tests!(double, f64);
 #[test]
 fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities() {
     use syntaqs_core::{
-        Adjoint, HomogeneousParity, Identity, LinearCombination, Parity, ParityOperator, Product,
-        Trace,
+        algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity, algebra::Parity,
+        algebra::ParityOperator, algebra::Product, algebra::Trace,
+        expression::parts::linear_combination::LinearCombination,
     };
 
     #[derive(PartialEq)]
@@ -554,7 +561,10 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
     assert_eq!(center.center().unwrap().len(), 2);
     assert!(center.complement().is_none());
     let decomposition = local
-        .decompose(&options, &syntaqs_lie::DecompositionOptions::default())
+        .decompose(
+            &options,
+            &syntaqs_lie::decomposition::DecompositionOptions::default(),
+        )
         .unwrap();
     assert_eq!(decomposition.center().unwrap().family().len(), 2);
     assert!(decomposition.simple_ideals().is_empty());
@@ -583,7 +593,10 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
     assert_eq!(center.center().unwrap().len(), 2);
     assert!(center.complement().is_none());
     let decomposition = placed
-        .decompose(&options, &syntaqs_lie::DecompositionOptions::default())
+        .decompose(
+            &options,
+            &syntaqs_lie::decomposition::DecompositionOptions::default(),
+        )
         .unwrap();
     assert_eq!(decomposition.center().unwrap().family().len(), 2);
     assert!(decomposition.simple_ideals().is_empty());
@@ -609,4 +622,17 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
             .unwrap()
             .in_span()
     );
+}
+
+#[test]
+fn numerical_error_conversion_preserves_source_and_message() {
+    use std::error::Error;
+
+    let error = LieError::<f64>::from(NumericalError::InvalidSetting("test setting"));
+    let source = error.source().expect("numerical error source");
+    assert!(matches!(
+        source.downcast_ref::<NumericalError>(),
+        Some(NumericalError::InvalidSetting("test setting"))
+    ));
+    assert_eq!(error.to_string(), source.to_string());
 }

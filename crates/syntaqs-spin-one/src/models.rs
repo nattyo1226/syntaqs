@@ -4,12 +4,17 @@ use crate::coefficient::{four_ninths, two_thirds};
 use crate::{SpinOne, SpinOneOperator as O};
 use core::ops::{Add, Div, Neg};
 use num_traits::One;
-use syntaqs_core::{ExpressionError, HilbertSpace, OperatorOf, SpaceError};
-use syntaqs_geometry::{Chain, MappingError, NearestNeighbors, SiteMapper};
+use syntaqs_core::{
+    expression::error::ExpressionError, space::HilbertSpace, space::SpaceError, system::OperatorOf,
+};
+use syntaqs_geometry::{
+    geometry::chain::Chain, mapping::MappingError, mapping::SiteMapper,
+    relation::nearest_neighbor::NearestNeighbors,
+};
 
 /// Failure to construct a spin-1 model on a site-ordered space assignment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
-pub enum UtilityError {
+pub enum ModelError {
     /// The input site count differs from the chain's count.
     #[error("{0}")]
     Mapping(#[from] MappingError),
@@ -25,7 +30,7 @@ pub enum UtilityError {
 fn model_space<I: Eq>(
     chain: &Chain,
     sites: &[HilbertSpace<I>],
-) -> Result<HilbertSpace<I>, UtilityError> {
+) -> Result<HilbertSpace<I>, ModelError> {
     SiteMapper::new(chain, sites)?;
     Ok(HilbertSpace::tensor_all(sites.iter().cloned())?)
 }
@@ -55,7 +60,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
         jx: R,
         jy: R,
         jz: R,
-    ) -> Result<OperatorOf<SpinOne<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<SpinOne<C>, I>, ModelError>
     where
         C: Clone + From<R> + Neg<Output = C> + One + Add<Output = C> + Div<Output = C>,
     {
@@ -93,7 +98,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
         chain: &Chain,
         sites: &[HilbertSpace<I>],
         j: R,
-    ) -> Result<OperatorOf<SpinOne<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<SpinOne<C>, I>, ModelError>
     where
         C: Clone + From<R> + Neg<Output = C> + One + Add<Output = C> + Div<Output = C>,
     {
@@ -117,9 +122,9 @@ impl<C> SpinOneModels<SpinOne<C>> {
     ///
     /// ```
     /// use num_complex::Complex;
-    /// use syntaqs_core::HilbertSpace;
-    /// use syntaqs_geometry::{Boundary, Chain};
-    /// use syntaqs_spin_one::{SpinOne, SpinOneState as Ket};
+    /// use syntaqs_core::space::HilbertSpace;
+    /// use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
+    /// use syntaqs_spin_one::{SpinOne, state::SpinOneState as Ket};
     /// type Spin = SpinOne<Complex<f64>>;
     /// let sites = [HilbertSpace::factor("a"), HilbertSpace::factor("b")];
     /// let h = syntaqs_spin_one::models::SpinOneModels::<Spin>::blbq(&Chain::new(2, Boundary::Open), &sites, 1.0, 0.5)?;
@@ -132,7 +137,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
         sites: &[HilbertSpace<I>],
         j: R,
         k: R,
-    ) -> Result<OperatorOf<SpinOne<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<SpinOne<C>, I>, ModelError>
     where
         C: Clone + From<R> + Neg<Output = C> + One + Add<Output = C> + Div<Output = C>,
     {

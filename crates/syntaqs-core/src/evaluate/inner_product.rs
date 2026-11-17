@@ -4,7 +4,7 @@ use alloc::{collections::BTreeMap, vec, vec::Vec};
 use core::{ops::Mul, ptr};
 use num_traits::{One, Zero};
 
-use crate::expr::{
+use crate::expression::{
     composite::{StateExpr, StateNode},
     traversal::{LinearTerms, state_view},
 };

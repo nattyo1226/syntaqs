@@ -19,7 +19,7 @@ integration tests, and shared internal BLAS/LAPACK support.
 | `syntaqs-normalize` | Extension traits for norms, state normalization, and normalized expectations. |
 | `syntaqs-export` | Vec, ndarray, and sprs output with interpretation metadata. |
 | `syntaqs-lie` | Operator families, real HS projection, Lie brackets and closure diagnostics, retained adjoint/Killing representations, real family transformations, full real adjoint commutants, center/complement extraction, complete simple-ideal decomposition, and dense numerical foundations. |
-| `syntaqs-spin-half` | Spin-1/2 primitives and bases, XYZ/Heisenberg models, and Neel construction. |
+| `syntaqs-spin-half` | Spin-1/2 primitives and bases, and XYZ/Heisenberg models. |
 | `syntaqs-spin-one` | Spin-1 primitives and bases, and XYZ/Heisenberg/BLBQ construction. |
 | `syntaqs-fermion` | Single-mode fermion primitives and bases, and standard/symmetric Hubbard construction. |
 | [examples](../examples/README.md) | Runnable examples using the individual crates directly. |
@@ -54,8 +54,12 @@ Typically, callers construct indices and spaces, choose primitive and coefficien
 
 ## 5. Module structure
 
-Core is divided into `ops`, `coefficient`, `space`, `system`, `expr`, `basis`, and private `evaluate` modules. Shared syntax parts live in `expr::parts` and internal traversal in `expr::traversal`. Public expression handles and major traits are available at the crate root; node enums and shared representations are private.
+Core is divided into `algebra`, `coefficient`, `space`, `system`, `expression`, `basis`, and private `evaluate` modules. Algebra operations and grading belong to `algebra`; `space` defines both `Dimension`, which describes a primitive's span, and `DimensionOverflow`. Public expression handles are defined in `expression::local` and `expression::composite`; linear combinations are defined in `expression::parts::linear_combination`. Expression nodes and traversal are private.
 
-Geometry separates geometry, boundaries, relations, groups, and connections. Normalize separates norms, expectations, and errors. Export separates arguments, results, metadata, coordinate/vector/matrix conversion, and backends. Lie separates expression adapters, families/projection, retained representations, invariant subspaces, decomposition, and numerical settings/kernels. Concrete algebras separate primitives, coefficient helpers, bases, and models. Feature designs specify detailed types, capabilities, errors, and processing.
+Geometry defines boundaries under `geometry`, site groups under `relation`, and site-to-data mapping under `mapping`. Normalize separates norms, expectations, and errors. Export separates arguments, results, metadata, coordinate/vector/matrix conversion, and backends. Lie separates expression adapters, families and their transformations, retained representations, invariant subspaces, decomposition, and numerical settings, tolerances, errors, and kernels. Concrete algebras separate primitives, coefficient helpers, bases, and models. Feature designs specify detailed types, capabilities, errors, and processing.
+
+Public items use their defining semantic module paths. Each library crate has a root `prelude` re-exporting frequently used items; other public re-exports are not used. A crate root may itself define a shared abstraction or a system alias. Within this repository, crates other than `examples` import dependencies through their defining paths rather than another syntaqs crate's prelude, including in tests and documentation examples.
+
+Named Rust modules use `name.rs` and, for children, a `name/` directory; crate entry points are excluded. The shared integration-test helper layout is described in [verification](design/verification.md#1-verification-responsibilities).
 
 See [verification](design/verification.md) for checks, [future work](future-work.md) for unimplemented extensions, and the [documentation guide](README.md) for document responsibilities and maintenance conventions.

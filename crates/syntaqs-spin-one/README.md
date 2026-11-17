@@ -9,6 +9,8 @@ Spin-1 dipoles, quadrupoles, bases, and chain-model helpers for [syntaqs](../../
 - Provide `SzBasis` for states and complete `CartesianBasis` / `LadderBasis` operator bases.
 - Construct XYZ, Heisenberg, and bilinear-biquadratic (BLBQ) Hamiltonians through `models::SpinOneModels`.
 
+State and operator primitives are defined in `state` and `operator`, bases in `basis`, and model helpers and errors in `models`. The crate prelude provides the system alias, primitives, and model helper.
+
 ## Conventions
 
 With `hbar = 1`, physical `Jz` has eigenvalues `1, 0, -1` in state order `Plus, Zero, Minus`. Cartesian primitives use `S = sqrt(3/2) J`, and Cartesian operator-basis elements are orthonormal under `Tr(A†B)/3`. The normalized state `SpinOneState::Zero` is distinct from a zero vector.

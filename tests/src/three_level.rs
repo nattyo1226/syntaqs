@@ -5,8 +5,9 @@ use std::{fmt::Debug, num::NonZeroUsize, ops::Neg};
 use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use syntaqs_core::{
-    Act, Adjoint, Basis, Dimension, DimensionOverflow, Identity, InnerProduct, LinearCombination,
-    Product, Term, Trace,
+    algebra::Act, algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Product,
+    algebra::Trace, basis::Basis, expression::parts::linear_combination::LinearCombination,
+    expression::parts::linear_combination::Term, space::Dimension, space::DimensionOverflow,
 };
 
 pub trait Real:
@@ -350,17 +351,17 @@ impl Dimension for Operator {
     }
 }
 
-impl syntaqs_core::HomogeneousParity for Ket {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for Ket {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }
-impl syntaqs_core::HomogeneousParity for Operator {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for Operator {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }
-impl syntaqs_core::ParityOperator for Operator {
+impl syntaqs_core::algebra::ParityOperator for Operator {
     fn parity_operator() -> Self {
         Self::identity()
     }

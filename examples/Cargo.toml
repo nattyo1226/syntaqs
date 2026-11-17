@@ -11,7 +11,7 @@ publish = false
 [features]
 default = ["normalize"]
 normalize = ["dep:syntaqs-normalize"]
-export = ["dep:syntaqs-export", "dep:blas-provider"]
+export = ["dep:syntaqs-export", "dep:blas-provider", "dep:ndarray", "dep:sprs"]
 lie = ["dep:syntaqs-lie", "dep:blas-provider"]
 libm = ["normalize"]
 
@@ -28,6 +28,8 @@ syntaqs-fermion.workspace = true
 blas-provider = { path = "../support/blas-provider", optional = true }
 
 num-complex.workspace = true
+ndarray = { workspace = true, optional = true }
+sprs = { workspace = true, optional = true }
 
 [dev-dependencies]
 num-traits.workspace = true

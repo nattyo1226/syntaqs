@@ -1,13 +1,13 @@
 //! Geometric site relations and borrowing connections to caller-owned data.
 //!
-//! Geometry retains site counts and boundary conditions; [`Relation`] selects
-//! ordered groups of site numbers. [`SiteMapper`] connects those groups to
+//! Geometry retains site counts and boundary conditions; [`relation::Relation`] selects
+//! ordered groups of site numbers. [`mapping::SiteMapper`] connects those groups to
 //! a caller-owned slice without cloning its elements. For Hilbert spaces,
-//! [`MappedGroup::leaves_cartesian`] and [`MappedGroup::leaves_zip`] combine
+//! [`mapping::MappedGroup::leaves_cartesian`] and [`mapping::MappedGroup::leaves_zip`] combine
 //! local factors while preserving site and tensor order.
 //!
 //! ```
-//! use syntaqs_geometry::{Boundary, Chain, Consecutive, SiteMapper};
+//! use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, relation::consecutive::Consecutive, mapping::SiteMapper};
 //! let chain = Chain::new(4, Boundary::Open);
 //! let values = ["a", "b", "c", "d"];
 //! let mapper = SiteMapper::new(&chain, &values)?;
@@ -17,6 +17,18 @@
 //! assert_eq!(triples, [["a", "b", "c"], ["b", "c", "d"]]);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
+//!
+//! The previous root facades are not public:
+//!
+//! ```compile_fail
+//! use syntaqs_geometry::Boundary;
+//! ```
+//! ```compile_fail
+//! use syntaqs_geometry::Consecutive;
+//! ```
+//! ```compile_fail
+//! use syntaqs_geometry::SiteMapper;
+//! ```
 
 #![no_std]
 #![forbid(unsafe_code)]
@@ -24,15 +36,18 @@
 
 extern crate alloc;
 
-mod boundary;
-mod connection;
-mod geometry;
-mod group;
-mod relation;
+pub mod geometry;
+pub mod mapping;
+pub mod relation;
 
-pub use boundary::Boundary;
-pub use connection::{MappedGroup, MappedGroupResult, MappingError, SiteMapper};
-pub use geometry::Geometry;
-pub use geometry::chain::Chain;
-pub use group::{SiteGroup, SiteGroupError};
-pub use relation::{Consecutive, ConsecutiveError, NearestNeighbors, Relation};
+pub(crate) use geometry::{Boundary, Geometry, chain::Chain};
+pub(crate) use relation::Relation;
+
+/// Common geometry, relation and mapping types.
+pub mod prelude {
+    pub use crate::geometry::{Boundary, Geometry, chain::Chain};
+    pub use crate::mapping::SiteMapper;
+    pub use crate::relation::{
+        Relation, consecutive::Consecutive, nearest_neighbor::NearestNeighbors,
+    };
+}

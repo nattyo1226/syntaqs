@@ -8,6 +8,8 @@ Feature designs define mathematical contracts and boundary cases. This document 
 
 Production-library tests live in each crate's `tests/` and unit tests. [syntaqs-tests](../../tests/README.md) holds shared three-level and graded two-state algebras, non-orthonormal bases, independent references, and core/normalize/export/Lie integration tests. [Examples](../../examples/README.md) include end-to-end model and Lie workflows. Production crates do not depend on test packages.
 
+Place unit tests under the module they exercise. Shared integration-test helpers use `tests/common/mod.rs`, so `mod common` can import them without Cargo discovering an additional test target. Core unit tests may also reference the coefficient fixture there with `#[path = "../tests/common/mod.rs"]`.
+
 ## 2. Common checks
 
 Run from the repository root. Prefix commands with `direnv exec .` when development tools are not on PATH.
@@ -59,7 +61,7 @@ Maintain the following coverage alongside the detailed verification targets in e
 
 Reference values for graded tests come from the [test-only two-state algebra](../../tests/src/graded.rs) and independently assembled ordinary matrices. They must not depend on production fermion rules or the evaluator under test. Resource and depth regression sizes are specific test cases, not general performance bounds.
 
-Core `expr::group_tests` covers structural grouping without coefficient
+Core `expression::group::tests` covers structural grouping without coefficient
 arithmetic or primitive evaluation capabilities, index equality across distinct
 handles, binding/error preservation, sharing and idempotence, and iterative
 grouping/destruction of deep single-factor, scalar, and multi-factor syntax.

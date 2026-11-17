@@ -6,12 +6,15 @@ use num_complex::Complex;
 use num_traits::Float;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use std::{fmt::Debug, ops::Neg};
-use syntaqs_basic::Id128;
-use syntaqs_core::{Divide, HilbertSpace, LocalState, State};
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_basic::index::Id128;
+use syntaqs_core::{
+    coefficient::Divide, expression::composite::State, expression::local::LocalState,
+    space::HilbertSpace,
+};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
-use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
-use syntaqs_spin_half::{SpinHalf, SpinHalfState};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
+use syntaqs_spin_half::{SpinHalf, state::SpinHalfState};
 
 trait Real: Num + Copy + PartialOrd + Neg<Output = Self> + FromPrimitive + ToPrimitive + Debug {
     const ATOL: f64;
@@ -43,7 +46,7 @@ fn close<T: Real>(actual: Complex<T>, expected: Complex<T>) {
 fn basis<T: Real>(
     factors: &[HilbertSpace<Id128>],
     bits: usize,
-) -> syntaqs_core::StateOf<SpinHalf<Complex<T>>, Id128> {
+) -> syntaqs_core::system::StateOf<SpinHalf<Complex<T>>, Id128> {
     State::tensor_in(
         &HilbertSpace::tensor_all(factors.iter().cloned()).unwrap(),
         factors.iter().enumerate().map(|(i, factor)| {
@@ -122,10 +125,10 @@ fn check<T: Real>() {
             assert!(h.space().unwrap().is_compatible_with(&space));
             let before: Vec<_> = space.indices().copied().collect();
             for first in [SpinHalfState::Up, SpinHalfState::Down] {
-                let psi = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::neel(
-                    &chain, &factors, first,
-                )
-                .unwrap();
+                let bits = (0..n).fold(0, |bits, i| {
+                    (bits << 1) | usize::from((i % 2 == 1) == (first == SpinHalfState::Up))
+                });
+                let psi = basis::<T>(&factors, bits);
                 close(
                     Complex::new(psi.norm_squared().unwrap(), T::zero()),
                     c(1.0, 0.0),
@@ -213,12 +216,10 @@ fn models_match_analytic_energies_and_independent_matrices_both_precisions() {
 
 #[cfg(feature = "export")]
 fn check_exports<T: Real + num_traits::NumAssign + Default + Send + Sync + 'static>() {
-    use syntaqs_export::{
-        Export, Exported, MatrixArgs,
-        ndarray::{Array1, Array2},
-        sprs::{CsMat, CsVec},
-    };
-    use syntaqs_spin_half::SzBasis;
+    use ndarray::{Array1, Array2};
+    use sprs::{CsMat, CsVec};
+    use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
+    use syntaqs_spin_half::basis::SzBasis;
     for n in 0..=4 {
         for boundary in [Boundary::Open, Boundary::Periodic] {
             let chain = Chain::new(n, boundary);
@@ -230,10 +231,10 @@ fn check_exports<T: Real + num_traits::NumAssign + Default + Send + Sync + 'stat
             )
             .unwrap();
             for first in [SpinHalfState::Up, SpinHalfState::Down] {
-                let psi = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::neel(
-                    &chain, &factors, first,
-                )
-                .unwrap();
+                let bits = (0..n).fold(0, |bits, i| {
+                    (bits << 1) | usize::from((i % 2 == 1) == (first == SpinHalfState::Up))
+                });
+                let psi = basis::<T>(&factors, bits);
                 let raw: Exported<Vec<Complex<T>>, _> = (&psi).export(&SzBasis).unwrap();
                 let pointer = raw.data().as_ptr();
                 let vector: Exported<Array1<_>, _> = raw.export(()).unwrap();
@@ -255,9 +256,6 @@ fn check_exports<T: Real + num_traits::NumAssign + Default + Send + Sync + 'stat
                 assert!(sparse.data().is_csc());
                 assert!(dense.metadata().space().is_compatible_with(&space));
                 assert!(sparse.metadata().space().is_compatible_with(&space));
-                let bits = (0..n).fold(0, |bits, i| {
-                    (bits << 1) | usize::from((i % 2 == 1) == (first == SpinHalfState::Up))
-                });
                 for i in 0..1 << n {
                     close(vector.data()[i], c(if i == bits { 1. } else { 0. }, 0.));
                     for k in 0..1 << n {
@@ -328,12 +326,13 @@ fn exports_complete_chain_scenario_at_both_precisions() {
 fn check_norms<T: Real + Float>() {
     for n in 0..=6 {
         for first in [SpinHalfState::Up, SpinHalfState::Down] {
-            let chain = Chain::new(n, Boundary::Open);
             let factors = factors(n);
-            let psi = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<T>>>::neel(
-                &chain, &factors, first,
-            )
-            .unwrap();
+            let bits = if first == SpinHalfState::Up {
+                0
+            } else {
+                (1 << n) - 1
+            };
+            let psi = basis::<T>(&factors, bits);
             close(Complex::new(psi.norm().unwrap(), T::zero()), c(1.0, 0.0));
             let normalized = psi.scaled(c(2.0, -3.0)).normalized().unwrap();
             close(

@@ -91,10 +91,10 @@ Validate as early as available information permits. Ambient-space/evaluation-dep
 
 Core provides generic identity comparison, basic provides Id128/Tag, and shared leaf/expression handles avoid unnecessary copies of I.
 
-Comparison uses Eq, factor construction uses `HilbertSpace::factor(index)`, and placement uses `at(&factor)`. Opaque `syntaqs_basic::Id128` wraps UUID v4; `new()` and Default issue fresh identities without seeds. Clone/Copy preserve identity. Display, Debug, equality, ordering, and Hash are provided. Generation delegates to `uuid::Uuid::new_v4`, including behavior when randomness is unavailable. Chain does not depend on basic.
+Comparison uses Eq, factor construction uses `HilbertSpace::factor(index)`, and placement uses `at(&factor)`. Opaque `syntaqs_basic::index::Id128` wraps UUID v4; `new()` and Default issue fresh identities without seeds. Clone/Copy preserve identity. Display, Debug, equality, ordering, and Hash are provided. Generation delegates to `uuid::Uuid::new_v4`, including behavior when randomness is unavailable. Chain does not depend on basic.
 
-Use Id128 from `syntaqs-basic` and `syntaqs_core::HilbertSpace<Id128>` for a UUID-indexed space.
+Use Id128 from `syntaqs-basic` and `syntaqs_core::space::HilbertSpace<Id128>` for a UUID-indexed space.
 
-`syntaqs_basic::Tag { raw: String }` is a named index with private raw storage and `new(impl Into<String>)`, `as_str()`, `From<String>`, and `From<&str>`. Clone, Debug, Eq, Hash, and Ord follow the string. It has no Copy, hidden UUID, or rename API. Use `syntaqs_core::HilbertSpace<Tag>`.
+`syntaqs_basic::index::Tag { raw: String }` is a named index with private raw storage and `new(impl Into<String>)`, `as_str()`, `From<String>`, and `From<&str>`. Clone, Debug, Eq, Hash, and Ord follow the string. It has no Copy, hidden UUID, or rename API. Use `syntaqs_core::space::HilbertSpace<Tag>`.
 
 Standalone Id128 Display/Debug retains the complete UUID; Tag Display writes the name unchanged. Expression Display alone limits any index to its first eight Rust chars. Debug retains full indices. Display collisions are allowed and never determine identity. Names are not inferred from tensor ordering and require no position lookup. See [formatting](expression-formatting.md).

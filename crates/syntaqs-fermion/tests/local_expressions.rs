@@ -1,20 +1,19 @@
-mod support;
+mod common;
+use common::*;
 use num_complex::Complex;
-use support::*;
-use syntaqs_core::{LocalOperator, LocalState};
-use syntaqs_export::{Export, Exported, MatrixArgs};
+use syntaqs_core::{expression::local::LocalOperator, expression::local::LocalState};
+use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
 use syntaqs_fermion::{
-    Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
+    Fermion, basis::LadderBasis, basis::MajoranaBasis, basis::OccupationBasis,
+    operator::FermionOperator as O, state::FermionState as S,
 };
-use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 
 fn vector<T: Real>(psi: &LocalState<S, O, Complex<T>>) -> Vec<Complex<f64>> {
     let out: Exported<Vec<Complex<T>>, _> = psi.export(&OccupationBasis).unwrap();
     assert_eq!(out.metadata().shape(), [2]);
-    let array: Exported<syntaqs_export::ndarray::Array1<Complex<T>>, _> =
-        psi.export(&OccupationBasis).unwrap();
-    let sparse: Exported<syntaqs_export::sprs::CsVec<Complex<T>>, _> =
-        psi.export(&OccupationBasis).unwrap();
+    let array: Exported<ndarray::Array1<Complex<T>>, _> = psi.export(&OccupationBasis).unwrap();
+    let sparse: Exported<sprs::CsVec<Complex<T>>, _> = psi.export(&OccupationBasis).unwrap();
     let result: Vec<_> = out.data().iter().map(|x| to64(*x)).collect();
     values::<T>(
         &array.data().iter().map(|x| to64(*x)).collect::<Vec<_>>(),
@@ -36,10 +35,10 @@ fn exported<T: Real>(op: &LocalOperator<O, Complex<T>>) -> Matrix {
         .export(MatrixArgs::<S, _>::new(&OccupationBasis))
         .unwrap();
     assert_eq!(out.metadata().shape(), [2, 2]);
-    let array: Exported<syntaqs_export::ndarray::Array2<Complex<T>>, _> = op
+    let array: Exported<ndarray::Array2<Complex<T>>, _> = op
         .export(MatrixArgs::<S, _>::new(&OccupationBasis))
         .unwrap();
-    let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<T>>, _> = op
+    let sparse: Exported<sprs::CsMat<Complex<T>>, _> = op
         .export(MatrixArgs::<S, _>::new(&OccupationBasis))
         .unwrap();
     let result: Vec<_> = out.data().iter().map(|x| to64(*x)).collect();

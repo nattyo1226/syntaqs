@@ -51,7 +51,7 @@ This example constructs a two-spin product state and measures a product of Pauli
 
 ```rust
 use num_complex::Complex;
-use syntaqs_core::HilbertSpace;
+use syntaqs_core::space::HilbertSpace;
 use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis};
 
 type Spin = SpinHalf<Complex<f64>>;

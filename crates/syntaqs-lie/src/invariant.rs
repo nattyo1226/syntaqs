@@ -7,7 +7,7 @@ use num_traits::{Float, Zero};
 use crate::{
     AdjointRepresentation, FamilyExpression, LieError, NumericalOptions, OperatorFamily,
     ToleranceCheck,
-    numerical::{RankAnalysis, finite, rank_nullspace},
+    numerical::kernels::{RankAnalysis, finite, rank_nullspace},
 };
 
 /// Effective SVD rank and residual diagnostics for a real linear constraint map.

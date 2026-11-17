@@ -4,7 +4,7 @@ Updated: 2026-11-02
 
 ## 1. Scope and responsibilities
 
-`syntaqs-geometry` separates geometry, site-selection rules, and borrowing connections to external sequences. Public types are available at the crate root. Core does not depend on geometry; geometry depends on core for HilbertSpace connections, maintaining `no_std + alloc`.
+`syntaqs-geometry` separates geometry, site-selection rules, and borrowing connections to external sequences. Public types are defined under `geometry`, `relation`, and `mapping`; the crate prelude provides common types and traits. Core does not depend on geometry; geometry depends on core for HilbertSpace connections, maintaining `no_std + alloc`.
 
 | Type / trait | Responsibility |
 | --- | --- |
@@ -44,7 +44,7 @@ periodic: [0,1,2], [1,2,3], [2,3,4], [3,4,0], [4,0,1]
 Positions correspond to local-operator roles. Do not merge equal rotated supports, since `X_i Z_j X_k` has a distinct middle role and graded products may change signs. Models decide duplication based on interaction symmetries.
 
 ```rust,ignore
-use syntaqs_geometry::{Boundary, Chain, Consecutive, NearestNeighbors, SiteMapper};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, relation::consecutive::Consecutive, relation::nearest_neighbor::NearestNeighbors, mapping::SiteMapper};
 let chain = Chain::new(4, Boundary::Open);
 let mapper = SiteMapper::new(&chain, &site_spaces)?;
 for group in mapper.groups(&Consecutive::<3>)? {

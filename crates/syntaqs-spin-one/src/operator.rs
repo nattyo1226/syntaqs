@@ -4,7 +4,9 @@ use crate::coefficient::{four, spin_scale, sqrt_two, three, two};
 use num_complex::Complex;
 use num_traits::{Float, One, Zero};
 use syntaqs_core::{
-    Adjoint, Dimension, DimensionOverflow, Identity, LinearCombination, Product, Trace,
+    algebra::Adjoint, algebra::Identity, algebra::Product, algebra::Trace,
+    expression::parts::linear_combination::LinearCombination, space::Dimension,
+    space::DimensionOverflow,
 };
 
 /// Fifteen primitives spanning the nine-dimensional spin-1 operator space.
@@ -714,12 +716,12 @@ impl Dimension for SpinOneOperator {
         Ok(core::num::NonZeroUsize::new(9).unwrap())
     }
 }
-impl syntaqs_core::HomogeneousParity for SpinOneOperator {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for SpinOneOperator {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }
-impl syntaqs_core::ParityOperator for SpinOneOperator {
+impl syntaqs_core::algebra::ParityOperator for SpinOneOperator {
     fn parity_operator() -> Self {
         Self::I
     }

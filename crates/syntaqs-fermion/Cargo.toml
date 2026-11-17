@@ -21,3 +21,5 @@ syntaqs-normalize.workspace = true
 syntaqs-export = { workspace = true, features = ["ndarray", "sprs"] }
 
 num-complex.workspace = true
+ndarray.workspace = true
+sprs.workspace = true

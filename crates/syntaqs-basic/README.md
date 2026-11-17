@@ -7,11 +7,13 @@ Standard factor identifiers for [syntaqs](../../README.md).
 - Issue UUID v4 identifiers through `Id128::new()` and `Default`.
 - Provide caller-chosen names through `Tag`.
 
+Both types are defined in `syntaqs_basic::index` and available through `syntaqs_basic::prelude`.
+
 `Id128` generation uses the operating system's randomness through the uuid crate. Copying an existing identifier preserves its identity. `Tag` equality uses the complete string, so callers must choose distinct names for independent factors.
 
 ## Integration
 
-The generic core accepts any suitable equality-comparable index type; using this crate is optional. Use `syntaqs_core::HilbertSpace<Id128>` or `syntaqs_core::HilbertSpace<Tag>` to construct spaces with these identifiers. Identifiers determine factor identity, while primitive types and their rules determine the local algebra. Space construction and expression evaluation belong to [syntaqs-core](../syntaqs-core/README.md).
+The generic core accepts any suitable equality-comparable index type; using this crate is optional. Use `syntaqs_core::space::HilbertSpace<Id128>` or `syntaqs_core::space::HilbertSpace<Tag>` to construct spaces with these identifiers. Identifiers determine factor identity, while primitive types and their rules determine the local algebra. Space construction and expression evaluation belong to [syntaqs-core](../syntaqs-core/README.md).
 
 This crate uses the standard library. Its index types provide Display and Debug; expression Display truncates index labels to eight Unicode scalar values while identity comparisons retain the complete value.
 

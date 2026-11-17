@@ -4,11 +4,13 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    Act, Adjoint, Basis, Dimension, Identity, ImaginaryUnit, InnerProduct, LinearCombination as Lc,
-    Product, Trace,
+    algebra::Act, algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Product,
+    algebra::Trace, basis::Basis, coefficient::ImaginaryUnit,
+    expression::parts::linear_combination::LinearCombination as Lc, space::Dimension,
 };
 use syntaqs_spin_half::{
-    CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as State, SzBasis,
+    basis::CartesianBasis, basis::LadderBasis, basis::SzBasis, operator::SpinHalfOperator as Op,
+    state::SpinHalfState as State,
 };
 
 use Op::{I, Sm, Sp, Sx, Sy, Sz};

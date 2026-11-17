@@ -27,7 +27,7 @@ Dimension provides `fn dim() -> Result<NonZeroUsize, DimensionOverflow>`. If the
 
 The identity must be representable as a primitive value, but need not belong to the selected basis. Basis expands it when necessary. Linearly dependent primitives are allowed, so adding an identity value does not increase the basis dimension. Local expressions retain identity as `Primitive(O::identity())`, using the ordinary primitive paths for action, products, adjoints, trace, and basis expansion. `LocalOperator::identity()` and an empty `product` require `O: Identity` but no numeric coefficient capabilities. The symbolic `OpNode::Identity` remains available for an unbound empty product or the identity on the full ambient space.
 
-The trace of local identity and spectator factors comes from O's Identity and Trace. It is not replaced with conversion of an integer dimension into a coefficient; local trace gains no additional One or integer-conversion bound. If Identity cannot be implemented for a foreign O, use an upstream implementation or a user-owned wrapper. `Identity` and `Dimension` are exported from `syntaqs_core::ops` and the crate root. `Identity` is also implemented for local expressions (`O: Identity`) and composite expressions (no additional capability bounds).
+The trace of local identity and spectator factors comes from O's Identity and Trace. It is not replaced with conversion of an integer dimension into a coefficient; local trace gains no additional One or integer-conversion bound. If Identity cannot be implemented for a foreign O, use an upstream implementation or a user-owned wrapper. `Identity` is exported from `syntaqs_core::algebra` and `Dimension` from `syntaqs_core::space`. `Identity` is also implemented for local expressions (`O: Identity`) and composite expressions (no additional capability bounds).
 
 ### 2.1. Provided primitives and normalization
 
@@ -126,7 +126,7 @@ All primitives are even and the parity operator is I. See the [spin-half source]
 
 ## 7. Local grading capabilities
 
-`syntaqs_core::ops` and the crate root export these coefficient-independent capabilities:
+`syntaqs_core::algebra` defines these coefficient-independent capabilities:
 
 ```rust,ignore
 enum Parity { Even, Odd }

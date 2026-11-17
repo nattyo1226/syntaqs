@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-02
 
-This document defines Display and Debug for local and composite state and operator expressions, and formatting of standard indices. See [expression_formatting](../../examples/src/bin/expression_formatting.rs) for Display examples of states and a four-Site Hamiltonian, and the rustdoc for `syntaqs_core::expr` and `syntaqs_basic::Tag` for public APIs.
+This document defines Display and Debug for local and composite state and operator expressions, and formatting of standard indices. See [expression_formatting](../../examples/src/bin/expression_formatting.rs) for Display examples of states and a four-Site Hamiltonian, and the rustdoc for `syntaqs_core::expression` and `syntaqs_basic::index::Tag` for public APIs.
 
 ## 1. Scope and type bounds
 
@@ -128,7 +128,7 @@ SpinOneState::Zero and FermionState::Empty are not zero vectors. Ket `|0>` diffe
 
 ## 5. Implementation and resource handling
 
-Formatting is contained in [syntaqs-core/src/expr/format.rs](../../crates/syntaqs-core/src/expr/format.rs). A borrowed work stack spans local / composite and state / operator expressions, iteratively handling parentheses, line breaks, and placement. Iterator continuation items handle sum and tensor children without pushing all children at once. No leaves or coefficients are copied, no whole-expression intermediate String is built, and evaluation traversal is not used. Output errors stop formatting immediately.
+Formatting is contained in [syntaqs-core/src/expression/format.rs](../../crates/syntaqs-core/src/expression/format.rs). A borrowed work stack spans local / composite and state / operator expressions, iteratively handling parentheses, line breaks, and placement. Iterator continuation items handle sum and tensor children without pushing all children at once. No leaves or coefficients are copied, no whole-expression intermediate String is built, and evaluation traversal is not used. Output errors stop formatting immediately.
 
 An iterative postorder traversal classifies tensors that can form a combined ket. A `BTreeMap` local to the display call records both positive and negative results, keyed by shared syntax-node addresses. Keys are neither dereferenced nor used for Index identity; I needs no Eq, Hash, or Ord. With U unique nodes and E edges, classification costs O((U + E) log(U + 1)) time and O(U) records. This avoids quadratic rescanning of deep mixed tensors for each ancestor.
 

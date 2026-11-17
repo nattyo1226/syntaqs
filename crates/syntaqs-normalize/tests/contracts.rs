@@ -5,10 +5,11 @@ use core::{
 use num_complex::Complex;
 use num_traits::Zero;
 use syntaqs_core::{
-    Act, Adjoint, Conjugate, HilbertSpace, InnerProduct, LinearCombination, LocalOperator,
-    LocalState, RealPart,
+    algebra::Act, algebra::Adjoint, algebra::InnerProduct, coefficient::Conjugate,
+    coefficient::RealPart, expression::local::LocalOperator, expression::local::LocalState,
+    expression::parts::linear_combination::LinearCombination, space::HilbertSpace,
 };
-use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 
 #[derive(PartialEq)]
 struct Primitive<'a>(&'a Cell<usize>);
@@ -82,19 +83,39 @@ fn norm_does_not_require_inverse_real_embedding_or_coefficient_float() {
     assert_eq!(LocalState::<(), (), NormOnly>::zero().norm(), 0.0);
 }
 
-struct Op;
-impl syntaqs_core::HomogeneousParity for Op {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+mod prelude_api {
+    use super::NormOnly;
+    use syntaqs_core::expression::local::LocalState;
+    use syntaqs_normalize::prelude::*;
+
+    fn _all_traits<
+        T: Norm
+            + Normalize
+            + NormalizedExpectation<(), Output = f64>
+            + NormalizedExpectationIn<(), (), Output = f64>,
+    >() {
+    }
+
+    #[test]
+    fn prelude_enables_norm_on_a_local_state() {
+        let state = LocalState::<(), (), NormOnly>::primitive(()).scaled(NormOnly(3.0));
+        assert_eq!(state.norm(), 3.0);
     }
 }
-impl syntaqs_core::ParityOperator for Op {
+
+struct Op;
+impl syntaqs_core::algebra::HomogeneousParity for Op {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
+    }
+}
+impl syntaqs_core::algebra::ParityOperator for Op {
     fn parity_operator() -> Self {
         Self
     }
 }
 
-impl syntaqs_core::Identity for Op {
+impl syntaqs_core::algebra::Identity for Op {
     fn identity() -> Self {
         Self
     }

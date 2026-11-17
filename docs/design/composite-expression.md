@@ -321,7 +321,7 @@ Validation of spaces/references precedes removal of zero states. Basis expansion
 checks primitives retained by evaluation; removed terms no longer run basis rules,
 including a tensor annihilated by a zero state factor. This boundary differs from
 operator coordinates, which still validate expansions of reached intrinsic terms.
-See [basis errors](basis.md#74-errors-re-exports-and-examples).
+See [basis errors](basis.md#74-errors-and-examples).
 
 ### 9.3. Incremental scalar contractions
 

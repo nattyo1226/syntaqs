@@ -25,7 +25,7 @@ Normalization and normalized expectations reject an exactly zero full self-inner
 
 Normalized expectations divide the expectation by the full self-inner-product and require `Divide`, but not square roots, real-part extraction, or real embedding. Complex division follows [numerics](numerics.md). An explicit ambient space overrides an operator's existing binding.
 
-Import extension traits and errors directly from `syntaqs-normalize`. Core has no libm feature; its algebra APIs, squared norms, and scalar division work without the normalization crate. Quotients by nonzero self-inner-products can be computed explicitly; the convenience trait for expectations without square roots still belongs to normalize.
+Import extension traits from `syntaqs_normalize::norm` and `syntaqs_normalize::expectation`, or from its prelude. `NormalizationError` is defined at the crate root. Core has no libm feature; its algebra APIs, squared norms, and scalar division work without the normalization crate. Quotients by nonzero self-inner-products can be computed explicitly; the convenience trait for expectations without square roots still belongs to normalize.
 
 ## 2. Mathematical meaning and verification
 

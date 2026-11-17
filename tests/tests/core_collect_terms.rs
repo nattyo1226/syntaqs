@@ -2,8 +2,10 @@
 
 use num_complex::Complex;
 use syntaqs_core::{
-    Adjoint, HilbertSpace, HomogeneousParity, Identity, LinearCombination, LocalOperator, Parity,
-    ParityOperator, Product, TensorKind, Trace,
+    algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity, algebra::Parity,
+    algebra::ParityOperator, algebra::Product, algebra::Trace, expression::local::LocalOperator,
+    expression::parts::linear_combination::LinearCombination, space::HilbertSpace,
+    space::TensorKind,
 };
 use syntaqs_tests::graded::{self as reference, Op, Real, c, close};
 

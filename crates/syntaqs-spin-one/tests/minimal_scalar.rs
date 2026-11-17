@@ -1,15 +1,17 @@
-mod support;
+mod common;
 
+use common::*;
 use core::ops::{Add, Div, Mul, Neg};
 use num_complex::Complex;
 use num_traits::One;
-use support::*;
 use syntaqs_core::{
-    Adjoint, Basis, HilbertSpace, Identity, ImaginaryUnit, InnerProduct, LinearCombination as Lc,
-    Trace,
+    algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Trace, basis::Basis,
+    coefficient::ImaginaryUnit, expression::parts::linear_combination::LinearCombination as Lc,
+    space::HilbertSpace,
 };
 use syntaqs_spin_one::{
-    CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,
+    SpinOne, basis::CartesianBasis, basis::LadderBasis, basis::SzBasis,
+    operator::SpinOneOperator as O, state::SpinOneState as S,
 };
 
 // Exact arithmetic is test-owned. The outer coefficient deliberately implements
@@ -230,17 +232,17 @@ fn storage_identity_placement_and_delayed_operations_need_no_numbers() {
     let psi = Spin::state(S::Zero);
     let op = Spin::operator(O::identity());
     let _ = psi.act(&(op.clone() * &op.adjoint()));
-    let _ = syntaqs_core::LocalOperator::<O, Opaque>::identity();
+    let _ = syntaqs_core::expression::local::LocalOperator::<O, Opaque>::identity();
     let a = HilbertSpace::factor("a");
     let b = HilbertSpace::factor("b");
     let psi = Spin::product_state(
-        &syntaqs_core::HilbertSpace::tensor_all([(a).clone(), (b).clone()]).unwrap(),
+        &syntaqs_core::space::HilbertSpace::tensor_all([(a).clone(), (b).clone()]).unwrap(),
         [S::Plus, S::Minus],
     )
     .unwrap();
     let _ = psi.act(&op.at(&a).unwrap()).unwrap();
     let _ = Spin::product_state(
-        &syntaqs_core::HilbertSpace::tensor_all_g([(a).clone(), (b).clone()]).unwrap(),
+        &syntaqs_core::space::HilbertSpace::tensor_all_g([(a).clone(), (b).clone()]).unwrap(),
         [S::Zero, S::Minus],
     )
     .unwrap();

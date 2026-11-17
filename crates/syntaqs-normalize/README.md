@@ -11,7 +11,7 @@ Norm and normalization extensions for [syntaqs](../../README.md) state expressio
 | `NormalizedExpectation` | Compute `<psi | A | psi> / <psi | psi>`. |
 | `NormalizedExpectationIn` | Compute a normalized expectation with an explicit ambient space. |
 
-Import the corresponding trait to enable its methods. Operations that divide by the state's self-inner-product reject an exactly zero denominator with `NormalizationError`. Norm computation itself permits zero.
+Import traits from `norm` or `expectation`, or use the crate's `prelude`, to enable their methods. Operations that divide by the state's self-inner-product reject an exactly zero denominator with the crate-root `NormalizationError`. Norm computation itself permits zero.
 
 ## Integration
 

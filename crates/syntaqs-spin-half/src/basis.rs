@@ -3,7 +3,10 @@
 use core::ops::{Add, Div, Neg};
 
 use num_traits::One;
-use syntaqs_core::{Basis, ImaginaryUnit, LinearCombination};
+use syntaqs_core::{
+    basis::Basis, coefficient::ImaginaryUnit,
+    expression::parts::linear_combination::LinearCombination,
+};
 
 use crate::{
     SpinHalfOperator, SpinHalfState,

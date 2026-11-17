@@ -1,7 +1,7 @@
 //! Shared conversion of sparse coordinates to flat indices.
 
 use crate::ExportError;
-use syntaqs_core::{Coordinates, DimensionOverflow};
+use syntaqs_core::{basis::Coordinates, space::DimensionOverflow};
 
 pub(crate) fn flat_index(digits: &[usize], local: Option<usize>) -> Result<usize, ExportError> {
     let mut index = 0usize;

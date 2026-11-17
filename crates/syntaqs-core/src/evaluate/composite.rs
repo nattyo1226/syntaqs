@@ -6,7 +6,8 @@ use super::{
     local::Evaluator as LocalEvaluator,
     state_terms::{Key, Ready, Sum, Terms},
 };
-use crate::expr::composite::{ExpressionError, OpExpr, OpNode, State, StateExpr, StateNode};
+use crate::expression::composite::{OpExpr, OpNode, State, StateExpr, StateNode};
+use crate::expression::error::ExpressionError;
 use crate::{
     Act, Adjoint, Conjugate, HilbertSpace, HomogeneousParity, LocalOperator, Parity,
     ParityOperator, TensorKind, coefficient::conjugate,
@@ -59,7 +60,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     {
         // These shapes are intrinsically normalized; inspecting direct leaves
         // needs no persistent certificate or equality shortcut between terms.
-        let primitive = |state: &StateExpr<I, S, O, C>| matches!(state.node(),StateNode::Local(_,local) if matches!(local.node(),crate::expr::local::StateNode::Primitive(_)));
+        let primitive = |state: &StateExpr<I, S, O, C>| matches!(state.node(),StateNode::Local(_,local) if matches!(local.node(),crate::expression::local::StateNode::Primitive(_)));
         if matches!(self.expression.node(), StateNode::Unit)
             || primitive(&self.expression)
             || matches!(self.expression.node(),StateNode::Tensor(parts) if parts.len()>1 && parts.iter().all(primitive))
@@ -172,7 +173,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                         tasks.push(Task::Local(state, factor, operator, None));
                         continue;
                     }
-                    use crate::expr::local::OperatorNode;
+                    use crate::expression::local::OperatorNode;
                     match operator.node() {
                         OperatorNode::Scale(s) => {
                             tasks.push(Task::Scale(if adjoint {

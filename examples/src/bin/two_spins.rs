@@ -1,8 +1,8 @@
 //! Build singlet/triplet states and an exchange Hamiltonian using QuantumSystem.
 
 use num_complex::Complex;
-use syntaqs_core::HilbertSpace;
-use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket};
+use syntaqs_core::space::HilbertSpace;
+use syntaqs_spin_half::{SpinHalf, operator::SpinHalfOperator as Op, state::SpinHalfState as Ket};
 
 // Choose primitives and coefficient precision once for states and operators.
 type Spin = SpinHalf<Complex<f64>>;

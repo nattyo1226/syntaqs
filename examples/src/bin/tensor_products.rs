@@ -1,7 +1,10 @@
 //! Select a tensor rule at construction and use the common evaluation API.
 use num_complex::Complex;
-use syntaqs_core::{HilbertSpace, HomogeneousParity, Parity, ParityOperator, TensorKind};
-use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket};
+use syntaqs_core::{
+    algebra::HomogeneousParity, algebra::Parity, algebra::ParityOperator, space::HilbertSpace,
+    space::TensorKind,
+};
+use syntaqs_spin_half::{SpinHalf, operator::SpinHalfOperator as Op, state::SpinHalfState as Ket};
 type Spin = SpinHalf<Complex<f64>>;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let a = HilbertSpace::factor("a");

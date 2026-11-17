@@ -5,7 +5,7 @@ use num_traits::{One, Zero};
 use super::local::{Ready as LocalReady, times};
 use crate::{
     HilbertSpace, LocalState,
-    expr::{
+    expression::{
         composite::{StateExpr, StateNode},
         local::StateNode as LocalNode,
     },

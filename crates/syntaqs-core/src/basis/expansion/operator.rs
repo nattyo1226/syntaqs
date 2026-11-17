@@ -7,7 +7,7 @@ use super::{Expansion, accumulate_with, local::local_operator};
 use crate::{
     Adjoint, Basis, BasisError, Conjugate, HilbertSpace, HomogeneousParity, Identity,
     LocalOperator, Operator, Product,
-    expr::{parts::SumExpr, traversal::IntrinsicOpTerms},
+    expression::{parts::SumExpr, traversal::IntrinsicOpTerms},
 };
 
 // Coordinates need no payload. Expanded syntax joins cheap local handles only
@@ -266,5 +266,4 @@ where
 }
 
 #[cfg(test)]
-#[path = "operator_tests.rs"]
 mod tests;

@@ -5,11 +5,14 @@ extern crate blas_provider as _;
 
 use num_complex::Complex;
 use syntaqs_core::{
-    Adjoint, HilbertSpace, HomogeneousParity, Identity, LinearCombination, LocalOperator, Operator,
-    Parity, ParityOperator, Product, Trace,
+    algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity, algebra::Parity,
+    algebra::ParityOperator, algebra::Product, algebra::Trace, expression::composite::Operator,
+    expression::local::LocalOperator, expression::parts::linear_combination::LinearCombination,
+    space::HilbertSpace,
 };
 use syntaqs_lie::{
-    DecompositionOptions, FamilyExpression, NumericalOptions, OperatorFamily, lie_bracket,
+    FamilyExpression, decomposition::DecompositionOptions, family::OperatorFamily, lie_bracket,
+    numerical::options::NumericalOptions,
 };
 use syntaqs_tests::{graded, three_level};
 
@@ -262,7 +265,7 @@ macro_rules! precision_tests {
 
             #[test]
             fn spin_workflow_agrees_with_pauli_matrices() {
-                use syntaqs_spin_half::SpinHalfOperator as P;
+                use syntaqs_spin_half::operator::SpinHalfOperator as P;
                 type Op = LocalOperator<P, C>;
                 let x = Op::primitive(P::Sx);
                 let y = Op::primitive(P::Sy);
@@ -274,7 +277,7 @@ macro_rules! precision_tests {
             }
             #[test]
             fn fermion_workflow_agrees_with_majorana_matrices() {
-                use syntaqs_fermion::FermionOperator as F;
+                use syntaqs_fermion::operator::FermionOperator as F;
                 type Op = LocalOperator<F, C>;
                 let x = Op::primitive(F::Mx);
                 let y = Op::primitive(F::My);
@@ -316,16 +319,21 @@ macro_rules! precision_tests {
                     OperatorFamily::new_in(&space, [x, y, z, Operator::identity()]).unwrap();
                 workflow(&family, &target, 1.);
                 let embed = |at| {
-                    graded::embedding::<R>(graded::A, at, 2, syntaqs_core::TensorKind::Graded)
-                        .into_iter()
-                        .zip(graded::embedding(
-                            graded::CREATE,
-                            at,
-                            2,
-                            syntaqs_core::TensorKind::Graded,
-                        ))
-                        .map(|(a, b)| a + b)
-                        .collect::<Vec<_>>()
+                    graded::embedding::<R>(
+                        graded::A,
+                        at,
+                        2,
+                        syntaqs_core::space::TensorKind::Graded,
+                    )
+                    .into_iter()
+                    .zip(graded::embedding(
+                        graded::CREATE,
+                        at,
+                        2,
+                        syntaqs_core::space::TensorKind::Graded,
+                    ))
+                    .map(|(a, b)| a + b)
+                    .collect::<Vec<_>>()
                 };
                 let dx = embed(0);
                 let dy = embed(1);
@@ -337,7 +345,7 @@ macro_rules! precision_tests {
             }
             #[test]
             fn eighty_spectators_do_not_require_a_physical_action_matrix() {
-                use syntaqs_spin_half::SpinHalfOperator as P;
+                use syntaqs_spin_half::operator::SpinHalfOperator as P;
                 type Local = LocalOperator<P, C>;
                 let factors: Vec<_> = (0..80u8).map(|i| HilbertSpace::factor(Factor(i))).collect();
                 let space = HilbertSpace::tensor_all(factors.iter().cloned()).unwrap();

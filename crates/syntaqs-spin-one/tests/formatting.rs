@@ -1,5 +1,7 @@
-use syntaqs_core::{HilbertSpace, LocalOperator, LocalState};
-use syntaqs_spin_one::{SpinOneOperator as O, SpinOneState as S};
+use syntaqs_core::{
+    expression::local::LocalOperator, expression::local::LocalState, space::HilbertSpace,
+};
+use syntaqs_spin_one::{operator::SpinOneOperator as O, state::SpinOneState as S};
 
 #[test]
 fn every_primitive_has_a_label_and_states_gain_kets_only_in_expressions() {

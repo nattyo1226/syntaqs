@@ -2,9 +2,9 @@
 //! One site is one spin. All supports up to CAP, including identity, are visited.
 
 use num_complex::Complex64;
-use syntaqs_core::{HilbertSpace, OperatorOf};
-use syntaqs_geometry::SiteGroup;
-use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op};
+use syntaqs_core::{space::HilbertSpace, system::OperatorOf};
+use syntaqs_geometry::relation::SiteGroup;
+use syntaqs_spin_half::{SpinHalf, operator::SpinHalfOperator as Op};
 
 type Error = Box<dyn std::error::Error>;
 type PauliString<I, C> = OperatorOf<SpinHalf<C>, I>;
@@ -125,9 +125,9 @@ fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
     #[cfg(feature = "export")]
-    use syntaqs_export::{Export, Exported, MatrixArgs};
+    use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
     #[cfg(feature = "export")]
-    use syntaqs_spin_half::{SpinHalfState, SzBasis};
+    use syntaqs_spin_half::{basis::SzBasis, state::SpinHalfState};
 
     #[cfg(feature = "export")]
     fn matrix(word: &PauliString<usize, Complex64>) -> Vec<Complex64> {

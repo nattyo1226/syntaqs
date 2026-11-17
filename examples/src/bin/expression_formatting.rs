@@ -1,11 +1,14 @@
 //! Display for product states, superpositions, delayed actions, and a Hamiltonian.
 
 use num_complex::Complex;
-use syntaqs_basic::{Id128, Tag};
-use syntaqs_core::{HilbertSpace, LocalOperator, LocalState, State};
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_basic::index::{Id128, Tag};
+use syntaqs_core::{
+    expression::composite::State, expression::local::LocalOperator, expression::local::LocalState,
+    space::HilbertSpace,
+};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 use syntaqs_spin_half::{
-    SpinHalf, SpinHalfOperator as O, SpinHalfState as S, models::SpinHalfModels,
+    SpinHalf, models::SpinHalfModels, operator::SpinHalfOperator as O, state::SpinHalfState as S,
 };
 
 type Spin = SpinHalf<Complex<f64>>;
