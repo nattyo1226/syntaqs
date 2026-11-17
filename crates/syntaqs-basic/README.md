@@ -7,6 +7,8 @@ Standard factor identifiers for [syntaqs](../../README.md).
 - Issue UUID v4 identifiers through `Id128::new()` and `Default`.
 - Provide caller-chosen names through `Tag`.
 
+Both types are defined in `syntaqs_basic::index` and available through `syntaqs_basic::prelude`.
+
 `Id128` generation uses the operating system's randomness through the uuid crate. Copying an existing identifier preserves its identity. `Tag` equality uses the complete string, so callers must choose distinct names for independent factors.
 
 ## Integration

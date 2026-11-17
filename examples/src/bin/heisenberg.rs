@@ -2,7 +2,7 @@
 extern crate blas_provider as _;
 
 use num_complex::Complex;
-use syntaqs_basic::Id128;
+use syntaqs_basic::index::Id128;
 #[cfg(not(feature = "normalize"))]
 use syntaqs_core::coefficient::Divide;
 use syntaqs_core::{expression::composite::State, space::HilbertSpace};

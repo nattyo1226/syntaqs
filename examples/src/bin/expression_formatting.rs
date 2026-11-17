@@ -1,7 +1,7 @@
 //! Display for product states, superpositions, delayed actions, and a Hamiltonian.
 
 use num_complex::Complex;
-use syntaqs_basic::{Id128, Tag};
+use syntaqs_basic::index::{Id128, Tag};
 use syntaqs_core::{
     expression::composite::State, expression::local::LocalOperator, expression::local::LocalState,
     space::HilbertSpace,

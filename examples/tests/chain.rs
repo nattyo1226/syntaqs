@@ -6,7 +6,7 @@ use num_complex::Complex;
 use num_traits::Float;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use std::{fmt::Debug, ops::Neg};
-use syntaqs_basic::Id128;
+use syntaqs_basic::index::Id128;
 use syntaqs_core::{
     coefficient::Divide, expression::composite::State, expression::local::LocalState,
     space::HilbertSpace,

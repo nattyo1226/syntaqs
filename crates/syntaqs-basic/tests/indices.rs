@@ -1,5 +1,16 @@
 use core::num::NonZeroUsize;
-use syntaqs_basic::Id128;
+use syntaqs_basic::index::Id128;
+
+#[test]
+fn prelude_and_canonical_paths_refer_to_the_same_identifiers() {
+    use std::any::TypeId;
+    use syntaqs_basic::{index, prelude};
+
+    assert_eq!(TypeId::of::<index::Id128>(), TypeId::of::<prelude::Id128>());
+    assert_eq!(TypeId::of::<index::Tag>(), TypeId::of::<prelude::Tag>());
+    assert_eq!(prelude::Tag::new("site").as_str(), "site");
+    let _ = prelude::Id128::new();
+}
 use syntaqs_core::space::HilbertSpace;
 
 #[test]
@@ -34,7 +45,7 @@ fn uuid_generation_and_core_connection_preserve_existing_identity() {
 
 #[test]
 fn tag_names_define_identity_and_are_only_shortened_in_expressions() {
-    use syntaqs_basic::Tag;
+    use syntaqs_basic::index::Tag;
     use syntaqs_core::{
         expression::local::LocalOperator, expression::local::LocalState, space::SpaceError,
     };

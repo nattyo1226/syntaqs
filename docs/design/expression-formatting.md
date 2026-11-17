@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-02
 
-This document defines Display and Debug for local and composite state and operator expressions, and formatting of standard indices. See [expression_formatting](../../examples/src/bin/expression_formatting.rs) for Display examples of states and a four-Site Hamiltonian, and the rustdoc for `syntaqs_core::expression` and `syntaqs_basic::Tag` for public APIs.
+This document defines Display and Debug for local and composite state and operator expressions, and formatting of standard indices. See [expression_formatting](../../examples/src/bin/expression_formatting.rs) for Display examples of states and a four-Site Hamiltonian, and the rustdoc for `syntaqs_core::expression` and `syntaqs_basic::index::Tag` for public APIs.
 
 ## 1. Scope and type bounds
 
