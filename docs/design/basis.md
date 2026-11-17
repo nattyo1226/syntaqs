@@ -227,7 +227,7 @@ Operator coordinates are operator-basis coefficients, distinct from action matri
 
 Generation needs Dimension/Basis, not index Eq/Clone, primitive Clone, local action/product/adjoint/identity rules, or coefficient arithmetic. Operations later comparing indices still need Eq. Increment digit sequences without an integer total count, allowing initial elements of huge spaces. Grouping does not change order; the unit space yields one unit element.
 
-### 7.4. Errors, re-exports, and examples
+### 7.4. Errors and examples
 
 BasisError distinguishes non-basis outputs (NonBasisElement), out-of-range local indices (IndexOutOfBounds), inconsistent enumeration/counts (InvalidEnumeration), dimension overflow (Dimension), and incompatible/unbound spaces (Expression). Check available information without automatically proving full independence/completeness. Zero coefficients do not hide invalid space references. State queries evaluate
 and collect first: primitives removed by exact cancellation or zero tensor

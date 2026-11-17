@@ -2,12 +2,12 @@
 
 ## Current phase
 
-The module-file, test-ownership and semantic-refactoring passes are complete. The public API review is complete; implementation has not started. The user accepts breaking changes and does not require compatibility with old paths.
+The module-file, test-ownership and semantic-refactoring passes are complete. The public API review, implementation and final cross-workspace verification are complete. The user accepts breaking changes and does not require compatibility with old paths.
 
 - [API assessment](api-assessment.md): agreed public paths, visibility, preludes and rationale.
 - [API implementation plan](api-implementation.md): implementation units, migration and verification.
 
-Planning does not authorize implementation. Preserve behavior, feature gates and supported environments except for explicitly agreed changes.
+Preserve behavior, feature gates and supported environments except for explicitly agreed changes.
 
 ## Structural conventions
 
@@ -17,7 +17,7 @@ Named modules use `name.rs` and, when needed, a `name/` directory. Crate entry p
 
 - [x] Complete module-file, test-ownership and semantic structure changes.
 - [x] Review public API boundaries and select preludes.
-- [ ] Implement the [API plan](api-implementation.md) in verified units.
-- [ ] Complete the plan's final cross-workspace checks, review and documentation updates.
+- [x] Implement the [API plan](api-implementation.md) in verified units.
+- [x] Complete the plan's final cross-workspace checks, review and documentation updates.
 
 The work is complete when the agreed API and preludes are implemented, consumers and documentation use the new paths, intended visibility and behavior are verified, and required checks pass or their limitations are recorded.

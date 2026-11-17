@@ -12,7 +12,7 @@ Crate roots are themselves meaningful namespaces: central crate-wide abstraction
 
 Within repository crates other than the `examples` crate, do not use another syntaqs crate's prelude, whether through a wildcard or an explicit import. Use the dependency's canonical public module paths instead. This applies to their library and binary targets, tests, examples, and documentation examples. The `examples` crate may use syntaqs preludes. Check this rule during the API migration.
 
-These decisions describe the agreed target API, not yet implemented. Check the inventory, signatures, and practical compatibility of the decisions while implementing them. Preserve public functionality and observable behavior except for explicitly agreed changes to visibility or functionality.
+These decisions describe the agreed API implemented in the workspace. References below to the current API and instructions to change it describe the pre-migration baseline. Preserve public functionality and observable behavior except for explicitly agreed changes to visibility or functionality.
 
 ## Decided canonical boundaries
 

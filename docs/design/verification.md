@@ -59,7 +59,7 @@ Maintain the following coverage alongside the detailed verification targets in e
 
 Reference values for graded tests come from the [test-only two-state algebra](../../tests/src/graded.rs) and independently assembled ordinary matrices. They must not depend on production fermion rules or the evaluator under test. Resource and depth regression sizes are specific test cases, not general performance bounds.
 
-Core `expr::group_tests` covers structural grouping without coefficient
+Core `expression::group::tests` covers structural grouping without coefficient
 arithmetic or primitive evaluation capabilities, index equality across distinct
 handles, binding/error preservation, sharing and idempotence, and iterative
 grouping/destruction of deep single-factor, scalar, and multi-factor syntax.
