@@ -1,8 +1,8 @@
 # API usability candidates
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
-These are unadopted, unstarted candidates for helper APIs and clearer explanations, not a list of approved additions. Names, signatures, and timing are undecided. Create a plan in `plans/` when concrete implementation starts.
+These are unadopted, unstarted candidates for helper APIs and clearer explanations, not a list of approved additions. Names, signatures, and timing are undecided. When implementation starts, use a plan in `plans/` for work that needs multiple stages or prior investigation; straightforward changes need no plan.
 
 Current APIs are described in [construction](../design/expression-construction.md), [composite evaluation](../design/composite-expression.md), [geometry](../design/geometry.md), and [export](../design/export.md).
 
@@ -66,7 +66,11 @@ Preserve ordinary `?` error handling while helping users find invalid placement,
 - A minimal user-facing custom ExpressionFactory alias, capability traits, and Basis derived from the test [three-level system](../../tests/src/three_level.rs).
 - Factor/basis/container order, metadata sharing and borrowing, and inner products in non-orthonormal coordinates.
 
-Reducing import line counts is not itself a priority; no prelude or unified entry crate is adopted. Explain the relationship between common construction and capability-specific extension APIs.
+Each library already provides a prelude for frequently used items, as described
+in the [module conventions](../architecture.md#5-module-structure). A unified
+entry crate remains unadopted. Further guidance should explain the relationship
+between common construction and capability-specific extension APIs; reducing
+import line counts is not itself a priority.
 
 ## 6. Deferred syntax helpers
 

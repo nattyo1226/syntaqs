@@ -1,6 +1,6 @@
 # Operator families, Lie representations, and real HS projection
 
-Updated: 2026-11-09
+Updated: 2026-11-17
 
 ## 1. Scope and contexts
 
@@ -81,7 +81,7 @@ cancellation before squaring without changing ordinary evaluation or imposing an
 policy. Collection uses primitive equality, not a complete independent operator
 basis; distinct natural primitives may still have linear relations. No general
 accuracy guarantee beyond the covered numerical cases is asserted. Candidate
-[residual-accuracy improvements](../future-work.md#31-lie-residual-accuracy)
+[residual-accuracy improvements](../future-work/evaluation-improvements.md#1-lie-residual-accuracy)
 remain future work.
 
 ### 3.1. Numerical settings and defaults
@@ -114,6 +114,13 @@ configured imaginary check and operation-specific scale. Negative squared norms
 are clamped only within the explicit roundoff bound; small positive values remain.
 These are configurable numerical decisions and representative tested defaults,
 not general accuracy guarantees for arbitrary expression contractions.
+
+`Tolerance::check` retains the measurement, reference scale, settings, and
+effective bound in a `ToleranceCheck`. Dense kernels provide real solves,
+symmetric eigensystems, and full SVD right nullspaces, including wide and empty
+constraint matrices. Kernel norms use scaled accumulation to avoid overflowing
+intermediate squares. The kernels operate on selected family coordinates, not
+physical Hilbert-space matrices.
 
 ## 4. Brackets, closure, and retained representations
 
@@ -294,6 +301,12 @@ LAPACK implementations or platforms is asserted. Different valid runs may change
 component order or eigenvectors; compare component spans/projectors and invariants.
 
 ## 8. Verification
+
+Numerical [kernel tests](../../crates/syntaqs-lie/src/numerical/kernels/tests.rs)
+cover solves, complete right nullspaces including wide/empty matrices, symmetric
+spectra, Gram cutoffs, tolerance overrides, and invalid numerical data at both
+precisions. This section owns feature-specific verification targets; workspace
+commands, native linkage checks, and CI coverage are in [verification](verification.md).
 
 [Public family tests](../../crates/syntaqs-lie/tests/operator_family.rs) compare
 against independent small matrices at both precisions, covering nonorthonormal

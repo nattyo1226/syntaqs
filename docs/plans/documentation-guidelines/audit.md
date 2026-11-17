@@ -1,5 +1,8 @@
 # Documentation conventions and writing audit findings
 
+This is the baseline audit. Subsequent conventions corrections and their
+verification are recorded in [conventions results](conventions-results.md).
+
 The documentation broadly follows the required directory layout, but it is not
 fully consistent with the current implementation or writing policy. This audit
 identifies **six confirmed issues** and **seven editorial or policy-alignment

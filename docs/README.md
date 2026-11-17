@@ -1,6 +1,6 @@
 # Documentation guide
 
-Updated: 2026-11-09
+Updated: 2026-11-17
 
 ## 1. Document responsibilities
 
@@ -13,7 +13,7 @@ Updated: 2026-11-09
 | `decisions/` | Consequential design choices, their rationale, and reference baselines. |
 | `plans/` | Plans and progress for work currently being implemented. |
 
-Keep detailed current specifications in the corresponding design documents and link to them from requirements and architecture. Separate proposals for unimplemented features from current specifications, and create a plan in `plans/` when implementation starts. Completed steps within an active plan remain part of its progress record. Once the work is complete and merged, move any lasting specifications and conventions into the appropriate permanent documents, update incoming references, and remove the completed plan. Create `plans/` as needed; it need not exist when no plans are active.
+Keep detailed current specifications in the corresponding design documents and link to them from requirements and architecture. Separate proposals for unimplemented features from current specifications. Create a plan in `plans/<task>/` when the work benefits from multiple stages, especially investigation or design before implementation; straightforward changes need no plan. A plan's README states its objective, scope, stages, progress, and completion criteria. Completed steps within an active plan remain part of its progress record. Once the work is complete and merged, move any lasting specifications and conventions into the appropriate permanent documents, update incoming references, and remove the completed plan. Create `plans/` as needed; it need not exist when no plans are active.
 
 ## 2. Feature details
 
@@ -39,7 +39,7 @@ Keep detailed current specifications in the corresponding design documents and l
 
 Write all documents under `docs/` in English, including requirements, architecture, future work, designs, and temporary plans. This applies to headings, tables, and explanatory comments in code examples as well as prose. Keep mathematical notation and API names consistent with the implementation.
 
-When moving documents or changing headings, update incoming repository links, including heading anchors. Check local links and code fences, and keep instructions and examples consistent with the current public APIs. Put current verification commands and coverage in [verification](design/verification.md); dated execution logs and implementation progress belong only in active plans.
+When moving documents or changing headings, update incoming repository links, including heading anchors. Check local links and code fences, and keep instructions and examples consistent with the current public APIs. Keep feature-specific verification targets with their designs, and common commands, test placement, and CI coverage in [verification](design/verification.md). Dated execution logs and implementation progress belong only in active plans.
 
 ## 4. Presentation order
 

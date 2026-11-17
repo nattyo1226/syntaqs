@@ -1,6 +1,6 @@
 # Export to numerical containers
 
-Last updated: 2026-11-16
+Last updated: 2026-11-17
 
 ## 1. Status and responsibilities
 
@@ -191,7 +191,11 @@ Numerical, type, and memory contracts have the following verification targets:
 
 Specify destinations as `Exported<Vec<C>, M>`, `Exported<ndarray::Array1<C>, M>`, `Exported<ndarray::Array2<C>, M>`, `Exported<sprs::CsVec<C>, M>`, or `Exported<sprs::CsMat<C>, M>`. There are no aliases for particular combinations. Local variables can infer metadata with `_`. Matrix state type is specified through `MatrixArgs::<S, _>::new(&basis)`. Rust API documentation provides complete type parameters and methods.
 
-Implementation is split into private output, metadata, args, coordinates, vector, matrix, error, and backend modules. Internal storage shares dense and sparse column generation; direct and staged ndarray conversion share Vec construction and array conversion. Export uses core's public API rather than private nodes.
+Public `vector` and `matrix` modules expose metadata, with operator arguments
+under `matrix::args`. `Export`, `Exported`, and `ExportError` are defined at the
+crate root. Private coordinate, backend, and vector/matrix export implementations
+share dense/sparse column generation and Vec-to-ndarray conversion. Export uses
+core's public API rather than private expression nodes.
 
 Separately from general map representation coefficients, current numerical matrix output uses the same state basis and full ambient space for both input and output.
 

@@ -2,9 +2,12 @@
 
 This audit helper uses only the Python standard library. It handles the inline
 links and ATX headings used in this repository; it is not a CommonMark parser or
-an external URL checker. Run from any directory. --write records checks.json.
+an external URL checker. Run from any directory. --include adds a repository-
+relative Markdown file not yet in HEAD; --write [FILENAME] records results in
+the task directory, defaulting to checks.json.
 """
 
+import argparse
 import json
 from pathlib import Path
 import re
@@ -17,14 +20,18 @@ from urllib.parse import unquote, urlsplit
 TASK = Path(__file__).resolve().parent
 ROOT = TASK.parents[2]
 PLAN_ROOT = ROOT / "docs/plans"
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--include", action="append", default=[], metavar="PATH")
+parser.add_argument("--write", nargs="?", const="checks.json", metavar="FILENAME")
+arguments = parser.parse_args()
 tracked = subprocess.check_output(
     ["git", "ls-tree", "-r", "-z", "--name-only", "HEAD"], cwd=ROOT
 ).decode().split("\0")
-baseline = sorted(
+baseline = sorted({
     ROOT / name for name in tracked
     if Path(name).suffix in (".md", ".mdx")
     and not (ROOT / name).is_relative_to(TASK)
-)
+} | {(ROOT / name).resolve() for name in arguments.include})
 documents = sorted(set(baseline) | set(TASK.glob("*.md")))
 issues = []
 contents = {}
@@ -111,7 +118,7 @@ result = {
     ],
 }
 output = json.dumps(result, indent=2, ensure_ascii=False) + "\n"
-if "--write" in sys.argv[1:]:
-    (TASK / "checks.json").write_text(output)
+if arguments.write:
+    (TASK / arguments.write).write_text(output)
 print(output, end="")
 sys.exit(bool(issues))

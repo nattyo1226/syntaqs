@@ -5,6 +5,7 @@ conventions and technical writing guidelines at baseline revision
 `3856a311230bc9dd29952c20eaa82d1ac91235c2`. This inventory records
 document responsibility, current/proposed/historical status, relevant ownership
 and writing concerns, and applicable findings from [the audit](audit.md).
+Subsequent resolutions are recorded in [conventions results](conventions-results.md).
 
 “No specific issue” means no actionable conventions/writing discrepancy was
 identified in that reading. It does not certify every API example, mathematical

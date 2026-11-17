@@ -52,7 +52,9 @@ This example constructs a two-spin product state and measures a product of Pauli
 ```rust
 use num_complex::Complex;
 use syntaqs_core::space::HilbertSpace;
-use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis};
+use syntaqs_spin_half::{
+    SpinHalf, basis::SzBasis, operator::SpinHalfOperator as Op, state::SpinHalfState as Ket,
+};
 
 type Spin = SpinHalf<Complex<f64>>;
 
@@ -91,7 +93,7 @@ The coefficient type is selected once through `Spin`. The spin-1/2 Cartesian pri
 | [syntaqs-spin-one](crates/syntaqs-spin-one/README.md) | Spin-1 dipoles and quadrupoles, bases, and spin-chain models. |
 | [syntaqs-fermion](crates/syntaqs-fermion/README.md) | Single-mode fermions, Majorana bases, and Hubbard chains. |
 
-`syntaqs-core`, `syntaqs-geometry`, `syntaqs-spin-half`, and `syntaqs-fermion` use `no_std + alloc`. Other crates use the standard library. Verification limits, including the declared minimum Rust version and dedicated no_std targets, are documented in [future work](docs/future-work.md#3-outstanding-verification-and-performance).
+`syntaqs-core`, `syntaqs-geometry`, `syntaqs-spin-half`, and `syntaqs-fermion` use `no_std + alloc`. Other crates use the standard library. See [verification coverage and limits](docs/design/verification.md#3-ci-and-verification-limits) for minimum Rust version checks and dedicated no_std target limitations, and [future work](docs/future-work.md#3-outstanding-verification-and-performance) for outstanding investigations.
 
 ## Examples and documentation
 

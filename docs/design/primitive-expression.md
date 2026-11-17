@@ -1,6 +1,6 @@
 # Local expressions and algebraic evaluation
 
-Updated: 2026-11-16
+Updated: 2026-11-17
 
 ## 1. Scope and responsibilities
 
@@ -145,7 +145,13 @@ This needs no state type, Dimension, integer total dimension, or integer-to-C co
 
 Dependent primitives permit multiple expressions for one object, such as Sp and `(Sx+iSy)/2`. Capabilities preserve those linear relations and give mathematically equal results for equivalent inputs; identical coefficient lists/tree structures are not required.
 
-Evaluation needs no primitive/tree structural comparison. Expansion aggregates by basis index while maintaining local-algebra/index checks independently of structural comparison support.
+State evaluation uses primitive `PartialEq` to collect matching natural terms;
+composite states also require coefficient `PartialEq`. These requirements do
+not provide a public expression-tree comparison API or identify linear relations
+between distinct primitives. See the
+[evaluation capability table](composite-expression.md#92-natural-state-collection-between-actions).
+Basis expansion resolves those relations and aggregates by basis index, while
+preserving local-algebra and factor checks.
 
 Exact expansion/coordinates explicitly organize expressions and connect them to bases, preserving linear relations and aggregating members. Primitives do not fix a selected basis, and ordinary actions/inner products/traces need no expansion. Approximate comparison and action equivalence follow [numerics](numerics.md).
 
