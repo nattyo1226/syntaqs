@@ -23,7 +23,9 @@ Do not implement the proposed broad renames and public API reshaping (`ops`/`exp
 - [x] Rehome unit tests by responsibility, adjusting imports and privacy; core unit, integration and documentation tests and core Clippy passed. All 54 unit-test function names were preserved.
 - [x] Split `expr::parts` and Lie family/decomposition along their responsibility boundaries. Core and Lie tests and doctests, targeted Clippy, and the core no-default-features check passed; existing public paths remain available for the later API phase.
 - [x] Remove the Neel constructor, rename model errors, and update affected tests, example, and documentation. Affected all-features tests and doctests, Clippy, no-default-features checks, and the Heisenberg example passed.
-- [ ] Review the complete diff for unintended behavior, lost public capabilities, changed test coverage and unrelated changes; run repository-required formatting, lint, tests, doctests and builds as applicable, recording any limits.
+- [x] Review the changes from `396fe64` through `d949250` for unintended behavior, lost public capabilities, changed test coverage and unrelated changes. The agreed Neel constructor removal and model error rename are the intentional API changes; no additional issues were identified.
+  - On Rust 1.85.0 and 1.99.1, workspace default, all-features and no-default-features tests, all-features builds, and all-target no-default-features checks passed.
+  - On Rust 1.99.1, workspace and fixture formatting, all-target all-features Clippy, and all-features rustdoc with warnings denied passed. Isolated export and shared-test backend combinations, Lie-only integration and examples, and the downstream BLAS fixture also passed.
 - [ ] Record the resulting structure and API changes for the later API inventory and prelude phase. Do not mark the API phase complete as part of this task.
 
 Batches may be reordered where dependencies make it safer, but each must leave a coherent build and receive relevant path and test checks. Planning does not authorize code changes.
