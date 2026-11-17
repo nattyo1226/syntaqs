@@ -34,19 +34,17 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-mod args;
 mod backend;
 mod coordinates;
 mod error;
 mod matrix;
-mod metadata;
 mod output;
 mod vector;
 
-pub use args::MatrixArgs;
 pub use error::ExportError;
-pub use metadata::{Layout, MatrixMetadata, VectorMetadata};
+pub use matrix::{Layout, MatrixArgs, MatrixMetadata};
 pub use output::Exported;
+pub use vector::VectorMetadata;
 
 #[cfg(feature = "ndarray")]
 pub use ndarray;

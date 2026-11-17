@@ -30,7 +30,7 @@ impl<'b, S, B, A> MatrixArgs<'b, S, B, A> {
     }
 }
 
-pub(crate) trait Ambient<I> {
+pub(super) trait Ambient<I> {
     fn explicit(&self) -> Option<&HilbertSpace<I>>;
 }
 impl<I> Ambient<I> for () {
