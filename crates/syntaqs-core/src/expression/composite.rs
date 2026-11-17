@@ -26,7 +26,7 @@ pub enum ExpressionError {
 }
 
 /// A composite state with primitive types S and O and an immutable factor space.
-/// See [`crate::expr`] for mathematical Display and structural Debug formats.
+/// See [`crate::expression`] for mathematical Display and structural Debug formats.
 ///
 /// Tensor products require the same primitive types even though their spaces
 /// carry only index structure:
@@ -76,7 +76,7 @@ pub struct State<I, S, O, C> {
 }
 
 /// A placed operator with an optional ambient-space binding.
-/// See [`crate::expr`] for mathematical Display and structural Debug formats.
+/// See [`crate::expression`] for mathematical Display and structural Debug formats.
 ///
 /// Bindings are held only by this outer handle. Combining operators shares
 /// their syntax without retaining old bindings inside child nodes.

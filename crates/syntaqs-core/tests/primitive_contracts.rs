@@ -198,3 +198,43 @@ fn local_identity_uses_primitive_rules_without_dimension_queries() {
     assert_eq!(identity.adjoint().trace(), 1.0);
     assert_eq!(ADJOINTS.load(Relaxed), 1);
 }
+
+#[test]
+fn legacy_and_semantic_module_paths_refer_to_the_same_items() {
+    use std::any::TypeId;
+    use syntaqs_core::{algebra, error, expr, expression, ops, space};
+
+    struct Primitive;
+    impl space::Dimension for Primitive {
+        fn dim() -> Result<std::num::NonZeroUsize, space::DimensionOverflow> {
+            Ok(std::num::NonZeroUsize::MIN)
+        }
+    }
+    fn require_space<T: space::Dimension>() {}
+    fn legacy_bound<T: ops::Dimension>() {
+        require_space::<T>();
+    }
+    fn algebra_bound<T: algebra::Dimension>() {
+        legacy_bound::<T>();
+    }
+    algebra_bound::<Primitive>();
+
+    assert_eq!(
+        TypeId::of::<error::DimensionOverflow>(),
+        TypeId::of::<space::DimensionOverflow>()
+    );
+    assert_eq!(
+        TypeId::of::<expr::parts::LinearCombination<(), i32>>(),
+        TypeId::of::<expression::parts::linear_combination::LinearCombination<(), i32>>()
+    );
+    assert_eq!(
+        TypeId::of::<expr::parts::SumExpr<()>>(),
+        TypeId::of::<expression::parts::SumExpr<()>>()
+    );
+    assert_eq!(
+        TypeId::of::<expr::composite::State<u8, (), (), i32>>(),
+        TypeId::of::<expression::composite::State<u8, (), (), i32>>()
+    );
+    let old: ops::Parity = algebra::Parity::Even;
+    assert_eq!(old, algebra::Parity::Even);
+}

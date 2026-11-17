@@ -543,7 +543,7 @@ impl<W: fmt::Write + ?Sized> fmt::Write for IndexPrefix<'_, W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{HilbertSpace, expr::parts::SumExpr};
+    use crate::{HilbertSpace, expression::parts::SumExpr};
     use alloc::string::String;
 
     #[test]

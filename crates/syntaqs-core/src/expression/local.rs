@@ -7,7 +7,7 @@ use crate::{ExpressionError, Identity, Term};
 ///
 /// Cloning shares immutable nodes without cloning primitives or coefficients.
 /// Construction requests no algebra or numeric capabilities.
-/// See [`crate::expr`] for mathematical Display and structural Debug formats.
+/// See [`crate::expression`] for mathematical Display and structural Debug formats.
 ///
 /// Different state primitives cannot be added implicitly:
 ///
@@ -43,7 +43,7 @@ pub struct LocalState<S, O, C> {
 }
 
 /// A shared local operator over primitive O and coefficient C.
-/// See [`crate::expr`] for mathematical Display and structural Debug formats.
+/// See [`crate::expression`] for mathematical Display and structural Debug formats.
 ///
 /// Its primitive type must match the state's delayed action:
 ///

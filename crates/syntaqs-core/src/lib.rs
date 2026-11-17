@@ -86,20 +86,24 @@ mod test_coefficient;
 pub mod coefficient;
 mod evaluate;
 
+pub mod algebra;
 pub mod basis;
 pub mod error;
-pub mod expr;
-pub mod ops;
+pub mod expression;
+/// Compatibility alias for the former algebra module.
+pub use algebra as ops;
+/// Compatibility alias for the former expression module.
+pub use expression as expr;
 pub mod space;
 pub mod system;
 
+pub use algebra::{Act, Adjoint, Dimension, Identity, InnerProduct, Product, Trace};
+pub use algebra::{HomogeneousParity, Parity, ParityOperator};
 pub use basis::{Basis, BasisError, Coordinates, dim_op, dim_state};
 pub use coefficient::{Conjugate, Divide, ImaginaryUnit, RealPart};
-pub use error::DimensionOverflow;
-pub use expr::parts::{IntoTerms, LinearCombination, Term};
-pub use expr::{ExpressionError, LocalOperator, LocalState, Operator, State};
-pub use ops::{Act, Adjoint, Dimension, Identity, InnerProduct, Product, Trace};
-pub use ops::{HomogeneousParity, Parity, ParityOperator};
+pub use expression::parts::{IntoTerms, LinearCombination, Term};
+pub use expression::{ExpressionError, LocalOperator, LocalState, Operator, State};
+pub use space::DimensionOverflow;
 pub use space::{HilbertSpace, SpaceError, TensorKind};
 pub use system::{
     ExpressionFactory, LocalOperatorOf, LocalStateOf, OperatorOf, QuantumSystem, StateOf,

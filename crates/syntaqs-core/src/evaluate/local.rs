@@ -2,7 +2,7 @@ use alloc::{collections::BTreeMap, sync::Arc, vec, vec::Vec};
 use core::{ops::Mul, ptr};
 use num_traits::{One, Zero};
 
-use crate::expr::local::{LocalOperator, LocalState, OperatorNode, StateNode};
+use crate::expression::local::{LocalOperator, LocalState, OperatorNode, StateNode};
 use crate::{
     Act, Adjoint, Conjugate, Product,
     coefficient::{conjugate, multiply},

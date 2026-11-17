@@ -454,7 +454,7 @@ fn queries_keep_capabilities_and_original_grading_path() {
 
 #[test]
 fn expanded_payloads_share_identity_handles_and_join_only_for_new_keys() {
-    use crate::expr::{composite::OpNode, local::OperatorNode};
+    use crate::expression::{composite::OpNode, local::OperatorNode};
     let f = sites(3);
     let h = HilbertSpace::tensor_all(f.iter().cloned()).unwrap();
     let b = B::new(Mode::Cartesian);

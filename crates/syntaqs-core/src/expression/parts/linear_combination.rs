@@ -2,7 +2,7 @@
 
 use crate::{
     coefficient::multiply,
-    expr::parts::{IntoOperands, ScaleExpr, SumExpr},
+    expression::parts::{IntoOperands, ScaleExpr, SumExpr},
 };
 use core::{
     ops::{Add, Mul},

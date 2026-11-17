@@ -407,7 +407,7 @@ fn deep_action_free_contraction_and_destruction_use_work_stacks() {
     std::thread::Builder::new()
         .stack_size(128 * 1024)
         .spawn(|| {
-            use crate::expr::composite::{StateExpr, StateNode};
+            use crate::expression::composite::{StateExpr, StateNode};
             let factor = H::factor(0u8);
             let local = LocalState::<Ket, Op, f64>::primitive(Ket { label: 0, site: 0 })
                 .at(&factor)

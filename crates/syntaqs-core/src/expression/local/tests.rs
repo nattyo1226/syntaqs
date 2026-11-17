@@ -3,7 +3,7 @@ use core::cell::Cell;
 use std::{sync::Arc, thread};
 
 use super::{LocalOperator, LocalState, OperatorNode, StateNode};
-use crate::expr::parts::*;
+use crate::expression::parts::*;
 use crate::{Act, Adjoint, LinearCombination};
 use num_complex::Complex;
 

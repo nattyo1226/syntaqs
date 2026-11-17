@@ -4,7 +4,7 @@ use super::accumulate;
 use crate::{
     Act, Adjoint, Basis, BasisError, Conjugate, Coordinates, Dimension, Identity, LocalOperator,
     LocalState, Product,
-    expr::traversal::{LinearTerms, operator_view, state_view},
+    expression::traversal::{LinearTerms, operator_view, state_view},
 };
 use alloc::{collections::BTreeMap, vec};
 use core::ops::Mul;

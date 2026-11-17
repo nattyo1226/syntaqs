@@ -3,7 +3,7 @@
 use crate::{
     Basis, BasisError, Dimension, DimensionOverflow, HilbertSpace, LocalOperator, LocalState,
     Operator, State,
-    expr::{
+    expression::{
         composite::{OpExpr, OpNode, StateExpr, StateNode},
         parts::{ProductExpr, SumExpr},
     },

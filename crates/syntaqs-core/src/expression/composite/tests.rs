@@ -596,7 +596,7 @@ fn all_binary_ownership_forms_preserve_results_and_shared_operands() {
         let OpNode::Local(_, local_sum) = sum.expression.node() else {
             panic!("same-factor local sum")
         };
-        let crate::expr::local::OperatorNode::Sum(parts) = local_sum.node() else {
+        let crate::expression::local::OperatorNode::Sum(parts) = local_sum.node() else {
             panic!("local sum")
         };
         let OpNode::Local(_, original_local) = op.expression.node() else {

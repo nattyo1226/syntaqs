@@ -5,7 +5,7 @@ use crate::basis::enumeration::{collect_leaves, local_size};
 use crate::{
     Act, Adjoint, Basis, BasisError, Conjugate, Coordinates, Dimension, HilbertSpace, Identity,
     LocalOperator, LocalState, Operator, Product, State,
-    expr::{
+    expression::{
         composite::{OpExpr, OpNode, StateExpr, StateNode},
         parts::{ProductExpr, ScaleExpr, SumExpr},
     },

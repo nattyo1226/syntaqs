@@ -7,7 +7,7 @@ use num_traits::{One, Zero};
 use crate::{
     Adjoint, Conjugate, ExpressionError, HilbertSpace, HomogeneousParity, Identity, LocalOperator,
     Operator, Product,
-    expr::{
+    expression::{
         local::OperatorNode,
         traversal::{IntrinsicOpTerms, LinearTerms, LinearView},
     },

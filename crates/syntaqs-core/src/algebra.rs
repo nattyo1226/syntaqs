@@ -1,11 +1,13 @@
-//! Dimension queries and algebraic capabilities of primitives and expressions.
+//! Algebraic capabilities of primitives and expressions.
 //!
 //! Rules are infallible for valid primitives. Concrete types must reject invalid
 //! values at construction. Numeric bounds and algebraic laws are the concrete
 //! implementation's responsibility, rather than blanket bounds on these traits.
 
-use crate::{DimensionOverflow, LinearCombination};
-use core::num::NonZeroUsize;
+use crate::LinearCombination;
+
+/// Compatibility export for the primitive span dimension trait.
+pub use crate::space::Dimension;
 
 /// The inner product, conjugate-linear on the left and linear on the right.
 pub trait InnerProduct<C> {
@@ -71,16 +73,6 @@ pub trait Trace<C> {
 pub trait Identity: Sized {
     /// Returns the identity without constructing numeric coefficients.
     fn identity() -> Self;
-}
-
-/// Dimension of the linear space spanned by all values of a primitive type.
-///
-/// For a complete state space this is `d`; for its full operator space it is
-/// `d²`. It is not the number of primitive variants or the span of one value.
-/// Dimensions must agree with the algebra, action, and complete basis contracts.
-pub trait Dimension {
-    /// Returns the positive dimension, or an error if it does not fit in usize.
-    fn dim() -> Result<NonZeroUsize, DimensionOverflow>;
 }
 
 /// Parity of a homogeneous primitive.

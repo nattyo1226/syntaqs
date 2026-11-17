@@ -4,7 +4,7 @@ use crate::{
     Adjoint, Conjugate, Divide, ExpressionError, HilbertSpace, Identity, LocalOperator, Operator,
     Product, Trace,
     coefficient::{add, multiply, zero},
-    expr::traversal::{LinearTerms, OrdinaryOpTerms, operator_view},
+    expression::traversal::{LinearTerms, OrdinaryOpTerms, operator_view},
 };
 use core::ops::Mul;
 use num_traits::{One, Zero};
