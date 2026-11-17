@@ -5,7 +5,10 @@ use common::MinimalComplex;
 
 use num_complex::Complex;
 use num_traits::One;
-use syntaqs_core::{LinearCombination, Term};
+use syntaqs_core::{
+    expression::parts::linear_combination::LinearCombination,
+    expression::parts::linear_combination::Term,
+};
 
 fn term(primitive: u8, re: f64, im: f64) -> Term<u8, Complex<f64>> {
     Term {

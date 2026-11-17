@@ -309,7 +309,7 @@ impl<I: Eq, O: Identity, C: Clone> Operator<I, O, C> {
     /// already grouped expression makes no further structural changes.
     ///
     /// ```
-    /// use syntaqs_core::{HilbertSpace, Identity, LocalOperator, Operator};
+    /// use syntaqs_core::{space::HilbertSpace, algebra::Identity, expression::local::LocalOperator, expression::composite::Operator};
     /// struct Gate;
     /// impl Identity for Gate {
     ///     fn identity() -> Self { Self }
@@ -320,7 +320,7 @@ impl<I: Eq, O: Identity, C: Clone> Operator<I, O, C> {
     /// let grouped = expression.group_local();
     /// assert!(grouped.space().is_none());
     /// // No primitive product or adjoint implementation is needed.
-    /// # Ok::<(), syntaqs_core::ExpressionError>(())
+    /// # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())
     /// ```
     pub fn group_local(&self) -> Self {
         Self {

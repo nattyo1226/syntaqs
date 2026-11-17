@@ -1,5 +1,8 @@
 use num_complex::Complex;
-use syntaqs_core::{HilbertSpace, LocalOperator, LocalState, State};
+use syntaqs_core::{
+    expression::composite::State, expression::local::LocalOperator, expression::local::LocalState,
+    space::HilbertSpace,
+};
 use syntaqs_export::{Export, Exported, Layout, MatrixArgs, MatrixMetadata, VectorMetadata};
 use syntaqs_spin_half::{
     CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis,

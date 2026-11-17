@@ -4,8 +4,8 @@ extern crate blas_provider as _;
 use num_complex::Complex;
 use syntaqs_basic::Id128;
 #[cfg(not(feature = "normalize"))]
-use syntaqs_core::Divide;
-use syntaqs_core::{HilbertSpace, State};
+use syntaqs_core::coefficient::Divide;
+use syntaqs_core::{expression::composite::State, space::HilbertSpace};
 use syntaqs_geometry::{Boundary, Chain};
 #[cfg(feature = "normalize")]
 use syntaqs_normalize::{Norm, NormalizedExpectation};

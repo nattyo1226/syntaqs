@@ -1,7 +1,7 @@
 //! Spin-1 dipoles, quadrupoles, chain models and common expression APIs.
 
 use num_complex::Complex;
-use syntaqs_core::HilbertSpace;
+use syntaqs_core::space::HilbertSpace;
 use syntaqs_geometry::{Boundary, Chain};
 use syntaqs_spin_one::{
     CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as Op, SpinOneState as Ket,

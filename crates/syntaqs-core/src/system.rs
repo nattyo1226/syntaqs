@@ -25,7 +25,7 @@ type FactoryMarker<S, O, C> = core::marker::PhantomData<fn() -> (S, O, C)>;
 /// with the same associated types construct the same expression types.
 ///
 /// ```
-/// use syntaqs_core::{ExpressionFactory, LocalStateOf};
+/// use syntaqs_core::{system::ExpressionFactory, system::LocalStateOf};
 /// // A custom algebra can opt into construction before providing evaluation.
 /// struct Ket;
 /// struct Op;
@@ -33,13 +33,13 @@ type FactoryMarker<S, O, C> = core::marker::PhantomData<fn() -> (S, O, C)>;
 /// type Custom = ExpressionFactory<Ket, Op, Coeff>;
 /// let ket: LocalStateOf<Custom> = Custom::state(Ket);
 /// let delayed = ket.act(&Custom::operator(Op));
-/// let a = syntaqs_core::HilbertSpace::factor("a");
-/// let b = syntaqs_core::HilbertSpace::factor("b");
+/// let a = syntaqs_core::space::HilbertSpace::factor("a");
+/// let b = syntaqs_core::space::HilbertSpace::factor("b");
 /// let space = a.tensor(&b)?;
 /// let state = Custom::product_state(&space, [Ket, Ket])?;
 /// let operator = Custom::try_operator_sum([Custom::operator_product_at([(&a, Op)])])?;
 /// let delayed = state.act(&operator)?;
-/// # Ok::<(), syntaqs_core::ExpressionError>(())
+/// # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())
 /// ```
 /// Its constructors are inherent methods and require no trait import. Operations on an existing
 /// expression (scaling, placement, binding and evaluation) remain methods of the

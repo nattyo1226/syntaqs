@@ -1,7 +1,7 @@
 //! Geometry relations using the library API and a custom open square grid.
 //! The example-local grid demonstrates custom Geometry and Relation implementations.
 
-use syntaqs_core::HilbertSpace;
+use syntaqs_core::space::HilbertSpace;
 use syntaqs_geometry::{
     Boundary, Chain, Consecutive, Geometry, MappedGroup, NearestNeighbors, Relation, SiteMapper,
 };

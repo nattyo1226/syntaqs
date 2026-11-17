@@ -5,8 +5,9 @@ use core::{
 use num_complex::Complex;
 use num_traits::Zero;
 use syntaqs_core::{
-    Act, Adjoint, Conjugate, HilbertSpace, InnerProduct, LinearCombination, LocalOperator,
-    LocalState, RealPart,
+    algebra::Act, algebra::Adjoint, algebra::InnerProduct, coefficient::Conjugate,
+    coefficient::RealPart, expression::local::LocalOperator, expression::local::LocalState,
+    expression::parts::linear_combination::LinearCombination, space::HilbertSpace,
 };
 use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
 
@@ -83,18 +84,18 @@ fn norm_does_not_require_inverse_real_embedding_or_coefficient_float() {
 }
 
 struct Op;
-impl syntaqs_core::HomogeneousParity for Op {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for Op {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }
-impl syntaqs_core::ParityOperator for Op {
+impl syntaqs_core::algebra::ParityOperator for Op {
     fn parity_operator() -> Self {
         Self
     }
 }
 
-impl syntaqs_core::Identity for Op {
+impl syntaqs_core::algebra::Identity for Op {
     fn identity() -> Self {
         Self
     }

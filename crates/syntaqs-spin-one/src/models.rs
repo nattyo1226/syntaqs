@@ -4,7 +4,9 @@ use crate::coefficient::{four_ninths, two_thirds};
 use crate::{SpinOne, SpinOneOperator as O};
 use core::ops::{Add, Div, Neg};
 use num_traits::One;
-use syntaqs_core::{ExpressionError, HilbertSpace, OperatorOf, SpaceError};
+use syntaqs_core::{
+    expression::error::ExpressionError, space::HilbertSpace, space::SpaceError, system::OperatorOf,
+};
 use syntaqs_geometry::{Chain, MappingError, NearestNeighbors, SiteMapper};
 
 /// Failure to construct a spin-1 model on a site-ordered space assignment.
@@ -117,7 +119,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
     ///
     /// ```
     /// use num_complex::Complex;
-    /// use syntaqs_core::HilbertSpace;
+    /// use syntaqs_core::space::HilbertSpace;
     /// use syntaqs_geometry::{Boundary, Chain};
     /// use syntaqs_spin_one::{SpinOne, SpinOneState as Ket};
     /// type Spin = SpinOne<Complex<f64>>;

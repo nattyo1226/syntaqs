@@ -4,7 +4,10 @@ extern crate blas_provider as _;
 
 use ndarray::{Array2, array};
 use num_complex::Complex;
-use syntaqs_core::{ExpressionError, HilbertSpace, LocalOperator, Operator, TensorKind};
+use syntaqs_core::{
+    expression::composite::Operator, expression::error::ExpressionError,
+    expression::local::LocalOperator, space::HilbertSpace, space::TensorKind,
+};
 use syntaqs_lie::{LieError, NumericalError, NumericalOptions, OperatorFamily, Tolerance};
 use syntaqs_spin_half::SpinHalfOperator as Pauli;
 
@@ -502,8 +505,9 @@ precision_tests!(double, f64);
 #[test]
 fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities() {
     use syntaqs_core::{
-        Adjoint, HomogeneousParity, Identity, LinearCombination, Parity, ParityOperator, Product,
-        Trace,
+        algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity, algebra::Parity,
+        algebra::ParityOperator, algebra::Product, algebra::Trace,
+        expression::parts::linear_combination::LinearCombination,
     };
 
     #[derive(PartialEq)]

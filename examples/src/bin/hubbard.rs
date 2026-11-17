@@ -1,7 +1,7 @@
 //! Standard and symmetric Hubbard models on a two-site graded chain.
 use num_complex::Complex;
 use syntaqs_basic::Id128;
-use syntaqs_core::HilbertSpace;
+use syntaqs_core::space::HilbertSpace;
 use syntaqs_fermion::{Fermion, FermionOperator as O, FermionState as S, MajoranaBasis};
 use syntaqs_geometry::{Boundary, Chain};
 #[cfg(feature = "normalize")]

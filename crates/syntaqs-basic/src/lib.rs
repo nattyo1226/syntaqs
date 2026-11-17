@@ -51,12 +51,12 @@ impl fmt::Display for Id128 {
 ///
 /// ```
 /// use syntaqs_basic::Tag;
-/// use syntaqs_core::{HilbertSpace, LocalState};
+/// use syntaqs_core::{space::HilbertSpace, expression::local::LocalState};
 /// let factor = HilbertSpace::factor(Tag::new("spin-left"));
 /// let state = LocalState::<_, &str, i32>::primitive("up").at(&factor)?;
 /// assert_eq!(state.to_string(), "|up[spin-lef]>");
 /// assert_eq!(Tag::from("spin-left").to_string(), "spin-left");
-/// # Ok::<(), syntaqs_core::ExpressionError>(())
+/// # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Tag {

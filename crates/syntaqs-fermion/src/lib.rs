@@ -8,7 +8,7 @@
 //! is orthonormal under the dimension-normalized inner product `Tr(A†B)/2`.
 //!
 //! Primitive types have no coefficient precision. [`Fermion<C>`] selects it
-//! once, while [`syntaqs_core::ExpressionFactory`] constructs shared core expressions.
+//! once, while [`syntaqs_core::system::ExpressionFactory`] constructs shared core expressions.
 //! Numeric bounds belong to individual operations, not expression construction.
 //! Complete operator bases are [`LadderBasis`] and [`MajoranaBasis`].
 //!
@@ -27,7 +27,7 @@
 //!
 //! ```
 //! use num_complex::Complex;
-//! use syntaqs_core::HilbertSpace;
+//! use syntaqs_core::space::HilbertSpace;
 //! use syntaqs_fermion::{Fermion, FermionOperator as O, FermionState as S};
 //! type F = Fermion<Complex<f32>>;
 //! let up = HilbertSpace::factor("up");
@@ -37,7 +37,7 @@
 //! let up_only = F::product_state(&space, [S::Occupied, S::Empty])?;
 //! let removed = double.act(&F::operator(O::Annihilate).at(&down)?)?;
 //! assert_eq!(up_only.inner_product(&removed)?, Complex::new(-1., 0.));
-//! # Ok::<(), syntaqs_core::ExpressionError>(())
+//! # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())
 //! ```
 //!
 //! Different precisions cannot mix implicitly:
@@ -70,4 +70,4 @@ pub use state::FermionState;
 ///
 /// `state` and `operator` require no trait import. No default
 /// precision, numeric capability, or cloning capability is required here.
-pub type Fermion<C> = syntaqs_core::ExpressionFactory<FermionState, FermionOperator, C>;
+pub type Fermion<C> = syntaqs_core::system::ExpressionFactory<FermionState, FermionOperator, C>;

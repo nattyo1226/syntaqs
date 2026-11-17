@@ -1,6 +1,10 @@
 use std::{cell::Cell, fmt, fmt::Write, rc::Rc};
 
-use syntaqs_core::{HilbertSpace, LocalOperator, LocalState, Operator, State, TensorKind};
+use syntaqs_core::{
+    expression::composite::Operator, expression::composite::State,
+    expression::local::LocalOperator, expression::local::LocalState, space::HilbertSpace,
+    space::TensorKind,
+};
 
 type LO = LocalOperator<&'static str, &'static str>;
 type LS = LocalState<&'static str, &'static str, &'static str>;

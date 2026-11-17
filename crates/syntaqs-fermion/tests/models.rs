@@ -2,7 +2,7 @@ use syntaqs_fermion::models::ModelError;
 mod common;
 use common::*;
 use num_complex::Complex;
-use syntaqs_core::{HilbertSpace as H, SpaceError, TensorKind};
+use syntaqs_core::{space::HilbertSpace as H, space::SpaceError, space::TensorKind};
 use syntaqs_fermion::{
     Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
 };
@@ -232,7 +232,7 @@ fn graded<T: Real>() {
         }
     }
     let double = Fermion::<Complex<T>>::product_state(
-        &syntaqs_core::HilbertSpace::tensor_all_g([(modes[0]).clone(), (modes[1]).clone()])
+        &syntaqs_core::space::HilbertSpace::tensor_all_g([(modes[0]).clone(), (modes[1]).clone()])
             .unwrap(),
         [S::Occupied, S::Occupied],
     )

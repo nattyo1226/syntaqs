@@ -3,7 +3,10 @@
 
 use num_complex::Complex;
 use num_traits::{Float, FromPrimitive, ToPrimitive};
-use syntaqs_core::{LinearCombination, LocalOperator, LocalState};
+use syntaqs_core::{
+    expression::local::LocalOperator, expression::local::LocalState,
+    expression::parts::linear_combination::LinearCombination,
+};
 use syntaqs_spin_one::{SpinOneOperator as O, SpinOneState as S};
 
 pub trait Real: Float + FromPrimitive + ToPrimitive + core::fmt::Debug {

@@ -3,27 +3,7 @@
 use alloc::{sync::Arc, vec::Vec};
 
 use super::parts::{AdjointExpr, ProductExpr, ScaleExpr, SumExpr};
-use crate::{HilbertSpace, Identity, LocalOperator, LocalState, SpaceError};
-
-/// Errors connecting, placing or evaluating composite expressions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
-pub enum ExpressionError {
-    /// A local expression must be placed on a leaf, not an arbitrary tensor.
-    #[error("local placement requires a factor space")]
-    NotAFactor,
-    /// Operands have incompatible ordered factor spaces.
-    #[error("incompatible Hilbert spaces")]
-    IncompatibleSpaces,
-    /// An operator refers to an index absent from its selected ambient space.
-    #[error("referenced index is absent from the ambient space")]
-    MissingIndex,
-    /// No binding or explicit ambient space is available.
-    #[error("operator ambient space is not specified")]
-    UnboundOperator,
-    /// An invalid tensor space was requested.
-    #[error(transparent)]
-    Space(#[from] SpaceError),
-}
+use crate::{ExpressionError, HilbertSpace, Identity, LocalOperator, LocalState};
 
 /// A composite state with primitive types S and O and an immutable factor space.
 /// See [`crate::expression`] for mathematical Display and structural Debug formats.
@@ -32,19 +12,19 @@ pub enum ExpressionError {
 /// carry only index structure:
 ///
 /// ```compile_fail
-/// use syntaqs_core::{HilbertSpace, LocalState};
+/// use syntaqs_core::{space::HilbertSpace, expression::local::LocalState};
 /// let a = HilbertSpace::factor(0u8);
 /// let b = HilbertSpace::factor(1u8);
 /// let left = LocalState::<u8, (), ()>::primitive(0).at(&a).unwrap();
 /// let right = LocalState::<u16, (), ()>::primitive(0).at(&b).unwrap();
 /// let h = a.tensor(&b).unwrap();
-/// let _ = syntaqs_core::State::tensor_in(&h, [left, right]);
+/// let _ = syntaqs_core::expression::composite::State::tensor_in(&h, [left, right]);
 /// ```
 ///
 /// Composite action also requires matching operator primitives:
 ///
 /// ```compile_fail
-/// use syntaqs_core::{HilbertSpace, LocalState, Operator};
+/// use syntaqs_core::{space::HilbertSpace, expression::local::LocalState, expression::composite::Operator};
 /// let h = HilbertSpace::factor(0u8);
 /// let state = LocalState::<(), u8, ()>::zero().at(&h).unwrap();
 /// let operator = Operator::<u8, u16, ()>::identity().bind(&h).unwrap();
@@ -54,7 +34,7 @@ pub enum ExpressionError {
 /// Coefficient precisions cannot be mixed:
 ///
 /// ```compile_fail
-/// use syntaqs_core::{HilbertSpace, State};
+/// use syntaqs_core::{space::HilbertSpace, expression::composite::State};
 /// let h = HilbertSpace::factor(0u8);
 /// let a = State::<_, (), (), f32>::zero(&h);
 /// let b = State::<_, (), (), f64>::zero(&h);
@@ -65,7 +45,7 @@ pub enum ExpressionError {
 ///
 /// ```compile_fail
 /// use std::rc::Rc;
-/// use syntaqs_core::State;
+/// use syntaqs_core::expression::composite::State;
 /// fn needs_send<T: Send>() {}
 /// needs_send::<State<Rc<()>, (), (), ()>>();
 /// ```

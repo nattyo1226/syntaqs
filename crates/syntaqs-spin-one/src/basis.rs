@@ -6,7 +6,10 @@ use crate::{
 };
 use core::ops::{Add, Div, Neg};
 use num_traits::One;
-use syntaqs_core::{Basis, ImaginaryUnit, LinearCombination};
+use syntaqs_core::{
+    basis::Basis, coefficient::ImaginaryUnit,
+    expression::parts::linear_combination::LinearCombination,
+};
 
 /// The orthonormal state basis in the order `Plus, Zero, Minus`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]

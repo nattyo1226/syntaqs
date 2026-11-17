@@ -2,7 +2,7 @@
 
 use core::ops::{Add, Div, Mul};
 use num_traits::One;
-use syntaqs_core::ImaginaryUnit;
+use syntaqs_core::coefficient::ImaginaryUnit;
 
 pub(crate) fn half<C: One + Add<Output = C> + Div<Output = C>>() -> C {
     C::one() / (C::one() + C::one())

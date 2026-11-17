@@ -236,7 +236,7 @@ Retained primitives still undergo basis checks. Operator queries preserve
 expansion checks for reached intrinsic terms even under zero coefficients;
 enumeration checks are independent of numerical state collection.
 
-Basis, BasisError, and Coordinates are re-exported at core's root. See [basis_expansion.rs](../../examples/src/bin/basis_expansion.rs) and section 6 for verification.
+`Basis`, `BasisError`, and `Coordinates` are defined in `syntaqs_core::basis`; `Basis` is also available in the core prelude. See [basis_expansion.rs](../../examples/src/bin/basis_expansion.rs) and section 6 for verification.
 
 ## 8. Graded bases
 

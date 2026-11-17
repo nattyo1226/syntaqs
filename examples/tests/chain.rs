@@ -7,7 +7,10 @@ use num_traits::Float;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use std::{fmt::Debug, ops::Neg};
 use syntaqs_basic::Id128;
-use syntaqs_core::{Divide, HilbertSpace, LocalState, State};
+use syntaqs_core::{
+    coefficient::Divide, expression::composite::State, expression::local::LocalState,
+    space::HilbertSpace,
+};
 use syntaqs_geometry::{Boundary, Chain};
 #[cfg(feature = "normalize")]
 use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
@@ -43,7 +46,7 @@ fn close<T: Real>(actual: Complex<T>, expected: Complex<T>) {
 fn basis<T: Real>(
     factors: &[HilbertSpace<Id128>],
     bits: usize,
-) -> syntaqs_core::StateOf<SpinHalf<Complex<T>>, Id128> {
+) -> syntaqs_core::system::StateOf<SpinHalf<Complex<T>>, Id128> {
     State::tensor_in(
         &HilbertSpace::tensor_all(factors.iter().cloned()).unwrap(),
         factors.iter().enumerate().map(|(i, factor)| {

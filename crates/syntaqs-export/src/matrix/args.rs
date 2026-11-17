@@ -1,5 +1,5 @@
 use std::marker::PhantomData;
-use syntaqs_core::HilbertSpace;
+use syntaqs_core::space::HilbertSpace;
 
 /// Arguments selecting an operator's state type, state basis and optional space.
 pub struct MatrixArgs<'b, S, B, A = ()> {

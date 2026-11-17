@@ -6,7 +6,8 @@ use super::{
     local::Evaluator as LocalEvaluator,
     state_terms::{Key, Ready, Sum, Terms},
 };
-use crate::expression::composite::{ExpressionError, OpExpr, OpNode, State, StateExpr, StateNode};
+use crate::expression::composite::{OpExpr, OpNode, State, StateExpr, StateNode};
+use crate::expression::error::ExpressionError;
 use crate::{
     Act, Adjoint, Conjugate, HilbertSpace, HomogeneousParity, LocalOperator, Parity,
     ParityOperator, TensorKind, coefficient::conjugate,

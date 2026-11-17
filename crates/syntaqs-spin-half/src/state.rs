@@ -4,7 +4,9 @@ use core::ops::Neg;
 
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    Act, Dimension, DimensionOverflow, ImaginaryUnit, InnerProduct, LinearCombination,
+    algebra::Act, algebra::InnerProduct, coefficient::ImaginaryUnit,
+    expression::parts::linear_combination::LinearCombination, space::Dimension,
+    space::DimensionOverflow,
 };
 
 use crate::{SpinHalfOperator, coefficient::imaginary};
@@ -67,8 +69,8 @@ impl Dimension for SpinHalfState {
     }
 }
 
-impl syntaqs_core::HomogeneousParity for SpinHalfState {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for SpinHalfState {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }

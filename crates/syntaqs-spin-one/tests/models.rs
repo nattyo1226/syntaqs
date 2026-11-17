@@ -3,7 +3,10 @@ mod common;
 
 use common::*;
 use num_complex::Complex;
-use syntaqs_core::{ExpressionError, HilbertSpace as H, OperatorOf, SpaceError};
+use syntaqs_core::{
+    expression::error::ExpressionError, space::HilbertSpace as H, space::SpaceError,
+    system::OperatorOf,
+};
 use syntaqs_export::{Export, Exported, MatrixArgs};
 use syntaqs_geometry::{Boundary, Chain, MappingError};
 use syntaqs_spin_one::{SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis};
@@ -180,7 +183,7 @@ fn total_spin<T: Real>() {
             &space,
             terms.into_iter().map(|(weight, left, right)| {
                 Spin::<T>::product_state(
-                    &syntaqs_core::HilbertSpace::tensor_all([
+                    &syntaqs_core::space::HilbertSpace::tensor_all([
                         (sites[0]).clone(),
                         (sites[1]).clone(),
                     ])

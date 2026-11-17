@@ -5,7 +5,9 @@ use crate::{SpinHalf, SpinHalfOperator};
 use alloc::vec::Vec;
 use core::ops::{Add, Div, Neg};
 use num_traits::One;
-use syntaqs_core::{ExpressionError, HilbertSpace, OperatorOf, SpaceError};
+use syntaqs_core::{
+    expression::error::ExpressionError, space::HilbertSpace, space::SpaceError, system::OperatorOf,
+};
 use syntaqs_geometry::{Chain, MappingError, NearestNeighbors, SiteMapper};
 
 /// Failure to construct a spin model on a site-ordered space assignment.

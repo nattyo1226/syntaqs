@@ -1,5 +1,5 @@
-use syntaqs_core::HilbertSpace;
-use syntaqs_core::HilbertSpace as H;
+use syntaqs_core::space::HilbertSpace;
+use syntaqs_core::space::HilbertSpace as H;
 use syntaqs_geometry::{
     Boundary::*, Chain, Consecutive, MappingError, NearestNeighbors, Relation, SiteMapper,
 };

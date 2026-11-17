@@ -32,12 +32,12 @@ enum Op {
 }
 #[allow(non_upper_case_globals)]
 const Op: Op = Op::Flip;
-impl syntaqs_core::HomogeneousParity for Op {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for Op {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }
-impl syntaqs_core::ParityOperator for Op {
+impl syntaqs_core::algebra::ParityOperator for Op {
     fn parity_operator() -> Self {
         Self::Parity
     }
@@ -817,12 +817,12 @@ fn composite_scalar_reductions_require_neither_num_float_copy_nor_division() {
     }
     #[derive(PartialEq)]
     struct Primitive;
-    impl syntaqs_core::HomogeneousParity for Primitive {
-        fn parity(&self) -> syntaqs_core::Parity {
-            syntaqs_core::Parity::Even
+    impl syntaqs_core::algebra::HomogeneousParity for Primitive {
+        fn parity(&self) -> syntaqs_core::algebra::Parity {
+            syntaqs_core::algebra::Parity::Even
         }
     }
-    impl syntaqs_core::ParityOperator for Primitive {
+    impl syntaqs_core::algebra::ParityOperator for Primitive {
         fn parity_operator() -> Self {
             Self
         }
@@ -864,7 +864,7 @@ fn composite_scalar_reductions_require_neither_num_float_copy_nor_division() {
     }
     let a = HilbertSpace::<_>::factor(0u8);
     let b = HilbertSpace::factor(1);
-    let state = syntaqs_core::State::tensor_in(
+    let state = syntaqs_core::expression::composite::State::tensor_in(
         &a.tensor(&b).unwrap(),
         [
             LocalState::<Primitive, Primitive, MinimalComplex<Ring>>::primitive(Primitive)

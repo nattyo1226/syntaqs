@@ -4,14 +4,18 @@ use ndarray_linalg::{Lapack, Scalar};
 use num_complex::Complex;
 use num_traits::Float;
 use syntaqs_core::{
-    Adjoint, ExpressionError, HilbertSpace, HomogeneousParity, Identity, LocalOperator, Operator,
-    ParityOperator, Product, Trace,
+    algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity, algebra::ParityOperator,
+    algebra::Product, algebra::Trace, expression::composite::Operator,
+    expression::error::ExpressionError, expression::local::LocalOperator, space::HilbertSpace,
 };
 
 mod private {
     pub trait Sealed {}
-    impl<O, R> Sealed for syntaqs_core::LocalOperator<O, num_complex::Complex<R>> {}
-    impl<I, O, R> Sealed for syntaqs_core::Operator<I, O, num_complex::Complex<R>> {}
+    impl<O, R> Sealed for syntaqs_core::expression::local::LocalOperator<O, num_complex::Complex<R>> {}
+    impl<I, O, R> Sealed
+        for syntaqs_core::expression::composite::Operator<I, O, num_complex::Complex<R>>
+    {
+    }
 }
 
 /// A supported local or placed core operator with complex f32/f64 coefficients.

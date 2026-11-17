@@ -20,7 +20,7 @@
 //! containing sums, scales, actions or explicit units use `⊗` instead.
 //!
 //! ```
-//! use syntaqs_core::{HilbertSpace, LocalState, State};
+//! use syntaqs_core::{space::HilbertSpace, expression::local::LocalState, expression::composite::State};
 //! let a = HilbertSpace::factor("a");
 //! let b = HilbertSpace::factor("b");
 //! let h = a.tensor(&b)?;
@@ -29,7 +29,7 @@
 //! let state = State::tensor_in(&h, [up.at(&a)?, down.at(&b)?])?;
 //! assert_eq!(state.to_string(), "|up[a],down[b]>");
 //! assert_eq!(format!("{state:#}"), "| up[a],\n  down[b] >");
-//! # Ok::<(), syntaqs_core::ExpressionError>(())
+//! # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())
 //! ```
 //!
 //! In expression Display only, index labels are limited to their first eight
@@ -49,10 +49,12 @@ pub mod parts;
 
 mod arithmetic;
 pub mod composite;
+pub mod error;
 mod format;
 mod group;
-pub(crate) mod local;
+/// Local state and operator expressions.
+pub mod local;
 pub(crate) mod traversal;
 
-pub use composite::{ExpressionError, Operator, State};
-pub use local::{LocalOperator, LocalState};
+pub(crate) use composite::{Operator, State};
+pub(crate) use local::{LocalOperator, LocalState};

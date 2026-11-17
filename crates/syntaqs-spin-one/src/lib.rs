@@ -17,14 +17,14 @@
 //!
 //! ```
 //! use num_complex::Complex;
-//! use syntaqs_core::Product;
+//! use syntaqs_core::algebra::Product;
 //! use syntaqs_spin_one::{SpinOne, SpinOneOperator as Op, SpinOneState as Ket};
 //! type Spin = SpinOne<Complex<f64>>;
 //! let raised = Spin::state(Ket::Zero).act(&Spin::operator(Op::Sp));
 //! let amplitude = Spin::state(Ket::Plus).inner_product(&raised);
 //! assert!((amplitude.re - 3.0_f64.sqrt()).abs() < 1e-12);
 //! let squared = <Op as Product<Complex<f64>>>::product(&Op::Sp, &Op::Sp);
-//! assert_eq!(squared, syntaqs_core::LinearCombination::term(Complex::new((3.0_f64/2.0).sqrt(), 0.0), Op::Q2p));
+//! assert_eq!(squared, syntaqs_core::expression::parts::linear_combination::LinearCombination::term(Complex::new((3.0_f64/2.0).sqrt(), 0.0), Op::Q2p));
 //! ```
 //!
 //! Products and state actions use `Complex<R>` with `R: num_traits::Float`.
@@ -59,7 +59,7 @@ pub use state::SpinOneState;
 ///
 /// ```
 /// use num_complex::Complex;
-/// use syntaqs_core::HilbertSpace;
+/// use syntaqs_core::space::HilbertSpace;
 /// use syntaqs_spin_one::{SpinOne, SpinOneOperator as Op, SpinOneState as Ket};
 /// type Spin = SpinOne<Complex<f32>>;
 /// let a = HilbertSpace::factor("a");
@@ -68,7 +68,7 @@ pub use state::SpinOneState;
 /// let psi = Spin::product_state(&space, [Ket::Plus, Ket::Minus])?;
 /// let zz = Spin::operator_product_at([(&a, Op::Sz), (&b, Op::Sz)])?;
 /// assert!((psi.expectation(&zz)?.re + 1.5).abs() < 1e-5);
-/// # Ok::<(), syntaqs_core::ExpressionError>(())
+/// # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())
 /// ```
 ///
 /// Different precisions cannot be mixed implicitly:
@@ -80,4 +80,4 @@ pub use state::SpinOneState;
 /// let op = SpinOne::<Complex<f64>>::operator(Op::Sz);
 /// let _ = psi.act(&op);
 /// ```
-pub type SpinOne<C> = syntaqs_core::ExpressionFactory<SpinOneState, SpinOneOperator, C>;
+pub type SpinOne<C> = syntaqs_core::system::ExpressionFactory<SpinOneState, SpinOneOperator, C>;

@@ -1,13 +1,14 @@
 use syntaqs_core::{
-    HilbertSpace, LocalOperator, LocalOperatorOf, LocalState, LocalStateOf, OperatorOf,
-    QuantumSystem, StateOf,
+    expression::local::LocalOperator, expression::local::LocalState, space::HilbertSpace,
+    system::LocalOperatorOf, system::LocalStateOf, system::OperatorOf, system::QuantumSystem,
+    system::StateOf,
 };
 
 // These types deliberately provide no capabilities (including Clone).
 struct Ket;
 struct Op;
 struct Coeff;
-type System = syntaqs_core::ExpressionFactory<Ket, Op, Coeff>;
+type System = syntaqs_core::system::ExpressionFactory<Ket, Op, Coeff>;
 struct Equivalent;
 impl QuantumSystem for Equivalent {
     type State = Ket;
@@ -124,7 +125,7 @@ fn empty_system_builders_keep_the_existing_space_contracts() {
 
 #[test]
 fn explicit_builders_validate_counts_and_operators_still_validate_placement() {
-    use syntaqs_core::ExpressionError as E;
+    use syntaqs_core::expression::error::ExpressionError as E;
     let a = HilbertSpace::factor(0);
     for states in [vec![], vec![Ket, Ket]] {
         assert_eq!(

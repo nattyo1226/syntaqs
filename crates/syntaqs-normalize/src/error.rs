@@ -1,5 +1,5 @@
 use num_traits::Zero;
-use syntaqs_core::ExpressionError;
+use syntaqs_core::expression::error::ExpressionError;
 
 /// Failure to normalize a state or an expectation value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]

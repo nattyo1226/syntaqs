@@ -5,8 +5,10 @@ extern crate blas_provider as _;
 
 use num_complex::Complex;
 use syntaqs_core::{
-    Adjoint, HilbertSpace, HomogeneousParity, Identity, LinearCombination, LocalOperator, Operator,
-    Parity, ParityOperator, Product, Trace,
+    algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity, algebra::Parity,
+    algebra::ParityOperator, algebra::Product, algebra::Trace, expression::composite::Operator,
+    expression::local::LocalOperator, expression::parts::linear_combination::LinearCombination,
+    space::HilbertSpace,
 };
 use syntaqs_lie::{
     DecompositionOptions, FamilyExpression, NumericalOptions, OperatorFamily, lie_bracket,
@@ -316,16 +318,21 @@ macro_rules! precision_tests {
                     OperatorFamily::new_in(&space, [x, y, z, Operator::identity()]).unwrap();
                 workflow(&family, &target, 1.);
                 let embed = |at| {
-                    graded::embedding::<R>(graded::A, at, 2, syntaqs_core::TensorKind::Graded)
-                        .into_iter()
-                        .zip(graded::embedding(
-                            graded::CREATE,
-                            at,
-                            2,
-                            syntaqs_core::TensorKind::Graded,
-                        ))
-                        .map(|(a, b)| a + b)
-                        .collect::<Vec<_>>()
+                    graded::embedding::<R>(
+                        graded::A,
+                        at,
+                        2,
+                        syntaqs_core::space::TensorKind::Graded,
+                    )
+                    .into_iter()
+                    .zip(graded::embedding(
+                        graded::CREATE,
+                        at,
+                        2,
+                        syntaqs_core::space::TensorKind::Graded,
+                    ))
+                    .map(|(a, b)| a + b)
+                    .collect::<Vec<_>>()
                 };
                 let dx = embed(0);
                 let dy = embed(1);

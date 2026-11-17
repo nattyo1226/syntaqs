@@ -1,7 +1,7 @@
 //! Borrowing connections between geometric groups and caller-owned data.
 use crate::{Geometry, Relation};
 use alloc::{vec, vec::Vec};
-use syntaqs_core::{HilbertSpace, space::Leaves};
+use syntaqs_core::{space::HilbertSpace, space::Leaves};
 
 /// Failure to connect site numbers to a caller-owned sequence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]

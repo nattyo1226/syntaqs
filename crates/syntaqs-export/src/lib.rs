@@ -6,7 +6,7 @@
 //!
 //! ```
 //! use num_complex::Complex;
-//! use syntaqs_core::LocalState;
+//! use syntaqs_core::expression::local::LocalState;
 //! use syntaqs_export::{Export, Exported};
 //! use syntaqs_spin_half::{SpinHalfState as S, SpinHalfOperator as O, SzBasis};
 //! let psi = LocalState::<S,O,Complex<f64>>::primitive(S::Down);
@@ -24,7 +24,7 @@
 //!
 //! ```compile_fail
 //! use num_complex::Complex;
-//! use syntaqs_core::LocalState;
+//! use syntaqs_core::expression::local::LocalState;
 //! use syntaqs_export::{Export, Exported};
 //! use syntaqs_spin_half::{SpinHalfState as S, SpinHalfOperator as O, SzBasis};
 //! let psi = LocalState::<S,O,Complex<f32>>::primitive(S::Up);

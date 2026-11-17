@@ -6,7 +6,10 @@ use crate::{
 };
 use num_complex::Complex;
 use num_traits::{Float, One, Zero};
-use syntaqs_core::{Act, Dimension, DimensionOverflow, InnerProduct, LinearCombination};
+use syntaqs_core::{
+    algebra::Act, algebra::InnerProduct, expression::parts::linear_combination::LinearCombination,
+    space::Dimension, space::DimensionOverflow,
+};
 
 /// The Sz eigenstates in the order `Plus, Zero, Minus`.
 /// Display writes `+1`, `0` or `-1`; state expressions add ket markers and indices.
@@ -88,8 +91,8 @@ impl Dimension for SpinOneState {
         Ok(core::num::NonZeroUsize::new(3).unwrap())
     }
 }
-impl syntaqs_core::HomogeneousParity for SpinOneState {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for SpinOneState {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }

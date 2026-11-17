@@ -2,7 +2,7 @@
 //! One site is one spin. All supports up to CAP, including identity, are visited.
 
 use num_complex::Complex64;
-use syntaqs_core::{HilbertSpace, OperatorOf};
+use syntaqs_core::{space::HilbertSpace, system::OperatorOf};
 use syntaqs_geometry::SiteGroup;
 use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op};
 

@@ -38,7 +38,7 @@ pub enum LieError<R> {
     EmptyFamily,
     /// Core rejected a binding, factor index, or expression context.
     #[error("{0}")]
-    Expression(#[from] syntaqs_core::ExpressionError),
+    Expression(#[from] syntaqs_core::expression::error::ExpressionError),
     /// Invalid numerical data, singularity, or a factorization failure.
     #[error("{0}")]
     Numerical(#[from] NumericalError),

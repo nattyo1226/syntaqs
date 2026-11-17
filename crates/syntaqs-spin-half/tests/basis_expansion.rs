@@ -4,8 +4,9 @@ use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use std::{fmt::Debug, ops::Neg};
 use syntaqs_core::{
-    BasisError, DimensionOverflow, ExpressionError, HilbertSpace, LocalOperator, LocalState,
-    Operator, State,
+    basis::BasisError, expression::composite::Operator, expression::composite::State,
+    expression::error::ExpressionError, expression::local::LocalOperator,
+    expression::local::LocalState, space::DimensionOverflow, space::HilbertSpace,
 };
 use syntaqs_spin_half::{
     CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis,

@@ -6,7 +6,9 @@
 extern crate blas_provider as _;
 
 use num_complex::Complex;
-use syntaqs_core::{HilbertSpace, LocalOperator, Operator};
+use syntaqs_core::{
+    expression::composite::Operator, expression::local::LocalOperator, space::HilbertSpace,
+};
 use syntaqs_lie::{DecompositionOptions, NumericalOptions, OperatorFamily, Tolerance};
 use syntaqs_spin_half::SpinHalfOperator as Pauli;
 

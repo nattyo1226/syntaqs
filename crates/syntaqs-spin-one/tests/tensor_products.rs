@@ -2,15 +2,15 @@ mod common;
 
 use common::*;
 use num_complex::Complex;
-use syntaqs_core::{Basis, HilbertSpace, TensorKind};
+use syntaqs_core::{basis::Basis, space::HilbertSpace, space::TensorKind};
 use syntaqs_export::{Export, Exported, MatrixArgs};
 use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
 use syntaqs_spin_one::{
     CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,
 };
 
-type Op<T> = syntaqs_core::Operator<u8, O, Complex<T>>;
-type Ket<T> = syntaqs_core::State<u8, S, O, Complex<T>>;
+type Op<T> = syntaqs_core::expression::composite::Operator<u8, O, Complex<T>>;
+type Ket<T> = syntaqs_core::expression::composite::State<u8, S, O, Complex<T>>;
 
 fn vector<T: Real>(psi: &Ket<T>) -> Matrix {
     let out: Exported<Vec<Complex<T>>, _> = psi.export(&SzBasis).unwrap();

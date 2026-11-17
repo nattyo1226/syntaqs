@@ -3,7 +3,9 @@ extern crate blas_provider as _;
 
 use ndarray::Array2;
 use num_complex::Complex;
-use syntaqs_core::{HilbertSpace, LocalOperator, Operator};
+use syntaqs_core::{
+    expression::composite::Operator, expression::local::LocalOperator, space::HilbertSpace,
+};
 use syntaqs_lie::{
     DecompositionFailure, DecompositionOptions, LieDecomposition, LieError, NumericalError,
     NumericalOptions, OperatorFamily,

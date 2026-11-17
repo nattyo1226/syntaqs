@@ -7,8 +7,10 @@ use crate::{
 use num_traits::{One, Zero};
 use std::{marker::PhantomData, ops::Mul};
 use syntaqs_core::{
-    Act, Adjoint, Basis, BasisError, Conjugate, Dimension, ExpressionError, HilbertSpace,
-    LocalOperator, LocalState, Operator,
+    algebra::Act, algebra::Adjoint, basis::Basis, basis::BasisError, coefficient::Conjugate,
+    expression::composite::Operator, expression::error::ExpressionError,
+    expression::local::LocalOperator, expression::local::LocalState, space::Dimension,
+    space::HilbertSpace,
 };
 
 impl<'b, S, O, C, B, D> Export<Exported<D, MatrixMetadata<'b, S, B>>, MatrixArgs<'b, S, B>>
@@ -61,7 +63,9 @@ impl<'b, I: Eq, S, O, C, B, A, D>
 where
     C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
     S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,
-    O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
+    O: Adjoint<C, Term = O>
+        + syntaqs_core::algebra::HomogeneousParity
+        + syntaqs_core::algebra::ParityOperator,
     B: Basis<S, C>,
     A: Ambient<I>,
     D: MatrixStorage<C>,

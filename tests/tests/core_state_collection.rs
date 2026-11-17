@@ -1,6 +1,9 @@
 //! Repeated actions against analytic rotations and an independent bit-state H.
 use num_complex::Complex;
-use syntaqs_core::{HilbertSpace as H, LocalOperator, LocalState, Operator, State};
+use syntaqs_core::{
+    expression::composite::Operator, expression::composite::State,
+    expression::local::LocalOperator, expression::local::LocalState, space::HilbertSpace as H,
+};
 use syntaqs_spin_half::{SpinHalfOperator as O, SpinHalfState as S, SzBasis};
 use syntaqs_tests::graded::{Real, c};
 

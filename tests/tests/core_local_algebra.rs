@@ -4,8 +4,10 @@ use std::num::NonZeroUsize;
 
 use num_complex::Complex;
 use syntaqs_core::{
-    Act, Adjoint, Basis, Dimension, DimensionOverflow, Identity, InnerProduct, LinearCombination,
-    Product, Trace, dim_op, dim_state,
+    algebra::Act, algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Product,
+    algebra::Trace, basis::Basis, basis::dim_op, basis::dim_state,
+    expression::parts::linear_combination::LinearCombination, space::Dimension,
+    space::DimensionOverflow,
 };
 
 use fixture::*;
@@ -208,23 +210,27 @@ fn basis_dimensions_handle_unit_large_and_overflow_cases() {
 }
 
 fn expression_coordinates<T: Real>(
-    state: &syntaqs_core::LocalState<Ket, Operator, Complex<T>>,
+    state: &syntaqs_core::expression::local::LocalState<Ket, Operator, Complex<T>>,
 ) -> Vector<T> {
     AXES.map(|axis| {
-        syntaqs_core::LocalState::<Ket, Operator, Complex<T>>::primitive(Ket::Unit(axis))
-            .inner_product(state)
+        syntaqs_core::expression::local::LocalState::<Ket, Operator, Complex<T>>::primitive(
+            Ket::Unit(axis),
+        )
+        .inner_product(state)
     })
 }
 fn expression_operator_matrix<T: Real>(
-    operator: &syntaqs_core::LocalOperator<Operator, Complex<T>>,
+    operator: &syntaqs_core::expression::local::LocalOperator<Operator, Complex<T>>,
 ) -> Matrix<T> {
     let columns = AXES.map(|axis| {
-        expression_coordinates(&syntaqs_core::LocalState::primitive(Ket::Unit(axis)).act(operator))
+        expression_coordinates(
+            &syntaqs_core::expression::local::LocalState::primitive(Ket::Unit(axis)).act(operator),
+        )
     });
     std::array::from_fn(|i| std::array::from_fn(|j| columns[j][i]))
 }
 fn check_three_level_expressions<T: Real>() {
-    use syntaqs_core::{LocalOperator, LocalState};
+    use syntaqs_core::{expression::local::LocalOperator, expression::local::LocalState};
     type S<T> = LocalState<Ket, Operator, Complex<T>>;
     type O<T> = LocalOperator<Operator, Complex<T>>;
     let state = S::<T>::primitive(Ket::Sum).scaled(c(0.2, 0.3))
@@ -311,9 +317,9 @@ fn three_level_expressions_and_nonorthogonal_basis_match_matrices() {
     check_three_level_expressions::<f64>();
 }
 
-type CompositeState<T> = syntaqs_core::State<u8, Ket, Operator, Complex<T>>;
-type CompositeOperator<T> = syntaqs_core::Operator<u8, Operator, Complex<T>>;
-type CompositeSpace = syntaqs_core::HilbertSpace<u8>;
+type CompositeState<T> = syntaqs_core::expression::composite::State<u8, Ket, Operator, Complex<T>>;
+type CompositeOperator<T> = syntaqs_core::expression::composite::Operator<u8, Operator, Complex<T>>;
+type CompositeSpace = syntaqs_core::space::HilbertSpace<u8>;
 type PairVector<T> = [Complex<T>; 9];
 type PairMatrix<T> = [[Complex<T>; 9]; 9];
 
@@ -357,7 +363,7 @@ fn composite_coordinates<T: Real>(
     state: &CompositeState<T>,
     factors: &[CompositeSpace; 2],
 ) -> PairVector<T> {
-    use syntaqs_core::LocalState;
+    use syntaqs_core::expression::local::LocalState;
     let evaluated = state.evaluate().unwrap();
     std::array::from_fn(|n| {
         let left = LocalState::primitive(Ket::Unit(AXES[n / 3]))
@@ -366,7 +372,7 @@ fn composite_coordinates<T: Real>(
         let right = LocalState::primitive(Ket::Unit(AXES[n % 3]))
             .at(&factors[1])
             .unwrap();
-        syntaqs_core::State::tensor_in(
+        syntaqs_core::expression::composite::State::tensor_in(
             &CompositeSpace::tensor_all(factors.iter().cloned()).unwrap(),
             [left, right],
         )
@@ -383,7 +389,7 @@ fn assert_pair_vector<T: Real>(actual: PairVector<T>, expected: PairVector<T>) {
 }
 
 fn check_three_level_composites<T: Real>() {
-    use syntaqs_core::{LocalOperator as O, LocalState as S};
+    use syntaqs_core::{expression::local::LocalOperator as O, expression::local::LocalState as S};
     let factors = [CompositeSpace::factor(17), CompositeSpace::factor(3)];
     let [a, b] = &factors;
     let h = a.tensor(b).unwrap();
@@ -400,12 +406,12 @@ fn check_three_level_composites<T: Real>() {
     );
     let left = local.at(a).unwrap();
     let right = S::primitive(Ket::Sum).at(b).unwrap();
-    let first = syntaqs_core::State::tensor_in(
+    let first = syntaqs_core::expression::composite::State::tensor_in(
         &CompositeSpace::tensor_all(factors.iter().cloned()).unwrap(),
         [left, right],
     )
     .unwrap();
-    let second = syntaqs_core::State::tensor_in(
+    let second = syntaqs_core::expression::composite::State::tensor_in(
         &h,
         [
             S::primitive(Ket::Unit(Axis::C)).at(a).unwrap(),
@@ -500,7 +506,7 @@ fn three_level_composites_and_nonorthogonal_imports_match_kronecker_matrices() {
 }
 
 fn check_inner_products_and_squared_norms<T: Real>() {
-    use syntaqs_core::{LocalOperator as O, LocalState as S};
+    use syntaqs_core::{expression::local::LocalOperator as O, expression::local::LocalState as S};
     let x = S::<Ket, Operator, Complex<T>>::primitive(Ket::Sum);
     let y = S::<Ket, Operator, Complex<T>>::primitive(Ket::Phase);
     let z = S::<Ket, Operator, Complex<T>>::primitive(Ket::Unit(Axis::A));
@@ -549,9 +555,16 @@ fn check_inner_products_and_squared_norms<T: Real>() {
     let a = CompositeSpace::factor(11);
     let b = CompositeSpace::factor(7);
     let h = a.tensor(&b).unwrap();
-    let first = syntaqs_core::State::tensor_in(&h, [x.at(&a).unwrap(), y.at(&b).unwrap()]).unwrap();
-    let second =
-        syntaqs_core::State::tensor_in(&h, [y.at(&a).unwrap(), z.at(&b).unwrap()]).unwrap();
+    let first = syntaqs_core::expression::composite::State::tensor_in(
+        &h,
+        [x.at(&a).unwrap(), y.at(&b).unwrap()],
+    )
+    .unwrap();
+    let second = syntaqs_core::expression::composite::State::tensor_in(
+        &h,
+        [y.at(&a).unwrap(), z.at(&b).unwrap()],
+    )
+    .unwrap();
     assert_complex(
         Complex::new(first.norm_squared().unwrap(), T::zero()),
         c(4.0, 0.0),
@@ -568,7 +581,7 @@ fn check_inner_products_and_squared_norms<T: Real>() {
         alpha * first.inner_product(&first).unwrap() + beta * first.inner_product(&second).unwrap(),
     );
     for zero in [
-        syntaqs_core::State::zero(&h),
+        syntaqs_core::expression::composite::State::zero(&h),
         (&first - &first.clone()).unwrap(),
     ] {
         assert_complex(

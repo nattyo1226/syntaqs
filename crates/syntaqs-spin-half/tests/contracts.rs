@@ -5,8 +5,9 @@ use std::{fmt::Debug, hash::Hash, ops::Neg};
 use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use syntaqs_core::{
-    Act, Adjoint, Basis, Dimension, Identity, InnerProduct, LinearCombination as Lc, Product,
-    Trace, dim_op, dim_state,
+    algebra::Act, algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Product,
+    algebra::Trace, basis::Basis, basis::dim_op, basis::dim_state,
+    expression::parts::linear_combination::LinearCombination as Lc, space::Dimension,
 };
 use syntaqs_spin_half::{
     CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as State, SzBasis,
@@ -467,13 +468,13 @@ fn precision_independent_primitives_and_public_type_contracts() {
 // Expression evaluation is checked against the literal matrices above, not the
 // primitive lifting helpers. Projections also exercise inner-product evaluation.
 fn expression_vector<T: Real>(
-    state: &syntaqs_core::LocalState<
+    state: &syntaqs_core::expression::local::LocalState<
         syntaqs_spin_half::SpinHalfState,
         syntaqs_spin_half::SpinHalfOperator,
         Complex<T>,
     >,
 ) -> Vector {
-    use syntaqs_core::LocalState;
+    use syntaqs_core::expression::local::LocalState;
     STATES.map(|basis| {
         complex64(
             LocalState::<
@@ -486,9 +487,12 @@ fn expression_vector<T: Real>(
     })
 }
 fn expression_matrix<T: Real>(
-    op: &syntaqs_core::LocalOperator<syntaqs_spin_half::SpinHalfOperator, Complex<T>>,
+    op: &syntaqs_core::expression::local::LocalOperator<
+        syntaqs_spin_half::SpinHalfOperator,
+        Complex<T>,
+    >,
 ) -> Matrix {
-    use syntaqs_core::LocalState;
+    use syntaqs_core::expression::local::LocalState;
     let columns = STATES.map(|basis| expression_vector(&LocalState::primitive(basis).act(op)));
     std::array::from_fn(|i| std::array::from_fn(|j| columns[j][i]))
 }
@@ -497,7 +501,7 @@ fn matrix_trace(matrix: Matrix) -> Complex<f64> {
 }
 
 fn check_local_expressions<T: Real>() {
-    use syntaqs_core::{LocalOperator, LocalState};
+    use syntaqs_core::{expression::local::LocalOperator, expression::local::LocalState};
     type O<T> = LocalOperator<syntaqs_spin_half::SpinHalfOperator, Complex<T>>;
     type S<T> = LocalState<
         syntaqs_spin_half::SpinHalfState,
@@ -619,7 +623,7 @@ fn local_expressions_match_independent_matrices_at_both_precisions() {
     reason = "Exercise the public borrowed scalar overloads"
 )]
 fn all_expression_operator_ownership_forms_agree() {
-    use syntaqs_core::{LocalOperator, LocalState};
+    use syntaqs_core::{expression::local::LocalOperator, expression::local::LocalState};
     type O = LocalOperator<syntaqs_spin_half::SpinHalfOperator, Complex<f64>>;
     type S = LocalState<
         syntaqs_spin_half::SpinHalfState,
@@ -728,7 +732,7 @@ fn long_operator_trace_and_destruction_fit_a_small_stack() {
     std::thread::Builder::new()
         .stack_size(128 * 1024)
         .spawn(|| {
-            use syntaqs_core::LocalOperator;
+            use syntaqs_core::expression::local::LocalOperator;
             type O = LocalOperator<syntaqs_spin_half::SpinHalfOperator, Complex<f64>>;
             let mut expression = O::primitive(Sz);
             for _ in 0..20_000 {
@@ -755,15 +759,18 @@ fn long_operator_trace_and_destruction_fit_a_small_stack() {
         .unwrap();
 }
 
-type GlobalState<T> = syntaqs_core::State<
+type GlobalState<T> = syntaqs_core::expression::composite::State<
     u8,
     syntaqs_spin_half::SpinHalfState,
     syntaqs_spin_half::SpinHalfOperator,
     Complex<T>,
 >;
-type GlobalOperator<T> =
-    syntaqs_core::Operator<u8, syntaqs_spin_half::SpinHalfOperator, Complex<T>>;
-type GlobalSpace = syntaqs_core::HilbertSpace<u8>;
+type GlobalOperator<T> = syntaqs_core::expression::composite::Operator<
+    u8,
+    syntaqs_spin_half::SpinHalfOperator,
+    Complex<T>,
+>;
+type GlobalSpace = syntaqs_core::space::HilbertSpace<u8>;
 type Dense = Vec<Vec<Complex<f64>>>;
 
 fn placed_matrix(operator: Op, site: usize) -> Dense {
@@ -822,12 +829,16 @@ fn dense_dot(a: &[Complex<f64>], b: &[Complex<f64>]) -> Complex<f64> {
 }
 
 fn global_basis<T: Real>(factors: &[GlobalSpace; 3], n: usize) -> GlobalState<T> {
-    syntaqs_core::State::tensor_in(
+    syntaqs_core::expression::composite::State::tensor_in(
         &GlobalSpace::tensor_all(factors.iter().cloned()).unwrap(),
         factors.iter().enumerate().map(|(k, factor)| {
-            syntaqs_core::LocalState::primitive(if (n >> (2 - k)) & 1 == 0 { Up } else { Down })
-                .at(factor)
-                .unwrap()
+            syntaqs_core::expression::local::LocalState::primitive(if (n >> (2 - k)) & 1 == 0 {
+                Up
+            } else {
+                Down
+            })
+            .at(factor)
+            .unwrap()
         }),
     )
     .unwrap()
@@ -846,7 +857,9 @@ fn assert_dense_vector<T: Real>(a: &[Complex<f64>], b: &[Complex<f64>]) {
 }
 
 fn check_composite_expressions<T: Real>() {
-    use syntaqs_core::{LocalOperator as LO, LocalState as LS};
+    use syntaqs_core::{
+        expression::local::LocalOperator as LO, expression::local::LocalState as LS,
+    };
     let factors = [
         GlobalSpace::factor(9),
         GlobalSpace::factor(2),
@@ -868,20 +881,24 @@ fn check_composite_expressions<T: Real>() {
     let s0 = local.at(a).unwrap();
     let s1 = LS::primitive(Down).at(b).unwrap();
     let s2 = LS::primitive(Up).at(d).unwrap();
-    let left = syntaqs_core::State::tensor_in(
+    let left = syntaqs_core::expression::composite::State::tensor_in(
         &h,
         [
-            syntaqs_core::State::tensor_in(&a.tensor(b).unwrap(), [s0.clone(), s1.clone()])
-                .unwrap(),
+            syntaqs_core::expression::composite::State::tensor_in(
+                &a.tensor(b).unwrap(),
+                [s0.clone(), s1.clone()],
+            )
+            .unwrap(),
             s2.clone(),
         ],
     )
     .unwrap();
-    let right = syntaqs_core::State::tensor_in(
+    let right = syntaqs_core::expression::composite::State::tensor_in(
         &h,
         [
             s0,
-            syntaqs_core::State::tensor_in(&b.tensor(d).unwrap(), [s1, s2]).unwrap(),
+            syntaqs_core::expression::composite::State::tensor_in(&b.tensor(d).unwrap(), [s1, s2])
+                .unwrap(),
         ],
     )
     .unwrap();
@@ -983,7 +1000,7 @@ fn composite_expressions_match_independent_three_factor_matrices() {
 }
 
 fn check_subsystem_contractions<T: Real>() {
-    use syntaqs_core::{LocalOperator, LocalState};
+    use syntaqs_core::{expression::local::LocalOperator, expression::local::LocalState};
     let factors = [9, 2, 7].map(GlobalSpace::factor);
     let ket = |site: usize, state| {
         LocalState::<
@@ -994,13 +1011,13 @@ fn check_subsystem_contractions<T: Real>() {
         .at(&factors[site])
         .unwrap()
     };
-    let ab = (syntaqs_core::State::tensor_in(
+    let ab = (syntaqs_core::expression::composite::State::tensor_in(
         &GlobalSpace::tensor_all([factors[0].clone(), factors[1].clone()]).unwrap(),
         [ket(0, Up), ket(1, Up)],
     )
     .unwrap()
     .clone()
-        + &syntaqs_core::State::tensor_in(
+        + &syntaqs_core::expression::composite::State::tensor_in(
             &GlobalSpace::tensor_all([factors[0].clone(), factors[1].clone()]).unwrap(),
             [ket(0, Down), ket(1, Down)],
         )
@@ -1008,31 +1025,31 @@ fn check_subsystem_contractions<T: Real>() {
         .scaled(c(0.7, 0.2)))
         .unwrap();
     let last = (ket(2, Up).clone() + &ket(2, Down).scaled(c(-0.3, 0.5))).unwrap();
-    let lhs = syntaqs_core::State::tensor_in(
+    let lhs = syntaqs_core::expression::composite::State::tensor_in(
         &GlobalSpace::tensor_all(factors.iter().cloned()).unwrap(),
         [ab, last],
     )
     .unwrap();
     let first = (ket(0, Up).clone() + &ket(0, Down).scaled(c(0.4, -0.6))).unwrap();
-    let bc = (syntaqs_core::State::tensor_in(
+    let bc = (syntaqs_core::expression::composite::State::tensor_in(
         &GlobalSpace::tensor_all([factors[1].clone(), factors[2].clone()]).unwrap(),
         [ket(1, Up), ket(2, Up)],
     )
     .unwrap()
     .clone()
-        + &syntaqs_core::State::tensor_in(
+        + &syntaqs_core::expression::composite::State::tensor_in(
             &GlobalSpace::tensor_all([factors[1].clone(), factors[2].clone()]).unwrap(),
             [ket(1, Down), ket(2, Down)],
         )
         .unwrap()
         .scaled(c(-0.2, 0.8)))
         .unwrap();
-    let rhs = syntaqs_core::State::tensor_in(
+    let rhs = syntaqs_core::expression::composite::State::tensor_in(
         lhs.space(),
         [
-            syntaqs_core::State::unit(),
+            syntaqs_core::expression::composite::State::unit(),
             first,
-            syntaqs_core::State::tensor_in(
+            syntaqs_core::expression::composite::State::tensor_in(
                 &GlobalSpace::tensor_all(factors[1..].iter().cloned()).unwrap(),
                 [bc],
             )
@@ -1082,7 +1099,9 @@ fn subsystem_contractions_match_independent_vectors_at_both_precisions() {
 #[test]
 fn composite_empty_zero_spectator_and_overflow_contracts() {
     use syntaqs_core::{
-        ExpressionError as E, LocalOperator as LO, LocalState as LS, Operator as O, State as S,
+        expression::composite::Operator as O, expression::composite::State as S,
+        expression::error::ExpressionError as E, expression::local::LocalOperator as LO,
+        expression::local::LocalState as LS,
     };
     type Op = O<u32, syntaqs_spin_half::SpinHalfOperator, Complex<f64>>;
     type Ket =
@@ -1101,9 +1120,9 @@ fn composite_empty_zero_spectator_and_overflow_contracts() {
     );
     assert!(matches!(identity.trace(), Err(E::UnboundOperator)));
     let factors: Vec<_> = (0..usize::BITS + 1)
-        .map(syntaqs_core::HilbertSpace::<_>::factor)
+        .map(syntaqs_core::space::HilbertSpace::<_>::factor)
         .collect();
-    let space = syntaqs_core::HilbertSpace::tensor_all(factors.iter().cloned()).unwrap();
+    let space = syntaqs_core::space::HilbertSpace::tensor_all(factors.iter().cloned()).unwrap();
     let state = Ket::tensor_in(
         &space,
         factors.iter().map(|f| LS::primitive(Up).at(f).unwrap()),
@@ -1156,7 +1175,9 @@ fn composite_empty_zero_spectator_and_overflow_contracts() {
 
 #[test]
 fn spin_half_has_trivial_grading_in_both_tensor_kinds() {
-    use syntaqs_core::{HilbertSpace, HomogeneousParity, Parity, ParityOperator};
+    use syntaqs_core::{
+        algebra::HomogeneousParity, algebra::Parity, algebra::ParityOperator, space::HilbertSpace,
+    };
     use syntaqs_spin_half::SpinHalf;
     for op in OPS {
         assert_eq!(op.parity(), Parity::Even);

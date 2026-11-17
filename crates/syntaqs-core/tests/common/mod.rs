@@ -2,7 +2,9 @@
 #![allow(dead_code)]
 use core::ops::{Add, Div, Mul, Neg, Sub};
 use num_traits::{One, Zero};
-use syntaqs_core::{Conjugate, Divide, ImaginaryUnit, RealPart};
+use syntaqs_core::{
+    coefficient::Conjugate, coefficient::Divide, coefficient::ImaginaryUnit, coefficient::RealPart,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct MinimalComplex<T> {

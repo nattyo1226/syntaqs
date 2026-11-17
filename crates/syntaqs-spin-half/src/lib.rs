@@ -5,11 +5,11 @@
 //! States are ordered `Up, Down`; CartesianBasis is orthonormal under `Tr(A†B)/2`.
 //! Primitive types carry no numeric precision; the coefficient type is inferred
 //! from the result, specified through a qualified trait call, or selected once
-//! using [`SpinHalf<C>`] and [`syntaqs_core::ExpressionFactory`].
+//! using [`SpinHalf<C>`] and [`syntaqs_core::system::ExpressionFactory`].
 //!
 //! ```
 //! use num_complex::Complex;
-//! use syntaqs_core::{Act, LinearCombination, Product};
+//! use syntaqs_core::{algebra::Act, expression::parts::linear_combination::LinearCombination, algebra::Product};
 //! use syntaqs_spin_half::{SpinHalfOperator as Op, SpinHalfState as State};
 //!
 //! let raised: LinearCombination<State, Complex<f64>> = State::Down.act(&Op::Sp);
@@ -23,7 +23,7 @@
 //!
 //! ```
 //! use num_complex::Complex;
-//! use syntaqs_core::{Basis, LinearCombination, Product};
+//! use syntaqs_core::{basis::Basis, expression::parts::linear_combination::LinearCombination, algebra::Product};
 //! use syntaqs_spin_half::{CartesianBasis, SpinHalfOperator as Op};
 //!
 //! let product: LinearCombination<Op, Complex<f64>> = Op::I.product(&Op::Sp);
@@ -60,7 +60,7 @@
 //!
 //! ```
 //! use num_complex::Complex;
-//! use syntaqs_core::HilbertSpace;
+//! use syntaqs_core::space::HilbertSpace;
 //! use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket};
 //! type Spin = SpinHalf<Complex<f64>>;
 //!
@@ -69,7 +69,7 @@
 //! let h = a.tensor(&b)?;
 //! let up = Spin::state(Ket::Up).at(&a)?;
 //! let down = Spin::state(Ket::Down).at(&b)?;
-//! let state = syntaqs_core::State::tensor_in(&h, [up, down])?;
+//! let state = syntaqs_core::expression::composite::State::tensor_in(&h, [up, down])?;
 //! let sz = Spin::operator(Op::Sz);
 //! let zz = (sz.at(&a)?.clone() * &sz.at(&b)?)?.bind(&h)?;
 //! assert_eq!(state.expectation(&zz)?, Complex::new(-1.0, 0.0));
@@ -117,4 +117,4 @@ pub use state::SpinHalfState;
 /// let sx = SpinHalf::<Complex<f64>>::operator(Op::Sx);
 /// let _ = up.act(&sx);
 /// ```
-pub type SpinHalf<C> = syntaqs_core::ExpressionFactory<SpinHalfState, SpinHalfOperator, C>;
+pub type SpinHalf<C> = syntaqs_core::system::ExpressionFactory<SpinHalfState, SpinHalfOperator, C>;

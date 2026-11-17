@@ -1,5 +1,7 @@
 use core::num::NonZeroUsize;
-use syntaqs_core::{Dimension, DimensionOverflow, HilbertSpace, SpaceError};
+use syntaqs_core::{
+    space::Dimension, space::DimensionOverflow, space::HilbertSpace, space::SpaceError,
+};
 
 // No Clone, Hash, Ord, Debug or generation implementation.
 #[derive(PartialEq, Eq)]

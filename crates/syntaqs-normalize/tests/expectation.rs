@@ -3,20 +3,21 @@ use core::ops::{Add, Mul};
 use num_complex::Complex;
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    Act, Adjoint, Conjugate, Divide, HilbertSpace, InnerProduct, LinearCombination, LocalOperator,
-    LocalState,
+    algebra::Act, algebra::Adjoint, algebra::InnerProduct, coefficient::Conjugate,
+    coefficient::Divide, expression::local::LocalOperator, expression::local::LocalState,
+    expression::parts::linear_combination::LinearCombination, space::HilbertSpace,
 };
 
 use syntaqs_normalize::{NormalizationError, NormalizedExpectation, NormalizedExpectationIn};
 
 #[derive(PartialEq)]
 struct Primitive;
-impl syntaqs_core::HomogeneousParity for Primitive {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for Primitive {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }
-impl syntaqs_core::ParityOperator for Primitive {
+impl syntaqs_core::algebra::ParityOperator for Primitive {
     fn parity_operator() -> Self {
         Self
     }

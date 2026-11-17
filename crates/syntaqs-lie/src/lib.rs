@@ -10,7 +10,7 @@
 //! ```
 //! # extern crate blas_provider as _;
 //! use num_complex::Complex;
-//! use syntaqs_core::LocalOperator;
+//! use syntaqs_core::expression::local::LocalOperator;
 //! use syntaqs_lie::{DecompositionOptions, LieError, NumericalOptions, OperatorFamily};
 //! use syntaqs_spin_half::SpinHalfOperator as Pauli;
 //!

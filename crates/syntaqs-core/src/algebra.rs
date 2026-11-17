@@ -6,9 +6,6 @@
 
 use crate::LinearCombination;
 
-/// Compatibility export for the primitive span dimension trait.
-pub use crate::space::Dimension;
-
 /// The inner product, conjugate-linear on the left and linear on the right.
 pub trait InnerProduct<C> {
     /// Returns the inner product of `self` with `rhs`.
@@ -29,7 +26,7 @@ pub trait Product<C> {
 ///
 /// ```compile_fail
 /// use num_complex::Complex;
-/// use syntaqs_core::{Act, LinearCombination};
+/// use syntaqs_core::{algebra::Act, expression::parts::linear_combination::LinearCombination};
 /// struct Operator;
 /// struct State;
 /// struct OtherOperator;

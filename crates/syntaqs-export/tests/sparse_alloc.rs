@@ -6,7 +6,10 @@ use std::{
     cell::Cell,
     ptr,
 };
-use syntaqs_core::{HilbertSpace, LocalState, Operator, State};
+use syntaqs_core::{
+    expression::composite::Operator, expression::composite::State, expression::local::LocalState,
+    space::HilbertSpace,
+};
 use syntaqs_export::{Export, ExportError, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
 use syntaqs_spin_half::{SpinHalfOperator as O, SpinHalfState as S, SzBasis};
 

@@ -26,7 +26,6 @@ mod operation;
 mod scale;
 mod sum;
 
-pub use linear_combination::{IntoTerms, LinearCombination, Term};
 pub(crate) use operation::{ActExpr, AdjointExpr, ProductExpr};
 pub(crate) use scale::ScaleExpr;
 pub(crate) use sum::{IntoOperands, SumExpr};

@@ -1,7 +1,7 @@
 use super::*;
 use ndarray::array;
 use num_complex::Complex;
-use syntaqs_core::LocalOperator;
+use syntaqs_core::expression::local::LocalOperator;
 use syntaqs_spin_half::SpinHalfOperator as Pauli;
 
 macro_rules! precision_tests {

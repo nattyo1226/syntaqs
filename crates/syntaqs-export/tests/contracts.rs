@@ -1,9 +1,12 @@
 use std::num::NonZeroUsize;
 #[cfg(feature = "sprs")]
-use syntaqs_core::Coordinates;
+use syntaqs_core::basis::Coordinates;
 use syntaqs_core::{
-    Act, Adjoint, Basis, BasisError, Dimension, DimensionOverflow, ExpressionError, HilbertSpace,
-    LinearCombination, LocalOperator, LocalState, Operator, State,
+    algebra::Act, algebra::Adjoint, basis::Basis, basis::BasisError,
+    expression::composite::Operator, expression::composite::State,
+    expression::error::ExpressionError, expression::local::LocalOperator,
+    expression::local::LocalState, expression::parts::linear_combination::LinearCombination,
+    space::Dimension, space::DimensionOverflow, space::HilbertSpace,
 };
 use syntaqs_export::{Export, ExportError, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
 
@@ -16,12 +19,12 @@ enum Op {
 }
 #[allow(non_upper_case_globals)]
 const Op: Op = Op::Flip;
-impl syntaqs_core::HomogeneousParity for Op {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for Op {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }
-impl syntaqs_core::ParityOperator for Op {
+impl syntaqs_core::algebra::ParityOperator for Op {
     fn parity_operator() -> Self {
         Self::Parity
     }
@@ -84,7 +87,7 @@ fn exports_need_neither_primitive_cloning_nor_operator_products_or_index_cloning
     assert_eq!(matrix.data()[2], 1.);
     assert_eq!(matrix.data()[7], 1.);
     assert_eq!(matrix.data().iter().sum::<f64>(), 4.);
-    let state = syntaqs_core::State::tensor_in(
+    let state = syntaqs_core::expression::composite::State::tensor_in(
         &space,
         [
             LocalState::<Ket, Op, f64>::primitive(Ket(1))
@@ -348,8 +351,8 @@ fn export_errors_retain_the_original_error_as_their_source() {
     assert_eq!(e.to_string(), BasisError::InvalidEnumeration.to_string());
     let e = ExportError::from(ExpressionError::MissingIndex);
     assert!(e.source().unwrap().is::<ExpressionError>());
-    let e = ExportError::from(syntaqs_core::SpaceError::DuplicateIndex);
-    assert!(e.source().unwrap().is::<syntaqs_core::SpaceError>());
+    let e = ExportError::from(syntaqs_core::space::SpaceError::DuplicateIndex);
+    assert!(e.source().unwrap().is::<syntaqs_core::space::SpaceError>());
     let e = ExportError::from(DimensionOverflow);
     assert!(e.source().unwrap().is::<DimensionOverflow>());
     let reserve = Vec::<u8>::new().try_reserve(usize::MAX).unwrap_err();

@@ -1,5 +1,5 @@
 use graded::*;
-use syntaqs_core::{HilbertSpace, TensorKind};
+use syntaqs_core::{space::HilbertSpace, space::TensorKind};
 use syntaqs_export::{Export, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
 use syntaqs_tests::graded;
 fn check<T: Real>() {
@@ -77,7 +77,7 @@ fn check<T: Real>() {
         assert!(matches!(
             bad,
             Err(syntaqs_export::ExportError::Expression(
-                syntaqs_core::ExpressionError::MissingIndex
+                syntaqs_core::expression::error::ExpressionError::MissingIndex
             ))
         ));
     }

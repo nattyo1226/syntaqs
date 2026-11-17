@@ -1,4 +1,6 @@
-use syntaqs_core::{HilbertSpace, LocalOperator, LocalState};
+use syntaqs_core::{
+    expression::local::LocalOperator, expression::local::LocalState, space::HilbertSpace,
+};
 use syntaqs_spin_half::{SpinHalfOperator as O, SpinHalfState as S};
 
 #[test]

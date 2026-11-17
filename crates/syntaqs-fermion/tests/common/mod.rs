@@ -2,7 +2,9 @@
 
 use num_complex::Complex;
 use num_traits::{Float, FromPrimitive};
-use syntaqs_core::{LinearCombination, LocalOperator};
+use syntaqs_core::{
+    expression::local::LocalOperator, expression::parts::linear_combination::LinearCombination,
+};
 use syntaqs_fermion::{Fermion, FermionOperator as O, FermionState as S, LadderBasis};
 
 pub const OPS: [O; 7] = [
@@ -122,7 +124,9 @@ pub fn fock_matrix(mode: usize, modes: usize, create: bool) -> Matrix {
     result
 }
 
-pub fn exported_matrix<T: Real, I: Eq>(op: &syntaqs_core::Operator<I, O, Complex<T>>) -> Matrix {
+pub fn exported_matrix<T: Real, I: Eq>(
+    op: &syntaqs_core::expression::composite::Operator<I, O, Complex<T>>,
+) -> Matrix {
     use syntaqs_export::{Export, Exported, MatrixArgs};
     use syntaqs_fermion::OccupationBasis;
     let dense: Exported<Vec<Complex<T>>, _> = op

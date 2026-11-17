@@ -3,18 +3,19 @@ use core::ops::{Add, Mul};
 use num_complex::Complex;
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    Act, Adjoint, Conjugate, Divide, HilbertSpace, InnerProduct, LinearCombination, LocalOperator,
-    LocalState,
+    algebra::Act, algebra::Adjoint, algebra::InnerProduct, coefficient::Conjugate,
+    coefficient::Divide, expression::local::LocalOperator, expression::local::LocalState,
+    expression::parts::linear_combination::LinearCombination, space::HilbertSpace,
 };
 
 #[derive(PartialEq)]
 struct Primitive;
-impl syntaqs_core::HomogeneousParity for Primitive {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for Primitive {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }
-impl syntaqs_core::ParityOperator for Primitive {
+impl syntaqs_core::algebra::ParityOperator for Primitive {
     fn parity_operator() -> Self {
         Self
     }
@@ -98,7 +99,7 @@ impl Divide for Weight {
 
 #[test]
 fn normalized_hs_needs_no_dimension_float_cast_or_general_div_trait() {
-    use syntaqs_core::{Identity, Product, Trace};
+    use syntaqs_core::{algebra::Identity, algebra::Product, algebra::Trace};
     struct IdentityOnly;
     impl Identity for IdentityOnly {
         fn identity() -> Self {
@@ -122,12 +123,12 @@ fn normalized_hs_needs_no_dimension_float_cast_or_general_div_trait() {
             Weight(3.0)
         }
     }
-    impl syntaqs_core::HomogeneousParity for IdentityOnly {
-        fn parity(&self) -> syntaqs_core::Parity {
-            syntaqs_core::Parity::Even
+    impl syntaqs_core::algebra::HomogeneousParity for IdentityOnly {
+        fn parity(&self) -> syntaqs_core::algebra::Parity {
+            syntaqs_core::algebra::Parity::Even
         }
     }
-    impl syntaqs_core::ParityOperator for IdentityOnly {
+    impl syntaqs_core::algebra::ParityOperator for IdentityOnly {
         fn parity_operator() -> Self {
             Self
         }
@@ -352,9 +353,11 @@ fn every_scaled_entry_converts_a_non_clone_source_exactly_once() {
     // Conversion occurs once per call, including empty and many-term inputs.
     for count in 0..=3 {
         let before = calls.get();
-        let terms = LinearCombination::<_, C>::from_terms((0..count).map(|i| syntaqs_core::Term {
-            coefficient: C::new(f64::from(i), 0.0),
-            operand: i,
+        let terms = LinearCombination::<_, C>::from_terms((0..count).map(|i| {
+            syntaqs_core::expression::parts::linear_combination::Term {
+                coefficient: C::new(f64::from(i), 0.0),
+                operand: i,
+            }
         }));
         let scaled = terms.clone().scaled(Input(&calls));
         assert_eq!(calls.get(), before + 1);

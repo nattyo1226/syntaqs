@@ -1,8 +1,7 @@
 //! Local basis sizes and lazy tensor-product enumeration.
 
 use crate::{
-    Basis, BasisError, Dimension, DimensionOverflow, HilbertSpace, LocalOperator, LocalState,
-    Operator, State,
+    Basis, BasisError, Dimension, HilbertSpace, LocalOperator, LocalState, Operator, State,
     expression::{
         composite::{OpExpr, OpNode, StateExpr, StateNode},
         parts::{ProductExpr, SumExpr},
@@ -156,16 +155,4 @@ impl<I> HilbertSpace<I> {
             })
         }))
     }
-}
-
-/// Returns the state basis size from the span of state primitive S.
-pub fn dim_state<S: Dimension>() -> Result<usize, DimensionOverflow> {
-    Ok(S::dim()?.get())
-}
-
-/// Returns the operator basis size from the span of operator primitive O.
-///
-/// This is already the operator-space dimension, not a value to square again.
-pub fn dim_op<O: Dimension>() -> Result<usize, DimensionOverflow> {
-    Ok(O::dim()?.get())
 }

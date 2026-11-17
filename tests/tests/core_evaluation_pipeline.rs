@@ -1,5 +1,5 @@
 //! Combined grouping, repeated collection, contraction, and coordinate queries.
-use syntaqs_core::{HilbertSpace as H, Operator, TensorKind};
+use syntaqs_core::{expression::composite::Operator, space::HilbertSpace as H, space::TensorKind};
 use syntaqs_tests::graded::*;
 
 fn pipeline<T: Real>() {

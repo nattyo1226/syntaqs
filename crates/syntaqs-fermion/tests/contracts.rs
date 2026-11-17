@@ -2,8 +2,10 @@ mod common;
 use common::*;
 use num_complex::Complex;
 use syntaqs_core::{
-    Act, Adjoint, Basis, Dimension, HomogeneousParity, Identity, InnerProduct, LinearCombination,
-    Parity, ParityOperator, Product, Trace,
+    algebra::Act, algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity,
+    algebra::InnerProduct, algebra::Parity, algebra::ParityOperator, algebra::Product,
+    algebra::Trace, basis::Basis, expression::parts::linear_combination::LinearCombination,
+    space::Dimension,
 };
 use syntaqs_fermion::{
     Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,

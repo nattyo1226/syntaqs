@@ -1,5 +1,8 @@
 use std::collections::TryReserveError;
-use syntaqs_core::{BasisError, DimensionOverflow, ExpressionError, SpaceError};
+use syntaqs_core::{
+    basis::BasisError, expression::error::ExpressionError, space::DimensionOverflow,
+    space::SpaceError,
+};
 
 /// Failure to construct or interpret a numerical export.
 #[derive(Debug, thiserror::Error)]

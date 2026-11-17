@@ -2,8 +2,8 @@
 
 use core::num::NonZeroUsize;
 use syntaqs_core::{
-    Dimension, DimensionOverflow, HilbertSpace, Identity, LocalOperator, LocalState, dim_op,
-    dim_state,
+    algebra::Identity, basis::dim_op, basis::dim_state, expression::local::LocalOperator,
+    expression::local::LocalState, space::Dimension, space::DimensionOverflow, space::HilbertSpace,
 };
 
 struct Ket;
@@ -95,7 +95,7 @@ fn local_dimension_errors_are_requested_only_for_queries_on_actual_factors() {
 
 #[test]
 fn identities_share_a_trait_without_numeric_or_unrelated_primitive_bounds() {
-    fn identity<T: syntaqs_core::ops::Identity>() -> T {
+    fn identity<T: syntaqs_core::algebra::Identity>() -> T {
         T::identity()
     }
 
@@ -106,9 +106,10 @@ fn identities_share_a_trait_without_numeric_or_unrelated_primitive_bounds() {
     let _: LocalOperator<Op, Opaque> = LocalOperator::product([]);
 
     // Neither index, operator primitive nor coefficient has any capabilities.
-    let unbound: syntaqs_core::Operator<Opaque, OtherOp, Opaque> = identity();
+    let unbound: syntaqs_core::expression::composite::Operator<Opaque, OtherOp, Opaque> =
+        identity();
     assert!(unbound.space().is_none());
-    let composite: syntaqs_core::Operator<u8, OtherOp, Opaque> = identity();
+    let composite: syntaqs_core::expression::composite::Operator<u8, OtherOp, Opaque> = identity();
     assert!(
         composite
             .bind(&factor)
@@ -121,19 +122,25 @@ fn identities_share_a_trait_without_numeric_or_unrelated_primitive_bounds() {
 
 #[test]
 fn moved_common_parts_and_dimension_capabilities_keep_their_public_paths() {
-    fn dim<P: syntaqs_core::ops::Dimension>() -> usize {
+    fn dim<P: syntaqs_core::space::Dimension>() -> usize {
         P::dim().unwrap().get()
     }
     assert_eq!(dim::<Ket>(), 3);
     assert_eq!(dim::<Op>(), 9);
-    let terms = syntaqs_core::expr::parts::LinearCombination::term(Opaque, OtherOp);
-    let _: syntaqs_core::LinearCombination<OtherOp, Opaque> = terms;
+    let terms = syntaqs_core::expression::parts::linear_combination::LinearCombination::term(
+        Opaque, OtherOp,
+    );
+    let _: syntaqs_core::expression::parts::linear_combination::LinearCombination<OtherOp, Opaque> =
+        terms;
 }
 
 #[test]
 fn local_identity_uses_primitive_rules_without_dimension_queries() {
     use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
-    use syntaqs_core::{Act, Adjoint, InnerProduct, LinearCombination as Lc, Product, Trace};
+    use syntaqs_core::{
+        algebra::Act, algebra::Adjoint, algebra::InnerProduct, algebra::Product, algebra::Trace,
+        expression::parts::linear_combination::LinearCombination as Lc,
+    };
 
     static ACTIONS: AtomicUsize = AtomicUsize::new(0);
     static PRODUCTS: AtomicUsize = AtomicUsize::new(0);
@@ -141,12 +148,12 @@ fn local_identity_uses_primitive_rules_without_dimension_queries() {
     #[derive(PartialEq)]
     struct UnitState;
     struct UnitOperator;
-    impl syntaqs_core::HomogeneousParity for UnitOperator {
-        fn parity(&self) -> syntaqs_core::Parity {
-            syntaqs_core::Parity::Even
+    impl syntaqs_core::algebra::HomogeneousParity for UnitOperator {
+        fn parity(&self) -> syntaqs_core::algebra::Parity {
+            syntaqs_core::algebra::Parity::Even
         }
     }
-    impl syntaqs_core::ParityOperator for UnitOperator {
+    impl syntaqs_core::algebra::ParityOperator for UnitOperator {
         fn parity_operator() -> Self {
             Self
         }
@@ -200,41 +207,24 @@ fn local_identity_uses_primitive_rules_without_dimension_queries() {
 }
 
 #[test]
-fn legacy_and_semantic_module_paths_refer_to_the_same_items() {
+fn canonical_paths_and_prelude_expose_the_same_contracts() {
     use std::any::TypeId;
-    use syntaqs_core::{algebra, error, expr, expression, ops, space};
-
+    use syntaqs_core::{algebra, expression, prelude, space};
     struct Primitive;
     impl space::Dimension for Primitive {
         fn dim() -> Result<std::num::NonZeroUsize, space::DimensionOverflow> {
             Ok(std::num::NonZeroUsize::MIN)
         }
     }
-    fn require_space<T: space::Dimension>() {}
-    fn legacy_bound<T: ops::Dimension>() {
-        require_space::<T>();
-    }
-    fn algebra_bound<T: algebra::Dimension>() {
-        legacy_bound::<T>();
-    }
-    algebra_bound::<Primitive>();
-
+    fn require_dimension<T: space::Dimension>() {}
+    require_dimension::<Primitive>();
     assert_eq!(
-        TypeId::of::<error::DimensionOverflow>(),
-        TypeId::of::<space::DimensionOverflow>()
-    );
-    assert_eq!(
-        TypeId::of::<expr::parts::LinearCombination<(), i32>>(),
+        TypeId::of::<prelude::LinearCombination<(), i32>>(),
         TypeId::of::<expression::parts::linear_combination::LinearCombination<(), i32>>()
     );
     assert_eq!(
-        TypeId::of::<expr::parts::Term<(), i32>>(),
-        TypeId::of::<expression::parts::linear_combination::Term<(), i32>>()
-    );
-    assert_eq!(
-        TypeId::of::<expr::composite::State<u8, (), (), i32>>(),
+        TypeId::of::<prelude::State<u8, (), (), i32>>(),
         TypeId::of::<expression::composite::State<u8, (), (), i32>>()
     );
-    let old: ops::Parity = algebra::Parity::Even;
-    assert_eq!(old, algebra::Parity::Even);
+    assert_eq!(algebra::Parity::Even, algebra::Parity::Even);
 }

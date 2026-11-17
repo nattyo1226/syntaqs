@@ -1,5 +1,5 @@
 use std::marker::PhantomData;
-use syntaqs_core::HilbertSpace;
+use syntaqs_core::space::HilbertSpace;
 
 /// Borrowed local basis, shared space and shape of a coordinate vector.
 ///

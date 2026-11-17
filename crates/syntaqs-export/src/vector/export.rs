@@ -5,7 +5,9 @@ use crate::{
 use num_traits::{One, Zero};
 use std::{marker::PhantomData, ops::Mul};
 use syntaqs_core::{
-    Act, Adjoint, Basis, Conjugate, Coordinates, Dimension, HilbertSpace, LocalState, State,
+    algebra::Act, algebra::Adjoint, basis::Basis, basis::Coordinates, coefficient::Conjugate,
+    expression::composite::State, expression::local::LocalState, space::Dimension,
+    space::HilbertSpace,
 };
 
 impl<'b, B, C, H: Clone, D: VectorStorage<C>> Export<Exported<D, VectorMetadata<'b, B, H>>>
@@ -77,7 +79,9 @@ impl<'b, I: Eq, S, O, C, B, D> Export<Exported<D, VectorMetadata<'b, B, HilbertS
 where
     C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
     S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,
-    O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
+    O: Adjoint<C, Term = O>
+        + syntaqs_core::algebra::HomogeneousParity
+        + syntaqs_core::algebra::ParityOperator,
     B: Basis<S, C>,
     D: VectorStorage<C>,
 {

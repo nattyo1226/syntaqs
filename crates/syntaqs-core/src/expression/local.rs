@@ -12,7 +12,7 @@ use crate::{ExpressionError, Identity, Term};
 /// Different state primitives cannot be added implicitly:
 ///
 /// ```compile_fail
-/// use syntaqs_core::LocalState;
+/// use syntaqs_core::expression::local::LocalState;
 /// let a = LocalState::<u8, (), ()>::primitive(0);
 /// let b = LocalState::<u16, (), ()>::primitive(0);
 /// let _ = a + b;
@@ -21,7 +21,7 @@ use crate::{ExpressionError, Identity, Term};
 /// Coefficient precision also stays fixed:
 ///
 /// ```compile_fail
-/// use syntaqs_core::LocalState;
+/// use syntaqs_core::expression::local::LocalState;
 /// let a = LocalState::<(), (), f32>::zero();
 /// let b = LocalState::<(), (), f64>::zero();
 /// let _ = a + b;
@@ -31,7 +31,7 @@ use crate::{ExpressionError, Identity, Term};
 ///
 /// ```compile_fail
 /// use std::rc::Rc;
-/// use syntaqs_core::LocalState;
+/// use syntaqs_core::expression::local::LocalState;
 /// fn needs_send<T: Send>() {}
 /// needs_send::<LocalState<Rc<()>, (), ()>>();
 /// ```
@@ -48,7 +48,7 @@ pub struct LocalState<S, O, C> {
 /// Its primitive type must match the state's delayed action:
 ///
 /// ```compile_fail
-/// use syntaqs_core::{LocalOperator, LocalState};
+/// use syntaqs_core::{expression::local::LocalOperator, expression::local::LocalState};
 /// let state = LocalState::<(), u8, ()>::zero();
 /// let other = LocalOperator::<u16, ()>::primitive(0);
 /// let _ = state.act(&other);

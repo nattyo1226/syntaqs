@@ -2,7 +2,10 @@
 use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use std::{fmt::Debug, num::NonZeroUsize};
-use syntaqs_core::*;
+use syntaqs_core::{
+    algebra::*, basis::*, expression::composite::*, expression::local::*,
+    expression::parts::linear_combination::*, space::*,
+};
 
 pub trait Real:
     Num

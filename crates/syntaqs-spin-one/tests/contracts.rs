@@ -3,8 +3,10 @@ mod common;
 use common::*;
 use num_complex::Complex;
 use syntaqs_core::{
-    Act, Adjoint, Basis, Dimension, HomogeneousParity, Identity, InnerProduct,
-    LinearCombination as Lc, Parity, ParityOperator, Product, Trace,
+    algebra::Act, algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity,
+    algebra::InnerProduct, algebra::Parity, algebra::ParityOperator, algebra::Product,
+    algebra::Trace, basis::Basis, expression::parts::linear_combination::LinearCombination as Lc,
+    space::Dimension,
 };
 use syntaqs_spin_one::{
     CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,

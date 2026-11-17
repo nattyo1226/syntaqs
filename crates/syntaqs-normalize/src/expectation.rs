@@ -4,8 +4,9 @@ use crate::{NormalizationError, error::nonzero};
 use core::ops::Mul;
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    Act, Adjoint, Conjugate, Divide, HilbertSpace, InnerProduct, LocalOperator, LocalState,
-    Operator, State,
+    algebra::Act, algebra::Adjoint, algebra::InnerProduct, coefficient::Conjugate,
+    coefficient::Divide, expression::composite::Operator, expression::composite::State,
+    expression::local::LocalOperator, expression::local::LocalState, space::HilbertSpace,
 };
 
 /// An expectation divided by the full self-inner-product.
@@ -52,7 +53,9 @@ impl<I: Eq, S, O, C> NormalizedExpectation<Operator<I, O, C>> for State<I, S, O,
 where
     C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
     S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
-    O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
+    O: Adjoint<C, Term = O>
+        + syntaqs_core::algebra::HomogeneousParity
+        + syntaqs_core::algebra::ParityOperator,
 {
     type Output = C;
     fn normalized_expectation(
@@ -71,7 +74,9 @@ impl<I: Eq, S, O, C> NormalizedExpectationIn<Operator<I, O, C>, HilbertSpace<I>>
 where
     C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
     S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
-    O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
+    O: Adjoint<C, Term = O>
+        + syntaqs_core::algebra::HomogeneousParity
+        + syntaqs_core::algebra::ParityOperator,
 {
     type Output = C;
     fn normalized_expectation_in(

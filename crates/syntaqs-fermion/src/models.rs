@@ -5,7 +5,10 @@ use crate::{Fermion, FermionOperator as O};
 use alloc::vec::Vec;
 use core::ops::{Add, Div, Neg};
 use num_traits::One;
-use syntaqs_core::{ExpressionError, HilbertSpace, OperatorOf, SpaceError, TensorKind};
+use syntaqs_core::{
+    expression::error::ExpressionError, space::HilbertSpace, space::SpaceError, space::TensorKind,
+    system::OperatorOf,
+};
 use syntaqs_geometry::{Chain, MappingError, NearestNeighbors, SiteMapper};
 
 /// Failure to construct a Hubbard model on a site-ordered space assignment.
@@ -49,7 +52,7 @@ impl<C> FermionModels<Fermion<C>> {
     ///
     /// ```
     /// use num_complex::Complex;
-    /// use syntaqs_core::HilbertSpace;
+    /// use syntaqs_core::space::HilbertSpace;
     /// use syntaqs_geometry::{Boundary, Chain};
     /// use syntaqs_fermion::Fermion;
     /// type F = Fermion<Complex<f64>>;

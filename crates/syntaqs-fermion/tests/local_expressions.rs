@@ -1,7 +1,7 @@
 mod common;
 use common::*;
 use num_complex::Complex;
-use syntaqs_core::{LocalOperator, LocalState};
+use syntaqs_core::{expression::local::LocalOperator, expression::local::LocalState};
 use syntaqs_export::{Export, Exported, MatrixArgs};
 use syntaqs_fermion::{
     Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,

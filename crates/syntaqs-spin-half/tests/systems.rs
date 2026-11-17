@@ -1,5 +1,8 @@
 use num_complex::Complex;
-use syntaqs_core::{ExpressionError, HilbertSpace as H, SpaceError, State, StateOf};
+use syntaqs_core::{
+    expression::composite::State, expression::error::ExpressionError, space::HilbertSpace as H,
+    space::SpaceError, system::StateOf,
+};
 use syntaqs_geometry::{Boundary, Chain, MappingError};
 use syntaqs_spin_half::models::ModelError;
 use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket};
@@ -23,14 +26,14 @@ fn product_state<C, I: Eq>(sites: &[H<I>], orientations: &[Ket]) -> StateOf<Spin
 fn local_and_composite_expressions_connect_to_existing_types() {
     let a = H::factor("a");
     let b = H::factor("b");
-    let up: syntaqs_core::LocalStateOf<Spin> = Spin::state(Ket::Up);
-    let sz: syntaqs_core::LocalOperatorOf<Spin> = Spin::operator(Op::Sz);
+    let up: syntaqs_core::system::LocalStateOf<Spin> = Spin::state(Ket::Up);
+    let sz: syntaqs_core::system::LocalOperatorOf<Spin> = Spin::operator(Op::Sz);
     let psi: StateOf<Spin, _> = State::tensor_in(
         &a.tensor(&b).unwrap(),
         [up.at(&a).unwrap(), Spin::state(Ket::Down).at(&b).unwrap()],
     )
     .unwrap();
-    let zz: syntaqs_core::OperatorOf<Spin, _> =
+    let zz: syntaqs_core::system::OperatorOf<Spin, _> =
         (sz.at(&a).unwrap().clone() * &sz.at(&b).unwrap()).unwrap();
     assert_eq!(psi.expectation(&zz).unwrap(), Complex::new(-1.0, 0.));
     // Construction fixes f32 even without downstream evaluation or annotation.
@@ -89,7 +92,7 @@ fn models_accept_multiple_leaves_per_site() {
             );
         }
     }
-    let reference = syntaqs_core::OperatorOf::<Spin, _>::sum(terms).unwrap();
+    let reference = syntaqs_core::system::OperatorOf::<Spin, _>::sum(terms).unwrap();
     let basis: Vec<_> = (0..8)
         .map(|bits| {
             State::tensor_in(
@@ -372,7 +375,7 @@ macro_rules! construction_precision {
             let b = H::factor(1);
             let space = a.tensor(&b).unwrap();
             let state = Q::product_state(
-                &syntaqs_core::HilbertSpace::tensor_all([(a).clone(), (b).clone()]).unwrap(),
+                &syntaqs_core::space::HilbertSpace::tensor_all([(a).clone(), (b).clone()]).unwrap(),
                 [Ket::Up, Ket::Down],
             )
             .unwrap();
@@ -421,8 +424,11 @@ macro_rules! construction_precision {
                 state.expectation(&h.scaled(0.5)).unwrap(),
                 Complex::new(-0.5, 0.)
             );
-            let lc =
-                syntaqs_core::LinearCombination::<_, Complex<$real>>::primitive(0u8).scaled(0.5);
+            let lc = syntaqs_core::expression::parts::linear_combination::LinearCombination::<
+                _,
+                Complex<$real>,
+            >::primitive(0u8)
+            .scaled(0.5);
             assert_eq!(
                 lc.terms().next().unwrap().coefficient,
                 Complex::new(0.5, 0.)

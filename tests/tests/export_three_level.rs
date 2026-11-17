@@ -1,6 +1,9 @@
 use fixture::*;
 use num_complex::Complex;
-use syntaqs_core::{Basis, HilbertSpace, LocalOperator, LocalState};
+use syntaqs_core::{
+    basis::Basis, expression::local::LocalOperator, expression::local::LocalState,
+    space::HilbertSpace,
+};
 use syntaqs_export::{Export, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
 use syntaqs_tests::three_level as fixture;
 
@@ -143,9 +146,10 @@ fn check<T: Real>() {
         }
     }
     // Identity is not itself a MatrixUnits basis element; export remains valid.
-    let identity = syntaqs_core::Operator::<u8, Operator, Complex<T>>::identity()
-        .bind(&space)
-        .unwrap();
+    let identity =
+        syntaqs_core::expression::composite::Operator::<u8, Operator, Complex<T>>::identity()
+            .bind(&space)
+            .unwrap();
     let output: Exported<Vec<_>, MatrixMetadata<'_, Ket, _, _>> =
         (&identity).export(MatrixArgs::new(&basis)).unwrap();
     for row in 0..9 {

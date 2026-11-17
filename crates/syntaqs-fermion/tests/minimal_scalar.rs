@@ -4,8 +4,9 @@ use core::ops::{Add, Div, Mul, Neg};
 use num_complex::Complex;
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    Act, Adjoint, Basis, HilbertSpace, Identity, ImaginaryUnit, InnerProduct,
-    LinearCombination as Lc, Product, Trace,
+    algebra::Act, algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Product,
+    algebra::Trace, basis::Basis, coefficient::ImaginaryUnit,
+    expression::parts::linear_combination::LinearCombination as Lc, space::HilbertSpace,
 };
 use syntaqs_fermion::{
     Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,

@@ -7,8 +7,10 @@ use std::{
     ops::{Add, Mul},
 };
 use syntaqs_core::{
-    Act, Adjoint, Basis, BasisError, Conjugate, Dimension, DimensionOverflow, HilbertSpace,
-    LinearCombination, LocalState, State,
+    algebra::Act, algebra::Adjoint, basis::Basis, basis::BasisError, coefficient::Conjugate,
+    expression::composite::State, expression::local::LocalState,
+    expression::parts::linear_combination::LinearCombination, space::Dimension,
+    space::DimensionOverflow, space::HilbertSpace,
 };
 
 // No Clone, Eq, ordering or hashing on either primitive. In particular, the
@@ -16,12 +18,12 @@ use syntaqs_core::{
 #[derive(PartialEq)]
 struct Ket(bool);
 struct Action;
-impl syntaqs_core::HomogeneousParity for Action {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for Action {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }
-impl syntaqs_core::ParityOperator for Action {
+impl syntaqs_core::algebra::ParityOperator for Action {
     fn parity_operator() -> Self {
         Self
     }
@@ -116,8 +118,9 @@ fn local_expansion_needs_no_primitive_clone_product_float_or_division() {
     type S = LocalState<Ket, Action, Coefficient>;
     let basis = CountingBasis::new();
     let state = S::primitive(Ket(true));
-    let delayed = (state.clone() + state.scaled(Coefficient(2)))
-        .act(&syntaqs_core::LocalOperator::primitive(Action));
+    let delayed = (state.clone() + state.scaled(Coefficient(2))).act(
+        &syntaqs_core::expression::local::LocalOperator::primitive(Action),
+    );
     let expanded = delayed.expand(&basis).unwrap();
     let coords = expanded.coordinates(&basis).unwrap();
     assert_eq!(coords.len(), 1);
@@ -364,7 +367,7 @@ fn placed_expansion_shares_nonclone_indices_and_does_not_enumerate_all_basis_ele
         ],
     )
     .unwrap();
-    let op = syntaqs_core::LocalOperator::primitive(Action)
+    let op = syntaqs_core::expression::local::LocalOperator::primitive(Action)
         .at(&b)
         .unwrap();
     let expanded = state.act(&op).unwrap().expand(&basis).unwrap();

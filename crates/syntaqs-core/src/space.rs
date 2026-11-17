@@ -53,7 +53,7 @@ enum Node<I> {
 ///
 /// ```
 /// use core::num::NonZeroUsize;
-/// use syntaqs_core::HilbertSpace;
+/// use syntaqs_core::space::HilbertSpace;
 /// let a = HilbertSpace::factor("a");
 /// let b = HilbertSpace::factor("b");
 /// let h = a.tensor(&b)?;
