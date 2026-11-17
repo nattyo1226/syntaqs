@@ -10,7 +10,7 @@ use crate::{
     AdjointRepresentation, ConstraintDiagnostics, FamilyExpression, LieError, NumericalError,
     NumericalOptions, OperatorFamily, ToleranceCheck,
     invariant::{adjoint_kernel, diagnostics, symmetric_commutant, vector_norm},
-    numerical::{finite, rank_nullspace, symmetric_eigen},
+    numerical::kernels::{finite, rank_nullspace, symmetric_eigen},
 };
 
 /// Finite, reproducible controls for spectral ideal sampling.

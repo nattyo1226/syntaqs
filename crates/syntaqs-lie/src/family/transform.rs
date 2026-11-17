@@ -6,7 +6,7 @@ use num_traits::{Float, One, Zero};
 use crate::{
     FamilyExpression, FamilyValidation, LieError, NumericalError, NumericalOptions, OperatorFamily,
     ToleranceCheck,
-    numerical::{finite, gram_spectrum},
+    numerical::kernels::{finite, gram_spectrum},
 };
 
 /// A new family and its retained coordinates in an immutable originating family.

@@ -610,3 +610,16 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
             .in_span()
     );
 }
+
+#[test]
+fn numerical_error_conversion_preserves_source_and_message() {
+    use std::error::Error;
+
+    let error = LieError::<f64>::from(NumericalError::InvalidSetting("test setting"));
+    let source = error.source().expect("numerical error source");
+    assert!(matches!(
+        source.downcast_ref::<NumericalError>(),
+        Some(NumericalError::InvalidSetting("test setting"))
+    ));
+    assert_eq!(error.to_string(), source.to_string());
+}

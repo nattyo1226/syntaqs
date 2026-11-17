@@ -7,7 +7,7 @@ use num_traits::{Float, One, Zero};
 
 use crate::{
     FamilyExpression, LieError, NumericalError, NumericalOptions, ToleranceCheck,
-    numerical::{finite, real_coordinate, squared_norm, symmetric_eigen},
+    numerical::kernels::{finite, real_coordinate, squared_norm, symmetric_eigen},
 };
 
 /// A nonempty ordered family of shared core operator expressions.
@@ -114,6 +114,7 @@ impl<E: FamilyExpression> OperatorFamily<E> {
 }
 
 mod projection;
+pub(super) mod transform;
 mod validation;
 
 pub use projection::{FamilyCoordinates, GramFactorization, GramMatrix, Projection};

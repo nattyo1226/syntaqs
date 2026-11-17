@@ -61,26 +61,24 @@ mod expression;
 mod family;
 mod invariant;
 mod representation;
-mod transform;
 // Some kernels are reserved for subsequent Lie-representation operations.
 #[allow(dead_code)]
 mod numerical;
-mod tolerance;
 
 pub use decomposition::{
     DecompositionAttempt, DecompositionDiagnostics, DecompositionFailure, DecompositionOptions,
     DecompositionValidation, LieComponent, LieDecomposition,
 };
-pub use error::{LieError, NumericalError};
+pub use error::LieError;
 pub use expression::FamilyExpression;
+pub use family::transform::{FamilyTransform, OrthonormalityReport};
 pub use family::{
     FamilyCoordinates, FamilyValidation, GramFactorization, GramMatrix, IndependenceReport,
     OperatorFamily, Projection,
 };
 pub use invariant::{AdjointCommutant, CenterSplit, ConstraintDiagnostics};
+pub use numerical::{NumericalError, NumericalOptions, Tolerance, ToleranceCheck};
 pub use representation::{
     AdjointRepresentation, BracketClosureCheck, ClosureReport, KillingForm, StructureConstants,
     lie_bracket,
 };
-pub use tolerance::{NumericalOptions, Tolerance, ToleranceCheck};
-pub use transform::{FamilyTransform, OrthonormalityReport};

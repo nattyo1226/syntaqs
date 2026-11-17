@@ -5,7 +5,7 @@ use num_traits::Zero;
 
 use crate::{
     FamilyCoordinates, FamilyExpression, GramFactorization, LieError, NumericalError,
-    NumericalOptions, OperatorFamily, Projection, ToleranceCheck, numerical::finite,
+    NumericalOptions, OperatorFamily, Projection, ToleranceCheck, numerical::kernels::finite,
 };
 
 /// Constructs `-i(AB-BA)`, including on graded spaces (an ordinary bracket).
