@@ -9,7 +9,7 @@ use syntaqs_geometry::{Chain, MappingError, NearestNeighbors, SiteMapper};
 
 /// Failure to construct a spin-1 model on a site-ordered space assignment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
-pub enum UtilityError {
+pub enum ModelError {
     /// The input site count differs from the chain's count.
     #[error("{0}")]
     Mapping(#[from] MappingError),
@@ -25,7 +25,7 @@ pub enum UtilityError {
 fn model_space<I: Eq>(
     chain: &Chain,
     sites: &[HilbertSpace<I>],
-) -> Result<HilbertSpace<I>, UtilityError> {
+) -> Result<HilbertSpace<I>, ModelError> {
     SiteMapper::new(chain, sites)?;
     Ok(HilbertSpace::tensor_all(sites.iter().cloned())?)
 }
@@ -55,7 +55,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
         jx: R,
         jy: R,
         jz: R,
-    ) -> Result<OperatorOf<SpinOne<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<SpinOne<C>, I>, ModelError>
     where
         C: Clone + From<R> + Neg<Output = C> + One + Add<Output = C> + Div<Output = C>,
     {
@@ -93,7 +93,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
         chain: &Chain,
         sites: &[HilbertSpace<I>],
         j: R,
-    ) -> Result<OperatorOf<SpinOne<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<SpinOne<C>, I>, ModelError>
     where
         C: Clone + From<R> + Neg<Output = C> + One + Add<Output = C> + Div<Output = C>,
     {
@@ -132,7 +132,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
         sites: &[HilbertSpace<I>],
         j: R,
         k: R,
-    ) -> Result<OperatorOf<SpinOne<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<SpinOne<C>, I>, ModelError>
     where
         C: Clone + From<R> + Neg<Output = C> + One + Add<Output = C> + Div<Output = C>,
     {

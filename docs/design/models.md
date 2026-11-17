@@ -4,31 +4,28 @@ Updated: 2026-11-02
 
 ## 1. Scope and responsibilities
 
-Each concrete algebra's models module constructs ordinary state/operator expressions from a Chain and caller-owned site-ordered spaces. Geometry enumerates edges/placements; models assign operators, coefficients, and couplings, without separate model expression types or evaluators.
+Each concrete algebra's models module constructs ordinary operator expressions from a Chain and caller-owned site-ordered spaces. Geometry enumerates edges/placements; models assign operators, coefficients, and couplings, without separate model expression types or evaluators.
 
 Callers issue indices. Construction validates length, duplicates, and model-specific site shape while delaying local evaluation and matrices. See [geometry](geometry.md) for connections and [local algebras](local-structure.md) for primitive normalization.
 
 ## 2. SpinHalf model construction
 
-Public entry points are associated functions on `syntaqs_spin_half::models::SpinHalfModels<SpinHalf<C>>`. Below, `type Models = SpinHalfModels<Spin>`. UtilityError is re-exported at the crate root.
+Public entry points are associated functions on `syntaqs_spin_half::models::SpinHalfModels<SpinHalf<C>>`. Below, `type Models = SpinHalfModels<Spin>`. Errors are exposed as `models::ModelError`.
 
 | Call | Successful result |
 | --- | --- |
 | `Models::xyz(&chain, &factors, jx, jy, jz)` | `OperatorOf<Spin, I>` |
 | `Models::heisenberg(&chain, &factors, coupling)` | `OperatorOf<Spin, I>` |
-| `Models::neel(&chain, &factors, first)` | `StateOf<Spin, I>` |
 
-All return Result and validate sequence length and all leaf duplicates even without edges. Length errors are `UtilityError::Mapping(MappingError::SiteCountMismatch { expected, actual })`, duplicates `UtilityError::Space(SpaceError::DuplicateIndex)`, and placement/binding errors UtilityError::Expression. Original errors remain sources; indices need only Eq.
+All return Result and validate sequence length and all leaf duplicates even without edges. Length errors are `ModelError::Mapping(MappingError::SiteCountMismatch { expected, actual })`, duplicates `ModelError::Space(SpaceError::DuplicateIndex)`, and placement/binding errors ModelError::Expression. Original errors remain sources; indices need only Eq.
 
 XYZ constructs `−(1/4)Σ_(i,j) Σ_(a∈Li,b∈Lj) (Jx Sx_a Sx_b + Jy Sy_a Sy_b + Jz Sz_a Sz_b)`, using NearestNeighbors and all leaves_cartesian pairs between sites. Li is the leaf set of site i. There are no within-site terms. Heisenberg sets all couplings to J; positive J is ferromagnetic. No positional zip is implicitly chosen.
 
 XYZ/Heisenberg bind to the tensor of input site handles in sequence order, sharing local grouping and retaining sites absent from interactions. They do not preserve an independently existing ambient root, upper grouping, or different factor order.
 
-Neel alternates by site position and first, assigning the same orientation to every leaf of a site. Empty sites still count toward parity. Factor order follows site order and local leaf order; odd periodic lengths are allowed. For `[(a,b),c]` and first=Up, the state is `Up_a ⊗ Up_b ⊗ Down_c`.
+Zero sites return a zero Hamiltonian bound to the unit space. All-empty sites behave similarly, retaining empty-site grouping in the Hamiltonian's space.
 
-Zero sites return a zero Hamiltonian bound to the unit space and a unit state. All-empty sites behave similarly, retaining empty-site grouping in the Hamiltonian's space.
-
-Bounds belong to each function: xyz requires `C: Clone + From<R> + Neg<Output=C> + One + Add<Output=C> + Div<Output=C>`, and heisenberg additionally `R: Clone`. Neel needs no numeric capabilities or Clone on C. Model-specific methods are not added to QuantumSystem.
+Bounds belong to each function: xyz requires `C: Clone + From<R> + Neg<Output=C> + One + Add<Output=C> + Div<Output=C>`, and heisenberg additionally `R: Clone`. Model-specific methods are not added to QuantumSystem.
 
 ## 3. Fermionic Hubbard models
 
@@ -75,14 +72,14 @@ Construct in models.rs through `models::FermionModels<Fermion<C>>`, without mode
 ```rust,ignore
 FermionModels::<Fermion<C>>::hubbard(&chain, &sites, t, u)
 FermionModels::<Fermion<C>>::symmetric_hubbard(&chain, &sites, t, u)
-// Both return Result<OperatorOf<Fermion<C>, I>, UtilityError>.
+// Both return Result<OperatorOf<Fermion<C>, I>, ModelError>.
 ```
 
 - Each `sites: &[HilbertSpace<I>]` entry is one physical site with exactly two graded leaves in `(up,down)` order. Callers issue indices; constructors do not reissue them.
 - Build the full graded space in site order and up/down order, sharing input site handles, and bind the result to it.
 - Hopping connects only equal spins on adjacent sites, unlike spin-half's all-leaf Cartesian pairs. Add each direction once per edge; core's grading supplies signs.
 - Follow Chain boundaries: no edges for zero/one site and one edge for two periodic sites, without duplicate hopping.
-- Validate site count, two-leaf graded shape, and all mode duplicates even for zero couplings. Invalid sites produce `UtilityError::InvalidSite { site }`; Mapping/Space/Expression retain underlying errors.
+- Validate site count, two-leaf graded shape, and all mode duplicates even for zero couplings. Invalid sites produce `ModelError::InvalidSite { site }`; Mapping/Space/Expression retain underlying errors.
 - Zero sites give zero bound to the graded unit; one site retains interaction without hopping.
 - Standard Hubbard requires `C: Clone + From<R> + Neg<Output=C>`; symmetric additionally One, Add, and Div. Both t/U use one R. Generate 1/4 in C for `(U/4) Mz↑Mz↓`, without imaginary unit, local Product/Act, or Float. Parameters must represent real values and fractions mathematical division.
 
@@ -134,7 +131,7 @@ BLBQ accepts independent bilinear J and biquadratic K. The angular convention `H
 | `SpinOneModels::<SpinOne<C>>::heisenberg(&chain, &sites, j)` | `OperatorOf<SpinOne<C>,I>` |
 | `SpinOneModels::<SpinOne<C>>::blbq(&chain, &sites, j, k)` | `OperatorOf<SpinOne<C>,I>` |
 
-All take &Chain and site spaces and return `Result<_,syntaqs_spin_one::UtilityError>`. Site, pairing, and binding contracts follow SpinHalf XYZ/Heisenberg:
+All take &Chain and site spaces and return `Result<_,syntaqs_spin_one::models::ModelError>`. Site, pairing, and binding contracts follow SpinHalf XYZ/Heisenberg:
 
 - One input space is one site; couple every leaf pair across adjacent sites. BLBQ squares each pair's `A_ab=S_a·S_b` separately, without within-site terms or cross terms between different leaf pairs.
 - Check count and global index uniqueness independently of edges/couplings, requiring only Eq on I, not Clone/Hash/Ord.
@@ -142,7 +139,7 @@ All take &Chain and site spaces and return `Result<_,syntaqs_spin_one::UtilityEr
 - Empty sites retain positions without reconnecting neighbors. Zero sites give zero on the unit; one/all-empty sites give zero bound to input space structure.
 - Follow [Chain boundaries](geometry.md): no edges for zero/one site, one for two sites with either boundary.
 
-Errors are Mapping(MappingError), Space(SpaceError), and Expression(ExpressionError), preserving sources. Count mismatch uses SiteCountMismatch and duplicate indices DuplicateIndex. UtilityError is re-exported at the crate root.
+Errors are Mapping(MappingError), Space(SpaceError), and Expression(ExpressionError), preserving sources. Count mismatch uses SiteCountMismatch and duplicate indices DuplicateIndex. Errors are exposed as `models::ModelError`.
 
 ### 4.3. Delayed construction and coefficient capabilities
 

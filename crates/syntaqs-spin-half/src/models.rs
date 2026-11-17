@@ -1,16 +1,16 @@
 //! Spin models built on a chain and caller-owned site spaces.
 
 use crate::coefficient::quarter;
-use crate::{SpinHalf, SpinHalfOperator, SpinHalfState};
+use crate::{SpinHalf, SpinHalfOperator};
 use alloc::vec::Vec;
 use core::ops::{Add, Div, Neg};
 use num_traits::One;
-use syntaqs_core::{ExpressionError, HilbertSpace, OperatorOf, SpaceError, State, StateOf};
+use syntaqs_core::{ExpressionError, HilbertSpace, OperatorOf, SpaceError};
 use syntaqs_geometry::{Chain, MappingError, NearestNeighbors, SiteMapper};
 
 /// Failure to construct a spin model on a site-ordered space assignment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
-pub enum UtilityError {
+pub enum ModelError {
     /// The input site count differs from the chain's count.
     #[error("{0}")]
     Mapping(#[from] MappingError),
@@ -26,7 +26,7 @@ pub enum UtilityError {
 fn model_space<I: Eq>(
     chain: &Chain,
     factors: &[HilbertSpace<I>],
-) -> Result<HilbertSpace<I>, UtilityError> {
+) -> Result<HilbertSpace<I>, ModelError> {
     SiteMapper::new(chain, factors)?;
     Ok(HilbertSpace::tensor_all(factors.iter().cloned())?)
 }
@@ -53,7 +53,7 @@ impl<C> SpinHalfModels<SpinHalf<C>> {
         jx: R,
         jy: R,
         jz: R,
-    ) -> Result<OperatorOf<SpinHalf<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<SpinHalf<C>, I>, ModelError>
     where
         C: Clone + From<R> + Neg<Output = C> + One + Add<Output = C> + Div<Output = C>,
     {
@@ -87,39 +87,10 @@ impl<C> SpinHalfModels<SpinHalf<C>> {
         chain: &Chain,
         factors: &[HilbertSpace<I>],
         coupling: R,
-    ) -> Result<OperatorOf<SpinHalf<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<SpinHalf<C>, I>, ModelError>
     where
         C: Clone + From<R> + Neg<Output = C> + One + Add<Output = C> + Div<Output = C>,
     {
         Self::xyz(chain, factors, coupling.clone(), coupling.clone(), coupling)
-    }
-
-    /// Builds a product state alternating orientation by site, starting at `first`.
-    ///
-    /// All leaves of a site have the same orientation, and empty sites count
-    /// toward parity. Leaves appear in site order and then local leaf order.
-    /// Zero sites or all-empty sites give the unit state. Odd periodic chains
-    /// are allowed. No numeric or cloning capabilities are required of `C`.
-    pub fn neel<I: Eq>(
-        chain: &Chain,
-        factors: &[HilbertSpace<I>],
-        first: SpinHalfState,
-    ) -> Result<StateOf<SpinHalf<C>, I>, UtilityError> {
-        let space = model_space(chain, factors)?;
-        let mut states = Vec::new();
-        for (i, site) in factors.iter().enumerate() {
-            let orientation = if i % 2 == 0 {
-                first
-            } else {
-                match first {
-                    SpinHalfState::Up => SpinHalfState::Down,
-                    SpinHalfState::Down => SpinHalfState::Up,
-                }
-            };
-            for leaf in site.leaves() {
-                states.push(SpinHalf::<C>::state(orientation).at(leaf)?);
-            }
-        }
-        Ok(State::tensor_in(&space, states)?)
     }
 }

@@ -87,7 +87,6 @@ pub mod basis;
 pub mod models;
 pub mod operator;
 pub mod state;
-pub use models::UtilityError;
 
 mod coefficient;
 

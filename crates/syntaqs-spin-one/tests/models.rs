@@ -1,3 +1,4 @@
+use syntaqs_spin_one::models::ModelError;
 mod common;
 
 use common::*;
@@ -5,7 +6,7 @@ use num_complex::Complex;
 use syntaqs_core::{ExpressionError, HilbertSpace as H, OperatorOf, SpaceError};
 use syntaqs_export::{Export, Exported, MatrixArgs};
 use syntaqs_geometry::{Boundary, Chain, MappingError};
-use syntaqs_spin_one::{SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis, UtilityError};
+use syntaqs_spin_one::{SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis};
 
 type Spin<T> = SpinOne<Complex<T>>;
 
@@ -306,12 +307,11 @@ fn every_model_validates_even_with_no_edges_and_zero_couplings() {
             for count in 0..=4 {
                 let sites: Vec<_> = (0..count).map(H::factor).collect();
                 let chain = Chain::new(n, boundary);
-                let expected = (n != count).then_some(UtilityError::Mapping(
-                    MappingError::SiteCountMismatch {
+                let expected =
+                    (n != count).then_some(ModelError::Mapping(MappingError::SiteCountMismatch {
                         expected: n,
                         actual: count,
-                    },
-                ));
+                    }));
                 assert_eq!(
                     syntaqs_spin_one::models::SpinOneModels::<Q>::xyz(
                         &chain, &sites, 0.0, 0.0, 0.0
@@ -337,7 +337,7 @@ fn every_model_validates_even_with_no_edges_and_zero_couplings() {
             H::tensor_all([H::factor(0)]).unwrap(),
         ];
         let chain = Chain::new(3, boundary);
-        let expected = Some(UtilityError::Space(SpaceError::DuplicateIndex));
+        let expected = Some(ModelError::Space(SpaceError::DuplicateIndex));
         assert_eq!(
             syntaqs_spin_one::models::SpinOneModels::<Q>::xyz(&chain, &sites, 0.0, 0.0, 0.0).err(),
             expected
@@ -442,7 +442,7 @@ fn construction_needs_rational_arithmetic_but_no_float_or_evaluation() {
 fn model_errors_preserve_the_original_source_and_message() {
     for (error, source) in [
         (
-            UtilityError::from(MappingError::SiteCountMismatch {
+            ModelError::from(MappingError::SiteCountMismatch {
                 expected: 2,
                 actual: 1,
             }),
@@ -453,11 +453,11 @@ fn model_errors_preserve_the_original_source_and_message() {
             .to_string(),
         ),
         (
-            UtilityError::from(SpaceError::DuplicateIndex),
+            ModelError::from(SpaceError::DuplicateIndex),
             SpaceError::DuplicateIndex.to_string(),
         ),
         (
-            UtilityError::from(ExpressionError::NotAFactor),
+            ModelError::from(ExpressionError::NotAFactor),
             ExpressionError::NotAFactor.to_string(),
         ),
     ] {

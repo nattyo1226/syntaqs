@@ -5,7 +5,7 @@ use num_complex::Complex;
 use syntaqs_basic::Id128;
 #[cfg(not(feature = "normalize"))]
 use syntaqs_core::Divide;
-use syntaqs_core::HilbertSpace;
+use syntaqs_core::{HilbertSpace, State};
 use syntaqs_geometry::{Boundary, Chain};
 #[cfg(feature = "normalize")]
 use syntaqs_normalize::{Norm, NormalizedExpectation};
@@ -21,7 +21,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     // H = -J sum(Sx Sx + Sy Sy + Sz Sz); positive J is ferromagnetic.
     let h = Models::heisenberg(&chain, &factors, 1.0)?;
-    let psi = Models::neel(&chain, &factors, SpinHalfState::Up)?;
+    let space = HilbertSpace::tensor_all(factors.iter().cloned())?;
+    let psi = State::try_tensor_in(
+        &space,
+        factors.iter().enumerate().map(|(i, factor)| {
+            Spin::state(if i % 2 == 0 {
+                SpinHalfState::Up
+            } else {
+                SpinHalfState::Down
+            })
+            .at(factor)
+        }),
+    )?;
     #[cfg(feature = "normalize")]
     let energy = psi.normalized_expectation(&h)?;
     // This Neel state has nonzero norm; core's scalar quotient needs no

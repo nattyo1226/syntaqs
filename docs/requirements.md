@@ -72,7 +72,7 @@ See [bases](design/basis.md) and [export](design/export.md).
 - Support one-dimensional chains with site count, order, and boundary conditions, nearest-neighbor edges, and ordered many-site relations.
 - Borrow caller-owned site-ordered data to connect it to geometry, validating lengths and referenced positions.
 - Support multiple leaves, nesting, and empty spaces at sites; distinguish site order from the full space's factor order.
-- Construct spin-1/2 XYZ, Heisenberg, and Neel states; spin-1 XYZ, Heisenberg, and BLBQ models; and standard/symmetric fermionic Hubbard models as ordinary expressions.
+- Construct spin-1/2 XYZ and Heisenberg models; spin-1 XYZ, Heisenberg, and BLBQ models; and standard/symmetric fermionic Hubbard models as ordinary expressions. Construct Neel states using expression building blocks.
 - Preserve the physical meaning of couplings by compensating for primitive normalization. Do not silently discard constant shifts.
 - Specify boundary conventions for zero, one, and two sites, and validate assignments even without edges or nonzero couplings.
 

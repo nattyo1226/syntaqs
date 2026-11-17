@@ -1,9 +1,23 @@
 use num_complex::Complex;
 use syntaqs_core::{ExpressionError, HilbertSpace as H, SpaceError, State, StateOf};
 use syntaqs_geometry::{Boundary, Chain, MappingError};
-use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket, UtilityError};
+use syntaqs_spin_half::models::ModelError;
+use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket};
 
 type Spin = SpinHalf<Complex<f64>>;
+
+fn product_state<C, I: Eq>(sites: &[H<I>], orientations: &[Ket]) -> StateOf<SpinHalf<C>, I> {
+    assert_eq!(sites.len(), orientations.len());
+    let space = H::tensor_all(sites.iter().cloned()).unwrap();
+    let states = sites
+        .iter()
+        .zip(orientations)
+        .flat_map(|(site, &orientation)| {
+            site.leaves()
+                .map(move |leaf| SpinHalf::<C>::state(orientation).at(leaf).unwrap())
+        });
+    State::tensor_in(&space, states).unwrap()
+}
 
 #[test]
 fn local_and_composite_expressions_connect_to_existing_types() {
@@ -34,17 +48,12 @@ fn local_and_composite_expressions_connect_to_existing_types() {
         &chain, &sites, 1.0,
     )
     .unwrap();
-    let psi = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<Complex<f32>>>::neel(
-        &chain,
-        &sites,
-        Ket::Up,
-    )
-    .unwrap();
+    let psi = product_state::<Complex<f32>, _>(&sites, &[Ket::Up, Ket::Down]);
     assert_eq!(psi.expectation(&h).unwrap(), Complex::new(0.25_f32, 0.));
 }
 
 #[test]
-fn models_accept_multiple_leaves_and_alternate_by_site() {
+fn models_accept_multiple_leaves_per_site() {
     let a = H::factor(0);
     let b = H::factor(1);
     let c = H::factor(2);
@@ -56,8 +65,7 @@ fn models_accept_multiple_leaves_and_alternate_by_site() {
         syntaqs_spin_half::models::SpinHalfModels::<Spin>::heisenberg(&chain, &sites, 1.0).unwrap();
     let xyz = syntaqs_spin_half::models::SpinHalfModels::<Spin>::xyz(&chain, &sites, 1.0, 1.0, 1.0)
         .unwrap();
-    let psi =
-        syntaqs_spin_half::models::SpinHalfModels::<Spin>::neel(&chain, &sites, Ket::Up).unwrap();
+    let psi = product_state::<Complex<f64>, _>(&sites, &[Ket::Up, Ket::Down]);
     let expected = State::tensor_in(
         psi.space(),
         [
@@ -119,11 +127,10 @@ fn models_accept_multiple_leaves_and_alternate_by_site() {
 }
 
 #[test]
-fn empty_sites_keep_edges_and_parity_and_all_empty_inputs_give_units() {
+fn empty_sites_keep_edges_and_all_empty_inputs_give_units() {
     let sites = [H::factor(0), H::unit(), H::factor(1)];
     let chain = Chain::new(3, Boundary::Open);
-    let psi =
-        syntaqs_spin_half::models::SpinHalfModels::<Spin>::neel(&chain, &sites, Ket::Up).unwrap();
+    let psi = product_state::<Complex<f64>, _>(&sites, &[Ket::Up, Ket::Up, Ket::Up]);
     let expected = State::tensor_in(
         psi.space(),
         [
@@ -157,9 +164,7 @@ fn empty_sites_keep_edges_and_parity_and_all_empty_inputs_give_units() {
     for count in 0..=3 {
         let sites: Vec<_> = (0..count).map(|_| H::<u8>::unit()).collect();
         let chain = Chain::new(count, Boundary::Periodic);
-        let psi =
-            syntaqs_spin_half::models::SpinHalfModels::<Spin>::neel(&chain, &sites, Ket::Down)
-                .unwrap();
+        let psi = product_state::<Complex<f64>, _>(&sites, &vec![Ket::Down; count]);
         let h = syntaqs_spin_half::models::SpinHalfModels::<Spin>::heisenberg(&chain, &sites, 1.0)
             .unwrap();
         assert_eq!(
@@ -186,15 +191,10 @@ fn every_model_validates_length_and_duplicate_indices_without_edges() {
             let sites: Vec<_> = (0..count).map(H::factor).collect();
             let chain = Chain::new(n, Boundary::Open);
             let expected =
-                (n != count).then_some(UtilityError::Mapping(MappingError::SiteCountMismatch {
+                (n != count).then_some(ModelError::Mapping(MappingError::SiteCountMismatch {
                     expected: n,
                     actual: count,
                 }));
-            assert_eq!(
-                syntaqs_spin_half::models::SpinHalfModels::<Spin>::neel(&chain, &sites, Ket::Up)
-                    .err(),
-                expected
-            );
             assert_eq!(
                 syntaqs_spin_half::models::SpinHalfModels::<Spin>::heisenberg(&chain, &sites, 1.0)
                     .err(),
@@ -217,11 +217,7 @@ fn every_model_validates_length_and_duplicate_indices_without_edges() {
             H::tensor_all([H::factor(0)]).unwrap(),
         ];
         let chain = Chain::new(3, boundary);
-        let expected = Some(UtilityError::Space(SpaceError::DuplicateIndex));
-        assert_eq!(
-            syntaqs_spin_half::models::SpinHalfModels::<Spin>::neel(&chain, &sites, Ket::Up).err(),
-            expected
-        );
+        let expected = Some(ModelError::Space(SpaceError::DuplicateIndex));
         assert_eq!(
             syntaqs_spin_half::models::SpinHalfModels::<Spin>::heisenberg(&chain, &sites, 1.0)
                 .err(),
@@ -237,7 +233,6 @@ fn every_model_validates_length_and_duplicate_indices_without_edges() {
 
 #[test]
 fn model_construction_needs_only_operation_specific_coefficient_capabilities() {
-    struct NoCapabilities;
     #[derive(Clone)]
     struct Coupling(f64);
     impl core::ops::Add for Coupling {
@@ -277,15 +272,8 @@ fn model_construction_needs_only_operation_specific_coefficient_capabilities() {
             Self(-self.0)
         }
     }
-    // No numeric traits, Clone or Act are required for the Neel coefficient.
     let sites = [H::factor(0), H::factor(1)];
     let chain = Chain::new(2, Boundary::Open);
-    let _ = syntaqs_spin_half::models::SpinHalfModels::<SpinHalf<NoCapabilities>>::neel(
-        &chain,
-        &sites,
-        Ket::Up,
-    )
-    .unwrap();
     // Hamiltonian construction needs rational arithmetic, but neither Zero nor evaluation.
     // XYZ's real coupling source need not implement Clone either.
     struct Real(i32);
@@ -321,9 +309,7 @@ fn non_clone_indices_and_deep_site_grouping_are_supported_iteratively() {
             }
             let sites = [first, H::factor(Index(0))];
             let chain = Chain::new(2, Boundary::Periodic);
-            let state =
-                syntaqs_spin_half::models::SpinHalfModels::<Spin>::neel(&chain, &sites, Ket::Up)
-                    .unwrap();
+            let state = product_state::<Complex<f64>, _>(&sites, &[Ket::Up, Ket::Down]);
             let h =
                 syntaqs_spin_half::models::SpinHalfModels::<Spin>::heisenberg(&chain, &sites, 1.0)
                     .unwrap();
@@ -350,15 +336,15 @@ fn non_clone_indices_and_deep_site_grouping_are_supported_iteratively() {
 fn model_errors_preserve_sources_and_messages() {
     for (error, source) in [
         (
-            UtilityError::from(ExpressionError::NotAFactor),
+            ModelError::from(ExpressionError::NotAFactor),
             ExpressionError::NotAFactor.to_string(),
         ),
         (
-            UtilityError::from(SpaceError::DuplicateIndex),
+            ModelError::from(SpaceError::DuplicateIndex),
             SpaceError::DuplicateIndex.to_string(),
         ),
         (
-            UtilityError::from(MappingError::SiteCountMismatch {
+            ModelError::from(MappingError::SiteCountMismatch {
                 expected: 2,
                 actual: 1,
             }),

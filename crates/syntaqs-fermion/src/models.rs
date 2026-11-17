@@ -10,7 +10,7 @@ use syntaqs_geometry::{Chain, MappingError, NearestNeighbors, SiteMapper};
 
 /// Failure to construct a Hubbard model on a site-ordered space assignment.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
-pub enum UtilityError {
+pub enum ModelError {
     /// The supplied site count does not match the chain.
     #[error("{0}")]
     Mapping(#[from] MappingError),
@@ -63,7 +63,7 @@ impl<C> FermionModels<Fermion<C>> {
         sites: &[HilbertSpace<I>],
         t: R,
         u: R,
-    ) -> Result<OperatorOf<Fermion<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<Fermion<C>, I>, ModelError>
     where
         C: Clone + From<R> + Neg<Output = C>,
     {
@@ -84,7 +84,7 @@ impl<C> FermionModels<Fermion<C>> {
         sites: &[HilbertSpace<I>],
         t: R,
         u: R,
-    ) -> Result<OperatorOf<Fermion<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<Fermion<C>, I>, ModelError>
     where
         C: Clone + From<R> + Neg<Output = C> + One + Add<Output = C> + Div<Output = C>,
     {
@@ -97,7 +97,7 @@ impl<C> FermionModels<Fermion<C>> {
         t: C,
         u: C,
         interaction: O,
-    ) -> Result<OperatorOf<Fermion<C>, I>, UtilityError>
+    ) -> Result<OperatorOf<Fermion<C>, I>, ModelError>
     where
         C: Clone + Neg<Output = C>,
     {
@@ -112,7 +112,7 @@ impl<C> FermionModels<Fermion<C>> {
                 {
                     [up, down]
                 }
-                _ => return Err(UtilityError::InvalidSite { site }),
+                _ => return Err(ModelError::InvalidSite { site }),
             };
             modes.push(pair);
         }

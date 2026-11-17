@@ -7,7 +7,7 @@ Spin-1/2 primitive rules, bases, and chain-model helpers for [syntaqs](../../REA
 - Provide `SpinHalfState::{Up, Down}` and `SpinHalfOperator::{I, Sx, Sy, Sz, Sp, Sm}`.
 - Implement local products, actions, adjoints, inner products, traces, dimensions, and trivial grading.
 - Provide `SzBasis` for states and `CartesianBasis` / `LadderBasis` for operators.
-- Construct XYZ and Heisenberg Hamiltonians and Neel product states through `models::SpinHalfModels`.
+- Construct XYZ and Heisenberg Hamiltonians through `models::SpinHalfModels` and product states from expression building blocks.
 
 ## Conventions
 

@@ -63,7 +63,7 @@ cargo run -p examples --bin heisenberg --no-default-features
 cargo run -p examples --bin heisenberg --no-default-features --features export
 ```
 
-`basis_expansion` selects the coefficient type once with `type Spin = SpinHalf<Complex<f64>>` and constructs local expressions with `Spin::state` and `Spin::operator` through the ExpressionFactory type alias. `heisenberg` issues indices in caller code, builds local spaces in site order, and uses `SpinHalfModels<Spin>::heisenberg` and `neel` through normalization and dense/sparse export. To switch to single precision, change the Spin definition to `Complex<f32>`.
+`basis_expansion` selects the coefficient type once with `type Spin = SpinHalf<Complex<f64>>` and constructs local expressions with `Spin::state` and `Spin::operator` through the ExpressionFactory type alias. `heisenberg` issues indices in caller code, builds local spaces in site order, and uses `SpinHalfModels<Spin>::heisenberg` and builds a Neel state from local states through normalization and dense/sparse export. To switch to single precision, change the Spin definition to `Complex<f32>`.
 
 Use `syntaqs_core::StateOf<Spin,I>` and `OperatorOf<Spin,I>` for return type annotations, or `LocalStateOf<Spin>` and `LocalOperatorOf<Spin>` for local expressions. For matrix export, `MatrixArgs::<SpinHalfState,_>` selects the state primitive acted on, rather than specifying coefficient precision again. The output container is selected through a return type such as `Exported<Vec<_>,_>`.
 

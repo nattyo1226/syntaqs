@@ -1,10 +1,10 @@
+use syntaqs_fermion::models::ModelError;
 mod common;
 use common::*;
 use num_complex::Complex;
 use syntaqs_core::{HilbertSpace as H, SpaceError, TensorKind};
 use syntaqs_fermion::{
     Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
-    UtilityError,
 };
 use syntaqs_geometry::{Boundary, Chain, MappingError};
 use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
@@ -167,13 +167,13 @@ fn invalid_sites_lengths_kinds_indices_and_error_sources() {
         ] {
             assert!(matches!(
                 build(&chain, &[bad], 0., 0.),
-                Err(UtilityError::InvalidSite { site: 0 })
+                Err(ModelError::InvalidSite { site: 0 })
             ));
         }
         let mismatch = build(&chain, &[], 0., 0.).err().unwrap();
         assert_eq!(
             mismatch,
-            UtilityError::Mapping(MappingError::SiteCountMismatch {
+            ModelError::Mapping(MappingError::SiteCountMismatch {
                 expected: 1,
                 actual: 0
             })
@@ -188,7 +188,7 @@ fn invalid_sites_lengths_kinds_indices_and_error_sources() {
         )
         .err()
         .unwrap();
-        assert_eq!(duplicate, UtilityError::Space(SpaceError::DuplicateIndex));
+        assert_eq!(duplicate, ModelError::Space(SpaceError::DuplicateIndex));
         assert!(std::error::Error::source(&duplicate).is_some());
     }
     let nested = H::tensor_all([H::unit(), sites(1).pop().unwrap()]).unwrap();

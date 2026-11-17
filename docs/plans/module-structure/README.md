@@ -22,7 +22,7 @@ Do not implement the proposed broad renames and public API reshaping (`ops`/`exp
 - [x] Convert module entry files and integration-test helper locations by crate; verify Cargo test-target discovery and run affected tests. Workspace all-features tests, all-target no-default-features check, formatting, Clippy, and export no-default-features tests passed; Cargo target names and kinds were unchanged.
 - [x] Rehome unit tests by responsibility, adjusting imports and privacy; core unit, integration and documentation tests and core Clippy passed. All 54 unit-test function names were preserved.
 - [x] Split `expr::parts` and Lie family/decomposition along their responsibility boundaries. Core and Lie tests and doctests, targeted Clippy, and the core no-default-features check passed; existing public paths remain available for the later API phase.
-- [ ] Apply the agreed Neel and model-error changes; update affected tests, example, and current documentation, and run affected crate tests and example checks.
+- [x] Remove the Neel constructor, rename model errors, and update affected tests, example, and documentation. Affected all-features tests and doctests, Clippy, no-default-features checks, and the Heisenberg example passed.
 - [ ] Review the complete diff for unintended behavior, lost public capabilities, changed test coverage and unrelated changes; run repository-required formatting, lint, tests, doctests and builds as applicable, recording any limits.
 - [ ] Record the resulting structure and API changes for the later API inventory and prelude phase. Do not mark the API phase complete as part of this task.
 

@@ -49,7 +49,6 @@ pub mod operator;
 pub mod state;
 
 pub use basis::{CartesianBasis, LadderBasis, SzBasis};
-pub use models::UtilityError;
 pub use operator::SpinOneOperator;
 pub use state::SpinOneState;
 

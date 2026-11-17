@@ -63,7 +63,6 @@ pub mod operator;
 pub mod state;
 
 pub use basis::{LadderBasis, MajoranaBasis, OccupationBasis};
-pub use models::UtilityError;
 pub use operator::FermionOperator;
 pub use state::FermionState;
 
