@@ -6,7 +6,7 @@ Implement the agreed semantic module names and file organization recorded in the
 
 The eventual direction is canonical semantic module paths and public re-exports only in preludes. In this intermediate phase, the user's request to preserve existing visibility and usable public paths takes precedence: retain existing re-exports and use narrowly scoped temporary aliases where a move would otherwise break an existing public path. Record every such alias and any unavoidable visibility or path change for the later API phase. Do not remove dependency re-exports, add preludes, systematically expose private modules, or undertake the complete public API inventory here. Do not retain duplicate definitions: old and new paths must refer to the same types and traits. Public paths used by callers should remain usable; compiler-generated type names, rustdoc definition locations, and module paths may change even when aliases preserve imports. Verify those effects and document them rather than promising identical textual output.
 
-## Target implementation layout
+## Implemented layout
 
 Names below describe file and module ownership, not final public visibility. Child entry files are thin; restricted imports may be used to connect implementation modules. Exact canonical API paths and eventual removal of temporary re-exports remain for the subsequent API work.
 
@@ -17,7 +17,7 @@ syntaqs-core/src/
 ├── expression/                   # former expr/; existing children retained
 │   └── parts/{linear_combination,operation,scale,sum}.rs
 ├── space.rs                      # Dimension, DimensionOverflow, existing space types
-└── error.rs                      # temporary compatibility entry if needed
+└── error.rs                      # temporary compatibility entry
 
 syntaqs-geometry/src/
 ├── geometry.rs
@@ -53,9 +53,26 @@ The tree lists affected paths, not every existing module. `ExpressionError` and 
 - [x] **Cross-workspace verification.** Reviewed changes from `7c3c003` through `27bb85b`; no unintended public capability, visibility or behavior change was identified. An external consumer compiled using old and new core paths, type-identity and trait-bound checks, geometry and Lie root exports, and both feature-gated export backends. All 75 Cargo targets and 448 baseline all-features test entries remain, with two compatibility tests added. The old and new `DimensionOverflow` paths are the same type; the observed `type_name` is `syntaqs_core::space::DimensionOverflow`, reflecting its new definition location.
   - Workspace default, all-features and no-default-features tests, all-features builds, and no-default-features all-target checks passed on Rust 1.85.0 and 1.99.1. Formatting, Clippy, and warning-denied rustdoc passed on 1.99.1.
   - Independent export and shared-test backend configurations, the Lie-only shared test and example, all-features Lie example, and downstream BLAS fixture passed. Existing code and documentation references to moved physical paths were checked; `git diff --check` passed.
-- [ ] **Handoff.** Update this plan with actual moves, temporary compatibility aliases, any unavoidable breakage and outstanding API decisions. Leave the full public API review, removal of temporary aliases and prelude selection for a later separately requested task.
+- [x] **Handoff.** Record the implemented structure, temporary compatibility paths, observed presentation changes and outstanding API decisions below. Full API review, removal of temporary aliases and prelude selection remain separate work.
 
 Each stage should leave the workspace coherent and receive its relevant checks before proceeding. If a path cannot be preserved without broadening exposure or breaking an invariant, record the specific trade-off and resolve it in context rather than silently changing the contract.
+
+## Handoff to API review
+
+The affected implementation files are in the layout above. Core's `algebra` and `expression` are public; geometry's `geometry`, `relation`, and `mapping`, export's `matrix` and `vector`, and Lie's `family` and `numerical` remain private at their crate roots. Public types from those private modules remain accessible through their pre-existing crate-root re-exports. The export `ndarray` and `sprs` dependency re-exports remain gated by their existing features.
+
+The compatibility paths introduced for the core migration are:
+
+| Temporary path | Current owner | Purpose |
+| --- | --- | --- |
+| `syntaqs_core::ops` | `syntaqs_core::algebra` | Preserves the former module and its algebra and grading paths. |
+| `syntaqs_core::expr` | `syntaqs_core::expression` | Preserves the former module and its existing public descendants. |
+| `syntaqs_core::algebra::Dimension` (also `ops::Dimension`) | `syntaqs_core::space::Dimension` | Preserves the trait's former `ops` path after moving its definition. |
+| `syntaqs_core::error::DimensionOverflow` | `syntaqs_core::space::DimensionOverflow` | Preserves the former error path after moving its definition. |
+
+Existing root re-exports and internal public re-exports also remain as an intermediate compatibility surface; the table does not imply that these are the only future API changes. No source-level path break was identified in the scoped checks. Definition movement can change compiler-generated type names and rustdoc locations: `DimensionOverflow` was observed as `syntaqs_core::space::DimensionOverflow` through both old and new paths. The separately agreed earlier removal of `SpinHalfModels::neel` and rename of the three `UtilityError` types to `models::ModelError` are intentional breaking changes, not compatibility gaps introduced by this semantic pass.
+
+The subsequent API task must inventory all reachable items, including associated and signature types; decide canonical paths and visibility for each domain; assess removal of these compatibility paths and other root/parent re-exports; and design and validate each prelude. It must also decide the treatment of export's feature-gated `ndarray` and `sprs` re-exports and update affected consumers if those are removed. None of those changes is authorized by this handoff. The [scoped pre-migration baseline](semantic-baseline.md) and test listings remain available for comparison.
 
 ## Completion criteria
 
