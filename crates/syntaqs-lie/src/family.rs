@@ -113,9 +113,12 @@ impl<E: FamilyExpression> OperatorFamily<E> {
     }
 }
 
-mod projection;
-pub(super) mod transform;
-mod validation;
+/// Gram matrices and projection results.
+pub mod projection;
+/// Family transformations and orthonormality reports.
+pub mod transform;
+/// Family validation reports.
+pub mod validation;
 
-pub use projection::{FamilyCoordinates, GramFactorization, GramMatrix, Projection};
-pub use validation::{FamilyValidation, IndependenceReport};
+pub(crate) use projection::{FamilyCoordinates, GramFactorization, Projection};
+pub(crate) use validation::{FamilyValidation, IndependenceReport};

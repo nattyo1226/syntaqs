@@ -1,5 +1,5 @@
 use super::*;
-use crate::Tolerance;
+use crate::numerical::tolerance::Tolerance;
 use ndarray::array;
 
 macro_rules! precision_tests {

@@ -1,5 +1,7 @@
 //! The two supported core expression contexts; the contraction cannot be customized.
 
+use crate::FamilyExpression;
+
 use ndarray_linalg::{Lapack, Scalar};
 use num_complex::Complex;
 use num_traits::Float;
@@ -8,49 +10,6 @@ use syntaqs_core::{
     algebra::Product, algebra::Trace, expression::composite::Operator,
     expression::error::ExpressionError, expression::local::LocalOperator, space::HilbertSpace,
 };
-
-mod private {
-    pub trait Sealed {}
-    impl<O, R> Sealed for syntaqs_core::expression::local::LocalOperator<O, num_complex::Complex<R>> {}
-    impl<I, O, R> Sealed
-        for syntaqs_core::expression::composite::Operator<I, O, num_complex::Complex<R>>
-    {
-    }
-}
-
-/// A supported local or placed core operator with complex f32/f64 coefficients.
-///
-/// This sealed trait fixes the normalized Hilbert–Schmidt contraction. Users
-/// supply primitive algebra rules through core traits, not a custom metric.
-/// Primitives also need `PartialEq` for exact term collection before contraction.
-/// Local context is `()`; placed context is `HilbertSpace<I>`.
-pub trait FamilyExpression: private::Sealed + Clone {
-    /// Real precision of the expression's complex coefficients.
-    type Real: Float + Scalar<Real = Self::Real> + Lapack;
-    /// Common context retained by a family.
-    type Context: Clone;
-
-    #[doc(hidden)]
-    fn inferred_context(operators: &[Self]) -> Result<Self::Context, ExpressionError>;
-    #[doc(hidden)]
-    fn in_context(&self, context: &Self::Context) -> Result<Self, ExpressionError>;
-    #[doc(hidden)]
-    fn sum_in(operators: Vec<Self>, context: &Self::Context) -> Result<Self, ExpressionError>;
-    #[doc(hidden)]
-    fn collected_in(&self, context: &Self::Context) -> Result<Self, ExpressionError>;
-    #[doc(hidden)]
-    fn scaled_real(&self, coefficient: Self::Real) -> Self;
-    #[doc(hidden)]
-    fn adjoint_expression(&self) -> Self;
-    #[doc(hidden)]
-    fn lie_bracket_expression(&self, rhs: &Self) -> Result<Self, ExpressionError>;
-    #[doc(hidden)]
-    fn hs_in(
-        &self,
-        rhs: &Self,
-        context: &Self::Context,
-    ) -> Result<Complex<Self::Real>, ExpressionError>;
-}
 
 impl<O, R> FamilyExpression for LocalOperator<O, Complex<R>>
 where

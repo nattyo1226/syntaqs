@@ -13,6 +13,11 @@ and complete center/simple-ideal decomposition. The
 [design decision](../decisions/lie-analysis.md) records the reference baseline,
 intentional compatibility differences, and dependency choices.
 
+Public analysis types are defined under `family`, `representation`, `invariant`,
+`decomposition`, and `numerical`. The crate-root prelude provides `OperatorFamily`,
+`NumericalOptions`, and `lie_bracket`; `FamilyExpression`, `LieError`, and
+`lie_bracket` are defined at the crate root.
+
 `OperatorFamily<E>` uses the sealed `FamilyExpression` adapter for core's
 `LocalOperator<O,Complex<R>>` and `Operator<I,O,Complex<R>>`, with R=f32/f64.
 Primitives supply Product, Adjoint, Trace, Identity, and PartialEq; placed inputs

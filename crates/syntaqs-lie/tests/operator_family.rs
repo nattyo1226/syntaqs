@@ -8,7 +8,10 @@ use syntaqs_core::{
     expression::composite::Operator, expression::error::ExpressionError,
     expression::local::LocalOperator, space::HilbertSpace, space::TensorKind,
 };
-use syntaqs_lie::{LieError, NumericalError, NumericalOptions, OperatorFamily, Tolerance};
+use syntaqs_lie::{
+    LieError, family::OperatorFamily, numerical::error::NumericalError,
+    numerical::options::NumericalOptions, numerical::tolerance::Tolerance,
+};
 use syntaqs_spin_half::SpinHalfOperator as Pauli;
 
 macro_rules! precision_tests {
@@ -558,7 +561,10 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
     assert_eq!(center.center().unwrap().len(), 2);
     assert!(center.complement().is_none());
     let decomposition = local
-        .decompose(&options, &syntaqs_lie::DecompositionOptions::default())
+        .decompose(
+            &options,
+            &syntaqs_lie::decomposition::DecompositionOptions::default(),
+        )
         .unwrap();
     assert_eq!(decomposition.center().unwrap().family().len(), 2);
     assert!(decomposition.simple_ideals().is_empty());
@@ -587,7 +593,10 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
     assert_eq!(center.center().unwrap().len(), 2);
     assert!(center.complement().is_none());
     let decomposition = placed
-        .decompose(&options, &syntaqs_lie::DecompositionOptions::default())
+        .decompose(
+            &options,
+            &syntaqs_lie::decomposition::DecompositionOptions::default(),
+        )
         .unwrap();
     assert_eq!(decomposition.center().unwrap().family().len(), 2);
     assert!(decomposition.simple_ideals().is_empty());

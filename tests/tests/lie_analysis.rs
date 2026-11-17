@@ -11,7 +11,8 @@ use syntaqs_core::{
     space::HilbertSpace,
 };
 use syntaqs_lie::{
-    DecompositionOptions, FamilyExpression, NumericalOptions, OperatorFamily, lie_bracket,
+    FamilyExpression, decomposition::DecompositionOptions, family::OperatorFamily, lie_bracket,
+    numerical::options::NumericalOptions,
 };
 use syntaqs_tests::{graded, three_level};
 

@@ -7,8 +7,9 @@ use syntaqs_core::{
     expression::composite::Operator, expression::local::LocalOperator, space::HilbertSpace,
 };
 use syntaqs_lie::{
-    DecompositionFailure, DecompositionOptions, LieDecomposition, LieError, NumericalError,
-    NumericalOptions, OperatorFamily,
+    LieError, decomposition::DecompositionFailure, decomposition::DecompositionOptions,
+    decomposition::LieDecomposition, family::OperatorFamily, numerical::error::NumericalError,
+    numerical::options::NumericalOptions,
 };
 use syntaqs_spin_half::SpinHalfOperator as Pauli;
 

@@ -4,7 +4,7 @@ extern crate blas_provider as _;
 
 use ndarray::array;
 use ndarray_linalg::{Eigh, Solve, UPLO};
-use syntaqs_lie::NumericalOptions;
+use syntaqs_lie::numerical::options::NumericalOptions;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     macro_rules! check {

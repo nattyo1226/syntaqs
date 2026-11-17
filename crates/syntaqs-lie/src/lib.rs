@@ -11,7 +11,7 @@
 //! # extern crate blas_provider as _;
 //! use num_complex::Complex;
 //! use syntaqs_core::expression::local::LocalOperator;
-//! use syntaqs_lie::{DecompositionOptions, LieError, NumericalOptions, OperatorFamily};
+//! use syntaqs_lie::{decomposition::DecompositionOptions, LieError, numerical::options::NumericalOptions, family::OperatorFamily};
 //! use syntaqs_spin_half::SpinHalfOperator as Pauli;
 //!
 //! type Op = LocalOperator<Pauli, Complex<f64>>;
@@ -46,6 +46,24 @@
 //! assert!(decomposition.diagnostics().validation.passed());
 //! # Ok::<(), LieError<f64>>(())
 //! ```
+//!
+//! The former root and parent-module facades are not public:
+//!
+//! ```compile_fail
+//! use syntaqs_lie::OperatorFamily;
+//! ```
+//! ```compile_fail
+//! use syntaqs_lie::NumericalOptions;
+//! ```
+//! ```compile_fail
+//! use syntaqs_lie::FamilyTransform;
+//! ```
+//! ```compile_fail
+//! use syntaqs_lie::family::GramMatrix;
+//! ```
+//! ```compile_fail
+//! use syntaqs_lie::numerical::Tolerance;
+//! ```
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -55,30 +73,136 @@ extern crate blas_src as _;
 #[cfg(test)]
 extern crate blas_provider as _;
 
-mod decomposition;
-mod error;
+pub mod decomposition;
 mod expression;
-mod family;
-mod invariant;
-mod representation;
+pub mod family;
+pub mod invariant;
+pub mod representation;
 // Some kernels are reserved for subsequent Lie-representation operations.
 #[allow(dead_code)]
-mod numerical;
+pub mod numerical;
 
-pub use decomposition::{
-    DecompositionAttempt, DecompositionDiagnostics, DecompositionFailure, DecompositionOptions,
-    DecompositionValidation, LieComponent, LieDecomposition,
+pub(crate) use decomposition::DecompositionAttempt;
+pub(crate) use family::{
+    FamilyCoordinates, FamilyValidation, GramFactorization, OperatorFamily, Projection,
 };
-pub use error::LieError;
-pub use expression::FamilyExpression;
-pub use family::transform::{FamilyTransform, OrthonormalityReport};
-pub use family::{
-    FamilyCoordinates, FamilyValidation, GramFactorization, GramMatrix, IndependenceReport,
-    OperatorFamily, Projection,
-};
-pub use invariant::{AdjointCommutant, CenterSplit, ConstraintDiagnostics};
-pub use numerical::{NumericalError, NumericalOptions, Tolerance, ToleranceCheck};
-pub use representation::{
-    AdjointRepresentation, BracketClosureCheck, ClosureReport, KillingForm, StructureConstants,
-    lie_bracket,
-};
+pub(crate) use invariant::ConstraintDiagnostics;
+pub(crate) use numerical::{NumericalError, NumericalOptions, ToleranceCheck};
+pub(crate) use representation::AdjointRepresentation;
+
+use ndarray_linalg::{Lapack, Scalar};
+use num_complex::Complex;
+use num_traits::Float;
+use syntaqs_core::expression::error::ExpressionError;
+
+mod private {
+    pub trait Sealed {}
+    impl<O, R> Sealed for syntaqs_core::expression::local::LocalOperator<O, num_complex::Complex<R>> {}
+    impl<I, O, R> Sealed
+        for syntaqs_core::expression::composite::Operator<I, O, num_complex::Complex<R>>
+    {
+    }
+}
+
+/// A supported local or placed core operator with complex f32/f64 coefficients.
+///
+/// This sealed trait fixes the normalized Hilbert–Schmidt contraction. Users
+/// supply primitive algebra rules through core traits, not a custom metric.
+/// Primitives also need `PartialEq` for exact term collection before contraction.
+/// Local context is `()`; placed context is `HilbertSpace<I>`.
+pub trait FamilyExpression: private::Sealed + Clone {
+    /// Real precision of the expression's complex coefficients.
+    type Real: Float + Scalar<Real = Self::Real> + Lapack;
+    /// Common context retained by a family.
+    type Context: Clone;
+
+    #[doc(hidden)]
+    fn inferred_context(operators: &[Self]) -> Result<Self::Context, ExpressionError>;
+    #[doc(hidden)]
+    fn in_context(&self, context: &Self::Context) -> Result<Self, ExpressionError>;
+    #[doc(hidden)]
+    fn sum_in(operators: Vec<Self>, context: &Self::Context) -> Result<Self, ExpressionError>;
+    #[doc(hidden)]
+    fn collected_in(&self, context: &Self::Context) -> Result<Self, ExpressionError>;
+    #[doc(hidden)]
+    fn scaled_real(&self, coefficient: Self::Real) -> Self;
+    #[doc(hidden)]
+    fn adjoint_expression(&self) -> Self;
+    #[doc(hidden)]
+    fn lie_bracket_expression(&self, rhs: &Self) -> Result<Self, ExpressionError>;
+    #[doc(hidden)]
+    fn hs_in(
+        &self,
+        rhs: &Self,
+        context: &Self::Context,
+    ) -> Result<Complex<Self::Real>, ExpressionError>;
+}
+
+/// Invalid family context or failed operator-analysis precondition.
+#[derive(Debug, thiserror::Error)]
+pub enum LieError<R> {
+    /// Sampling failed to produce a validated complete simple-ideal split.
+    #[error("decomposition exhausted its configured attempt budget (seed {seed})")]
+    DecompositionExhausted {
+        /// Seed used by the deterministic sampling stream.
+        seed: u64,
+        /// Spectral grouping and validation diagnostics for every failed attempt.
+        attempts: Vec<crate::DecompositionAttempt<R>>,
+    },
+    /// A computed constraint-nullspace vector fails the residual tolerance.
+    #[error("{operation} candidate {index} exceeds the constraint residual tolerance")]
+    ConstraintResidual {
+        /// Operation whose linear constraints were checked.
+        operation: &'static str,
+        /// Index of the returned candidate basis vector or matrix.
+        index: usize,
+        /// Aggregate residual norm, reference scale, and effective bound.
+        check: crate::ToleranceCheck<R>,
+    },
+    /// A bracket lies outside the family span under the recorded tolerance.
+    #[error("bracket of family elements {left} and {right} is outside the span")]
+    NonClosedPair {
+        /// Left input index.
+        left: usize,
+        /// Right input index.
+        right: usize,
+        /// Residual norm, bracket norm scale, and effective bound.
+        check: crate::ToleranceCheck<R>,
+    },
+    /// A family must retain at least one input operator.
+    #[error("operator family is empty")]
+    EmptyFamily,
+    /// Core rejected a binding, factor index, or expression context.
+    #[error("{0}")]
+    Expression(#[from] syntaqs_core::expression::error::ExpressionError),
+    /// Invalid numerical data, singularity, or a factorization failure.
+    #[error("{0}")]
+    Numerical(#[from] NumericalError),
+    /// An operation requiring Hermitian family elements rejected one input.
+    #[error("family element {index} is not Hermitian within tolerance")]
+    NonHermitianElement {
+        /// Index in the original family order.
+        index: usize,
+        /// Measured defect, scale, and effective bound.
+        check: crate::ToleranceCheck<R>,
+    },
+    /// Real projection requires a Hermitian target.
+    #[error("target is not Hermitian within tolerance")]
+    NonHermitianTarget {
+        /// Measured defect, scale, and effective bound.
+        check: crate::ToleranceCheck<R>,
+    },
+}
+
+/// Constructs `-i(AB-BA)`, including on graded spaces (an ordinary bracket).
+///
+/// This constructs an expression without numerical validation. Core resolves
+/// physical grading signs and rejects incompatible placed contexts.
+pub fn lie_bracket<E: FamilyExpression>(left: &E, right: &E) -> Result<E, LieError<E::Real>> {
+    Ok(left.lie_bracket_expression(right)?)
+}
+
+/// Common entry points for operator-family analysis.
+pub mod prelude {
+    pub use crate::{family::OperatorFamily, lie_bracket, numerical::options::NumericalOptions};
+}

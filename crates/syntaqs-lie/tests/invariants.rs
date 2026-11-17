@@ -7,7 +7,10 @@ use num_complex::Complex;
 use syntaqs_core::{
     expression::composite::Operator, expression::local::LocalOperator, space::HilbertSpace,
 };
-use syntaqs_lie::{LieError, NumericalError, NumericalOptions, OperatorFamily, Tolerance};
+use syntaqs_lie::{
+    LieError, family::OperatorFamily, numerical::error::NumericalError,
+    numerical::options::NumericalOptions, numerical::tolerance::Tolerance,
+};
 use syntaqs_spin_half::SpinHalfOperator as Pauli;
 
 macro_rules! precision_tests {

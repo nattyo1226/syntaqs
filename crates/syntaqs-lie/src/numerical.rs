@@ -1,10 +1,13 @@
 //! Numerical configuration, diagnostics and internal kernels.
 
-mod error;
+/// Numerical failures.
+pub mod error;
 pub(crate) mod kernels;
-mod options;
-mod tolerance;
+/// Numerical configuration.
+pub mod options;
+/// Tolerances and comparison results.
+pub mod tolerance;
 
-pub use error::NumericalError;
-pub use options::NumericalOptions;
-pub use tolerance::{Tolerance, ToleranceCheck};
+pub(crate) use error::NumericalError;
+pub(crate) use options::NumericalOptions;
+pub(crate) use tolerance::{Tolerance, ToleranceCheck};
