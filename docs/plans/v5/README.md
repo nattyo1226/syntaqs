@@ -7,14 +7,17 @@ reorganization and core evaluation performance work below. Current specification
 belong in [architecture](../../architecture.md) and the feature designs; this
 plan records integration progress and remaining work.
 
-The workspace currently declares version 0.4.0. Module declarations and the
-accepted performance record establish the implemented state, but this plan does
-not establish current merge or release readiness. Publishing and further feature
-development are outside its scope.
+The workspace currently declares version 0.4.0. The source and accepted
+performance record establish implementation progress; integration validation,
+version preparation, and merge confirmation remain separate stages below.
+Publishing and further feature development are outside this plan's scope.
 
 ## Module structure and public API
 
-Reorganized modules around their responsibilities and made defining module paths the public API, with a prelude for frequently used items in each library crate. This is a breaking change: old compatibility paths and non-prelude re-exports were removed. The spin-half Neel helper was removed; examples construct the state from expression building blocks.
+The implemented API uses defining module paths, with a prelude for frequently
+used items in each library. Compatibility paths and non-prelude re-exports were
+removed, so this is a breaking change. Examples construct Neel states from
+expression building blocks instead of the removed spin-half helper.
 
 ## Core evaluation performance
 

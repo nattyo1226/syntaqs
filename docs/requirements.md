@@ -1,12 +1,15 @@
 # syntaqs requirements
 
-Updated: 2026-11-09
+Updated: 2026-11-17
 
 ## 1. Purpose
 
 syntaqs is a Rust library for constructing, composing, and evaluating quantum Hilbert spaces, states, and operators algebraically, with numerical output when needed. Its goal is to use local algebra and expression structure to compute actions, inner products, expectations, and traces before constructing numerical matrices.
 
-This document defines what the project builds. See [architecture](architecture.md) for crates and overall structure, [feature designs](README.md#2-feature-details) for concrete types, public APIs, and mathematical conventions, and [future work](future-work.md) for features to implement. The [documentation guide](README.md#1-document-responsibilities) defines where ongoing plans and current specifications belong.
+The requirements below define accepted scope and guarantees. Read
+[architecture](architecture.md) for component boundaries and the
+[feature designs](README.md#2-feature-details) for APIs and mathematical details.
+Unadopted extensions are tracked separately in [future work](future-work.md).
 
 ## 2. Scope
 
@@ -16,7 +19,11 @@ This document defines what the project builds. See [architecture](architecture.m
 - Separate algebraic computation from numerical containers so matrix-free, dense, and sparse calculations use consistent conventions.
 - Delegate arithmetic, rounding, and special values to the numeric type. Automatic differentiation, physical Hamiltonian eigensolvers, and time evolution are outside the current scope; dense eigensolvers on selected Lie coordinates support Lie analysis.
 
-Within one system, every factor currently uses the same state and operator primitive types. A composite basis applies one local basis to all factors. Effective mixtures of ordinary and graded products after removing unit and singleton wrappers, implicit factor reordering, and implicit projection onto subspaces are unsupported.
+Within one system, every factor uses the same state and operator primitive
+types, and a composite basis applies one local basis to all factors.
+Effective mixtures of ordinary and graded products after unit/singleton
+identification are unsupported. Factor reordering and subspace projection are
+never implicit.
 
 ## 3. Functional requirements
 
@@ -72,7 +79,7 @@ See [bases](design/basis.md) and [export](design/export.md).
 - Support one-dimensional chains with site count, order, and boundary conditions, nearest-neighbor edges, and ordered many-site relations.
 - Borrow caller-owned site-ordered data to connect it to geometry, validating lengths and referenced positions.
 - Support multiple leaves, nesting, and empty spaces at sites; distinguish site order from the full space's factor order.
-- Construct spin-1/2 XYZ and Heisenberg models; spin-1 XYZ, Heisenberg, and BLBQ models; and standard/symmetric fermionic Hubbard models as ordinary expressions. Construct Neel states using expression building blocks.
+- Construct spin-1/2 XYZ and Heisenberg models; spin-1 XYZ, Heisenberg, and BLBQ models; and standard/symmetric fermionic Hubbard models as shared core expressions. Construct Neel states using expression building blocks.
 - Preserve the physical meaning of couplings by compensating for primitive normalization. Do not silently discard constant shifts.
 - Specify boundary conventions for zero, one, and two sites, and validate assignments even without edges or nonzero couplings.
 
@@ -120,7 +127,15 @@ See [numeric conventions](design/numerics.md) for numerical contracts and [verif
 
 ## 5. Acceptance criteria
 
-The representative end-to-end scenario constructs a one-dimensional spin-1/2 chain and factor spaces, builds its Heisenberg Hamiltonian and a Neel product state, and evaluates the energy without generating a matrix. It then exports the same state and operator to dense and sparse forms and compares algebraic results, independent small-system reference matrices, and numerical backends within explicit tolerances.
+The representative end-to-end scenario follows the same physical system through
+algebraic and numerical computation:
+
+1. Construct a one-dimensional spin-1/2 chain and its factor spaces.
+2. Build the Heisenberg Hamiltonian and a Neel product state, then evaluate the
+   energy without generating a matrix.
+3. Export that state and operator to dense and sparse forms.
+4. Compare algebraic results, independent small-system reference matrices, and
+   numerical backends within explicit tolerances.
 
 For physical spins `J_i=S_i/2` and real coupling `g`, the Hamiltonian is `H=-g Σ⟨i,j⟩ J_i·J_j=-(g/4) Σ⟨i,j⟩ S_i·S_j`. On an open chain of length L≥1, the Neel expectation is `g(L−1)/4`; it is zero for zero sites. Positive g is ferromagnetic.
 
@@ -130,4 +145,8 @@ centers and simple ideals, finite retry/exhaustion behavior, and application-own
 BLAS/LAPACK linkage. Operator-only and large-spectator cases must not need a state
 basis, Dimension, or full physical matrices.
 
-Also verify all local rules, a custom finite-dimensional algebra, non-orthonormal bases, graded CAR and signs, basis round trips, spaces, bindings, errors, sharing, deep trees, and preservation of small coefficients. Record executed checks in the progress of active plans rather than putting command results or migration history in this document.
+Additional acceptance coverage includes local rules, a custom finite-dimensional
+algebra, non-orthonormal bases, graded CAR and signs, basis round trips, spaces,
+bindings, errors, sharing, deep trees, and preservation of small coefficients.
+The [verification guide](design/verification.md) describes the shared checks;
+executed results belong in active plans.

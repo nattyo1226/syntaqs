@@ -4,7 +4,13 @@ Updated: 2026-11-17
 
 ## 1. Verification responsibilities
 
-Feature designs own mathematical contracts, boundary cases, and feature-specific verification targets. This document describes test placement, common commands, shared regression coverage, and environment limitations. Dated execution results and progress belong in active implementation plans; completed plans are removed after lasting specifications are recorded as described in the [documentation guide](../README.md#1-document-responsibilities).
+Use the commands below to check workspace behavior, optional backends, and
+application-owned native linkage. The coverage inventory identifies where a
+regression belongs; it describes test intent rather than a new execution result.
+
+Feature designs own their mathematical contracts and boundary cases. Dated runs
+and progress belong in active plans, following the
+[documentation guide](../README.md#1-document-responsibilities).
 
 Production-library tests live in each crate's `tests/` and unit tests. [syntaqs-tests](../../tests/README.md) holds shared three-level and graded two-state algebras, non-orthonormal bases, independent references, and core/normalize/export/Lie integration tests. [Examples](../../examples/README.md) include end-to-end model and Lie workflows. Production crates do not depend on test packages.
 
@@ -30,9 +36,13 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 ```
 
-Run the workspace default/all/no-default-feature tests, the all-feature build,
-and the all-target no-default-feature check with both Rust 1.85.0 and stable.
-Formatting, Clippy, and rustdoc checks use stable, matching CI.
+Match the configured CI toolchains when selecting checks:
+
+| Checks | Toolchains |
+| --- | --- |
+| Workspace default/all/no-default-feature tests | Rust 1.85.0 and stable |
+| All-feature build and all-target no-default-feature check | Rust 1.85.0 and stable |
+| Formatting, Clippy, and rustdoc | Stable |
 
 Run the Lie example and shared integration tests independently of export backends,
 and verify the downstream application-owned native link:

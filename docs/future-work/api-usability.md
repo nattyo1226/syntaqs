@@ -2,13 +2,18 @@
 
 Updated: 2026-11-17
 
-These are unadopted, unstarted candidates for helper APIs and clearer explanations, not a list of approved additions. Names, signatures, and timing are undecided. When implementation starts, use a plan in `plans/` for work that needs multiple stages or prior investigation; straightforward changes need no plan.
+The candidates below address repeated construction code, type inference, and
+error recovery. They are unadopted and unstarted; names, signatures, and timing
+are undecided. Use a plan when an adopted change needs multiple stages or prior
+investigation; straightforward changes need no plan.
 
 Current APIs are described in [construction](../design/expression-construction.md), [composite evaluation](../design/composite-expression.md), [geometry](../design/geometry.md), and [export](../design/export.md).
 
 ## 1. Additional ExpressionFactory helpers
 
-These candidates were excluded from the initial implementation. Existing constructors and expression methods already perform the same operations; consider helpers when real examples show substantial repetition.
+Existing constructors and expression methods perform these operations. Factory
+helpers would provide additional entry points; adopt them only when concrete
+examples show substantial repetition.
 
 | Candidate | Role |
 | --- | --- |
@@ -59,9 +64,10 @@ Preserve ordinary `?` error handling while helping users find invalid placement,
 
 ## 5. Onboarding and custom-algebra guidance
 
-[Examples](../../examples/README.md) cover manual construction, expansion, chain models, and numerical export. Further documentation candidates are:
+[Examples](../../examples/README.md) and crate READMEs cover basic construction,
+trait imports, models, and numerical export. Further guidance could address:
 
-- Dependencies, features, and trait imports for common uses, distinguishing missing imports from disabled features.
+- Troubleshooting additional workflows, distinguishing missing trait imports from disabled features.
 - Connections between crate-root guidance, rustdoc, designs, and runnable examples. Repository and library READMEs already exist.
 - A minimal user-facing custom ExpressionFactory alias, capability traits, and Basis derived from the test [three-level system](../../tests/src/three_level.rs).
 - Factor/basis/container order, metadata sharing and borrowing, and inner products in non-orthonormal coordinates.

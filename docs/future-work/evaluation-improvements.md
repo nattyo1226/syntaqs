@@ -2,7 +2,9 @@
 
 Updated: 2026-11-17
 
-These are deferred investigations and unadopted proposals. Public APIs,
+The aim is to reduce expression-contraction cancellation and query overhead
+while preserving exact-zero rules, small nonzero values, and factored structure.
+These are deferred investigations and unadopted proposals; public APIs,
 algorithms, schedules, and priorities are undecided. Current evaluation contracts
 belong in [composite expressions](../design/composite-expression.md), numerical
 rules in [numerics](../design/numerics.md), and verification coverage and limits
@@ -42,9 +44,10 @@ Any caches require explicit ownership, scope, reuse criteria, and resource limit
 
 ## 3. Natural-state collection overhead
 
-Per-query normalization and equality-based interning can dominate a single local
-action or a small factored norm even when they prevent explosive growth during
-repeated actions. Investigate reducing context initialization and allocation,
+Preparing normalized state terms and equality-based interning for each query
+can dominate a single local action or a small factored norm, even when term
+collection prevents explosive growth during repeated actions. Investigate
+reducing context initialization and allocation,
 and avoiding repeated preparation within one query. Preserve action-free
 collection, first-occurrence order, nonreflexive PartialEq behavior, minimal
 public bounds, and retained products of sums. A persistent normalized marker or

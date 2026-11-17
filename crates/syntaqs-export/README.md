@@ -1,16 +1,39 @@
 # syntaqs-export
 
-Basis-aware numerical export and interpretation metadata for [syntaqs](../../README.md).
+Convert syntaqs states into vectors and operators into action matrices, keeping
+the basis, space, shape, and layout needed to interpret the numbers.
 
-## Responsibilities
+Follow the [tagged installation and feature guide](../../docs/installation.md)
+and use the selected tag's documentation. The example below uses current APIs.
+This std crate depends on core for actions, basis enumeration, and coordinates.
 
-- Export state expressions and coordinates as numerical vectors.
-- Export operators as matrices by applying them to ordered state-basis elements.
-- Retain basis, factor-space, shape, and layout information in `Exported<Data, Metadata>`.
-- Convert owned Vec exports to ndarray containers without copying their coefficient data.
-- Build sprs output from sparse coordinates without constructing an intermediate dense vector or matrix.
+## Exporting a state vector
 
-## Output types and features
+`Export` selects the output container through the result type. Vec output is
+always available; this example exports the spin-up state in the spin-z basis:
+
+```rust
+use num_complex::Complex;
+use syntaqs_export::{Export, Exported};
+use syntaqs_spin_half::{SpinHalf, basis::SzBasis, state::SpinHalfState};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let up = SpinHalf::<Complex<f64>>::state(SpinHalfState::Up);
+    let vector: Exported<Vec<_>, _> = (&up).export(&SzBasis)?;
+    assert_eq!(
+        vector.data().as_slice(),
+        &[Complex::new(1.0, 0.0), Complex::new(0.0, 0.0),]
+    );
+    Ok(())
+}
+```
+
+`Exported` pairs the container with interpretation metadata. To export an
+operator matrix, pass `MatrixArgs::<StatePrimitive, _>::new(&basis)` from
+`matrix::args`; it identifies the state basis on which the operator acts.
+A composite operator also needs a binding or an explicit ambient space.
+
+## Containers and features
 
 | Feature | State/coordinate vectors | Operator matrices |
 | --- | --- | --- |
@@ -18,14 +41,20 @@ Basis-aware numerical export and interpretation metadata for [syntaqs](../../REA
 | `ndarray` | `ndarray::Array1<C>` | `ndarray::Array2<C>` |
 | `sprs` | `sprs::CsVec<C>` | `sprs::CsMat<C>` in CSC format |
 
-The default feature set is empty. Enable `ndarray` and `sprs` independently or together, and add direct dependencies on the container crates used by the application. `Export`, `Exported`, and `ExportError` are defined at the crate root. Matrix arguments and metadata are under `matrix`; vector metadata is under `vector`. The prelude provides `Export`, `Exported`, and `MatrixArgs`.
+The default feature set is empty. Enable `ndarray` and `sprs` independently or
+together, and declare direct dependencies on container crates whose types you
+use. Owned Vec exports convert to ndarray without copying coefficient data;
+sprs output comes from sparse coordinates without a dense intermediate.
 
-`Export` is the common conversion trait. Use a state basis directly for vector export and `MatrixArgs::<StatePrimitive, _>` for operator matrices. MatrixArgs can supply an explicit ambient space; otherwise a composite operator needs an existing binding. `VectorMetadata` and `MatrixMetadata` describe how to interpret the output.
+Operator-basis coordinates are coefficient vectors. Action matrices instead
+contain columns obtained by applying the operator to state-basis elements.
+Both paths preserve coefficient type, basis choice, and factor order.
 
-## Integration
+## Integration and references
 
-This crate uses the standard library and depends on [syntaqs-core](../syntaqs-core/README.md) for basis enumeration, actions, and coordinates. Export preserves the coefficient type and the selected basis and factor order. Algebra rules and expression evaluation remain in the core and concrete algebra crates.
+`Export`, `Exported`, and `ExportError` are crate-root types; matrix arguments and
+metadata live under `matrix`, and vector metadata under `vector`. The prelude
+provides `Export`, `Exported`, and `MatrixArgs`.
 
-Coordinates of an operator in an operator basis form a coefficient vector; they are distinct from its matrix acting on a state basis.
-
-See the [crate API overview](src/lib.rs), [export design](../../docs/design/export.md), and [Heisenberg export example](../../examples/src/bin/heisenberg.rs). Git dependency and feature settings are in the [project README](../../README.md).
+See the [API overview](src/lib.rs), [export contracts](../../docs/design/export.md),
+and [matrix export example](../../examples/src/bin/heisenberg.rs).

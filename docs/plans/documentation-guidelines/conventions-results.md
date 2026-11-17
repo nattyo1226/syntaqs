@@ -56,6 +56,9 @@ the parser limitations described in the baseline audit.
 
 ## Remaining work
 
+The later [writing phase](writing-results.md) has now completed these follow-up
+items. The paragraphs below retain the scope identified at conventions closeout.
+
 The later writing-focused task retains E04 (composite explanation order), E06
 (migration-relative wording), and E07 (repeated basis/identity explanations).
 The baseline audit and coverage inventory remain historical findings rather

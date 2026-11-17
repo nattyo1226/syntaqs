@@ -6,6 +6,8 @@ conventions and technical writing guidelines at baseline revision
 document responsibility, current/proposed/historical status, relevant ownership
 and writing concerns, and applicable findings from [the audit](audit.md).
 Subsequent resolutions are recorded in [conventions results](conventions-results.md).
+The [writing results](writing-results.md#document-coverage) cover all current
+project documents, including the proposal added after this baseline inventory.
 
 “No specific issue” means no actionable conventions/writing discrepancy was
 identified in that reading. It does not certify every API example, mathematical

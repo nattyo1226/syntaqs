@@ -4,12 +4,14 @@ Updated: 2026-11-17
 
 ## 1. Scope and contexts
 
-`syntaqs-lie` currently provides ordered operator families, explicit Hermiticity
-and independence diagnostics, Gram factorizations, real projection coordinates,
-reconstruction, residuals, span membership, ordinary Lie brackets, closure
-diagnostics, retained Lie representations, real family transformations, the
-full real adjoint commutant, the full center with its HS-orthogonal complement,
-and complete center/simple-ideal decomposition. The
+An ordered operator family supplies coordinates for expression-based Lie
+analysis. Construction stores candidates; explicit Hermiticity, independence,
+and closure checks establish which subsequent computations are valid.
+
+The crate provides real HS projection and reconstruction, retained Lie
+representations, real family transformations, the full real adjoint commutant,
+and complete center/simple-ideal decomposition. Results retain their source
+family and numerical settings so coordinates and diagnostics remain interpretable. The
 [design decision](../decisions/lie-analysis.md) records the reference baseline,
 intentional compatibility differences, and dependency choices.
 

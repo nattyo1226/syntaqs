@@ -2,11 +2,19 @@
 
 Updated: 2026-11-17
 
-This document collects future features, required design reviews, and candidates not yet adopted. Current specifications belong in [architecture](architecture.md) and [design](README.md#2-feature-details). Follow the [documentation guide](README.md#1-document-responsibilities) when starting an implementation plan or completing work.
+The topics below are deferred investigations and unadopted proposals, not a
+release commitment. Use [architecture](architecture.md) and the
+[feature designs](README.md#2-feature-details) to determine what is available
+now. The [documentation guide](README.md#1-document-responsibilities) describes
+how an adopted task moves into planning and current specifications.
 
 ## 1. Required design review
 
-Revisit ownership, sharing, and associations among State, Operator, Structure, and Space, and the boundary between Geometry and spaces. Consider whether states and operators can be understood as special cases of general operators, and document the mathematical objects, API correspondence, shared responsibilities, and distinctions with reasons. See [design review topics](future-work/state-and-operator.md) for questions and completion criteria.
+Review ownership and sharing among states, operators, local algebra, and spaces,
+including the boundary between geometry and space assignment. A central question
+is whether general operators provide a useful common account of states and
+operators. The [review topics](future-work/state-and-operator.md) define the
+questions and completion criteria without presuming type unification.
 
 ## 2. Unimplemented features and proposals
 
@@ -24,7 +32,14 @@ These features or candidates have not started; public APIs, schedules, and prior
 
 Consider heterogeneous local algebras within one system, type erasure and storage for them, runtime representation parameters, and definition matching between implementation types. Per-factor bases, subspace bases, projections, constrained subspaces, conserved quantities, and particle-number sectors remain future work.
 
-Spin-1/2, spin-1, single-mode fermions, and their current models are already provided. Further candidates include general spin-S, qudits, bosons and truncation; spin-one MatrixUnitBasis, spherical-tensor phase conventions, and exact Product/Act without Float; and generic spinful-fermion helpers, arbitrary lattices, and variable couplings.
+Current local algebras cover spin-1/2, spin-1, and single-mode fermions and their
+models. Extension candidates fall into three groups:
+
+- New local systems: general spin-S, qudits, and bosons with truncation.
+- Spin-one representations: MatrixUnitBasis, spherical-tensor phase conventions,
+  and exact Product/Act without Float.
+- Model construction: generic spinful-fermion helpers, arbitrary lattices, and
+  variable couplings.
 
 ### 2.2. Expression and space operations
 

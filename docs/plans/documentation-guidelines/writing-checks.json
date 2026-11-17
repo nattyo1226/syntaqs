@@ -1,0 +1,189 @@
+{
+  "baseline_revision": "3d29a68b64c4b8fa6f7c4ab995aa93e4cb28da3a",
+  "baseline_documents": 42,
+  "task_documents": 5,
+  "documents_checked": 47,
+  "link_counts": {
+    "baseline": {
+      "local_links": 407,
+      "heading_links": 110,
+      "external_links_skipped": 21
+    },
+    "task": {
+      "local_links": 161,
+      "heading_links": 12,
+      "external_links_skipped": 1
+    }
+  },
+  "issues": [],
+  "baseline_inventory": [
+    {
+      "path": "README.md",
+      "lines": 169
+    },
+    {
+      "path": "crates/syntaqs-basic/README.md",
+      "lines": 46
+    },
+    {
+      "path": "crates/syntaqs-core/README.md",
+      "lines": 49
+    },
+    {
+      "path": "crates/syntaqs-export/README.md",
+      "lines": 60
+    },
+    {
+      "path": "crates/syntaqs-fermion/README.md",
+      "lines": 56
+    },
+    {
+      "path": "crates/syntaqs-geometry/README.md",
+      "lines": 54
+    },
+    {
+      "path": "crates/syntaqs-lie/README.md",
+      "lines": 75
+    },
+    {
+      "path": "crates/syntaqs-normalize/README.md",
+      "lines": 53
+    },
+    {
+      "path": "crates/syntaqs-spin-half/README.md",
+      "lines": 59
+    },
+    {
+      "path": "crates/syntaqs-spin-one/README.md",
+      "lines": 57
+    },
+    {
+      "path": "docs/README.md",
+      "lines": 91
+    },
+    {
+      "path": "docs/architecture.md",
+      "lines": 105
+    },
+    {
+      "path": "docs/decisions/core-evaluation-performance.md",
+      "lines": 191
+    },
+    {
+      "path": "docs/decisions/lie-analysis.md",
+      "lines": 68
+    },
+    {
+      "path": "docs/design/basis.md",
+      "lines": 264
+    },
+    {
+      "path": "docs/design/composite-expression.md",
+      "lines": 498
+    },
+    {
+      "path": "docs/design/export.md",
+      "lines": 221
+    },
+    {
+      "path": "docs/design/expression-construction.md",
+      "lines": 86
+    },
+    {
+      "path": "docs/design/expression-formatting.md",
+      "lines": 173
+    },
+    {
+      "path": "docs/design/geometry.md",
+      "lines": 130
+    },
+    {
+      "path": "docs/design/hilbert-space.md",
+      "lines": 194
+    },
+    {
+      "path": "docs/design/index.md",
+      "lines": 118
+    },
+    {
+      "path": "docs/design/lie.md",
+      "lines": 367
+    },
+    {
+      "path": "docs/design/local-structure.md",
+      "lines": 388
+    },
+    {
+      "path": "docs/design/models.md",
+      "lines": 174
+    },
+    {
+      "path": "docs/design/normalization.md",
+      "lines": 55
+    },
+    {
+      "path": "docs/design/numerics.md",
+      "lines": 69
+    },
+    {
+      "path": "docs/design/primitive-expression.md",
+      "lines": 176
+    },
+    {
+      "path": "docs/design/verification.md",
+      "lines": 165
+    },
+    {
+      "path": "docs/future-work/api-usability.md",
+      "lines": 88
+    },
+    {
+      "path": "docs/future-work/evaluation-improvements.md",
+      "lines": 79
+    },
+    {
+      "path": "docs/future-work/external-connections.md",
+      "lines": 24
+    },
+    {
+      "path": "docs/future-work/identity-and-storage.md",
+      "lines": 41
+    },
+    {
+      "path": "docs/future-work/partial-trace.md",
+      "lines": 59
+    },
+    {
+      "path": "docs/future-work/representation-matrix.md",
+      "lines": 100
+    },
+    {
+      "path": "docs/future-work/state-and-operator.md",
+      "lines": 26
+    },
+    {
+      "path": "docs/future-work.md",
+      "lines": 78
+    },
+    {
+      "path": "docs/plans/v5/README.md",
+      "lines": 48
+    },
+    {
+      "path": "docs/requirements.md",
+      "lines": 152
+    },
+    {
+      "path": "examples/README.md",
+      "lines": 94
+    },
+    {
+      "path": "support/blas-provider/README.md",
+      "lines": 15
+    },
+    {
+      "path": "tests/README.md",
+      "lines": 58
+    }
+  ]
+}

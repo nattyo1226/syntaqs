@@ -1,10 +1,14 @@
 # Local algebras and primitives
 
-Last updated: 2026-11-02
+Last updated: 2026-11-17
 
 ## 1. Scope and type responsibilities
 
-This document defines the meaning, dimensions, local rules, normalization, bases, and grading of state and operator primitives. S, O, and their individual capability implementations define the local algebra; there is no additional LocalStructure type, definition label, or definition ID.
+State primitives S and operator primitives O, together with their capability
+implementations, define the local quantum algebra. C is the whole coefficient
+type used by an operation. The contracts below connect primitive meaning,
+dimensions, normalization, bases, and grading; they use no separate
+LocalStructure type or definition ID.
 
 Local expressions are `LocalState<S,O,C>` and `LocalOperator<O,C>`; composite expressions are `State<I,S,O,C>` and `Operator<I,O,C>`. State expressions also specify O to retain delayed actions. Operator expressions do not require a state type. If the same O acts on several S types, each S provides the corresponding Act implementation.
 
@@ -65,7 +69,10 @@ These are mathematical contracts and verification targets for local implementati
 
 Equalities concern mathematical meaning, separately from bitwise equality in floating-point computation. Precision, special values, and approximate comparisons follow [numeric conventions](numerics.md).
 
-Local Product and Act return mathematically simplified final coefficients directly; analytically zero results are empty linear combinations. Unit coefficients use One, and private helpers consistently generate constants. Runtime rules do not repeatedly convert to and from the previous normalization.
+Local Product and Act generate final coefficients directly in the selected
+normalization convention. Analytically zero results are empty linear
+combinations; unit coefficients use One, and private helpers generate constants
+consistently.
 
 ## 4. Conditions for matching local structures
 
@@ -158,7 +165,7 @@ impl ParityOperator for MyOperator {
 }
 ```
 
-Spin-half explicitly implements this trivial grading. Existing model spaces remain ordinary and give identical numerical results in graded spaces. Purely local evaluation, construction, placement, and binding do not uniformly require grading capabilities. Operation-specific bounds are in [composite expressions](composite-expression.md#11-shared-ordinary-and-graded-evaluation).
+Spin-half explicitly implements this trivial grading. Existing model spaces remain ordinary and give identical numerical results in graded spaces. Purely local evaluation, construction, placement, and binding do not uniformly require grading capabilities. Operation-specific bounds are in [composite expressions](composite-expression.md#4-shared-ordinary-and-graded-evaluation).
 
 ## 8. Fermion local algebra
 
@@ -245,7 +252,17 @@ Inverse transformations use the definitions in section 8.1. index returns enumer
 
 ### 8.4. Coefficient types and capabilities
 
-Identity, Dimension, parity, and expression construction require no numeric bounds. InnerProduct and Trace require Zero + One; adjoint and OccupationBasis require One. Product requires One + Add + Neg + ImaginaryUnit; Act requires One + Neg + ImaginaryUnit; LadderBasis requires One + Add + Neg + ImaginaryUnit. MajoranaBasis additionally uses Div. Arithmetic Output is C.
+Fermion capabilities request the following coefficient bounds; arithmetic Output
+is C:
+
+| Capability | Coefficient requirements |
+| --- | --- |
+| Identity, Dimension, parity, construction | None |
+| InnerProduct, Trace | `Zero + One` |
+| Adjoint, OccupationBasis | `One` |
+| Product, LadderBasis | `One + Add + Neg + ImaginaryUnit` |
+| Act | `One + Neg + ImaginaryUnit` |
+| MajoranaBasis | LadderBasis requirements plus `Div` |
 
 Operations using fractions require a representation of the mathematical value 1/2. Local rules require neither Float nor Clone / Copy on C. Shared expression evaluation, HS inner products, and export impose their own operation-specific bounds. HS inner products use the existing Divide capability to divide by `Tr(I)`.
 
@@ -300,7 +317,11 @@ Quadrupoles are defined as follows.
 | `Q1p/Q1m` | `Qzx±iQyz={Sz,Sp/m}/c` |
 | `Q2p/Q2m` | `Dxy±iQxy=(Sp/m)²/c` |
 
-All nine Hermitian elements have ordinary squared HS norm 3 and are orthonormal under `Tr(A†B)/3`. The three spin components and five quadrupole components retain their respective rotation subspaces. Physical spin J uses existing scalar multiplication as `√(2/3) S`, without an additional helper API.
+Identity, the three Cartesian spin components, and the five quadrupoles form
+nine Hermitian elements with ordinary squared HS norm 3, orthonormal under
+`Tr(A†B)/3`. Spin and quadrupole components retain their respective rotation
+subspaces. Physical J is obtained by scaling S by `√(2/3)`; there is no separate
+helper API.
 
 ### 9.2. Bases and expansion
 

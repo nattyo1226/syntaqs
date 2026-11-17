@@ -1,59 +1,29 @@
 # syntaqs
 
-**syntaqs** /ˈsɪn.tæks/ (pronounced like [syntax](https://dictionary.cambridge.org/pronunciation/english/syntax)) is a Rust library for constructing and evaluating quantum states and operators algebraically.
+A Rust library for building quantum states and operators algebraically. Combine
+local spin or fermion expressions into larger systems, evaluate them without
+full matrices, and choose a basis when you need numerical output.
 
-The name stands for **synta**x for **q**uantum **s**ystems. Build local expressions, place them on identified Hilbert-space factors, and combine them into larger systems. Evaluate actions, inner products, expectations, and traces using local algebra rules, then choose a basis when you need coordinates or numerical vectors and matrices.
+## Quick start
 
-## What it provides
-
-- Shared, immutable expressions with delayed actions, products, and adjoints, evaluated without constructing full matrices.
-- Ordinary and graded tensor spaces with explicit factor identity and ordering.
-- Spin-1/2, spin-1, and single-mode fermion algebras, plus traits for defining your own local algebra.
-- Basis expansion, re-expansion, and sparse coordinates for states and operators.
-- Chain geometries and helpers for XYZ, Heisenberg, BLBQ, and Hubbard models.
-- State normalization and dense/sparse export to Vec, ndarray, and sprs containers.
-- Lie analysis on operator expressions: real HS projection, brackets, adjoint representations, centers, and complete simple-ideal decomposition.
-
-Each system currently uses one pair of state/operator primitive types across its factors. Partial trace, heterogeneous local algebras, and further extensions are tracked in [future work](docs/future-work.md).
-
-## Installation
-
-The workspace declares Rust **1.85** as its minimum version and uses edition **2024**. Install the crates you need directly from Git:
+Use Rust 1.85 or newer. Version-tagged Git dependencies are recommended; select
+the same tag for all syntaqs crates. Add these to `Cargo.toml`:
 
 ```toml
 [dependencies]
-syntaqs-core = { git = "https://github.com/nattyo1226/syntaqs" }
-syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs" }
+syntaqs-core = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.4.0" }
+syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.4.0" }
 
 num-complex = "0.4.6"
 ```
 
-These dependencies follow the repository's default branch. To use a fixed revision, add the same `rev` value to each syntaqs Git dependency. Publishing to crates.io is planned; the setup above uses Git.
-
-Normalization, numerical export, and Lie analysis are separate crates. Add these entries to the same dependency table when needed:
-
-```toml
-syntaqs-normalize = { git = "https://github.com/nattyo1226/syntaqs" }
-syntaqs-export = { git = "https://github.com/nattyo1226/syntaqs", features = ["ndarray", "sprs"] }
-syntaqs-lie = { git = "https://github.com/nattyo1226/syntaqs" }
-```
-
-`syntaqs-export` always supports Vec output. Its default feature set is empty; `ndarray` and `sprs` independently enable the corresponding external containers. See its [crate README](crates/syntaqs-export/README.md) for the output types.
-
-`syntaqs-lie` analyzes the real span of Hermitian operator expressions using
-normalized Hilbert–Schmidt contractions, without a state basis or physical action
-matrices. It requires an application-selected BLAS/LAPACK provider; see its
-[native linkage instructions](crates/syntaqs-lie/README.md#native-linkage).
-
-## Quick start
-
-This example constructs a two-spin product state and measures a product of Pauli Z operators. Put it in `src/main.rs` with the dependencies above.
+Put this two-spin calculation in `src/main.rs`:
 
 ```rust
 use num_complex::Complex;
 use syntaqs_core::space::HilbertSpace;
 use syntaqs_spin_half::{
-    SpinHalf, basis::SzBasis, operator::SpinHalfOperator as Op, state::SpinHalfState as Ket,
+    SpinHalf, operator::SpinHalfOperator as Op, state::SpinHalfState as Ket,
 };
 
 type Spin = SpinHalf<Complex<f64>>;
@@ -62,82 +32,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let a = HilbertSpace::factor("a");
     let b = HilbertSpace::factor("b");
     let space = a.tensor(&b)?;
-
     let state = Spin::product_state(&space, [Ket::Up, Ket::Down])?;
     let zz = Spin::operator_product_at([(&a, Op::Sz), (&b, Op::Sz)])?.bind(&space)?;
 
-    assert_eq!(state.expectation(&zz)?, Complex::new(-1.0, 0.0));
-
-    let coordinates = state.coordinates(&SzBasis)?;
-    for entry in coordinates.flat_entries() {
-        let (index, amplitude) = entry?;
-        println!("{index}: {amplitude}");
-    }
+    println!("Expectation: {}", state.expectation(&zz)?.re);
     Ok(())
 }
 ```
 
-The coefficient type is selected once through `Spin`. The spin-1/2 Cartesian primitives `Sx`, `Sy`, and `Sz` are Pauli matrices; physical spin operators are `J = S/2` with `hbar = 1`. The [spin-half README](crates/syntaqs-spin-half/README.md) describes the conventions and model helpers.
+Run `cargo run` to print `Expectation: -1`. Here `Sz` is Pauli Z, so the
+product has expectation −1 in `|up,down>`.
 
 ## Crates
 
-| Crate | Responsibility |
+| Crate | Purpose |
 | --- | --- |
-| [syntaqs-core](crates/syntaqs-core/README.md) | Algebra traits, shared expressions, tensor spaces, evaluation, and basis coordinates. |
-| [syntaqs-basic](crates/syntaqs-basic/README.md) | UUID and named indices for identifying factors. |
-| [syntaqs-geometry](crates/syntaqs-geometry/README.md) | Site geometries, relations, and connections to caller-owned data. |
-| [syntaqs-normalize](crates/syntaqs-normalize/README.md) | Norms, state normalization, and normalized expectations. |
-| [syntaqs-export](crates/syntaqs-export/README.md) | Numerical containers and the metadata needed to interpret them. |
-| [syntaqs-lie](crates/syntaqs-lie/README.md) | Operator families, HS projection, Lie representations, adjoint commutants, centers, and simple-ideal decomposition. |
-| [syntaqs-spin-half](crates/syntaqs-spin-half/README.md) | Spin-1/2 primitives, bases, and spin-chain models. |
-| [syntaqs-spin-one](crates/syntaqs-spin-one/README.md) | Spin-1 dipoles and quadrupoles, bases, and spin-chain models. |
-| [syntaqs-fermion](crates/syntaqs-fermion/README.md) | Single-mode fermions, Majorana bases, and Hubbard chains. |
+| [syntaqs-core](crates/syntaqs-core/README.md) | Algebra, expressions, spaces, and basis coordinates. |
+| [syntaqs-basic](crates/syntaqs-basic/README.md) | UUID and named factor identifiers. |
+| [syntaqs-geometry](crates/syntaqs-geometry/README.md) | Chains, site relations, and data mapping. |
+| [syntaqs-normalize](crates/syntaqs-normalize/README.md) | Norms, normalization, and normalized expectations. |
+| [syntaqs-export](crates/syntaqs-export/README.md) | Vec, ndarray, and sprs output. |
+| [syntaqs-lie](crates/syntaqs-lie/README.md) | Operator-family projection and Lie analysis. |
+| [syntaqs-spin-half](crates/syntaqs-spin-half/README.md) | Spin-1/2 algebra and chain models. |
+| [syntaqs-spin-one](crates/syntaqs-spin-one/README.md) | Spin-1 algebra and chain models. |
+| [syntaqs-fermion](crates/syntaqs-fermion/README.md) | Fermion algebra and Hubbard chains. |
 
-`syntaqs-core`, `syntaqs-geometry`, `syntaqs-spin-half`, and `syntaqs-fermion` use `no_std + alloc`. Other crates use the standard library. See [verification coverage and limits](docs/design/verification.md#3-ci-and-verification-limits) for minimum Rust version checks and dedicated no_std target limitations, and [future work](docs/future-work.md#3-outstanding-verification-and-performance) for outstanding investigations.
+## Docs
 
-## Examples and documentation
-
-Run the examples from the repository root:
-
-```sh
-cargo run -p examples --bin two_spins
-cargo run -p examples --bin heisenberg --features export
-cargo run -p examples --bin hubbard --features export
-cargo run -p examples --bin spin_one --features export
-cargo run -p examples --no-default-features --features lie --bin lie_algebra
-```
-
-The [examples README](examples/README.md) covers basis expansion, expression formatting, tensor products, and custom geometric relations as well.
-
-- [Architecture](docs/architecture.md): responsibilities and dependency direction.
-- [Requirements](docs/requirements.md): mathematical conventions and contracts.
-- [Future work](docs/future-work.md): planned extensions and verification limits.
-- [Workspace tests](tests/README.md): shared test algebras and integration checks.
-
-The design documents are in English. Generate the API documentation locally with `cargo doc --workspace --all-features --no-deps`.
-
-## Development
-
-Linked workspace checks use system OpenBLAS (including LAPACK) and pkg-config.
-Provide both in the development environment; the internal
-[blas-provider](support/blas-provider/README.md) selects them for tests/examples.
-Production `syntaqs-lie` leaves provider selection to its caller.
-
-```sh
-cargo build --workspace --all-features
-cargo test --workspace --all-features
-cargo check --workspace --all-targets --no-default-features
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
-```
-
-Run the isolated shared Lie workflow with `cargo test -p syntaqs-tests --no-default-features --features lie --test lie_analysis`.
-
-Test optional export backends independently with `cargo test -p syntaqs-export --no-default-features`, adding `--features ndarray` or `--features sprs` for each backend.
+- [Installation](docs/installation.md): version tags, optional crates, and features.
+- [Examples](examples/README.md): runnable calculations and models.
+- [Documentation guide](docs/README.md): requirements, architecture, and feature contracts.
+- [Development checks](docs/design/verification.md): tests, toolchains, and native dependencies.
 
 ## License
 
-Licensed under the [MIT License](LICENSE). Copyright (c) 2026 Haruki SAITO.
-
-The license covers this repository's code, examples, tests, and documentation.
+[MIT](LICENSE). Copyright (c) 2026 Haruki SAITO.

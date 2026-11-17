@@ -9,19 +9,26 @@ Hilbert–Schmidt metric. It works directly on shared core expressions, without 
 state basis or physical action matrices. The crate uses std and complex f32/f64
 coefficients; the application supplies native BLAS/LAPACK linkage.
 
+For a release, follow the [version-tagged installation guide](../../docs/installation.md)
+and use documentation at the chosen tag. This README describes current-checkout APIs.
+
 ## Using the crate
 
-Construct an `OperatorFamily` from local or placed operators, supplying an
-ambient space with `new_in` for entirely unbound placed inputs. Validate
-Hermiticity and independence before projection; a Gram factorization can be
-reused for multiple targets. Lie representations and decomposition additionally
-require closure. See the [crate-level example](src/lib.rs) and the runnable
-[Lie analysis example](../../examples/src/bin/lie_algebra.rs) for the public
-workflow.
+The usual workflow is:
+
+1. Construct an `OperatorFamily` from local or placed operators. Use `new_in`
+   with an ambient space when all placed inputs are unbound.
+2. Validate Hermiticity and independence. Reuse a Gram factorization when
+   projecting multiple targets onto the same family.
+3. Check closure before obtaining Lie representations or a center/simple-ideal
+   decomposition. Numerical settings and diagnostics remain attached to results.
+
+The [crate-level example](src/lib.rs) and runnable
+[Lie analysis example](../../examples/src/bin/lie_algebra.rs) show these steps together.
 
 Types live under `family`, `representation`, `invariant`, `decomposition`, and
-`numerical`; the prelude provides common entry points. The design document owns
-the detailed contracts:
+`numerical`; the prelude provides common entry points. Follow the relevant
+contract for precise preconditions and result conventions:
 
 | Topic | Specification |
 | --- | --- |
@@ -40,9 +47,8 @@ environment. The linked contracts specify these conditions and diagnostics.
 
 ## Native linkage
 
-This library enables ndarray BLAS and uses ndarray-linalg without provider
-features. Its provider-neutral blas-src dependency retains native linkage.
-The final application selects one source supplying both BLAS and LAPACK:
+Select one provider supplying both BLAS and LAPACK in the final application.
+For an installed system OpenBLAS, add:
 
 ```toml
 blas-src = { version = "0.14.0", features = ["openblas"] }
@@ -55,9 +61,10 @@ Retain that provider in the application binary with:
 extern crate blas_src as _;
 ```
 
-The library does not expose provider-selection features. The linked source must
-supply LAPACK as well as BLAS. For a system provider, pkg-config and linker search
-paths must find the installed implementation.
+The system implementation must be discoverable through pkg-config and the linker
+search paths. syntaqs-lie enables ndarray BLAS and uses ndarray-linalg without
+provider features; its provider-neutral blas-src dependency leaves selection to
+the application. It exposes no provider-selection features of its own.
 
 Workspace tests and examples select system OpenBLAS through the internal
 [blas-provider package](../../support/blas-provider/README.md); it is not a

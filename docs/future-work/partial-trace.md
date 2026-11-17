@@ -1,8 +1,12 @@
 # Partial trace proposal
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
-These are mathematical contracts for an unimplemented feature. Timing and public APIs are undecided; current full trace, bases, and export do not depend on it.
+Partial trace would contract selected factors of an operator and return an
+operator on the remaining ordered space. The feature is unimplemented; timing
+and APIs are undecided. The proposed mathematical contract below uses ordinary,
+unnormalized Hilbert-space trace for both ordinary and graded inputs. Current
+full trace, bases, and export are independent of this proposal.
 
 ## 1. Inputs, remaining space, and evaluation
 
@@ -11,7 +15,14 @@ Resolve two spaces for partial trace:
 - `ambient`: the full Hilbert space, taking an explicit argument before the operator's binding.
 - `trace_out`: the space whose basic factors identify the contracted degrees of freedom.
 
-`trace_out` must be a subsystem of `ambient` under the [space subsystem contract](../design/hilbert-space.md#6-subsystem-checks). Callers may use retained internal-factor spaces; an entire site corresponds to all its factors. All operator references must also exist in ambient. An unbound expression with an explicit space needs no preliminary bind call. Reject missing binding/explicit space; do not infer ambient from trace_out. A bound operator still needs a separate trace_out argument.
+`trace_out` must be a subsystem of `ambient` under the
+[space contract](../design/hilbert-space.md#6-subsystem-checks), and every operator
+reference must exist in ambient. Callers may select retained internal-factor
+spaces; a whole site consists of all its factors.
+
+An explicit ambient space permits unbound inputs without a preliminary bind.
+Reject a missing binding/explicit space rather than inferring ambient from
+trace_out. Even a bound operator needs a separate trace_out selection.
 
 Return an operator `B: R→R` bound to the remaining space R, preserving remaining indices, local structures, and order even for zero or scalar identity. Do not require rebinding by the caller. A delayed node may retain the selected pre-contraction ambient and contracted factors; later rebinding of the result must not change that original scope.
 

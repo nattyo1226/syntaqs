@@ -2,6 +2,8 @@
 
 This is the baseline audit. Subsequent conventions corrections and their
 verification are recorded in [conventions results](conventions-results.md).
+The later [writing phase](writing-results.md) records the completed full-document
+revision and remaining audit-item resolutions.
 
 The documentation broadly follows the required directory layout, but it is not
 fully consistent with the current implementation or writing policy. This audit
@@ -76,7 +78,7 @@ lines 55–59. Composite evaluation additionally requires coefficient `PartialEq
 Custom-algebra authors receive conflicting guidance about the required traits.
 Distinguish the absent public whole-tree comparison API from primitive equality
 used internally by state collection. Link to the
-[evaluation capability table](../../design/composite-expression.md#92-natural-state-collection-between-actions)
+[evaluation capability table](../../design/composite-expression.md#42-shared-apis-and-minimal-capabilities)
 and avoid broad claims covering both state evaluation and operator-only queries.
 
 ### C03 — Future-work guidance says no prelude is adopted

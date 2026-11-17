@@ -1,10 +1,13 @@
 # Proposed map representation matrices and coefficients
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
 ## 1. Scope and responsibilities
 
-Consider representation coefficients with explicit input/output bases, multiple inputs, conjugation per input, and retained/reusable coefficient data as an unimplemented feature. Timing, public APIs, and internal design are undecided.
+This proposal would retain a map's basis coefficients for reuse with later
+coordinate inputs. Input/output bases, argument order, and conjugation per
+input determine their meaning. The feature is unimplemented; timing, APIs, and
+internal design are undecided.
 
 Generation and interpretation would belong to the algebra core, with numerical storage in export. Combine basis enumeration, ordinary operations, expansion, and coordinates without requiring a dedicated trait per local algebra. Current state/operator coordinates and action-matrix export exist independently of this general mechanism.
 
@@ -55,7 +58,13 @@ Columns use mixed-radix order in the specified argument order, with the last inp
 | Two bilinear inputs | `z = M(x ⊗ y)`; unflattened coefficients are `C_{ρμν}`. |
 | First input conjugate-linear, second linear | `z = M(overline(x) ⊗ y)` |
 
-Scalar output uses the one-dimensional space C with basis `{1}`. Bilinear scalar maps may be written `xᵀCy`, and sesquilinear ones `x†Gy`. Turning a column into a row does not conjugate it: distinguish transpose `xᵀ` from adjoint `x†`. Although `z = K overline(x)` can also be written `zᵀ = x†Kᵀ`, row/column orientation alone must not specify conjugation.
+Scalar output uses the one-dimensional complex space ℂ with basis `{1}`.
+Bilinear scalar maps may be written `xᵀCy`, with coefficient matrix C, and
+sesquilinear ones `x†Gy`.
+
+Transpose `xᵀ` and adjoint `x†` have different meanings: turning a column into
+a row does not conjugate it. Although `z = K overline(x)` can also be written
+`zᵀ = x†Kᵀ`, row/column orientation alone does not specify conjugation.
 
 ## 4. Construction from existing capabilities
 
