@@ -10,8 +10,8 @@ syntaqs dependency. For example:
 
 ```toml
 [dependencies]
-syntaqs-core = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.4.0" }
-syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.4.0" }
+syntaqs-core = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
+syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
 
 num-complex = "0.4.6"
 ```
@@ -22,10 +22,10 @@ Publishing to crates.io is planned; current installation uses Git.
 
 ## Match documentation to the version
 
-Use the [documentation and examples at the selected tag](https://github.com/nattyo1226/syntaqs/tree/v0.4.0).
-The current checkout also contains API changes for the next version, so its
-module paths may differ from a released tag. The root Quick start works with
-both `v0.4.0` and the current checkout.
+For version 0.5.0, use the
+[documentation and examples at v0.5.0](https://github.com/nattyo1226/syntaqs/tree/v0.5.0).
+Module paths can change between releases; keep dependencies, documentation, and
+examples on the same tag.
 
 For unreleased work, select a reviewed commit with `rev`. Cargo's
 [Git dependency reference](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#choice-of-commit)
@@ -37,9 +37,9 @@ Normalization, numerical export, and Lie analysis are separate crates. Add the
 entries you need to the same dependency table:
 
 ```toml
-syntaqs-normalize = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.4.0" }
-syntaqs-export = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.4.0", features = ["ndarray", "sprs"] }
-syntaqs-lie = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.4.0" }
+syntaqs-normalize = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
+syntaqs-export = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0", features = ["ndarray", "sprs"] }
+syntaqs-lie = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
 ```
 
 - [Normalize](../crates/syntaqs-normalize/README.md) adds square-root norms,

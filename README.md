@@ -11,8 +11,8 @@ the same tag for all syntaqs crates. Add these to `Cargo.toml`:
 
 ```toml
 [dependencies]
-syntaqs-core = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.4.0" }
-syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.4.0" }
+syntaqs-core = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
+syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
 
 num-complex = "0.4.6"
 ```

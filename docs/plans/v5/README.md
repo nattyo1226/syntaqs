@@ -8,9 +8,9 @@ below. Current specifications belong in [architecture](../../architecture.md)
 and the feature designs; this plan records integration progress and remaining
 work.
 
-The workspace currently declares version 0.4.0. The source and accepted
-performance record establish implementation progress; integration validation,
-version preparation, and merge confirmation remain separate stages below.
+The workspace now declares version 0.5.0. The source and accepted performance
+record establish implementation progress; release-preparation checks are
+recorded below. Review and integration into `main` remain to be confirmed.
 Publishing and further feature development are outside this plan's scope.
 
 ## Module structure and public API
@@ -45,10 +45,40 @@ Eight standalone README examples passed against local crates. The final root
 Quick start also ran against a local `v0.4.0` archive; both versions printed
 `Expectation: -1`. Local links, heading anchors, plan boundaries, code fences,
 and whitespace checks passed. Example builds used local path dependencies;
-remote installation and external URL reachability were not tested. Full
-integration validation remains pending below. The completed documentation task's
-temporary audit files and helper were removed; production code and dependencies
-were unchanged.
+remote installation and external URL reachability were not tested.
+Release-candidate validation is tracked separately below. The completed
+documentation task's temporary audit files and helper were removed; production
+code and dependencies were unchanged.
+
+## Release preparation checks (2026-11-17)
+
+The workspace version and release-installation examples now select 0.5.0.
+Cargo metadata confirms that all 12 workspace packages inherit this version.
+The root and downstream fixture lockfiles were regenerated locally; they remain
+ignored under the existing repository policy.
+
+Seventeen temporary standalone documentation programs passed against local
+dependencies constrained to `=0.5.0`: eight complete README examples, eight
+design snippets with caller-owned setup where needed, and the Lie README's
+native provider configuration combined with the crate-level example. No example
+source changes were needed. The root Quick start printed `Expectation: -1`.
+
+All ten example binaries ran successfully in 38 feature configurations. The
+nine non-Lie binaries ran with default features, no default features, export,
+and export without default features. The Lie binary ran with Lie alone and
+all features, recovering center dimension 1 and simple-ideal dimensions `[3,3]`.
+
+On host stable Rust 1.99.1 and Rust 1.85.0, workspace default/all/no-default-feature
+tests, the all-feature build, and the all-target no-default-feature check passed.
+Stable also passed workspace and downstream formatting, all-target/all-feature
+Clippy, and rustdoc with warnings denied. Separate Vec/ndarray/sprs tests for
+export and shared integration, the Lie-only shared test, and downstream f32/f64
+native linkage passed on stable.
+
+Release tag consistency, local document link targets, code fences, and
+whitespace were checked. Remote Git installation, external URL reachability,
+GitHub-hosted CI status, review status, and integration into `main` were not
+verified by these local checks.
 
 ## Stages and progress
 
@@ -57,8 +87,8 @@ were unchanged.
 | Module/API reorganization | Implemented. Defining public module paths and crate preludes are present; the [architecture](../../architecture.md#5-module-structure) owns the current conventions. |
 | Core evaluation performance | Implemented and validated as recorded in the [accepted decision](../../decisions/core-evaluation-performance.md). These are the recorded development checks, not a new release-candidate run. |
 | Documentation guidelines alignment | Completed. Conventions corrections, writing revisions, README examples, and local document checks are summarized above; the temporary task directory has been removed. |
-| Integration validation and review | Pending. Check the candidate with the [verification commands](../../design/verification.md#2-common-checks), record results and limitations here, and confirm review status. |
-| Version preparation and integration | Pending. Update workspace version/lockfile consistently with 0.5.0 and confirm integration into the intended branch before closeout. |
+| Integration validation and review | Local [workspace validation](../../design/verification.md#2-common-checks) completed on stable and MSRV as recorded above. GitHub-hosted CI and review status remain unconfirmed. |
+| Version preparation and integration | Version preparation completed. Workspace packages, local lockfiles, and release-installation examples agree on 0.5.0; documentation examples passed. Integration into `main` remains to be confirmed before closeout. |
 
 ## Completion criteria
 
