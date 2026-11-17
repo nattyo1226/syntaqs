@@ -1,12 +1,20 @@
 # Local expressions and algebraic evaluation
 
-Updated: 2026-11-04
+Updated: 2026-11-17
 
 ## 1. Scope and responsibilities
 
-This document defines core's `LocalState<S,O,C>` and `LocalOperator<O,C>` and the extension of primitive capabilities to expressions. See [local algebras](local-structure.md) for concrete primitives/normalization, [construction](expression-construction.md) for type selection/inputs, and [numerics](numerics.md) for coefficient capabilities.
+`LocalState<S,O,C>` and `LocalOperator<O,C>` build sums, scales, products,
+actions, and adjoints from primitive rules. Here S/O are state/operator
+primitives and C is the whole coefficient type. Local expressions have no factor
+index; [placement](composite-expression.md#2-placement-binding-and-expression-construction)
+connects them to a composite space.
 
-Local Product/Act/adjoint rules return finite primitive combinations; shared expressions provide delayed syntax and evaluation. Local expressions have no index. See [composite expressions](composite-expression.md) for placement and full-space evaluation.
+Product, Act, and adjoint rules return finite primitive combinations. Shared
+expressions retain delayed syntax and apply those rules when evaluation,
+contraction, or expansion needs them. See [local algebras](local-structure.md)
+for primitive meaning, [construction](expression-construction.md) for inputs,
+and [numerics](numerics.md) for coefficient capabilities.
 
 ## 2. Primitive capabilities
 
@@ -71,7 +79,19 @@ Inner products are conjugate-linear in the first input and linear in the second.
 
 These laws do not require eager expansion during construction. Retain products/actions/adjoints until inner products, traces, action results, or basis expansion/coordinates require the relevant parts; primitive rules run then.
 
-state.act builds an Act node; state.evaluate resolves pending actions to ordinary state syntax using local Act. `ψ.act(&b).act(&a)` means A(Bψ). Evaluate takes no basis and performs no coordinate or matrix conversion.
+state.act builds an Act node; state.evaluate resolves pending actions to ordinary state syntax using local Act. `ψ.act(&b).act(&a)` means A(Bψ). Evaluate takes no basis and performs no coordinate or matrix conversion. It
+collects matching primitive terms between actions and on action-free inputs,
+retaining first-occurrence order and removing exact-zero coefficients. Local
+evaluation requires primitive PartialEq and coefficient Clone/Zero/One/conjugation,
+with no coefficient equality or operator Product. Composite normalization and
+matching follow [natural-state collection](composite-expression.md#114-natural-state-collection-between-actions).
+
+Local inner products and traces remove exact-zero scalar contributions before
+unnecessary coefficient multiplication or conjugation. HS skips normalization
+division for zero primitive traces; nonzero traces retain per-primitive
+normalization before coefficient arithmetic. A zero contribution never terminates
+a sum. Composite product stopping follows
+[incremental contractions](composite-expression.md#115-incremental-scalar-contractions).
 
 Local evaluation and explicit basis expansion/coordinates exist; selecting individual simplification rules does not. Distribution, local products, and coefficient combination remain internal steps when needed.
 
@@ -79,19 +99,20 @@ Local evaluation and explicit basis expansion/coordinates exist; selecting indiv
 combines equal natural primitives using PartialEq. It shares primitive handles,
 needs no primitive Clone or Dimension, and removes exact zeros only. Unlike
 complete basis expansion, it does not resolve linear relations between distinct
-natural primitives. Ordinary construction and evaluation retain their existing
-duplicate/zero behavior. Lie residual calculations use this explicit operation
+natural primitives. Construction retains duplicate/zero syntax; state evaluation
+collects terms automatically. Operator collection remains explicit. Lie residual calculations use this explicit operation
 to reduce cancellation before normalized HS contraction.
 
-Common ScaleExpr/SumExpr/ProductExpr/ActExpr/AdjointExpr store node contents. Zero is an empty sum. LinearCombination<P,C> stores `SumExpr<ScaleExpr<P,C>>`. Owned map/common constructors move rule/basis outputs into expressions, preserving coefficients, order, duplicates, and zero coefficients without Clone on elements or coefficients for that conversion.
+Internal ScaleExpr/SumExpr/ProductExpr/ActExpr/AdjointExpr store node contents. Zero is an empty sum. LinearCombination<P,C> stores `SumExpr<Term<P,C>>`. Owned map/common constructors move rule/basis outputs into expressions, preserving coefficients, order, duplicates, and zero coefficients without Clone on elements or coefficients for that conversion.
 
-expr::parts publicly exposes those parts and their contents; root re-exports expression handles. Node enums/shared internals stay private. Term<P,C> aliases ScaleExpr<P,C> with field operand. Linear-combination construction/traversal uses SumExpr. Associated Term in operation traits instead denotes an element without its coefficient.
+The expression nodes and shared internals are private; the tree is common infrastructure, not an extension point for user-defined nodes. Users customize local algebra through primitive capability traits and construct trees through the public expression handles under `expression::local` and `expression::composite`. Common handles are also available in the core prelude. `LinearCombination`, `Term<P,C>`, and its owned iterator `IntoTerms` are public under `expression::parts::linear_combination`. `Term` is an independent coefficient/operand type; associated `Term` in operation traits instead denotes an element without its coefficient.
 
 Evaluators separate state evaluation, operator application, and operator-term traversal. State action needs no primitive Product; trace and other local multiplication paths do. Storage, delayed construction, and map without arithmetic gain no numeric bounds; methods request individual capabilities rather than one combined coefficient trait. Binary operators accept all four owned/borrowed combinations, moving owned handles and cloning shared handles. Named methods primarily borrow.
 
 Evaluation and final-owner node destruction use explicit work stacks, avoiding depth-proportional recursion. Verify long product/action chains and surviving shared subtrees. Performance criteria cover sharing, avoiding unnecessary primitive clones, and allocation-free empty/single-term containers, not allocation-free map in general or guaranteed execution times.
 
-Arc shares immutable nodes and their primitives, so repeated handles do not clone whole trees/primitives. Independently constructed equal-shaped expressions are not automatically merged. Inputs stay unchanged; no common fully expanded representation or evaluation cache is required. Source retention/structural comparison are unavailable. [Formatting](expression-formatting.md) has independent Display/Debug bounds and concrete algebras need no separate expression trees.
+Arc shares immutable nodes and their primitives, so repeated handles do not clone whole trees/primitives. Independently constructed equal-shaped expressions are not automatically merged
+during construction; state evaluation performs the collection described above. Inputs stay unchanged; no common fully expanded representation or evaluation cache is required. There is no public source-retention or structural-comparison API. [Formatting](expression-formatting.md) has independent Display/Debug bounds and concrete algebras need no separate expression trees.
 
 ## 4. Derived operations
 
@@ -124,7 +145,7 @@ Then `||I||_D=1`, and identity spectators preserve inner products. For Hermitian
 
 Trace remains ordinary and unnormalized, with Tr(I)=D. Expectations, purity traces, state inner products/norms, and state normalization keep their meanings. Custom algebras/bases need not be orthonormal.
 
-LocalOperator::hs_inner_product divides by O::identity().trace(). Normalize each evaluated primitive trace before multiplying coefficients and summing. Composite hs_inner_product/hs_inner_product_in use the same [ordinary local-trace traversal](composite-expression.md#114-intrinsic-terms-and-ordinary-representations) before contraction. Scaling before or after placement avoids unnecessary unnormalized intermediates. Each local dimension must be a nonzero C supporting mathematical division through Divide; ordinary trace/trace_in gain no division requirement.
+LocalOperator::hs_inner_product divides by O::identity().trace(). Normalize each evaluated primitive trace before multiplying coefficients and summing. Composite hs_inner_product/hs_inner_product_in use the same [ordinary local-trace traversal](composite-expression.md#111-intrinsic-terms-and-ordinary-representations) before contraction. Scaling before or after placement avoids unnecessary unnormalized intermediates. Each local dimension must be a nonzero C supporting mathematical division through Divide; ordinary trace/trace_in gain no division requirement.
 
 This needs no state type, Dimension, integer total dimension, or integer-to-C conversion. Empty spaces have D=1. It avoids usize overflow and growth from multiplying spectator dimensions, without guaranteeing freedom from arbitrary coefficient overflow/rounding. See [trace.rs](../../crates/syntaqs-core/src/evaluate/trace.rs) and [HS regression tests](../../tests/tests/core_hs_inner_product.rs).
 
@@ -132,7 +153,13 @@ This needs no state type, Dimension, integer total dimension, or integer-to-C co
 
 Dependent primitives permit multiple expressions for one object, such as Sp and `(Sx+iSy)/2`. Capabilities preserve those linear relations and give mathematically equal results for equivalent inputs; identical coefficient lists/tree structures are not required.
 
-Evaluation needs no primitive/tree structural comparison. Expansion aggregates by basis index while maintaining local-algebra/index checks independently of structural comparison support.
+State evaluation uses primitive `PartialEq` to collect matching natural terms;
+composite states also require coefficient `PartialEq`. These requirements do
+not provide a public expression-tree comparison API or identify linear relations
+between distinct primitives. See the
+[evaluation capability table](composite-expression.md#42-shared-apis-and-minimal-capabilities).
+Basis expansion resolves those relations and aggregates by basis index, while
+preserving local-algebra and factor checks.
 
 Exact expansion/coordinates explicitly organize expressions and connect them to bases, preserving linear relations and aggregating members. Primitives do not fix a selected basis, and ordinary actions/inner products/traces need no expansion. Approximate comparison and action equivalence follow [numerics](numerics.md).
 

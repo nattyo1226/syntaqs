@@ -4,8 +4,10 @@ use syntaqs_tests::graded as support;
 use num_complex::Complex;
 use support::{Op, Real, c, close};
 use syntaqs_core::{
-    Adjoint, DimensionOverflow, HilbertSpace, HomogeneousParity, Identity, LinearCombination,
-    LocalOperator, Operator, Parity, ParityOperator, Product, TensorKind, Trace,
+    algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity, algebra::Parity,
+    algebra::ParityOperator, algebra::Product, algebra::Trace, expression::composite::Operator,
+    expression::local::LocalOperator, expression::parts::linear_combination::LinearCombination,
+    space::DimensionOverflow, space::HilbertSpace, space::TensorKind,
 };
 
 // No Dimension, state type, or basis implementation: HS gets d from Tr(I).

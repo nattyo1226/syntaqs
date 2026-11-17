@@ -1,15 +1,24 @@
 # Automatic differentiation and tensor-network connections
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
-## 1. Boundary with external libraries and automatic differentiation
+External connections would let syntaqs generate reusable algebraic coefficients
+while other libraries handle numeric representations, differentiation, or
+numerical containers. Automatic differentiation, ML modules, and tensor-network
+connections are unimplemented; current coordinates and dense/sparse export work
+independently of them.
 
-Automatic differentiation, ML modules, and tensor-network connections are unimplemented and are not prerequisites for current coordinates or dense/sparse export.
+Core would retain responsibility for spaces, bases, expression structure,
+embedding, algebraic computation, and coefficient generation. Every connection
+must preserve domain/codomain, factor order, basis, precision, and parameter
+dependencies.
 
-The algebra core would handle spaces, bases, expression structure, embedding, algebraic computation, and reusable coefficient generation. External libraries handle numeric coefficient representations, differentiation, and output containers. Connections must preserve domain/codomain, factor order, basis, precision, and parameter dependencies.
+Tensor-network export would need to reconcile backend contraction conventions
+with the inner products, norms, ordinary traces, and actions specified by
+[current composite evaluation](../design/composite-expression.md).
 
-Future tensor-network export must reconcile backend contraction conventions while preserving Hilbert-space inner products/norms, ordinary traces, and actions specified by [current composite evaluation](../design/composite-expression.md).
-
-Symbolic tractability and differentiability are separate requirements. The library should construct parameter-independent algebra and reusable coefficients for external connections without requiring an automatic differentiation engine in core.
-
-Future differentiable modules must preserve external parameter dependencies without cutting the computation graph through conversion to ordinary numbers. A parameter-dependent term must not be discarded solely because its current value is zero.
+Symbolic tractability and differentiability are separate requirements.
+Parameter-independent algebra should be constructible without an automatic
+differentiation engine in core. A differentiable connection must preserve the
+external computation graph through conversions and retain parameter-dependent
+terms even when their current value is zero.

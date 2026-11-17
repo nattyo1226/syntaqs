@@ -1,10 +1,17 @@
 # Geometry, site relations, and borrowing connections
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
 ## 1. Scope and responsibilities
 
-`syntaqs-geometry` separates geometry, site-selection rules, and borrowing connections to external sequences. Public types are available at the crate root. Core does not depend on geometry; geometry depends on core for HilbertSpace connections, maintaining `no_std + alloc`.
+Geometry describes sites; a relation selects groups of those sites; mapping
+borrows the caller's data at the selected positions. These three responsibilities
+let one geometry support multiple interactions and let the same relation work
+with multiple geometries.
+
+Public types live under `geometry`, `relation`, and `mapping`, with common items
+in the prelude. Geometry depends on core for HilbertSpace connections and uses
+`no_std + alloc`; core is independent of geometry.
 
 | Type / trait | Responsibility |
 | --- | --- |
@@ -25,7 +32,11 @@ Standard implementations provide the common traits/connections and chain nearest
 
 ## 2. Relation enumeration and borrowing
 
-`Relation<G>::groups(&geometry)` returns its associated Error or a lazy group iterator. Validate settings before returning the iterator without universally requiring Debug, Display, or Error on that error type. GATs permit borrowing stored data from rules/geometries, but ordinary iterators cannot lend a reusable mutable generation buffer.
+`Relation<G>::groups(&geometry)` validates settings and returns either its
+associated Error or a lazy group iterator. The error type needs no universal
+Debug, Display, or Error bound. Generic associated types allow groups to borrow
+stored data from the relation or geometry; an ordinary iterator cannot lend a
+reusable mutable generation buffer.
 
 | Chain relation | Enumeration |
 | --- | --- |
@@ -43,8 +54,11 @@ periodic: [0,1,2], [1,2,3], [2,3,4], [3,4,0], [4,0,1]
 
 Positions correspond to local-operator roles. Do not merge equal rotated supports, since `X_i Z_j X_k` has a distinct middle role and graded products may change signs. Models decide duplication based on interaction symmetries.
 
+The following sketch assumes caller-owned `site_spaces`, with one space per
+site. It applies two relations to the same mapping:
+
 ```rust,ignore
-use syntaqs_geometry::{Boundary, Chain, Consecutive, NearestNeighbors, SiteMapper};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, relation::consecutive::Consecutive, relation::nearest_neighbor::NearestNeighbors, mapping::SiteMapper};
 let chain = Chain::new(4, Boundary::Open);
 let mapper = SiteMapper::new(&chain, &site_spaces)?;
 for group in mapper.groups(&Consecutive::<3>)? {
@@ -87,7 +101,10 @@ An empty site produces no rows without closing gaps. A zero-site group yields on
 
 Site order and an independently existing ambient factor order are distinct. Connections neither reorder spaces/states/matrices nor construct tensors. Callers select ambient spaces, axes, and normalization; core handles placement, multiplication, and binding. Selecting one leaf per site differs from enumerating all Pauli assignments across leaves.
 
-Existing `ExpressionFactory::operator_product_at` and `try_operator_product` accept arbitrary-length placements/products. No per-arity construction API or geometry-specific evaluator is added, and enumeration/connections require no evaluation capabilities.
+`ExpressionFactory::operator_product_at` and `try_operator_product` accept
+arbitrary-length placements/products. Relations need no per-arity constructor
+or geometry-specific evaluator, and enumeration/mapping require no evaluation
+capabilities.
 
 [pauli_strings.rs](../../examples/src/bin/pauli_strings.rs) demonstrates all supports up to K sites with one spin per site: ordinary iterators select each size-r support for `r=0..=min(K,N)` and assign `3^r` X/Y/Z combinations. The total is `Σ(r=0..min(K,N)) binomial(N,r) × 3^r`, giving 37 terms including identity on three sites up to two-site support. Empty support is one ambient identity, unlike Consecutive<0>. Sx/Sy/Sz are directly Pauli matrices, requiring no extra scale before binding. Construction needs only `I: Eq`, `Group: AsRef<[usize]>`, and iteration over the group collection.
 

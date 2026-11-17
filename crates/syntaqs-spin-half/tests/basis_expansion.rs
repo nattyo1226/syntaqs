@@ -4,11 +4,13 @@ use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use std::{fmt::Debug, ops::Neg};
 use syntaqs_core::{
-    BasisError, DimensionOverflow, ExpressionError, HilbertSpace, LocalOperator, LocalState,
-    Operator, State,
+    basis::BasisError, expression::composite::Operator, expression::composite::State,
+    expression::error::ExpressionError, expression::local::LocalOperator,
+    expression::local::LocalState, space::DimensionOverflow, space::HilbertSpace,
 };
 use syntaqs_spin_half::{
-    CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis,
+    basis::CartesianBasis, basis::LadderBasis, basis::SzBasis, operator::SpinHalfOperator as Op,
+    state::SpinHalfState as Ket,
 };
 
 trait Real: Num + Copy + Neg<Output = Self> + Debug + FromPrimitive + ToPrimitive {

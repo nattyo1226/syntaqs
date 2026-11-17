@@ -1,8 +1,12 @@
 # Coefficient types and numeric conventions
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
-This document defines coefficients, operation-specific capabilities, numerical zero, and approximate comparison. See [coefficient.rs](../../crates/syntaqs-core/src/coefficient.rs) for implementation.
+The coefficient type C determines precision, arithmetic, and special-value
+behavior. Each operation requests the capabilities it uses. Exact zero controls
+term removal; approximate tolerances belong to numerical checks and never
+silently prune an ordinary expression. Implementations are in
+[coefficient.rs](../../crates/syntaqs-core/src/coefficient.rs).
 
 ## 1. Coefficient types and capabilities
 
@@ -27,7 +31,21 @@ Arithmetic, exact comparison, rounding, NaN, and infinity follow the numeric typ
 
 `Divide` is independent of standard Div and permits representation-specific division. A nonzero divisor is the caller's contract: normalized expectations check exact zero self-inner-products, while HS inner products require a nonzero local dimension `Tr(I)`. Even with truncating arithmetic such as integers, operations using fractions in rules, bases, or models require mathematical fractions to be representable.
 
-The standard `Complex<T>` implementation requires `T: PartialOrd`. Purely real divisors are divided directly. Otherwise, the divisor is scaled by its largest component magnitude before squaring. If scaling the dividend overflows, the dividend is halved first and the factor restored afterward. Small components are summed before division by the normalized squared divisor norm; large components are divided before summing. This avoids unnecessary squared-denominator overflow/underflow even for tiny imaginary rounding residuals. It adds no Float, Copy, One, or math backend requirement, and no ordering bound to custom C implementations or expression methods. Truncating division retains the original direct formula.
+The standard `Complex<T>` implementation requires `T: PartialOrd`. Purely real
+divisors use direct component division. For a nonreal divisor, truncating
+arithmetic uses the direct complex formula; arithmetic that represents fractions
+uses the following scaled path to avoid unnecessary squared-denominator
+overflow/underflow, including for tiny imaginary rounding residuals:
+
+1. Scale the divisor by its largest component magnitude before squaring.
+2. Scale the dividend by the same magnitude. If this overflows, halve the
+   dividend first and restore that factor after recombination.
+3. When both normalized dividend components have magnitude at most 1, sum before
+   dividing by the normalized squared divisor norm; otherwise divide first.
+
+The implementation requires no
+Float, Copy, One, or math backend, and imposes no ordering bound on custom C
+implementations or expression methods.
 
 ## 3. Approximate equivalence and verification
 

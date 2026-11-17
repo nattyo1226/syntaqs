@@ -1,20 +1,21 @@
-mod support;
+mod common;
 
+use common::*;
 use num_complex::Complex;
-use support::*;
-use syntaqs_export::{Export, Exported, MatrixArgs};
-use syntaqs_normalize::{Norm, NormalizationError, Normalize, NormalizedExpectation};
+use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
+use syntaqs_normalize::{
+    NormalizationError, expectation::NormalizedExpectation, norm::Norm, norm::Normalize,
+};
 use syntaqs_spin_one::{
-    CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,
+    SpinOne, basis::CartesianBasis, basis::LadderBasis, basis::SzBasis,
+    operator::SpinOneOperator as O, state::SpinOneState as S,
 };
 
 fn vector<T: Real>(psi: &LocalKet<T>) -> Matrix {
     let out: Exported<Vec<Complex<T>>, _> = psi.export(&SzBasis).unwrap();
     assert_eq!(out.metadata().shape(), [3]);
-    let array: Exported<syntaqs_export::ndarray::Array1<Complex<T>>, _> =
-        psi.export(&SzBasis).unwrap();
-    let sparse: Exported<syntaqs_export::sprs::CsVec<Complex<T>>, _> =
-        psi.export(&SzBasis).unwrap();
+    let array: Exported<ndarray::Array1<Complex<T>>, _> = psi.export(&SzBasis).unwrap();
+    let sparse: Exported<sprs::CsVec<Complex<T>>, _> = psi.export(&SzBasis).unwrap();
     let result: Vec<_> = out.data().iter().map(|x| to64(*x)).collect();
     values::<T>(
         &array.data().iter().map(|x| to64(*x)).collect::<Vec<_>>(),
@@ -34,9 +35,9 @@ fn vector<T: Real>(psi: &LocalKet<T>) -> Matrix {
 fn exported<T: Real>(op: &LocalOp<T>) -> Matrix {
     let out: Exported<Vec<Complex<T>>, _> = op.export(MatrixArgs::<S, _>::new(&SzBasis)).unwrap();
     assert_eq!(out.metadata().shape(), [3, 3]);
-    let array: Exported<syntaqs_export::ndarray::Array2<Complex<T>>, _> =
+    let array: Exported<ndarray::Array2<Complex<T>>, _> =
         op.export(MatrixArgs::<S, _>::new(&SzBasis)).unwrap();
-    let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<T>>, _> =
+    let sparse: Exported<sprs::CsMat<Complex<T>>, _> =
         op.export(MatrixArgs::<S, _>::new(&SzBasis)).unwrap();
     let result: Vec<_> = out.data().iter().map(|x| to64(*x)).collect();
     values::<T>(

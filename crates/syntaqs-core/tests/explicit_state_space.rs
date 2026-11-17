@@ -1,9 +1,12 @@
-use syntaqs_core::{ExpressionError as E, HilbertSpace as H, State, StateOf, TensorKind};
+use syntaqs_core::{
+    expression::composite::State, expression::error::ExpressionError as E,
+    space::HilbertSpace as H, space::TensorKind, system::StateOf,
+};
 
 // Construction requires none of Clone, numeric operations or evaluation rules.
 struct Primitive;
 struct Coeff;
-type System = syntaqs_core::ExpressionFactory<Primitive, (), Coeff>;
+type System = syntaqs_core::system::ExpressionFactory<Primitive, (), Coeff>;
 
 #[derive(PartialEq, Eq)]
 struct Index(u8);

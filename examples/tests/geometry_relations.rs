@@ -1,8 +1,11 @@
 use num_complex::Complex64 as C;
-use syntaqs_core::HilbertSpace as H;
-use syntaqs_fermion::{Fermion, FermionOperator as F, FermionState as Occupation};
-use syntaqs_geometry::{Boundary, Chain, Consecutive, NearestNeighbors, SiteMapper};
-use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as S, SpinHalfState as Spin};
+use syntaqs_core::space::HilbertSpace as H;
+use syntaqs_fermion::{Fermion, operator::FermionOperator as F, state::FermionState as Occupation};
+use syntaqs_geometry::{
+    geometry::Boundary, geometry::chain::Chain, mapping::SiteMapper,
+    relation::consecutive::Consecutive, relation::nearest_neighbor::NearestNeighbors,
+};
+use syntaqs_spin_half::{SpinHalf, operator::SpinHalfOperator as S, state::SpinHalfState as Spin};
 
 fn close(actual: C, expected: C) {
     assert!(

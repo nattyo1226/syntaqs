@@ -1,13 +1,23 @@
 //! Spin-1 states, dipole and quadrupole operators, and ordered local bases.
 //!
+//! ```compile_fail
+//! use syntaqs_spin_one::SpinOneState;
+//! ```
+//! ```compile_fail
+//! use syntaqs_spin_one::SpinOneOperator;
+//! ```
+//! ```compile_fail
+//! use syntaqs_spin_one::SzBasis;
+//! ```
+//!
 //! With `hbar = 1`, physical spin `Jz` has eigenvalues `1, 0, -1` in
 //! state order `Plus, Zero, Minus`. Cartesian primitives are `S = sqrt(3/2) J`.
-//! [`SpinOneState::Zero`] is a normalized state,
+//! [`state::SpinOneState::Zero`] is a normalized state,
 //! whereas a zero vector is an empty linear combination. The fifteen operator
 //! values span a nine-dimensional space; their structural equality does not
 //! identify different linear combinations representing the same operator.
 //!
-//! [`CartesianBasis`] and [`LadderBasis`] are complete, orthogonal operator
+//! [`basis::CartesianBasis`] and [`basis::LadderBasis`] are complete, orthogonal operator
 //! bases. Cartesian elements are orthonormal under `Tr(A†B)/3`; the ladder
 //! basis has squared norms 1 for `I, Sz, Q0` and 2 for its six ladder elements.
 //! Products of elements of the
@@ -17,14 +27,14 @@
 //!
 //! ```
 //! use num_complex::Complex;
-//! use syntaqs_core::Product;
-//! use syntaqs_spin_one::{SpinOne, SpinOneOperator as Op, SpinOneState as Ket};
+//! use syntaqs_core::algebra::Product;
+//! use syntaqs_spin_one::{SpinOne, operator::SpinOneOperator as Op, state::SpinOneState as Ket};
 //! type Spin = SpinOne<Complex<f64>>;
 //! let raised = Spin::state(Ket::Zero).act(&Spin::operator(Op::Sp));
 //! let amplitude = Spin::state(Ket::Plus).inner_product(&raised);
 //! assert!((amplitude.re - 3.0_f64.sqrt()).abs() < 1e-12);
 //! let squared = <Op as Product<Complex<f64>>>::product(&Op::Sp, &Op::Sp);
-//! assert_eq!(squared, syntaqs_core::LinearCombination::term(Complex::new((3.0_f64/2.0).sqrt(), 0.0), Op::Q2p));
+//! assert_eq!(squared, syntaqs_core::expression::parts::linear_combination::LinearCombination::term(Complex::new((3.0_f64/2.0).sqrt(), 0.0), Op::Q2p));
 //! ```
 //!
 //! Products and state actions use `Complex<R>` with `R: num_traits::Float`.
@@ -48,10 +58,8 @@ pub mod models;
 pub mod operator;
 pub mod state;
 
-pub use basis::{CartesianBasis, LadderBasis, SzBasis};
-pub use models::UtilityError;
-pub use operator::SpinOneOperator;
-pub use state::SpinOneState;
+pub(crate) use operator::SpinOneOperator;
+pub(crate) use state::SpinOneState;
 
 /// Selects spin-1 primitives and a coefficient type without storing values.
 ///
@@ -60,8 +68,8 @@ pub use state::SpinOneState;
 ///
 /// ```
 /// use num_complex::Complex;
-/// use syntaqs_core::HilbertSpace;
-/// use syntaqs_spin_one::{SpinOne, SpinOneOperator as Op, SpinOneState as Ket};
+/// use syntaqs_core::space::HilbertSpace;
+/// use syntaqs_spin_one::{SpinOne, operator::SpinOneOperator as Op, state::SpinOneState as Ket};
 /// type Spin = SpinOne<Complex<f32>>;
 /// let a = HilbertSpace::factor("a");
 /// let b = HilbertSpace::factor("b");
@@ -69,16 +77,23 @@ pub use state::SpinOneState;
 /// let psi = Spin::product_state(&space, [Ket::Plus, Ket::Minus])?;
 /// let zz = Spin::operator_product_at([(&a, Op::Sz), (&b, Op::Sz)])?;
 /// assert!((psi.expectation(&zz)?.re + 1.5).abs() < 1e-5);
-/// # Ok::<(), syntaqs_core::ExpressionError>(())
+/// # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())
 /// ```
 ///
 /// Different precisions cannot be mixed implicitly:
 ///
 /// ```compile_fail
 /// use num_complex::Complex;
-/// use syntaqs_spin_one::{SpinOne, SpinOneOperator as Op, SpinOneState as Ket};
+/// use syntaqs_spin_one::{SpinOne, operator::SpinOneOperator as Op, state::SpinOneState as Ket};
 /// let psi = SpinOne::<Complex<f32>>::state(Ket::Zero);
 /// let op = SpinOne::<Complex<f64>>::operator(Op::Sz);
 /// let _ = psi.act(&op);
 /// ```
-pub type SpinOne<C> = syntaqs_core::ExpressionFactory<SpinOneState, SpinOneOperator, C>;
+pub type SpinOne<C> = syntaqs_core::system::ExpressionFactory<SpinOneState, SpinOneOperator, C>;
+
+/// Common system, primitive, and model types.
+pub mod prelude {
+    pub use crate::{
+        SpinOne, models::SpinOneModels, operator::SpinOneOperator, state::SpinOneState,
+    };
+}

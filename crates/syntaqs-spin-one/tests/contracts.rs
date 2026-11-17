@@ -1,13 +1,16 @@
-mod support;
+mod common;
 
+use common::*;
 use num_complex::Complex;
-use support::*;
 use syntaqs_core::{
-    Act, Adjoint, Basis, Dimension, HomogeneousParity, Identity, InnerProduct,
-    LinearCombination as Lc, Parity, ParityOperator, Product, Trace,
+    algebra::Act, algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity,
+    algebra::InnerProduct, algebra::Parity, algebra::ParityOperator, algebra::Product,
+    algebra::Trace, basis::Basis, expression::parts::linear_combination::LinearCombination as Lc,
+    space::Dimension,
 };
 use syntaqs_spin_one::{
-    CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,
+    SpinOne, basis::CartesianBasis, basis::LadderBasis, basis::SzBasis,
+    operator::SpinOneOperator as O, state::SpinOneState as S,
 };
 
 fn lc_product<T: Real>(a: &Lc<O, Complex<T>>, b: &Lc<O, Complex<T>>) -> Lc<O, Complex<T>> {
@@ -125,7 +128,7 @@ fn laws<T: Real>() {
                 let ket = Lc::primitive(s);
                 let lhs = lc_action(&ab, &ket);
                 let rhs = lc_action(&al, &lc_action(&bl, &ket));
-                let expected = apply(&product(&am, &bm), &support::ket(s));
+                let expected = apply(&product(&am, &bm), &common::ket(s));
                 values::<T>(&state_combination(lhs), &expected);
                 values::<T>(&state_combination(rhs), &expected);
             }

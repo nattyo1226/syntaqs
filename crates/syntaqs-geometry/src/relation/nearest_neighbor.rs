@@ -5,7 +5,7 @@ use core::convert::Infallible;
 ///
 /// On a chain, returns `[i, j]` with `i < j` in lexicographic order. Zero and
 /// one sites have no edges; two sites have one for either boundary condition.
-/// This differs from ordered [`crate::Consecutive<2>`] on periodic chains.
+/// This differs from ordered [`crate::relation::consecutive::Consecutive<2>`] on periodic chains.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct NearestNeighbors;
 

@@ -2,7 +2,7 @@
 
 use core::ops::{Add, Div, Mul};
 use num_traits::{Float, One};
-use syntaqs_core::ImaginaryUnit;
+use syntaqs_core::coefficient::ImaginaryUnit;
 
 pub(crate) fn imaginary<C: ImaginaryUnit + Mul<Output = C>>(value: C) -> C {
     C::imaginary_unit() * value

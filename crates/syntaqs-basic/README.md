@@ -1,18 +1,46 @@
 # syntaqs-basic
 
-Standard factor identifiers for [syntaqs](../../README.md).
+Choose UUID or named identifiers for the Hilbert-space factors in
+[syntaqs](../../README.md). An identifier determines which factor an expression
+refers to; primitive types determine that factor's local algebra.
 
-## Responsibilities
+| Type | Use when | Identity rule |
+| --- | --- | --- |
+| `Id128` | Independent factors need generated identifiers. | UUID v4; copying preserves identity. |
+| `Tag` | The caller manages meaningful names. | The complete string; equal names identify the same factor. |
 
-- Issue UUID v4 identifiers through `Id128::new()` and `Default`.
-- Provide caller-chosen names through `Tag`.
+Use [version-tagged Git dependencies](../../docs/installation.md) for release
+installation and read documentation at the same tag. The paths below describe
+the current checkout. This crate uses std.
 
-`Id128` generation uses the operating system's randomness through the uuid crate. Copying an existing identifier preserves its identity. `Tag` equality uses the complete string, so callers must choose distinct names for independent factors.
+## Creating identifiers
 
-## Integration
+Both types live in `syntaqs_basic::index` and are also available in the prelude.
+For example:
 
-The generic core accepts any suitable equality-comparable index type; using this crate is optional. Use `syntaqs_core::HilbertSpace<Id128>` or `syntaqs_core::HilbertSpace<Tag>` to construct spaces with these identifiers. Identifiers determine factor identity, while primitive types and their rules determine the local algebra. Space construction and expression evaluation belong to [syntaqs-core](../syntaqs-core/README.md).
+```rust
+use syntaqs_basic::index::{Id128, Tag};
 
-This crate uses the standard library. Its index types provide Display and Debug; expression Display truncates index labels to eight Unicode scalar values while identity comparisons retain the complete value.
+fn main() {
+    let id = Id128::new();
+    let same_factor = id;
+    assert_eq!(id, same_factor);
 
-See the [crate API overview](src/lib.rs), [index design](../../docs/design/index.md), and [expression formatting design](../../docs/design/expression-formatting.md). Installation is covered by the [project README](../../README.md).
+    let site = Tag::new("site-0");
+    assert_eq!(site.as_str(), "site-0");
+    assert_eq!(site, Tag::from("site-0"));
+}
+```
+
+Pass either type to `syntaqs_core::space::HilbertSpace::factor`. Core accepts any
+suitable equality-comparable index type, so this crate is optional.
+
+`Id128::new()` and `Default` obtain randomness through the uuid crate. `Tag`
+callers must choose distinct names for independent factors. Standalone Display
+and Debug retain full identifiers; expression Display shows only the first eight
+Unicode scalar values, which never affect identity comparisons.
+
+## Integration and references
+
+See the [API overview](src/lib.rs), [identity contract](../../docs/design/index.md),
+and [expression formatting](../../docs/design/expression-formatting.md).

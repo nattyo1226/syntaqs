@@ -3,12 +3,15 @@ extern crate blas_provider as _;
 
 use ndarray::Array2;
 use num_complex::Complex;
-use syntaqs_core::{HilbertSpace, LocalOperator, Operator};
-use syntaqs_lie::{
-    DecompositionFailure, DecompositionOptions, LieDecomposition, LieError, NumericalError,
-    NumericalOptions, OperatorFamily,
+use syntaqs_core::{
+    expression::composite::Operator, expression::local::LocalOperator, space::HilbertSpace,
 };
-use syntaqs_spin_half::SpinHalfOperator as Pauli;
+use syntaqs_lie::{
+    LieError, decomposition::DecompositionFailure, decomposition::DecompositionOptions,
+    decomposition::LieDecomposition, family::OperatorFamily, numerical::error::NumericalError,
+    numerical::options::NumericalOptions,
+};
+use syntaqs_spin_half::operator::SpinHalfOperator as Pauli;
 
 macro_rules! precision_tests {
     ($module:ident,$real:ty) => {
@@ -464,7 +467,7 @@ macro_rules! precision_tests {
 
             #[test]
             fn graded_ordinary_brackets_decompose_with_full_identity_center() {
-                use syntaqs_fermion::FermionOperator as F;
+                use syntaqs_fermion::operator::FermionOperator as F;
                 use syntaqs_lie::lie_bracket;
                 let a = HilbertSpace::factor(0u8);
                 let b = HilbertSpace::factor(1u8);

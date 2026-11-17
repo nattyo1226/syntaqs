@@ -1,6 +1,6 @@
 //! The unified basis trait does not prescribe numeric capabilities.
 
-use syntaqs_core::{Basis, LinearCombination};
+use syntaqs_core::{basis::Basis, expression::parts::linear_combination::LinearCombination};
 
 enum Primitive {
     First,

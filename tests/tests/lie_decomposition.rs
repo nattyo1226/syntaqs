@@ -4,8 +4,11 @@
 extern crate blas_provider as _;
 
 use num_complex::Complex;
-use syntaqs_core::{HilbertSpace, LocalOperator};
-use syntaqs_lie::{DecompositionOptions, NumericalOptions, OperatorFamily};
+use syntaqs_core::{expression::local::LocalOperator, space::HilbertSpace};
+use syntaqs_lie::{
+    decomposition::DecompositionOptions, family::OperatorFamily,
+    numerical::options::NumericalOptions,
+};
 use syntaqs_tests::three_level::{Axis, Operator as MatrixUnit};
 
 macro_rules! precision_tests {

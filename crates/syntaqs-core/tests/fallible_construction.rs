@@ -1,10 +1,12 @@
 //! The same input-error priority applies to every fallible collection entry.
 use core::cell::Cell;
 use syntaqs_core::{
-    ExpressionError as E, HilbertSpace as H, LocalOperator, LocalState, Operator, State,
+    expression::composite::Operator, expression::composite::State,
+    expression::error::ExpressionError as E, expression::local::LocalOperator,
+    expression::local::LocalState, space::HilbertSpace as H,
 };
 
-type System = syntaqs_core::ExpressionFactory<(), (), ()>;
+type System = syntaqs_core::system::ExpressionFactory<(), (), ()>;
 
 // Panics on any next() after the first Err, including an end-of-input probe.
 fn failing_at<'a, T: 'a>(

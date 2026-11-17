@@ -1,16 +1,18 @@
-mod support;
+mod common;
+use common::*;
 use core::ops::{Add, Div, Mul, Neg};
 use num_complex::Complex;
 use num_traits::{One, Zero};
-use support::*;
 use syntaqs_core::{
-    Act, Adjoint, Basis, HilbertSpace, Identity, ImaginaryUnit, InnerProduct,
-    LinearCombination as Lc, Product, Trace,
+    algebra::Act, algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Product,
+    algebra::Trace, basis::Basis, coefficient::ImaginaryUnit,
+    expression::parts::linear_combination::LinearCombination as Lc, space::HilbertSpace,
 };
 use syntaqs_fermion::{
-    Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
+    Fermion, basis::LadderBasis, basis::MajoranaBasis, basis::OccupationBasis,
+    operator::FermionOperator as O, state::FermionState as S,
 };
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 
 // A small exact rational implementation used only by these capability tests.
 #[derive(Clone, Copy)]

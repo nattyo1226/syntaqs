@@ -2,14 +2,14 @@
 extern crate blas_provider as _;
 
 use num_complex::Complex;
-use syntaqs_basic::Id128;
+use syntaqs_basic::index::Id128;
 #[cfg(not(feature = "normalize"))]
-use syntaqs_core::Divide;
-use syntaqs_core::HilbertSpace;
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_core::coefficient::Divide;
+use syntaqs_core::{expression::composite::State, space::HilbertSpace};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
-use syntaqs_normalize::{Norm, NormalizedExpectation};
-use syntaqs_spin_half::{SpinHalf, SpinHalfState};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm};
+use syntaqs_spin_half::{SpinHalf, state::SpinHalfState};
 
 type Spin = SpinHalf<Complex<f64>>;
 type Models = syntaqs_spin_half::models::SpinHalfModels<Spin>;
@@ -21,7 +21,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     // H = -J sum(Sx Sx + Sy Sy + Sz Sz); positive J is ferromagnetic.
     let h = Models::heisenberg(&chain, &factors, 1.0)?;
-    let psi = Models::neel(&chain, &factors, SpinHalfState::Up)?;
+    let space = HilbertSpace::tensor_all(factors.iter().cloned())?;
+    let psi = State::try_tensor_in(
+        &space,
+        factors.iter().enumerate().map(|(i, factor)| {
+            Spin::state(if i % 2 == 0 {
+                SpinHalfState::Up
+            } else {
+                SpinHalfState::Down
+            })
+            .at(factor)
+        }),
+    )?;
     #[cfg(feature = "normalize")]
     let energy = psi.normalized_expectation(&h)?;
     // This Neel state has nonzero norm; core's scalar quotient needs no
@@ -33,12 +44,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Neel norm: {}", psi.norm()?);
     #[cfg(feature = "export")]
     {
-        use syntaqs_export::{
-            Export, Exported, MatrixArgs,
-            ndarray::{Array1, Array2},
-            sprs::{CsMat, CsVec},
-        };
-        use syntaqs_spin_half::SzBasis;
+        use ndarray::{Array1, Array2};
+        use sprs::{CsMat, CsVec};
+        use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
+        use syntaqs_spin_half::basis::SzBasis;
         // The Vec output is also usable with other numerical libraries.
         let raw: Exported<Vec<_>, _> = (&psi).export(&SzBasis)?;
         println!("Vector shape: {:?}", raw.metadata().shape());

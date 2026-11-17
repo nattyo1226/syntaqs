@@ -1,16 +1,20 @@
 # Reviewing State, Operator, and space management
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
 ## 1. Review scope
 
-Revisit ownership, sharing, associations among State, Operator, Structure, and Space, and dependencies between Geometry and spaces. Design and timing are undecided. Current primitive/space/expression boundaries are not fixed as the final design.
+Review whether general operators offer a useful mathematical account of both
+states and operators, and what that implies for ownership and sharing. The
+review includes local algebra, spaces, and geometry-to-space assignments.
+It has not started; design, timing, and implementation scope are undecided.
 
 ## 2. Relating operators and states
 
-This review has not started; timing and implementation scope are undecided.
-
-Consider whether operational quantum theory can organize both as special cases of general operators, and decide how mathematical meaning maps to APIs. Current State is a ket with domain/codomain `ℂ→H`; bound Operator has `H→H`. Local and composite representations each have separate state/operator trees and evaluation, with no type for a general `U→V` map.
+Currently, State is a ket with domain/codomain `ℂ→H`, while a bound Operator has
+`H→H`. Local and composite representations each have separate state/operator
+trees and evaluation, with no general `U→V` map type. Use these current facts as
+the starting point for deciding how mathematical commonality should map to APIs.
 
 Review these questions:
 

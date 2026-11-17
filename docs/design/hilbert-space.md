@@ -1,14 +1,21 @@
 # Recursive Hilbert spaces
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
 ## 1. Scope and contract
 
-This document defines Hilbert-space construction, grouping, and compatibility under [requirements](../requirements.md) and [architecture](../architecture.md).
+`HilbertSpace<I>` records factor identities, their order, and ordinary or graded
+tensor grouping. It is independent of local algebra, dimensions, and basis
+choice, allowing the same space structure to support different primitive-typed
+systems.
 
 Core owns generic identity comparison, Hilbert spaces, expressions, and evaluation. Basic issues concrete UUID indices; geometry handles site assignments. Space construction does not require Geometry. Section 9 lists public APIs.
 
-A space recursively represents a basic factor or an ordered tensor product of child spaces, including nested products. Grouping is the tree's parenthesization. Operations include construction/composition, child/index enumeration, compatibility, and subsystem checks. Arbitrary factor-selection extraction and regrouping are not provided, nor a separate grouping type. Factor/Tensor are concepts for private nodes; HilbertSpace is public.
+A space is either a basic factor or an ordered tensor product of child spaces.
+Its grouping is the tree's parenthesization. Construction, enumeration,
+compatibility, and subsystem checks inspect this structure; factor-selection
+extraction and regrouping are outside the API. Factor/Tensor name private node
+concepts, while HilbertSpace is the public handle.
 
 Spaces store no local algebra types. S/O/C on expressions enforce appropriate homogeneous composition; sharing space structure does not enable implicit mixing of primitive types.
 
@@ -164,7 +171,13 @@ H's direct children are `[T_o(a,b),c]` and indices `[Index(a),Index(b),Index(c)]
 | `dim_with(dim_local)` | Supply `NonZeroUsize` explicitly; return the same Result. |
 | `clone()`, `shares_node_with(&rhs)` | Clone/compare shared handles without cloning indices. |
 
-`dim::<S>()` queries state space and `dim::<O>()` operator space. Operator stores no S, so provide a local dimension through dim_with when its action-space dimension d is needed. Empty tensors have dimension one even if P's local dimension overflows. Comparison, placement, and binding register no primitive definitions; different primitive-typed expressions can use the same space structure.
+`dim::<S>()` queries state-space dimension and `dim::<O>()` queries operator-space
+dimension. An Operator carries no S; use `dim_with` to supply the local
+action-space dimension when needed. Empty tensors have dimension one even if
+P's local dimension overflows.
+
+Comparison, placement, and binding register no primitive definitions. Different
+primitive-typed expressions can therefore use the same space structure.
 
 Specify `TensorKind::{Ordinary, Graded}` at construction. tensor_all/tensor are ordinary and tensor_all_g/tensor_g graded conveniences over explicit-kind constructors. Kinds are not inferred from children/primitives or changed on existing spaces. kind() is None for a factor and the stored kind for tensors including empty/singleton wrappers. unit() stores an ordinary empty tensor and is compatible with `tensor_all_g([])`.
 

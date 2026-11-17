@@ -1,6 +1,8 @@
 use syntaqs_geometry::{
-    Boundary::*, Chain, Consecutive, ConsecutiveError, Geometry, MappingError, NearestNeighbors,
-    Relation, SiteGroup, SiteGroupError, SiteMapper,
+    geometry::Boundary::*, geometry::Geometry, geometry::chain::Chain, mapping::MappingError,
+    mapping::SiteMapper, relation::Relation, relation::SiteGroup, relation::SiteGroupError,
+    relation::consecutive::Consecutive, relation::consecutive::ConsecutiveError,
+    relation::nearest_neighbor::NearestNeighbors,
 };
 
 #[test]
@@ -63,7 +65,10 @@ fn exact_length_is_validated_before_returning_even_without_pairs() {
 }
 
 // Small independently written expectations cover direction and periodic rotations.
-fn consecutive<const K: usize>(n: usize, boundary: syntaqs_geometry::Boundary) -> Vec<[usize; K]> {
+fn consecutive<const K: usize>(
+    n: usize,
+    boundary: syntaqs_geometry::geometry::Boundary,
+) -> Vec<[usize; K]> {
     Consecutive::<K>
         .groups(&Chain::new(n, boundary))
         .unwrap()

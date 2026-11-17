@@ -1,17 +1,24 @@
 # Operator families, Lie representations, and real HS projection
 
-Updated: 2026-11-09
+Updated: 2026-11-17
 
 ## 1. Scope and contexts
 
-`syntaqs-lie` currently provides ordered operator families, explicit Hermiticity
-and independence diagnostics, Gram factorizations, real projection coordinates,
-reconstruction, residuals, span membership, ordinary Lie brackets, closure
-diagnostics, retained Lie representations, real family transformations, the
-full real adjoint commutant, the full center with its HS-orthogonal complement,
-and complete center/simple-ideal decomposition. The
+An ordered operator family supplies coordinates for expression-based Lie
+analysis. Construction stores candidates; explicit Hermiticity, independence,
+and closure checks establish which subsequent computations are valid.
+
+The crate provides real HS projection and reconstruction, retained Lie
+representations, real family transformations, the full real adjoint commutant,
+and complete center/simple-ideal decomposition. Results retain their source
+family and numerical settings so coordinates and diagnostics remain interpretable. The
 [design decision](../decisions/lie-analysis.md) records the reference baseline,
 intentional compatibility differences, and dependency choices.
+
+Public analysis types are defined under `family`, `representation`, `invariant`,
+`decomposition`, and `numerical`. The crate-root prelude provides `OperatorFamily`,
+`NumericalOptions`, and `lie_bracket`; `FamilyExpression`, `LieError`, and
+`lie_bracket` are defined at the crate root.
 
 `OperatorFamily<E>` uses the sealed `FamilyExpression` adapter for core's
 `LocalOperator<O,Complex<R>>` and `Operator<I,O,Complex<R>>`, with R=f32/f64.
@@ -76,7 +83,7 @@ cancellation before squaring without changing ordinary evaluation or imposing an
 policy. Collection uses primitive equality, not a complete independent operator
 basis; distinct natural primitives may still have linear relations. No general
 accuracy guarantee beyond the covered numerical cases is asserted. Candidate
-[residual-accuracy improvements](../future-work.md#31-lie-residual-accuracy)
+[residual-accuracy improvements](../future-work/evaluation-improvements.md#1-lie-residual-accuracy)
 remain future work.
 
 ### 3.1. Numerical settings and defaults
@@ -109,6 +116,13 @@ configured imaginary check and operation-specific scale. Negative squared norms
 are clamped only within the explicit roundoff bound; small positive values remain.
 These are configurable numerical decisions and representative tested defaults,
 not general accuracy guarantees for arbitrary expression contractions.
+
+`Tolerance::check` retains the measurement, reference scale, settings, and
+effective bound in a `ToleranceCheck`. Dense kernels provide real solves,
+symmetric eigensystems, and full SVD right nullspaces, including wide and empty
+constraint matrices. Kernel norms use scaled accumulation to avoid overflowing
+intermediate squares. The kernels operate on selected family coordinates, not
+physical Hilbert-space matrices.
 
 ## 4. Brackets, closure, and retained representations
 
@@ -289,6 +303,12 @@ LAPACK implementations or platforms is asserted. Different valid runs may change
 component order or eigenvectors; compare component spans/projectors and invariants.
 
 ## 8. Verification
+
+Numerical [kernel tests](../../crates/syntaqs-lie/src/numerical/kernels/tests.rs)
+cover solves, complete right nullspaces including wide/empty matrices, symmetric
+spectra, Gram cutoffs, tolerance overrides, and invalid numerical data at both
+precisions. This section owns feature-specific verification targets; workspace
+commands, native linkage checks, and CI coverage are in [verification](verification.md).
 
 [Public family tests](../../crates/syntaqs-lie/tests/operator_family.rs) compare
 against independent small matrices at both precisions, covering nonorthonormal

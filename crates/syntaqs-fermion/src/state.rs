@@ -4,8 +4,9 @@ use crate::{FermionOperator, coefficient::imaginary};
 use core::ops::Neg;
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    Act, Dimension, DimensionOverflow, HomogeneousParity, ImaginaryUnit, InnerProduct,
-    LinearCombination, Parity,
+    algebra::Act, algebra::HomogeneousParity, algebra::InnerProduct, algebra::Parity,
+    coefficient::ImaginaryUnit, expression::parts::linear_combination::LinearCombination,
+    space::Dimension, space::DimensionOverflow,
 };
 
 /// Single-mode occupation states, in the order `Empty, Occupied`.

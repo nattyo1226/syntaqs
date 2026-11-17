@@ -4,8 +4,9 @@ use crate::{NormalizationError, error::nonzero};
 use core::ops::Mul;
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    Act, Adjoint, Conjugate, Divide, HilbertSpace, InnerProduct, LocalOperator, LocalState,
-    Operator, State,
+    algebra::Act, algebra::Adjoint, algebra::InnerProduct, coefficient::Conjugate,
+    coefficient::Divide, expression::composite::Operator, expression::composite::State,
+    expression::local::LocalOperator, expression::local::LocalState, space::HilbertSpace,
 };
 
 /// An expectation divided by the full self-inner-product.
@@ -33,8 +34,8 @@ pub trait NormalizedExpectationIn<O, H> {
 
 impl<S, O, C> NormalizedExpectation<LocalOperator<O, C>> for LocalState<S, O, C>
 where
-    C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + Divide<Output = C>,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + Divide<Output = C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
     O: Adjoint<C, Term = O>,
 {
     type Output = C;
@@ -50,9 +51,11 @@ where
 
 impl<I: Eq, S, O, C> NormalizedExpectation<Operator<I, O, C>> for State<I, S, O, C>
 where
-    C: Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
-    O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    O: Adjoint<C, Term = O>
+        + syntaqs_core::algebra::HomogeneousParity
+        + syntaqs_core::algebra::ParityOperator,
 {
     type Output = C;
     fn normalized_expectation(
@@ -69,9 +72,11 @@ where
 impl<I: Eq, S, O, C> NormalizedExpectationIn<Operator<I, O, C>, HilbertSpace<I>>
     for State<I, S, O, C>
 where
-    C: Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
-    O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    O: Adjoint<C, Term = O>
+        + syntaqs_core::algebra::HomogeneousParity
+        + syntaqs_core::algebra::ParityOperator,
 {
     type Output = C;
     fn normalized_expectation_in(

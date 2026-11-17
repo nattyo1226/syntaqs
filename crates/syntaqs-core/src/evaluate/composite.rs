@@ -1,6 +1,13 @@
-use alloc::{vec, vec::Vec};
+use alloc::{collections::BTreeMap, vec, vec::Vec};
+use core::ptr;
+use num_traits::{One, Zero};
 
-use crate::expr::composite::{ExpressionError, OpExpr, OpNode, State, StateExpr, StateNode};
+use super::{
+    local::Evaluator as LocalEvaluator,
+    state_terms::{Key, Ready, Sum, Terms},
+};
+use crate::expression::composite::{OpExpr, OpNode, State, StateExpr, StateNode};
+use crate::expression::error::ExpressionError;
 use crate::{
     Act, Adjoint, Conjugate, HilbertSpace, HomogeneousParity, LocalOperator, Parity,
     ParityOperator, TensorKind, coefficient::conjugate,
@@ -8,64 +15,94 @@ use crate::{
 
 enum Task<I, S, O, C> {
     Evaluate(StateExpr<I, S, O, C>),
-    Apply(
-        StateExpr<I, S, O, C>,
-        OpExpr<I, O, C>,
-        bool,
-        HilbertSpace<I>,
-    ),
+    Remember(StateExpr<I, S, O, C>),
+    Apply(Ready<C>, OpExpr<I, O, C>, bool, HilbertSpace<I>),
     ThenApply(OpExpr<I, O, C>, bool, HilbertSpace<I>),
     Local(
-        StateExpr<I, S, O, C>,
+        Ready<C>,
         HilbertSpace<I>,
         LocalOperator<O, C>,
         Option<HilbertSpace<I>>,
     ),
     Placed(
-        StateExpr<I, S, O, C>,
+        Ready<C>,
         HilbertSpace<I>,
         LocalOperator<O, C>,
         bool,
         HilbertSpace<I>,
     ),
     Scale(C),
-    Sum(usize),
-    Rebuild(StateExpr<I, S, O, C>, usize),
+    SumStart,
+    SumAdd,
+    SumEnd,
+    Tensor(usize),
 }
-
+fn schedule_sum<I, S, O, C>(
+    tasks: &mut Vec<Task<I, S, O, C>>,
+    children: impl DoubleEndedIterator<Item = Task<I, S, O, C>>,
+) {
+    tasks.push(Task::SumEnd);
+    for child in children.rev() {
+        tasks.push(Task::SumAdd);
+        tasks.push(child);
+    }
+    tasks.push(Task::SumStart);
+}
 impl<I: Eq, S, O, C> State<I, S, O, C> {
-    /// Evaluates delayed actions using local rules, without a basis or matrix.
-    ///
-    /// An operator product applies its right operand first; primitive `Product`
-    /// is not required. Ready subtrees, spectator states and spaces are shared.
+    /// Evaluates delayed actions and collects matching natural-state terms
+    /// between actions. Action-free inputs are normalized too; tensor products
+    /// of sums stay factored. No basis or primitive operator Product is required.
     pub fn evaluate(&self) -> Result<Self, ExpressionError>
     where
-        C: Clone + Conjugate<Output = C>,
-        S: Act<C, Operator = O, Term = S>,
+        C: Clone + PartialEq + Zero + One + Conjugate<Output = C>,
+        S: PartialEq + Act<C, Operator = O, Term = S>,
         O: Adjoint<C, Term = O> + HomogeneousParity + ParityOperator,
     {
+        // These shapes are intrinsically normalized; inspecting direct leaves
+        // needs no persistent certificate or equality shortcut between terms.
+        let primitive = |state: &StateExpr<I, S, O, C>| matches!(state.node(),StateNode::Local(_,local) if matches!(local.node(),crate::expression::local::StateNode::Primitive(_)));
+        if matches!(self.expression.node(), StateNode::Unit)
+            || primitive(&self.expression)
+            || matches!(self.expression.node(),StateNode::Tensor(parts) if parts.len()>1 && parts.iter().all(primitive))
+        {
+            return Ok(self.clone());
+        }
         let mut tasks = vec![Task::Evaluate(self.expression.clone())];
-        let mut values: Vec<StateExpr<I, S, O, C>> = Vec::new();
+        let mut values: Vec<Ready<C>> = Vec::new();
+        let mut memo = BTreeMap::new();
+        let mut sums = Vec::new();
+        let mut terms = Terms::new();
+        let mut locals = LocalEvaluator::new();
         while let Some(task) = tasks.pop() {
             match task {
                 Task::Evaluate(state) => {
-                    if !state.pending_action {
-                        values.push(state);
+                    let key = ptr::from_ref(state.node());
+                    if let Some(ready) = memo.get(&key) {
+                        values.push(Ready::clone(ready));
                         continue;
                     }
+                    tasks.push(Task::Remember(state.clone()));
                     match state.node() {
-                        StateNode::Local(factor, local) => values.push(StateExpr::new(
-                            StateNode::Local(factor.clone(), local.evaluate()),
-                        )),
-                        StateNode::Unit => unreachable!("unit is ready"),
+                        StateNode::Local(factor, local) => {
+                            let local = locals.evaluate(local);
+                            values.push(terms.local(factor.clone(), local));
+                        }
+                        StateNode::Unit => values.push(terms.unit()),
                         StateNode::Scale(s) => {
-                            tasks.push(Task::Rebuild(state.clone(), 1));
+                            tasks.push(Task::Scale(s.coefficient.clone()));
                             tasks.push(Task::Evaluate(s.operand.clone()));
                         }
                         StateNode::Sum(s) | StateNode::Tensor(s) => {
-                            tasks.push(Task::Rebuild(state.clone(), s.len()));
-                            for child in s.iter().rev() {
-                                tasks.push(Task::Evaluate(child.clone()));
+                            if matches!(state.node(), StateNode::Tensor(_)) {
+                                tasks.push(Task::Tensor(s.len()));
+                                for child in s.iter().rev() {
+                                    tasks.push(Task::Evaluate(child.clone()));
+                                }
+                            } else {
+                                schedule_sum(
+                                    &mut tasks,
+                                    s.iter().map(|child| Task::Evaluate(child.clone())),
+                                );
                             }
                         }
                         StateNode::Act(a) => {
@@ -74,9 +111,12 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                         }
                     }
                 }
+                Task::Remember(source) => {
+                    terms.reuse(values.last().unwrap(), &source);
+                    memo.insert(ptr::from_ref(source.node()), values.last().unwrap().clone());
+                }
                 Task::ThenApply(op, adjoint, scope) => {
-                    let state = values.pop().expect("evaluated action input");
-                    tasks.push(Task::Apply(state, op, adjoint, scope));
+                    tasks.push(Task::Apply(values.pop().unwrap(), op, adjoint, scope))
                 }
                 Task::Apply(state, op, adjoint, scope) => match op.node() {
                     OpNode::Identity => values.push(state),
@@ -96,8 +136,9 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                         tasks.push(Task::Apply(state, s.operand.clone(), adjoint, scope));
                     }
                     OpNode::Sum(s) => {
-                        tasks.push(Task::Sum(s.len()));
+                        tasks.push(Task::SumEnd);
                         for child in s.iter().rev() {
+                            tasks.push(Task::SumAdd);
                             tasks.push(Task::Apply(
                                 state.clone(),
                                 child.clone(),
@@ -105,6 +146,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                                 scope.clone(),
                             ));
                         }
+                        tasks.push(Task::SumStart);
                     }
                     OpNode::Product(p) => {
                         let (first, second) = if adjoint {
@@ -131,7 +173,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                         tasks.push(Task::Local(state, factor, operator, None));
                         continue;
                     }
-                    use crate::expr::local::OperatorNode;
+                    use crate::expression::local::OperatorNode;
                     match operator.node() {
                         OperatorNode::Scale(s) => {
                             tasks.push(Task::Scale(if adjoint {
@@ -148,8 +190,9 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                             ));
                         }
                         OperatorNode::Sum(s) => {
-                            tasks.push(Task::Sum(s.len()));
+                            tasks.push(Task::SumEnd);
                             for child in s.iter().rev() {
+                                tasks.push(Task::SumAdd);
                                 tasks.push(Task::Placed(
                                     state.clone(),
                                     factor.clone(),
@@ -158,6 +201,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                                     scope.clone(),
                                 ));
                             }
+                            tasks.push(Task::SumStart);
                         }
                         OperatorNode::Product(p) => {
                             let (first, second) = if adjoint {
@@ -195,88 +239,68 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                         }
                     }
                 }
-                Task::Local(state, factor, operator, prefix) => match state.node() {
-                    StateNode::Local(target, local) => {
-                        if target.factor_index() == factor.factor_index() {
-                            values.push(StateExpr::new(StateNode::Local(
-                                target.clone(),
-                                local.act(&operator).evaluate(),
-                            )));
+                Task::Local(state, factor, operator, prefix) => {
+                    if state.shape == 0 {
+                        values.push(state);
+                        continue;
+                    }
+                    if let Some((target, local)) = terms.local_parts(state.shape) {
+                        let op = if target.factor_index() == factor.factor_index() {
+                            Some(operator)
                         } else if prefix.as_ref().is_some_and(|space| {
                             space
                                 .indices()
                                 .take_while(|i| Some(*i) != factor.factor_index())
                                 .any(|i| Some(i) == target.factor_index())
                         }) {
-                            values.push(StateExpr::new(StateNode::Local(
-                                target.clone(),
-                                local
-                                    .act(&LocalOperator::primitive(O::parity_operator()))
-                                    .evaluate(),
-                            )));
+                            Some(LocalOperator::primitive(O::parity_operator()))
+                        } else {
+                            None
+                        };
+                        if let Some(op) = op {
+                            let local = locals.apply(local, op);
+                            let mut ready = terms.local(target, local);
+                            if let Some(c) = state.coefficient {
+                                ready = terms.scaled(ready, c);
+                            }
+                            values.push(ready);
                         } else {
                             values.push(state);
                         }
-                    }
-                    StateNode::Unit => values.push(state),
-                    StateNode::Scale(s) => {
-                        tasks.push(Task::Rebuild(state.clone(), 1));
-                        tasks.push(Task::Local(s.operand.clone(), factor, operator, prefix));
-                    }
-                    StateNode::Sum(s) | StateNode::Tensor(s) => {
-                        tasks.push(Task::Rebuild(state.clone(), s.len()));
-                        for child in s.iter().rev() {
-                            tasks.push(Task::Local(
-                                child.clone(),
-                                factor.clone(),
-                                operator.clone(),
-                                prefix.clone(),
-                            ));
+                    } else if matches!(terms.key(state.shape), Key::Unit) {
+                        values.push(state);
+                    } else {
+                        let children = terms.children(state.shape);
+                        if let Some(c) = state.coefficient {
+                            tasks.push(Task::Scale(c));
+                        }
+                        let branches = children.into_iter().map(|child| {
+                            Task::Local(child, factor.clone(), operator.clone(), prefix.clone())
+                        });
+                        if matches!(terms.key(state.shape), Key::Tensor(_)) {
+                            tasks.push(Task::Tensor(branches.len()));
+                            tasks.extend(branches.rev());
+                        } else {
+                            schedule_sum(&mut tasks, branches);
                         }
                     }
-                    StateNode::Act(_) => unreachable!("local action input is ready"),
-                },
-                Task::Scale(coefficient) => {
-                    let state = values.pop().expect("scale operand");
-                    values.push(state.scaled(coefficient));
                 }
-                Task::Sum(count) => {
-                    let parts = values.split_off(values.len() - count);
-                    values.push(StateExpr::sum(parts.into_iter().collect()));
+                Task::Scale(c) => {
+                    let ready = values.pop().unwrap();
+                    values.push(terms.scaled(ready, c));
                 }
-                Task::Rebuild(original, count) => {
-                    let parts = values.split_off(values.len() - count);
-                    match original.node() {
-                        StateNode::Scale(s) => {
-                            let operand = parts.into_iter().next().expect("scale operand");
-                            if operand.shares_node_with(&s.operand) {
-                                values.push(original);
-                            } else {
-                                values.push(operand.scaled(s.coefficient.clone()));
-                            }
-                        }
-                        StateNode::Sum(s) | StateNode::Tensor(s) => {
-                            if s.iter().zip(&parts).all(|(a, b)| a.shares_node_with(b)) {
-                                values.push(original);
-                            } else {
-                                let parts = parts.into_iter().collect();
-                                values.push(StateExpr::new(
-                                    if matches!(original.node(), StateNode::Tensor(_)) {
-                                        StateNode::Tensor(parts)
-                                    } else {
-                                        StateNode::Sum(parts)
-                                    },
-                                ));
-                            }
-                        }
-                        _ => unreachable!("linear state container"),
-                    }
+                Task::SumStart => sums.push(Sum::new()),
+                Task::SumAdd => terms.add(sums.last_mut().unwrap(), values.pop().unwrap()),
+                Task::SumEnd => values.push(terms.finish_sum(sums.pop().unwrap())),
+                Task::Tensor(count) => {
+                    let children = values.split_off(values.len() - count);
+                    values.push(terms.tensor(children));
                 }
             }
         }
         Ok(Self {
             space: self.space.clone(),
-            expression: values.pop().expect("one state result"),
+            expression: terms.expression(&values.pop().unwrap()),
         })
     }
 }

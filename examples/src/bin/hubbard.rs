@@ -1,11 +1,13 @@
 //! Standard and symmetric Hubbard models on a two-site graded chain.
 use num_complex::Complex;
-use syntaqs_basic::Id128;
-use syntaqs_core::HilbertSpace;
-use syntaqs_fermion::{Fermion, FermionOperator as O, FermionState as S, MajoranaBasis};
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_basic::index::Id128;
+use syntaqs_core::space::HilbertSpace;
+use syntaqs_fermion::{
+    Fermion, basis::MajoranaBasis, operator::FermionOperator as O, state::FermionState as S,
+};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
-use syntaqs_normalize::{Normalize, NormalizedExpectation};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Normalize};
 
 type F = Fermion<Complex<f64>>;
 type Models = syntaqs_fermion::models::FermionModels<F>;
@@ -44,11 +46,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     #[cfg(feature = "export")]
     {
-        use syntaqs_export::{Export, Exported, MatrixArgs};
-        use syntaqs_fermion::OccupationBasis;
+        use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
+        use syntaqs_fermion::basis::OccupationBasis;
         let dense: Exported<Vec<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
-        let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<f64>>, _> =
+        let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
         assert_eq!(dense.metadata().shape(), [16, 16]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {

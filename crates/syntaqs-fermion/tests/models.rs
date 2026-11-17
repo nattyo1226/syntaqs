@@ -1,13 +1,14 @@
-mod support;
+use syntaqs_fermion::models::ModelError;
+mod common;
+use common::*;
 use num_complex::Complex;
-use support::*;
-use syntaqs_core::{HilbertSpace as H, SpaceError, TensorKind};
+use syntaqs_core::{space::HilbertSpace as H, space::SpaceError, space::TensorKind};
 use syntaqs_fermion::{
-    Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
-    UtilityError,
+    Fermion, basis::LadderBasis, basis::MajoranaBasis, basis::OccupationBasis,
+    operator::FermionOperator as O, state::FermionState as S,
 };
-use syntaqs_geometry::{Boundary, Chain, MappingError};
-use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, mapping::MappingError};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 
 fn sites(n: usize) -> Vec<H<usize>> {
     // Deliberately descending indices: ordering comes from the tensor.
@@ -167,13 +168,13 @@ fn invalid_sites_lengths_kinds_indices_and_error_sources() {
         ] {
             assert!(matches!(
                 build(&chain, &[bad], 0., 0.),
-                Err(UtilityError::InvalidSite { site: 0 })
+                Err(ModelError::InvalidSite { site: 0 })
             ));
         }
         let mismatch = build(&chain, &[], 0., 0.).err().unwrap();
         assert_eq!(
             mismatch,
-            UtilityError::Mapping(MappingError::SiteCountMismatch {
+            ModelError::Mapping(MappingError::SiteCountMismatch {
                 expected: 1,
                 actual: 0
             })
@@ -188,7 +189,7 @@ fn invalid_sites_lengths_kinds_indices_and_error_sources() {
         )
         .err()
         .unwrap();
-        assert_eq!(duplicate, UtilityError::Space(SpaceError::DuplicateIndex));
+        assert_eq!(duplicate, ModelError::Space(SpaceError::DuplicateIndex));
         assert!(std::error::Error::source(&duplicate).is_some());
     }
     let nested = H::tensor_all([H::unit(), sites(1).pop().unwrap()]).unwrap();
@@ -232,7 +233,7 @@ fn graded<T: Real>() {
         }
     }
     let double = Fermion::<Complex<T>>::product_state(
-        &syntaqs_core::HilbertSpace::tensor_all_g([(modes[0]).clone(), (modes[1]).clone()])
+        &syntaqs_core::space::HilbertSpace::tensor_all_g([(modes[0]).clone(), (modes[1]).clone()])
             .unwrap(),
         [S::Occupied, S::Occupied],
     )

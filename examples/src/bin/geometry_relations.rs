@@ -1,12 +1,14 @@
 //! Geometry relations using the library API and a custom open square grid.
 //! The example-local grid demonstrates custom Geometry and Relation implementations.
 
-use syntaqs_core::HilbertSpace;
+use syntaqs_core::space::HilbertSpace;
 use syntaqs_geometry::{
-    Boundary, Chain, Consecutive, Geometry, MappedGroup, NearestNeighbors, Relation, SiteMapper,
+    geometry::Boundary, geometry::Geometry, geometry::chain::Chain, mapping::MappedGroup,
+    mapping::SiteMapper, relation::Relation, relation::consecutive::Consecutive,
+    relation::nearest_neighbor::NearestNeighbors,
 };
 #[cfg(test)]
-use syntaqs_geometry::{ConsecutiveError, MappingError};
+use syntaqs_geometry::{mapping::MappingError, relation::consecutive::ConsecutiveError};
 
 type Error = Box<dyn std::error::Error>;
 
@@ -578,7 +580,7 @@ mod tests {
 
     #[test]
     fn mapped_spaces_feed_existing_expression_construction_without_evaluation_bounds() {
-        use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op};
+        use syntaqs_spin_half::{SpinHalf, operator::SpinHalfOperator as Op};
         #[derive(PartialEq, Eq)]
         struct Index(usize);
         struct Scale;

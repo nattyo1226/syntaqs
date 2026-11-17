@@ -4,7 +4,9 @@ use crate::{NormalizationError, error::nonzero};
 use core::ops::Mul;
 use num_traits::{Float, One, Zero};
 use syntaqs_core::{
-    Act, Adjoint, Conjugate, ExpressionError, InnerProduct, LocalState, RealPart, State,
+    algebra::Act, algebra::Adjoint, algebra::InnerProduct, coefficient::Conjugate,
+    coefficient::RealPart, expression::composite::State, expression::error::ExpressionError,
+    expression::local::LocalState,
 };
 
 /// A norm derived from the self-inner-product, with no clamping or zero rejection.
@@ -27,9 +29,9 @@ pub trait Normalize: Sized {
 
 impl<S, O, C> Norm for LocalState<S, O, C>
 where
-    C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + RealPart,
+    C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + RealPart,
     C::Real: Float,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
     O: Adjoint<C, Term = O>,
 {
     type Output = C::Real;
@@ -40,9 +42,9 @@ where
 
 impl<S, O, C> Normalize for LocalState<S, O, C>
 where
-    C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + RealPart + From<C::Real>,
+    C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C> + RealPart + From<C::Real>,
     C::Real: Float,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
     O: Adjoint<C, Term = O>,
 {
     fn normalized(&self) -> Result<Self, NormalizationError> {
@@ -54,10 +56,12 @@ where
 
 impl<I: Eq, S, O, C> Norm for State<I, S, O, C>
 where
-    C: Clone + Zero + One + Conjugate<Output = C> + RealPart,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + RealPart,
     C::Real: Float,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
-    O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    O: Adjoint<C, Term = O>
+        + syntaqs_core::algebra::HomogeneousParity
+        + syntaqs_core::algebra::ParityOperator,
 {
     type Output = Result<C::Real, ExpressionError>;
     fn norm(&self) -> Self::Output {
@@ -67,10 +71,12 @@ where
 
 impl<I: Eq, S, O, C> Normalize for State<I, S, O, C>
 where
-    C: Clone + Zero + One + Conjugate<Output = C> + RealPart + From<C::Real>,
+    C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + RealPart + From<C::Real>,
     C::Real: Float,
-    S: Act<C, Operator = O, Term = S> + InnerProduct<C>,
-    O: Adjoint<C, Term = O> + syntaqs_core::HomogeneousParity + syntaqs_core::ParityOperator,
+    S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
+    O: Adjoint<C, Term = O>
+        + syntaqs_core::algebra::HomogeneousParity
+        + syntaqs_core::algebra::ParityOperator,
 {
     fn normalized(&self) -> Result<Self, NormalizationError> {
         let denominator = self.inner_product(self)?;

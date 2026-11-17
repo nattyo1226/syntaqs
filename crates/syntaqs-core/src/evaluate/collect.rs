@@ -7,7 +7,7 @@ use num_traits::{One, Zero};
 use crate::{
     Adjoint, Conjugate, ExpressionError, HilbertSpace, HomogeneousParity, Identity, LocalOperator,
     Operator, Product,
-    expr::{
+    expression::{
         local::OperatorNode,
         traversal::{IntrinsicOpTerms, LinearTerms, LinearView},
     },
@@ -152,8 +152,9 @@ impl<I: Eq, O, C> Operator<I, O, C> {
     {
         let ambient = self.select_space(Some(ambient), None)?;
         let factors: Vec<_> = ambient.leaves().collect();
+        let expression = self.expression.group_local();
         let mut terms = Vec::new();
-        for (coefficient, locals) in IntrinsicOpTerms::new(&self.expression, ambient) {
+        for (coefficient, locals) in IntrinsicOpTerms::new(&expression, ambient) {
             let mut product = Vec::with_capacity(factors.len());
             for factor in &factors {
                 let identity;

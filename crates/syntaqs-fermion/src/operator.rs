@@ -4,8 +4,10 @@ use crate::coefficient::imaginary;
 use core::ops::{Add, Neg};
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    Adjoint, Dimension, DimensionOverflow, HomogeneousParity, Identity, ImaginaryUnit,
-    LinearCombination, Parity, ParityOperator, Product, Trace,
+    algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity, algebra::Parity,
+    algebra::ParityOperator, algebra::Product, algebra::Trace, coefficient::ImaginaryUnit,
+    expression::parts::linear_combination::LinearCombination, space::Dimension,
+    space::DimensionOverflow,
 };
 
 /// Seven homogeneous primitives spanning the four-dimensional operator space.

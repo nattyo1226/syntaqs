@@ -2,7 +2,10 @@
 use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use std::{fmt::Debug, num::NonZeroUsize};
-use syntaqs_core::*;
+use syntaqs_core::{
+    algebra::*, basis::*, expression::composite::*, expression::local::*,
+    expression::parts::linear_combination::*, space::*,
+};
 
 pub trait Real:
     Num
@@ -27,6 +30,11 @@ pub fn c<T: Real>(re: f64, im: f64) -> Complex<T> {
 }
 #[derive(Clone, Copy, Debug)]
 pub struct Ket(pub u8);
+impl PartialEq for Ket {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 #[derive(Clone, Copy, Debug)]
 pub enum Op {
     I,

@@ -1,10 +1,30 @@
 # syntaqs architecture overview
 
-Updated: 2026-11-09
+Updated: 2026-11-17
 
 ## 1. Overall structure
 
-syntaqs connects local algebra rules to shared expressions, spaces, and evaluation, then combines that core with geometry-based model construction, numerical output, and Lie algebra analysis. This document describes the structure currently provided. See [requirements](requirements.md) for purpose and functional requirements and the [design guide](README.md#2-feature-details) for feature contracts.
+syntaqs turns local algebra rules into shared expressions on ordered Hilbert
+spaces. Callers can evaluate those expressions directly, choose a basis for
+numerical output, or select an operator family for Lie analysis. Geometry-based
+model helpers construct the same expression types.
+
+The following diagram shows computation flow, rather than crate dependencies.
+The [requirements](requirements.md) define accepted scope; the
+[feature designs](README.md#2-feature-details) specify individual contracts.
+
+```mermaid
+flowchart LR
+    Rules[Local rules and coefficients] --> Expr[Expressions on Hilbert spaces]
+    Geometry[Geometry and site spaces] --> Models[Model helpers]
+    Models --> Expr
+    Expr --> Evaluate[Actions and scalar contractions]
+    Expr --> Coordinates[Basis expansion and coordinates]
+    Coordinates --> Export[Numerical export]
+    Expr --> Family[Selected operator family]
+    Family --> Lie[Lie analysis]
+    Evaluate -->|HS contractions| Lie
+```
 
 ## 2. Crates and responsibilities
 
@@ -19,7 +39,7 @@ integration tests, and shared internal BLAS/LAPACK support.
 | `syntaqs-normalize` | Extension traits for norms, state normalization, and normalized expectations. |
 | `syntaqs-export` | Vec, ndarray, and sprs output with interpretation metadata. |
 | `syntaqs-lie` | Operator families, real HS projection, Lie brackets and closure diagnostics, retained adjoint/Killing representations, real family transformations, full real adjoint commutants, center/complement extraction, complete simple-ideal decomposition, and dense numerical foundations. |
-| `syntaqs-spin-half` | Spin-1/2 primitives and bases, XYZ/Heisenberg models, and Neel construction. |
+| `syntaqs-spin-half` | Spin-1/2 primitives and bases, and XYZ/Heisenberg models. |
 | `syntaqs-spin-one` | Spin-1 primitives and bases, and XYZ/Heisenberg/BLBQ construction. |
 | `syntaqs-fermion` | Single-mode fermion primitives and bases, and standard/symmetric Hubbard construction. |
 | [examples](../examples/README.md) | Runnable examples using the individual crates directly. |
@@ -28,7 +48,10 @@ integration tests, and shared internal BLAS/LAPACK support.
 
 ## 3. Dependency direction
 
-The core does not depend on concrete algebras, basic, geometry, normalize, export, or lie. Local rules and bases connect through public traits; concrete algebras do not provide separate expression trees or evaluators.
+Core owns the shared expression and evaluation machinery. Concrete algebras
+connect their local rules and bases through public traits, so they reuse that
+machinery. Core is independent of basic, geometry, normalize, export, lie, and
+the concrete algebras.
 
 Geometry, normalize, export, lie, and the three concrete algebras depend on core. Each algebra's model construction uses geometry. Basic depends on core only for tests and doctests; UUID generation stays in basic. Lie owns its deterministic decomposition sampling stream. Production libraries do not depend on examples, syntaqs-tests, or the development BLAS provider.
 
@@ -50,12 +73,33 @@ Core, geometry, spin-half, and fermion use `no_std + alloc`; basic, normalize, e
 | `LieDecomposition` | The full center and nonabelian simple ideals, reconstructed in the original expression context with complete-splitting diagnostics. |
 | `Chain` / `SiteMapper` | Borrow geometry and caller-owned site-ordered data. Callers issue indices and construct, retain, and order the spaces. |
 
-Typically, callers construct indices and spaces, choose primitive and coefficient types, then place and compose local expressions. Actions, inner products, expectations, and traces can be evaluated without matrices. A state/operator basis is chosen for expansion or physical numerical output. Lie analysis instead selects a family of operator expressions and builds dense coefficient arrays of that family's dimension, without exporting physical action matrices; see [Lie contracts](design/lie.md). Model helpers also return ordinary state/operator expressions.
+A typical calculation starts with indices and spaces, followed by primitive and
+coefficient types, then local-expression placement and composition. Actions and
+scalar contractions need no matrix. Expansion and physical numerical output
+add an explicit state or operator basis.
+
+Lie analysis selects a family of operator expressions and constructs dense
+coefficient arrays in that family's dimension. It uses core HS contractions
+without physical action-matrix export; see [Lie contracts](design/lie.md).
 
 ## 5. Module structure
 
-Core is divided into `ops`, `coefficient`, `space`, `system`, `expr`, `basis`, and private `evaluate` modules. Shared syntax parts live in `expr::parts` and internal traversal in `expr::traversal`. Public expression handles and major traits are available at the crate root; node enums and shared representations are private.
+Core is divided into `algebra`, `coefficient`, `space`, `system`, `expression`, `basis`, and private `evaluate` modules. Algebra operations and grading belong to `algebra`; `space` defines both `Dimension`, which describes a primitive's span, and `DimensionOverflow`. Public expression handles are defined in `expression::local` and `expression::composite`; linear combinations are defined in `expression::parts::linear_combination`. Expression nodes and traversal are private.
 
-Geometry separates geometry, boundaries, relations, groups, and connections. Normalize separates norms, expectations, and errors. Export separates arguments, results, metadata, coordinate/vector/matrix conversion, and backends. Lie separates expression adapters, families/projection, retained representations, invariant subspaces, decomposition, and numerical settings/kernels. Concrete algebras separate primitives, coefficient helpers, bases, and models. Feature designs specify detailed types, capabilities, errors, and processing.
+Other module boundaries follow their responsibilities:
+
+| Component | Module responsibilities |
+| --- | --- |
+| Geometry | Boundaries and geometries, site relations, and site-to-data mapping. |
+| Normalize | Norms, expectations, and errors. |
+| Export | Arguments/results, metadata, coordinate/vector/matrix conversion, and backends. |
+| Lie | Expression adapters, families/transformations, representations, invariant subspaces, decomposition, and numerical foundations. |
+| Concrete algebras | Primitives, coefficient helpers, bases, and models. |
+
+Feature designs specify the detailed types, capabilities, errors, and processing.
+
+Public items use their defining semantic module paths. Each library crate has a root `prelude` re-exporting frequently used items; other public re-exports are not used. A crate root may itself define a shared abstraction or a system alias. Within this repository, crates other than `examples` import dependencies through their defining paths rather than another syntaqs crate's prelude, including in tests and documentation examples.
+
+Named Rust modules use `name.rs` and, for children, a `name/` directory; crate entry points are excluded. The shared integration-test helper layout is described in [verification](design/verification.md#1-verification-responsibilities).
 
 See [verification](design/verification.md) for checks, [future work](future-work.md) for unimplemented extensions, and the [documentation guide](README.md) for document responsibilities and maintenance conventions.

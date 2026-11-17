@@ -3,17 +3,19 @@ use core::ops::{Add, Mul};
 use num_complex::Complex;
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    Act, Adjoint, Conjugate, Divide, HilbertSpace, InnerProduct, LinearCombination, LocalOperator,
-    LocalState,
+    algebra::Act, algebra::Adjoint, algebra::InnerProduct, coefficient::Conjugate,
+    coefficient::Divide, expression::local::LocalOperator, expression::local::LocalState,
+    expression::parts::linear_combination::LinearCombination, space::HilbertSpace,
 };
 
+#[derive(PartialEq)]
 struct Primitive;
-impl syntaqs_core::HomogeneousParity for Primitive {
-    fn parity(&self) -> syntaqs_core::Parity {
-        syntaqs_core::Parity::Even
+impl syntaqs_core::algebra::HomogeneousParity for Primitive {
+    fn parity(&self) -> syntaqs_core::algebra::Parity {
+        syntaqs_core::algebra::Parity::Even
     }
 }
-impl syntaqs_core::ParityOperator for Primitive {
+impl syntaqs_core::algebra::ParityOperator for Primitive {
     fn parity_operator() -> Self {
         Self
     }
@@ -55,7 +57,7 @@ fn opaque_whole_coefficients_move_through_map_and_shared_local_and_composite_syn
 
 // No Num, Float, Copy, PartialEq, Neg, Div or RealPart. Real-part extraction is
 // deliberately absent: scalar quotients do not need a real projection.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct Weight(f64);
 impl Add for Weight {
     type Output = Self;
@@ -97,7 +99,7 @@ impl Divide for Weight {
 
 #[test]
 fn normalized_hs_needs_no_dimension_float_cast_or_general_div_trait() {
-    use syntaqs_core::{Identity, Product, Trace};
+    use syntaqs_core::{algebra::Identity, algebra::Product, algebra::Trace};
     struct IdentityOnly;
     impl Identity for IdentityOnly {
         fn identity() -> Self {
@@ -121,12 +123,12 @@ fn normalized_hs_needs_no_dimension_float_cast_or_general_div_trait() {
             Weight(3.0)
         }
     }
-    impl syntaqs_core::HomogeneousParity for IdentityOnly {
-        fn parity(&self) -> syntaqs_core::Parity {
-            syntaqs_core::Parity::Even
+    impl syntaqs_core::algebra::HomogeneousParity for IdentityOnly {
+        fn parity(&self) -> syntaqs_core::algebra::Parity {
+            syntaqs_core::algebra::Parity::Even
         }
     }
-    impl syntaqs_core::ParityOperator for IdentityOnly {
+    impl syntaqs_core::algebra::ParityOperator for IdentityOnly {
         fn parity_operator() -> Self {
             Self
         }
@@ -144,7 +146,7 @@ fn normalized_hs_needs_no_dimension_float_cast_or_general_div_trait() {
 }
 
 #[test]
-fn expectation_quotients_require_neither_real_part_nor_float_or_general_comparison() {
+fn expectation_quotients_require_neither_real_part_nor_float_or_ordering() {
     let state =
         LocalState::<Primitive, Primitive, Weight>::primitive(Primitive).scaled(Weight(2.0));
     let op = LocalOperator::primitive(Primitive).scaled(Weight(3.0));
@@ -351,9 +353,11 @@ fn every_scaled_entry_converts_a_non_clone_source_exactly_once() {
     // Conversion occurs once per call, including empty and many-term inputs.
     for count in 0..=3 {
         let before = calls.get();
-        let terms = LinearCombination::<_, C>::from_terms((0..count).map(|i| syntaqs_core::Term {
-            coefficient: C::new(f64::from(i), 0.0),
-            operand: i,
+        let terms = LinearCombination::<_, C>::from_terms((0..count).map(|i| {
+            syntaqs_core::expression::parts::linear_combination::Term {
+                coefficient: C::new(f64::from(i), 0.0),
+                operand: i,
+            }
         }));
         let scaled = terms.clone().scaled(Input(&calls));
         assert_eq!(calls.get(), before + 1);

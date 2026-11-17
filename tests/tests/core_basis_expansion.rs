@@ -1,7 +1,10 @@
 //! Basis coordinates and reconstruction against independent three-level algebra.
 
 use num_complex::Complex;
-use syntaqs_core::{Basis, BasisError, Coordinates, HilbertSpace, LocalOperator, LocalState};
+use syntaqs_core::{
+    basis::Basis, basis::BasisError, basis::Coordinates, expression::local::LocalOperator,
+    expression::local::LocalState, space::HilbertSpace,
+};
 
 use fixture::*;
 use syntaqs_tests::three_level as fixture;
@@ -41,7 +44,7 @@ fn assert_values<T: Real>(
     }
 }
 
-fn check_three_level<T: Real>(kind: syntaqs_core::TensorKind) {
+fn check_three_level<T: Real>(kind: syntaqs_core::space::TensorKind) {
     let p = Ls::<T>::primitive(Ket::Phase).scaled(c(0.3, -0.7))
         + Ls::primitive(Ket::Sum).scaled(c(-0.2, 0.6));
     let reference = std::array::from_fn::<_, 3, _>(|i| {
@@ -114,7 +117,7 @@ fn check_three_level<T: Real>(kind: syntaqs_core::TensorKind) {
     .unwrap();
     let a = Ls::<T>::primitive(Ket::Phase).at(&f).unwrap();
     let b = Ls::<T>::primitive(Ket::Sum).at(&g).unwrap();
-    let other = syntaqs_core::State::tensor_in(
+    let other = syntaqs_core::expression::composite::State::tensor_in(
         &space,
         [
             Ls::<T>::primitive(Ket::Unit(Axis::B)).at(&f).unwrap(),
@@ -122,7 +125,7 @@ fn check_three_level<T: Real>(kind: syntaqs_core::TensorKind) {
         ],
     )
     .unwrap();
-    let state = (syntaqs_core::State::tensor_in(&space, [a, b])
+    let state = (syntaqs_core::expression::composite::State::tensor_in(&space, [a, b])
         .unwrap()
         .scaled(c(0.3, -0.7))
         .clone()
@@ -158,7 +161,8 @@ fn check_three_level<T: Real>(kind: syntaqs_core::TensorKind) {
 
     // Identity is not a MatrixUnits basis primitive. Both spectator identities
     // must expand into sums of three diagonal units, rather than a fake index.
-    let identity = syntaqs_core::Operator::<_, Operator, Complex<T>>::identity();
+    let identity =
+        syntaqs_core::expression::composite::Operator::<_, Operator, Complex<T>>::identity();
     let coords = identity.coordinates_in(&MatrixUnits, &space).unwrap();
     assert_eq!(coords.dim().unwrap(), 81);
     assert_eq!(coords.len(), 9);
@@ -213,8 +217,8 @@ fn check_three_level<T: Real>(kind: syntaqs_core::TensorKind) {
 #[test]
 fn independent_three_level_expansion_at_both_precisions() {
     for kind in [
-        syntaqs_core::TensorKind::Ordinary,
-        syntaqs_core::TensorKind::Graded,
+        syntaqs_core::space::TensorKind::Ordinary,
+        syntaqs_core::space::TensorKind::Graded,
     ] {
         check_three_level::<f32>(kind);
         check_three_level::<f64>(kind);
@@ -223,8 +227,14 @@ fn independent_three_level_expansion_at_both_precisions() {
 
 struct BrokenBasis(u8);
 impl Basis<Ket, Complex<f64>> for BrokenBasis {
-    fn expand(&self, _: &Ket) -> syntaqs_core::LinearCombination<Ket, Complex<f64>> {
-        syntaqs_core::LinearCombination::primitive(Ket::Phase)
+    fn expand(
+        &self,
+        _: &Ket,
+    ) -> syntaqs_core::expression::parts::linear_combination::LinearCombination<Ket, Complex<f64>>
+    {
+        syntaqs_core::expression::parts::linear_combination::LinearCombination::primitive(
+            Ket::Phase,
+        )
     }
     fn index(&self, _: &Ket) -> Option<usize> {
         match self.0 {
@@ -239,8 +249,8 @@ impl Basis<Ket, Complex<f64>> for BrokenBasis {
 }
 
 #[test]
-fn malformed_expansion_and_enumeration_are_errors_even_under_zero_scale() {
-    let state = Ls::<f64>::primitive(Ket::Phase).scaled(c(0.0, 0.0));
+fn malformed_expansion_of_retained_states_and_enumeration_are_errors() {
+    let state = Ls::<f64>::primitive(Ket::Phase);
     assert!(matches!(
         state.coordinates(&BrokenBasis(0)),
         Err(BasisError::NonBasisElement)
@@ -264,31 +274,52 @@ fn malformed_expansion_and_enumeration_are_errors_even_under_zero_scale() {
 }
 
 #[test]
-fn zero_state_factor_does_not_hide_invalid_basis_expansion_in_another_factor() {
+fn zero_state_factor_is_removed_before_basis_expansion() {
     let a = HilbertSpace::factor(0u8);
     let b = HilbertSpace::factor(1u8);
-    let state = syntaqs_core::State::tensor_in(
+    let state = syntaqs_core::expression::composite::State::tensor_in(
         &a.tensor(&b).unwrap(),
         [
-            syntaqs_core::State::<_, Ket, Operator, Complex<f64>>::zero(&a),
+            syntaqs_core::expression::composite::State::<_, Ket, Operator, Complex<f64>>::zero(&a),
             Ls::<f64>::primitive(Ket::Phase).at(&b).unwrap(),
         ],
     )
     .unwrap();
-    assert!(matches!(
-        state.coordinates(&BrokenBasis(0)),
-        Err(BasisError::NonBasisElement)
-    ));
-    assert!(matches!(
-        state.expand(&BrokenBasis(1)),
-        Err(BasisError::IndexOutOfBounds { .. })
-    ));
+    assert_eq!(
+        state
+            .coordinates(&BrokenBasis(0))
+            .unwrap()
+            .entries()
+            .count(),
+        0
+    );
+    assert_eq!(
+        state
+            .expand(&BrokenBasis(1))
+            .unwrap()
+            .coordinates(&BrokenBasis(0))
+            .unwrap()
+            .entries()
+            .count(),
+        0
+    );
+    let zero = Ls::<f64>::primitive(Ket::Phase).scaled(c(0.0, 0.0));
+    assert_eq!(
+        zero.coordinates(&BrokenBasis(0)).unwrap().entries().count(),
+        0
+    );
 }
 
 struct BrokenOperatorBasis;
 impl Basis<Operator, Complex<f64>> for BrokenOperatorBasis {
-    fn expand(&self, p: &Operator) -> syntaqs_core::LinearCombination<Operator, Complex<f64>> {
-        syntaqs_core::LinearCombination::primitive(*p)
+    fn expand(
+        &self,
+        p: &Operator,
+    ) -> syntaqs_core::expression::parts::linear_combination::LinearCombination<
+        Operator,
+        Complex<f64>,
+    > {
+        syntaqs_core::expression::parts::linear_combination::LinearCombination::primitive(*p)
     }
     fn index(&self, p: &Operator) -> Option<usize> {
         matches!(p, Operator::Identity).then_some(0)

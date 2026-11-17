@@ -1,22 +1,53 @@
 # syntaqs-normalize
 
-Norm and normalization extensions for [syntaqs](../../README.md) state expressions.
+Compute state norms, normalize states, and divide expectations by the state's
+self-inner-product. These extension traits build on the local and composite
+state APIs of [syntaqs-core](../syntaqs-core/README.md).
 
-## Responsibilities
+Use the [tagged installation guide](../../docs/installation.md), adding core,
+normalize, and the concrete algebra used by your application. Read the selected
+tag's documentation; the example below describes the current checkout.
 
-| Extension trait | Operation |
-| --- | --- |
-| `Norm` | Compute `sqrt(Re(<psi | psi>))`. |
-| `Normalize` | Return a state scaled to unit norm while preserving its phase. |
-| `NormalizedExpectation` | Compute `<psi | A | psi> / <psi | psi>`. |
-| `NormalizedExpectationIn` | Compute a normalized expectation with an explicit ambient space. |
+## Normalizing a state
 
-Import the corresponding trait to enable its methods. Operations that divide by the state's self-inner-product reject an exactly zero denominator with `NormalizationError`. Norm computation itself permits zero.
+Import `Normalize` and `Norm` from `norm`. This example uses a local spin-half
+state with norm 2 and returns a unit-norm expression:
 
-## Integration
+```rust
+use num_complex::Complex;
+use syntaqs_normalize::norm::{Norm, Normalize};
+use syntaqs_spin_half::{SpinHalf, state::SpinHalfState};
 
-This crate builds on the public state and operator APIs of [syntaqs-core](../syntaqs-core/README.md). Squared norms, inner products, unnormalized expectations, and scalar division remain in the core. Normalization shares and scales the original expression.
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let state = SpinHalf::<Complex<f64>>::state(SpinHalfState::Up).scaled(2.0);
+    let unit = state.normalized()?;
+    assert_eq!(unit.norm(), 1.0);
+    Ok(())
+}
+```
 
-The crate uses the standard library. Square-root-based norms and normalization require `Float` on the associated real type. Normalized expectations use scalar division and need neither square roots nor real-part extraction.
+Normalization shares and scales the expression, preserves phase, and leaves the
+input unchanged. An exactly zero self-inner-product produces
+`NormalizationError::ZeroNorm`; computing the norm of zero is valid.
 
-See the [crate API overview](src/lib.rs), [normalization design](../../docs/design/normalization.md#1-norm-and-normalization-apis-and-features), and [Heisenberg example](../../examples/src/bin/heisenberg.rs). Installation is covered by the [project README](../../README.md).
+## Choosing an operation
+
+| Extension trait | Operation | Import module |
+| --- | --- | --- |
+| `Norm` | `sqrt(Re(<psi | psi>))` | `norm` |
+| `Normalize` | Unit-norm state | `norm` |
+| `NormalizedExpectation` | `<psi | A | psi> / <psi | psi>` | `expectation` |
+| `NormalizedExpectationIn` | The same quotient in an explicit ambient space | `expectation` |
+
+The prelude also provides the extension traits. `NormalizationError` is defined
+at the crate root. Squared norms, ordinary expectations, inner products, and
+scalar division remain in core.
+
+This crate uses std. Norms and normalization require `Float` on the associated
+real type. Normalized expectations require division and need neither square
+roots nor real-part extraction.
+
+## Integration and references
+
+See the [API overview](src/lib.rs), [normalization contract](../../docs/design/normalization.md),
+and [Heisenberg example](../../examples/src/bin/heisenberg.rs).
