@@ -5,7 +5,7 @@ use syntaqs_core::space::HilbertSpace;
 use syntaqs_fermion::{Fermion, FermionOperator as O, FermionState as S, MajoranaBasis};
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
-use syntaqs_normalize::{Normalize, NormalizedExpectation};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Normalize};
 
 type F = Fermion<Complex<f64>>;
 type Models = syntaqs_fermion::models::FermionModels<F>;

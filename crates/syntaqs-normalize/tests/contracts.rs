@@ -9,7 +9,7 @@ use syntaqs_core::{
     coefficient::RealPart, expression::local::LocalOperator, expression::local::LocalState,
     expression::parts::linear_combination::LinearCombination, space::HilbertSpace,
 };
-use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 
 #[derive(PartialEq)]
 struct Primitive<'a>(&'a Cell<usize>);
@@ -81,6 +81,26 @@ fn norm_does_not_require_inverse_real_embedding_or_coefficient_float() {
     let norm: f64 = state.norm();
     assert_eq!(norm, 3.0);
     assert_eq!(LocalState::<(), (), NormOnly>::zero().norm(), 0.0);
+}
+
+mod prelude_api {
+    use super::NormOnly;
+    use syntaqs_core::expression::local::LocalState;
+    use syntaqs_normalize::prelude::*;
+
+    fn _all_traits<
+        T: Norm
+            + Normalize
+            + NormalizedExpectation<(), Output = f64>
+            + NormalizedExpectationIn<(), (), Output = f64>,
+    >() {
+    }
+
+    #[test]
+    fn prelude_enables_norm_on_a_local_state() {
+        let state = LocalState::<(), (), NormOnly>::primitive(()).scaled(NormOnly(3.0));
+        assert_eq!(state.norm(), 3.0);
+    }
 }
 
 struct Op;

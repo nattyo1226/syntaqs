@@ -1,6 +1,9 @@
 use graded::*;
 use syntaqs_core::{space::HilbertSpace, space::TensorKind};
-use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation, NormalizedExpectationIn};
+use syntaqs_normalize::{
+    expectation::NormalizedExpectation, expectation::NormalizedExpectationIn, norm::Norm,
+    norm::Normalize,
+};
 use syntaqs_tests::graded;
 fn check<T: Real + num_traits::Float>() {
     let factors = [

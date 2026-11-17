@@ -3,7 +3,8 @@ use num_complex::Complex;
 use num_traits::Float;
 use syntaqs_core::{basis::Basis, space::HilbertSpace};
 use syntaqs_normalize::{
-    Norm, NormalizationError, Normalize, NormalizedExpectation, NormalizedExpectationIn,
+    NormalizationError, expectation::NormalizedExpectation, expectation::NormalizedExpectationIn,
+    norm::Norm, norm::Normalize,
 };
 use syntaqs_tests::three_level as fixture;
 type CompositeSpace = HilbertSpace<u8>;

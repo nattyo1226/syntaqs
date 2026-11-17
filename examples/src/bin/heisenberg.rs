@@ -8,7 +8,7 @@ use syntaqs_core::coefficient::Divide;
 use syntaqs_core::{expression::composite::State, space::HilbertSpace};
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
-use syntaqs_normalize::{Norm, NormalizedExpectation};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm};
 use syntaqs_spin_half::{SpinHalf, SpinHalfState};
 
 type Spin = SpinHalf<Complex<f64>>;

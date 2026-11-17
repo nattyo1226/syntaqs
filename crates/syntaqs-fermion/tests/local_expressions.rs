@@ -6,7 +6,7 @@ use syntaqs_export::{Export, Exported, MatrixArgs};
 use syntaqs_fermion::{
     Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
 };
-use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 
 fn vector<T: Real>(psi: &LocalState<S, O, Complex<T>>) -> Vec<Complex<f64>> {
     let out: Exported<Vec<Complex<T>>, _> = psi.export(&OccupationBasis).unwrap();

@@ -13,7 +13,7 @@ use syntaqs_core::{
 };
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
-use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 use syntaqs_spin_half::{SpinHalf, SpinHalfState};
 
 trait Real: Num + Copy + PartialOrd + Neg<Output = Self> + FromPrimitive + ToPrimitive + Debug {

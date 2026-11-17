@@ -7,7 +7,7 @@ use syntaqs_fermion::{
     Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
 };
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, mapping::MappingError};
-use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 
 fn sites(n: usize) -> Vec<H<usize>> {
     // Deliberately descending indices: ordering comes from the tensor.

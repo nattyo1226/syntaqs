@@ -8,7 +8,9 @@ use syntaqs_core::{
     expression::parts::linear_combination::LinearCombination, space::HilbertSpace,
 };
 
-use syntaqs_normalize::{NormalizationError, NormalizedExpectation, NormalizedExpectationIn};
+use syntaqs_normalize::{
+    NormalizationError, expectation::NormalizedExpectation, expectation::NormalizedExpectationIn,
+};
 
 #[derive(PartialEq)]
 struct Primitive;

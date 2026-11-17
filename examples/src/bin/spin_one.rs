@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(feature = "normalize")]
     {
-        use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+        use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
         let normalized = psi.normalized()?;
         assert!((normalized.norm() - 1.0).abs() < 1e-12);
         let energy = psi.normalized_expectation(&h)?;

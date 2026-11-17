@@ -4,7 +4,7 @@ use common::*;
 use num_complex::Complex;
 use syntaqs_core::{basis::Basis, space::HilbertSpace, space::TensorKind};
 use syntaqs_export::{Export, Exported, MatrixArgs};
-use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
+use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 use syntaqs_spin_one::{
     CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,
 };

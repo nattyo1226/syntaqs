@@ -3,7 +3,9 @@ mod common;
 use common::*;
 use num_complex::Complex;
 use syntaqs_export::{Export, Exported, MatrixArgs};
-use syntaqs_normalize::{Norm, NormalizationError, Normalize, NormalizedExpectation};
+use syntaqs_normalize::{
+    NormalizationError, expectation::NormalizedExpectation, norm::Norm, norm::Normalize,
+};
 use syntaqs_spin_one::{
     CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,
 };
