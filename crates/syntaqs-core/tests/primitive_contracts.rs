@@ -228,8 +228,8 @@ fn legacy_and_semantic_module_paths_refer_to_the_same_items() {
         TypeId::of::<expression::parts::linear_combination::LinearCombination<(), i32>>()
     );
     assert_eq!(
-        TypeId::of::<expr::parts::SumExpr<()>>(),
-        TypeId::of::<expression::parts::SumExpr<()>>()
+        TypeId::of::<expr::parts::Term<(), i32>>(),
+        TypeId::of::<expression::parts::linear_combination::Term<(), i32>>()
     );
     assert_eq!(
         TypeId::of::<expr::composite::State<u8, (), (), i32>>(),

@@ -146,3 +146,33 @@ impl<E> ExactSizeIterator for IntoOperands<E> {
 }
 
 impl<E> FusedIterator for IntoOperands<E> {}
+
+#[cfg(test)]
+mod tests {
+    use super::SumExpr;
+    use alloc::vec::Vec;
+
+    #[test]
+    fn sum_parts_support_borrowed_and_owned_mixed_end_iteration() {
+        assert!(SumExpr::<u8>::default().is_empty());
+        for n in 0..5 {
+            let sum: SumExpr<_> = (0..n).collect();
+            assert_eq!(sum.len(), n);
+            assert_eq!(
+                sum.iter().copied().collect::<Vec<_>>(),
+                (0..n).collect::<Vec<_>>()
+            );
+            let mut iter = sum.into_iter();
+            if n > 0 {
+                assert_eq!(iter.next_back(), Some(n - 1));
+            }
+            if n > 1 {
+                assert_eq!(iter.next(), Some(0));
+            }
+            assert_eq!(
+                iter.collect::<Vec<_>>(),
+                (1..n.saturating_sub(1)).collect::<Vec<_>>()
+            );
+        }
+    }
+}

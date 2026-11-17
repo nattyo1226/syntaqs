@@ -2,16 +2,23 @@
 
 use crate::{
     coefficient::multiply,
-    expression::parts::{IntoOperands, ScaleExpr, SumExpr},
+    expression::parts::{IntoOperands, SumExpr},
 };
 use core::{
+    iter::FusedIterator,
     ops::{Add, Mul},
     slice,
 };
 use num_traits::One;
 
 /// A coefficient and an operand; distinct from an operation's associated `Term`.
-pub type Term<P, C> = ScaleExpr<P, C>;
+#[derive(Clone, Debug, PartialEq)]
+pub struct Term<P, C> {
+    /// The coefficient, including explicitly stored zero and one.
+    pub coefficient: C,
+    /// The operand multiplied by the coefficient.
+    pub operand: P,
+}
 
 /// An ordered sum preserving duplicates, zero coefficients, and input order.
 ///
@@ -19,7 +26,7 @@ pub type Term<P, C> = ScaleExpr<P, C>;
 /// require no arithmetic, cloning, or comparison capabilities.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LinearCombination<P, C> {
-    terms: SumExpr<ScaleExpr<P, C>>,
+    terms: SumExpr<Term<P, C>>,
 }
 
 impl<P, C> LinearCombination<P, C> {
@@ -33,7 +40,7 @@ impl<P, C> LinearCombination<P, C> {
     /// Constructs one term, retaining even a zero coefficient.
     pub fn term(coefficient: C, operand: P) -> Self {
         Self {
-            terms: SumExpr::One(ScaleExpr {
+            terms: SumExpr::One(Term {
                 coefficient,
                 operand,
             }),
@@ -54,7 +61,9 @@ impl<P, C> LinearCombination<P, C> {
 
     /// Moves the terms out, taking over any existing allocation.
     pub fn into_terms(self) -> IntoTerms<P, C> {
-        self.terms.into_iter()
+        IntoTerms {
+            inner: self.terms.into_iter(),
+        }
     }
 
     /// Returns the number of stored terms, including zero coefficients.
@@ -70,7 +79,7 @@ impl<P, C> LinearCombination<P, C> {
     /// Transforms operands once in order, moving coefficients unchanged.
     pub fn map<Q>(self, mut f: impl FnMut(P) -> Q) -> LinearCombination<Q, C> {
         LinearCombination {
-            terms: self.terms.map(|term| ScaleExpr {
+            terms: self.terms.map(|term| Term {
                 coefficient: term.coefficient,
                 operand: f(term.operand),
             }),
@@ -93,7 +102,7 @@ impl<P, C> LinearCombination<P, C> {
     {
         let coefficient = coefficient.into();
         Self {
-            terms: self.terms.map(|term| ScaleExpr {
+            terms: self.terms.map(|term| Term {
                 coefficient: multiply(term.coefficient, coefficient.clone()),
                 operand: term.operand,
             }),
@@ -135,4 +144,32 @@ impl<'a, P, C> IntoIterator for &'a LinearCombination<P, C> {
 }
 
 /// Owning, exact-size, double-ended iteration over linear-combination terms.
-pub type IntoTerms<P, C> = IntoOperands<Term<P, C>>;
+pub struct IntoTerms<P, C> {
+    inner: IntoOperands<Term<P, C>>,
+}
+
+impl<P, C> Iterator for IntoTerms<P, C> {
+    type Item = Term<P, C>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<P, C> DoubleEndedIterator for IntoTerms<P, C> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back()
+    }
+}
+
+impl<P, C> ExactSizeIterator for IntoTerms<P, C> {
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
+}
+
+impl<P, C> FusedIterator for IntoTerms<P, C> {}

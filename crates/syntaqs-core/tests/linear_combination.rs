@@ -62,30 +62,6 @@ fn map_moves_opaque_coefficients_and_operands_once_in_order() {
     assert!(zero.is_empty());
 }
 
-#[test]
-fn sum_parts_support_borrowed_and_owned_mixed_end_iteration() {
-    use syntaqs_core::expr::parts::SumExpr;
-    for n in 0..5 {
-        let sum: SumExpr<_> = (0..n).collect();
-        assert_eq!(sum.len(), n);
-        assert_eq!(
-            sum.iter().copied().collect::<Vec<_>>(),
-            (0..n).collect::<Vec<_>>()
-        );
-        let mut iter = sum.into_iter();
-        if n > 0 {
-            assert_eq!(iter.next_back(), Some(n - 1));
-        }
-        if n > 1 {
-            assert_eq!(iter.next(), Some(0));
-        }
-        assert_eq!(
-            iter.collect::<Vec<_>>(),
-            (1..n.saturating_sub(1)).collect::<Vec<_>>()
-        );
-    }
-}
-
 fn check_iterator<I>(mut iter: I, expected: &[u8])
 where
     I: DoubleEndedIterator<Item = u8> + ExactSizeIterator + FusedIterator,
@@ -128,8 +104,6 @@ fn borrowed_and_owned_iterators_support_mixed_ends_and_exhaustion() {
 fn concatenation_and_owned_operations_require_no_scalar_or_primitive_traits() {
     struct Primitive(u8);
     struct Scalar;
-    let empty = syntaqs_core::expr::parts::SumExpr::<Primitive>::default();
-    assert!(empty.is_empty());
     fn combination(start: u8, len: u8) -> LinearCombination<Primitive, Scalar> {
         LinearCombination::from_terms((start..start + len).map(|p| Term {
             coefficient: Scalar,
