@@ -23,6 +23,8 @@ Both dense vectors and matrices store numerical data in `Vec<C>`. Matrix shape (
 
 The API exposes Vec output with metadata, direct ndarray output from inputs, and conversion of existing Vec output to ndarray. Direct ndarray output internally shares Vec output and conversion. Sparse output constructs sprs containers from Coordinates without an intermediate dense result.
 
+The `ndarray` and `sprs` features enable their respective containers independently. These crates are not re-exported; consumers using their types declare compatible direct dependencies.
+
 ### 2.2. Exported and metadata
 
 The common `Exported<D, M>` holds numerical data `D` and interpretation metadata `M`. Concrete destinations are specified directly with this type.

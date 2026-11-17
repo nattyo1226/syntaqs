@@ -8,6 +8,8 @@ Feature designs define mathematical contracts and boundary cases. This document 
 
 Production-library tests live in each crate's `tests/` and unit tests. [syntaqs-tests](../../tests/README.md) holds shared three-level and graded two-state algebras, non-orthonormal bases, independent references, and core/normalize/export/Lie integration tests. [Examples](../../examples/README.md) include end-to-end model and Lie workflows. Production crates do not depend on test packages.
 
+Place unit tests under the module they exercise. Shared integration-test helpers use `tests/common/mod.rs`, so `mod common` can import them without Cargo discovering an additional test target. Core unit tests may also reference the coefficient fixture there with `#[path = "../tests/common/mod.rs"]`.
+
 ## 2. Common checks
 
 Run from the repository root. Prefix commands with `direnv exec .` when development tools are not on PATH.
