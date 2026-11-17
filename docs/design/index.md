@@ -1,20 +1,26 @@
 # Index identity, issuance, and sharing
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
 ## 1. Scope and contract
 
-This document specifies factor-index issuance, uniqueness assumptions, reuse, placement on local expressions, and consistency checks as part of the [architecture](../architecture.md). Sites are separately represented as positions in geometry.
+An index identifies a Hilbert-space factor across spaces and placed expressions.
+The caller supplies it before constructing the factor. Geometric sites are
+positions, and basis-coordinate indices are numerical coordinates; neither is a
+factor identity.
 
-`syntaqs-core` takes a generic index type and handles identity comparison, placement, and consistency with spaces. Standard types are `syntaqs-basic`'s Id128 (UUID) and Tag (string). `syntaqs-geometry` borrows leaves from caller-owned spaces; Chain has neither an index type nor issuance helpers. No separate degree-of-freedom identifier is introduced.
+Core accepts a generic index type I and validates identity, placement, and space
+consistency. Basic supplies UUID `Id128` and string `Tag` types. Geometry borrows
+caller-owned spaces; Chain has neither an index type nor issuance helpers.
 
 The core's semantic contract is stable identity comparison as an equivalence relation, requiring standard Eq where comparison occurs. UUID representation/generation, randomness, seeds, and ordering are outside core's contract. Hash, Ord, and issuance capabilities are not universal requirements. Space/expression handles share indices without requiring Clone on I itself.
 
-> An index is only an identifier, issued independently of local algebra. Its provider manages uniqueness; it identifies local expression factors and Hilbert-space factor order. Factor structure uses the supplied index, while expression primitive types define local algebra. No global registry fixes that correspondence: composition, embedding, and evaluation validate their own operands.
-
 ## 2. Indices, local algebras, factors, and spaces
 
-An index has no local structure, dimension, site position, basis, or tensor ordering. Concrete types decide display labels: Id128 shows its UUID and Tag its caller-supplied string. This identity differs from a numerical basis-coordinate index.
+Spaces determine factor order and grouping; state/operator primitive types S/O
+determine local algebra and dimensions; each operation selects its basis.
+An index contributes only identity. Id128 displays its UUID and Tag displays its
+caller-supplied string.
 
 | Object | Stored information and role |
 | --- | --- |
@@ -23,11 +29,15 @@ An index has no local structure, dimension, site position, basis, or tensor orde
 | Basic factor (Factor) | An indexed Hilbert-space leaf, without a separate Dof type. |
 | Hilbert space | Basic indices, factor order, and ordinary/graded tensor structure. |
 
-Hilbert spaces recursively contain Factor and Tensor nodes, with indices on factors. Constructing a degree of freedom means constructing a HilbertSpace leaf, not a separate Dof object. Tensor construction/reuse does not change or issue indices; duplicates are checked across all leaves. There is no subsystem-extraction operation; callers retain their constructed spaces. See [Hilbert spaces](hilbert-space.md).
+Construct a degree of freedom as an indexed HilbertSpace leaf. Tensor nodes
+combine existing spaces without changing or issuing indices, and duplicate
+checks cover all leaves. Callers retain spaces for later subsystem checks;
+subsystem extraction is not provided. See [Hilbert spaces](hilbert-space.md).
 
 Different indices identify independent factors. Indices do not define local algebra; S/O and capability implementations do. Space comparisons inspect indices and order, while primitive/coefficient types reject inappropriate expression combinations. See [primitive type contracts](local-structure.md#4-conditions-for-matching-local-structures).
 
-All factors within one system use the same S/O types. This does not attach algebra to indices or establish a global registry. Separate systems with different local algebras can be constructed independently.
+One system uses the same S/O types at all factors. Separate systems may choose
+different local algebras; the consistency rules in section 6 explain that boundary.
 
 ## 3. Issuance, construction, and placement
 
@@ -51,7 +61,13 @@ Callers pass site-ordered spaces by borrow to geometry and model construction. S
 
 ## 4. Uniqueness assumptions
 
-Index providers must assign distinct identities to independent factors within and across runtimes. Id128 uses seed-free UUID generation, providing practical uniqueness rather than a mathematical collision guarantee. Tag uses the whole string as identity, so independently constructed equal names identify the same factor. Callers manage distinct names; names are not automatically unique across runtimes. Core compares identities, not generation methods or naming policies.
+Index providers must assign distinct identities to independent factors within
+and across runtimes. Id128 uses seed-free UUID generation, providing practical
+uniqueness rather than a mathematical collision guarantee.
+
+Tag uses the whole string as identity, so independently constructed equal names
+identify the same factor. Callers manage distinct names, including across
+runtimes. Core compares identities, not generation methods or naming policies.
 
 No global counter or registry of all issued indices is required. Standard Id128 uses UUID v4. UUID/randomness dependencies stay outside core, preserving its `no_std + alloc` support.
 
@@ -74,7 +90,9 @@ Intentional reuse differs from accidental issuance collisions. Adding equal-inde
 
 No global registry fixes index-to-algebra associations. Construction is not rejected by consulting whether an index was previously used with another structure.
 
-Neither indices nor space leaves provide local algebra. Expressions define rules through S/O and capabilities; spaces retain indices, order, and tensor structure.
+Expressions determine local rules through S/O and their capabilities. Spaces
+retain indices, order, and tensor structure. This separation lets the same space
+structure be used independently by different primitive-typed systems.
 
 Composition, placement, and binding check:
 

@@ -1,10 +1,15 @@
 # Export to numerical containers
 
-Last updated: 2026-11-16
+Last updated: 2026-11-17
 
 ## 1. Status and responsibilities
 
-`syntaqs-export` provides vectors for states and coordinates, and action matrices for operators. `Export`, `Exported`, and `ExportError` are defined at the crate root; representation-specific types are defined under `matrix` and `vector`.
+`syntaqs-export` stores states or coordinates in numerical vectors and operators
+in action matrices. `Exported` pairs each container with the basis, space, shape,
+and layout needed to interpret it. Operator-basis coordinates remain a vector;
+an action matrix describes the operator acting on a state basis.
+
+`Export`, `Exported`, and `ExportError` live at the crate root. Arguments and metadata for each output live under `matrix` and `vector`.
 
 Basis enumeration and coordinates follow [basis design](basis.md); action and space selection follow [composite expressions](composite-expression.md); coefficients and zeros follow [numeric conventions](numerics.md).
 
@@ -32,11 +37,17 @@ The common `Exported<D, M>` holds numerical data `D` and interpretation metadata
 - `data()` and `metadata()` borrow each part.
 - `into_data()` extracts the owned numerical container; `into_parts()` extracts owned data and metadata.
 - `data().as_slice()` accesses a Vec slice.
-- To preserve data-length and shape consistency, the initial API provides no mutable reference permitting arbitrary container resizing or reshaping. Extract ownership to modify data.
+- Container access is immutable to preserve data-length/shape consistency. Extract ownership to resize or reshape the data.
 
 `VectorMetadata` stores vector length; `MatrixMetadata` stores rows, columns, and storage order. They provide `shape()` and, for dense matrices, `layout()`. Dense construction and conversion validate that Vec length equals the shape's element count.
 
-Metadata exposes the domain, codomain, basis, and factor order used. Bases are borrowed as in Coordinates; composite spaces share `HilbertSpace` handles. Local expressions record factor count and local dimension. Results do not borrow the source expression and add no Clone bound on bases or Clone, Hash, or Ord on indices. Coefficient type `C` represents precision without a duplicated precision label.
+Metadata exposes the domain, codomain, basis, and factor order used. Bases are
+borrowed as in Coordinates, composite spaces share HilbertSpace handles, and
+local expressions record factor count and local dimension.
+
+Results own their numerical data without borrowing the source expression. They
+need no Clone on bases or Clone/Hash/Ord on indices. Coefficient type C represents
+precision without a separate precision label.
 
 Matrices use the same state basis for input and output and the same selected full ambient space as domain and codomain. State type `S` is associated at the type level with expression export and matrix metadata; storing it requires no S value, Clone, or numeric capabilities.
 
@@ -86,7 +97,7 @@ let direct: Exported<ndarray::Array1<_>, _> = (&psi).export(&basis)?;
 ```
 
 State-vector and action-matrix export inherit
-[state-evaluation capabilities](composite-expression.md#92-natural-state-collection-between-actions):
+[state-evaluation capabilities](composite-expression.md#42-shared-apis-and-minimal-capabilities):
 primitive PartialEq and coefficient One, plus coefficient PartialEq for composite
 outputs. Exporting existing Coordinates adds no evaluation/equality requirements.
 State terms removed during evaluation do not run basis expansion; original
@@ -145,7 +156,10 @@ For nonorthonormal bases, matrix columns still come from action-result expansion
 
 Dense output checks `nrows * ncols` and storable size before allocation; sparse output checks required array lengths. Major Vec allocations use `try_reserve` variants. Recovery from all out-of-memory conditions, including those within core evaluators and backends, is not guaranteed.
 
-Space-construction and algebraic-evaluation contracts remain unchanged. Export validates sizes required by numerical containers at its boundary. Existing sparse-coordinate storage and basis expansion remain usable even when total dimension overflows.
+Export validates sizes required by numerical containers at its boundary, while
+core retains responsibility for space construction and algebraic evaluation.
+Sparse-coordinate storage and basis expansion remain usable even when total
+dimension overflows.
 
 ## 6. Features and dependencies
 
@@ -155,7 +169,10 @@ Space-construction and algebraic-evaluation contracts remain unchanged. Export v
 
 Users select `syntaqs-export` features directly and depend on `ndarray` or `sprs` directly when using their container types. The `examples` package's optional `export` feature enables both backends.
 
-sprs depends on ndarray, so enabling sprs alone still includes the ndarray dependency. Feature separation selects the public conversion APIs. sprs defaults alga and multi_thread are disabled; ndarray uses std only. Initial integration includes no BLAS, rayon, or persistence features.
+sprs depends on ndarray, so enabling sprs alone still includes the ndarray
+dependency. Feature separation selects public conversion APIs. Export disables
+sprs defaults alga and multi_thread and requests ndarray std only; it requests
+no BLAS, rayon, or persistence features.
 
 ### 6.2. Dependency specifications and MSRV
 
@@ -180,7 +197,7 @@ Numerical, type, and memory contracts have the following verification targets:
 - Check three-dimensional algebras, nonorthonormal-basis coordinates and reconstruction, and Gram-matrix inner products and numerical expectations. Shared conversion has no spin-specific branches.
 - Cover empty, single-factor, nested, zero, identity, and spectator cases; explicit-space binding overrides; unbound operators; invalid references and bases; and overflow. Zero factors follow existing unit-space conventions.
 - Use open and periodic Heisenberg / Neel systems primarily of lengths 0–4, comparing analytic expectations, independent matrices, and dense and sparse calculations. Maintain an executable end-to-end example.
-- Follow [numeric conventions](numerics.md), initially using atol and rtol of `2e-5` each for f32 and `1e-12` each for f64. Record problem size and error justification when adjusting them.
+- Follow [numeric conventions](numerics.md). Small reference cases use atol and rtol of `2e-5` each for f32 and `1e-12` each for f64; record problem size and error justification when adjusting them.
 - Verify rejection of implicit precision changes and explicit precision conversion of extracted data. Check that storage and moves add no unnecessary coefficient, Index, or primitive bounds.
 - Verify sparse vectors avoid dense allocation in large spaces with few nonzeros. Targeted tests and implementation review check column-by-column sparse matrices without dense conversion or retaining all columns.
 - Check no-backend, ndarray-only, sprs-only, and both-backend configurations separately. [Verification](verification.md) specifies test and CI commands.
@@ -191,10 +208,14 @@ Numerical, type, and memory contracts have the following verification targets:
 
 Specify destinations as `Exported<Vec<C>, M>`, `Exported<ndarray::Array1<C>, M>`, `Exported<ndarray::Array2<C>, M>`, `Exported<sprs::CsVec<C>, M>`, or `Exported<sprs::CsMat<C>, M>`. There are no aliases for particular combinations. Local variables can infer metadata with `_`. Matrix state type is specified through `MatrixArgs::<S, _>::new(&basis)`. Rust API documentation provides complete type parameters and methods.
 
-Implementation is split into private output, metadata, args, coordinates, vector, matrix, error, and backend modules. Internal storage shares dense and sparse column generation; direct and staged ndarray conversion share Vec construction and array conversion. Export uses core's public API rather than private nodes.
+Public `vector` and `matrix` modules expose metadata, with operator arguments
+under `matrix::args`. `Export`, `Exported`, and `ExportError` are defined at the
+crate root. Private coordinate, backend, and vector/matrix export implementations
+share dense/sparse column generation and Vec-to-ndarray conversion. Export uses
+core's public API rather than private expression nodes.
 
 Separately from general map representation coefficients, current numerical matrix output uses the same state basis and full ambient space for both input and output.
 
 ## 9. Graded inputs
 
-The shared `Export` handles ordinary and graded inputs. Core action and state coordinates handle signs column by column; Vec / ndarray / sprs storage has no graded-specific logic. The HilbertSpace retained in metadata preserves kind and factor order. Composite state and operator output requires O's `HomogeneousParity + ParityOperator`; local output does not. Vector output also uses shared action evaluation, with common shape and storage order. See [shared evaluation](composite-expression.md#112-shared-apis-and-minimal-capabilities) for capabilities and [verification](verification.md) for test configurations.
+The shared `Export` handles ordinary and graded inputs. Core action and state coordinates handle signs column by column; Vec / ndarray / sprs storage has no graded-specific logic. The HilbertSpace retained in metadata preserves kind and factor order. Composite state and operator output requires O's `HomogeneousParity + ParityOperator`; local output does not. Vector output also uses shared action evaluation, with common shape and storage order. See [shared evaluation](composite-expression.md#42-shared-apis-and-minimal-capabilities) for capabilities and [verification](verification.md) for test configurations.

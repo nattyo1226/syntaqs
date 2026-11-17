@@ -1,8 +1,11 @@
 # Storage, restoration, and index reassignment
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
-These contracts concern unimplemented storage, restoration, and independent copies. See [current index specifications](../design/index.md) for issuance and sharing.
+Restoring an object and creating an independent copy require opposite identity
+choices: restoration preserves factor indices, while an independent copy
+reassigns them consistently. The operations below are unimplemented proposals;
+[current index rules](../design/index.md) already define issuance and sharing.
 
 ## 1. Storage, restoration, and multiple runtimes
 
@@ -22,7 +25,10 @@ Adding two restored copies as independent factors in one space/state tensor prod
 
 ### 1.2. Creating an independent system
 
-Unlike identity-preserving restoration, explicitly map old indices to fresh ones. Every reference to one old index receives the same new index, and different old indices receive different new indices. Reassign all space/state/operator references consistently while preserving local structure, factor order, and tensor structure.
+An independent copy maps old indices to fresh ones. Every reference to one old
+index receives the same new index, and different old indices receive different
+new indices. Apply that map to spaces, states, and operators together, preserving
+local structure, factor order, and tensor structure.
 
 ### 1.3. Combining runtimes
 

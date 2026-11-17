@@ -3,6 +3,13 @@
 Status: Accepted  
 Reference measurements: 2026-11-16
 
+Preserve local expression structure, collect matching state terms between
+actions, stop exact-zero contractions, and share spectator identity expansion
+within a coordinate query. These choices reduce avoidable work while retaining
+factored outputs; query preparation can still cost more on small workloads.
+The measurements below record both improvements and regressions under explicit
+conditions, without establishing general performance guarantees.
+
 ## Context
 
 Realistic local gate layers, repeated spin rotations, Hamiltonian actions,
@@ -22,7 +29,7 @@ normalization at every construction step would repeatedly traverse shared syntax
 Global distribution or gathering same-factor operands across other factors would
 add work and complicate ordered products and graded crossing signs. Grouping is
 structural; existing traversal remains responsible for signs. See the current
-[grouping contract](../design/composite-expression.md#91-structural-local-operator-grouping).
+[grouping contract](../design/composite-expression.md#113-structural-local-operator-grouping).
 
 Collect matching natural-state contributions inside `evaluate()` after each
 action and on action-free inputs. A product applies its right operand, collects,
@@ -31,7 +38,7 @@ retains exponentially many action paths to a small state. A separate evaluator
 that preserves those duplicates would not fulfill this evaluation contract.
 Accept primitive PartialEq and the coefficient capabilities required by
 collection, propagating them to consumers. Do not introduce operator Product as
-an action requirement. See [capabilities and matching rules](../design/composite-expression.md#92-natural-state-collection-between-actions).
+an action requirement. See [capabilities and matching rules](../design/composite-expression.md#114-natural-state-collection-between-actions).
 
 Match normalized ordered structure, including tensor parentheses and coefficient
 placement, while preserving factored products of sums and first-occurrence order.
@@ -47,7 +54,7 @@ requires no orthogonality metadata or basis selection and also applies to
 ordinary trace and normalized operator HS contractions. Graded HS retains
 ordinary parity-string lowering; intrinsic operator coordinates remain distinct.
 Approximate pruning and a basis-aware inner-product API were not adopted. See
-[contraction semantics](../design/composite-expression.md#93-incremental-scalar-contractions)
+[contraction semantics](../design/composite-expression.md#115-incremental-scalar-contractions)
 and [numeric conventions](../design/numerics.md).
 
 Keep sparse specified factors internally and expand spectator identity lazily

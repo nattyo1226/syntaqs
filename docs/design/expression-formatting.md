@@ -1,8 +1,15 @@
 # Expression-tree formatting
 
-Last updated: 2026-11-02
+Last updated: 2026-11-17
 
-This document defines Display and Debug for local and composite state and operator expressions, and formatting of standard indices. See [expression_formatting](../../examples/src/bin/expression_formatting.rs) for Display examples of states and a four-Site Hamiltonian, and the rustdoc for `syntaqs_core::expression` and `syntaqs_basic::index::Tag` for public APIs.
+Display renders a retained expression as a mathematical formula; alternate
+Display adds structural line breaks. Debug exposes stored structure, spaces,
+and full identifiers. Formatting borrows syntax without evaluating it, so the
+choice affects presentation rather than mathematical meaning.
+
+The [formatting example](../../examples/src/bin/expression_formatting.rs) shows
+states and a four-site Hamiltonian. Public APIs are documented under
+`syntaqs_core::expression` and `syntaqs_basic::index::Tag`.
 
 ## 1. Scope and type bounds
 
@@ -95,7 +102,18 @@ Sx[a] |up[a]>
 
 ### 3.3. Multiline display
 
-`{:#}` uses four spaces per nesting level. Sums and tensors written with `⊗` put each operand on a separate line, with `+ ` or `⊗ ` preceding subsequent operands. Operators occupy two positions to the left of each operand's starting column, aligning first and later operands. Top-level sums and `⊗` tensors reserve two initial spaces. Continuation indentation for parentheses and kets is based on the operand's start excluding the operator. A ket begins with `| `, breaks after commas, and aligns factor labels in one column. Even after a coefficient or action operator, alignment uses the actual column immediately after the emitted `| `. It closes with ` >` on the last factor's line; a single factor is one line such as `| up[a] >`. Columns count Rust chars, not terminal display width.
+`{:#}` uses four spaces per nesting level. Sums and tensors written with `⊗`
+put each operand on a separate line, with `+ ` or `⊗ ` before later operands.
+Operators occupy two positions to the left of each operand's starting column,
+aligning the first and later operands. Top-level sums and `⊗` tensors reserve
+two initial spaces.
+
+Continuation indentation for parentheses and kets is based on the operand's
+start, excluding the operator. A ket begins with `| `, breaks after commas, and
+aligns factor labels in one column. Even after a coefficient or action operator,
+alignment uses the actual column immediately after the emitted `| `. It closes
+with ` >` on the last factor's line; one factor fits on one line, such as
+`| up[a] >`. Columns count Rust chars rather than terminal display width.
 
 Parenthesized composite operands indent their contents. Simple parts of products and actions avoid unnecessary line breaks. Parenthesized sums and `⊗` tensors break after the opening and before the closing parenthesis; other parentheses remain inline.
 
@@ -124,7 +142,9 @@ Each algebra crate's primitives provide Display and derive(Debug). Standalone la
 | SpinOneState | Plus → `+1`, Zero → `0`, Minus → `-1` |
 | FermionState | Empty → `0`, Occupied → `1` |
 
-SpinOneState::Zero and FermionState::Empty are not zero vectors. Ket `|0>` differs from empty sum `0`. Normalization and physical coupling constants are unchanged.
+SpinOneState::Zero and FermionState::Empty label physical states, whereas an
+empty sum represents the zero vector. Ket `|0>` therefore differs from `0`.
+These display labels do not alter normalization or physical coupling constants.
 
 ## 5. Implementation and resource handling
 

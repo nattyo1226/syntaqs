@@ -1,12 +1,19 @@
 # Type selection and expression construction
 
-Updated: 2026-11-15
+Updated: 2026-11-17
 
-This document specifies common construction and coefficient inputs. See [local expressions](primitive-expression.md) for evaluation and [composite expressions](composite-expression.md) for space-aware operations.
+Choose primitive and coefficient types once, then construct local or placed
+expressions through the same factory. Construction stores shared syntax;
+[local evaluation](primitive-expression.md) and [space-aware evaluation](composite-expression.md)
+apply the mathematical rules when a result is requested.
 
 ## 1. Type selection, placement, and collection
 
-QuantumSystem associates state/operator primitives and coefficients through `State`, `Operator`, and `Coeff`. ExpressionFactory's inherent methods construct existing core expressions without registering/storing spaces or indices or uniformly requiring Clone/evaluation capabilities. Combining composite expressions requires `I: Eq`.
+`QuantumSystem` associates state/operator primitives and coefficients through
+`State`, `Operator`, and `Coeff`. `ExpressionFactory` provides inherent
+constructors for the corresponding core expressions. It stores no spaces or
+indices and requires no uniform Clone or evaluation capabilities; combining
+composite expressions requires `I: Eq`.
 
 `ExpressionFactory<S,O,C>` stores no values and needs no instance; it implements QuantumSystem generically. `SpinHalf<C>`, `SpinOne<C>`, and `Fermion<C>` select concrete primitives through type aliases, without a trait import for construction. Custom primitives can also use a factory alias. The same primitive/coefficient types produce the same expression types; a system name adds no identity.
 
@@ -24,7 +31,16 @@ Use `LocalStateOf<Q>`, `LocalOperatorOf<Q>`, `StateOf<Q,I>`, and `OperatorOf<Q,I
 
 The `_at` in operator_product_at means it also places primitives: inputs are an IntoIterator of `(&factor, primitive)`, not bare primitives. Placement requires leaves without automatic tensor expansion. The product stays unbound until explicitly bound; its placements do not determine an ambient space including spectators. Shared expressions/spaces can outlive input slices and placement variables.
 
-`try_` denotes Result inputs; ordinary composite constructors also return Result. Input errors use ExpressionError. Return the first input Err unchanged and stop calling next afterward. Composition is validated only after every input succeeds, so input errors precede earlier operands' space/duplicate errors. Already-built arrays/vectors and producer side effects are not rolled back. If final composition fails after successful inputs, all inputs have still been generated.
+`try_` denotes Result inputs; ordinary composite constructors also return Result.
+Input errors use `ExpressionError`. Fallible collection follows this order:
+
+1. Consume inputs until the first Err, returning that error unchanged and making
+   no further calls to next.
+2. If every input succeeds, validate the complete composition. Input errors
+   therefore precede space or duplicate errors in earlier successful operands.
+
+Already-built arrays/vectors and producer side effects are not rolled back. If
+composition fails after successful input generation, all inputs have been produced.
 
 State::try_sum/try_tensor_in and Operator::try_sum/try_product are the underlying public APIs; ExpressionFactory delegates to them. Binding is decided from the entire operator sequence. A later unbound item makes the result unbound even if earlier bound items are incompatible; do not replace this with an early-rejecting binary fold.
 
@@ -37,7 +53,7 @@ apply that rule while folding in input order. Factor matching uses index
 equality, not handle identity. This structural grouping adds no coefficient
 Clone/arithmetic or primitive Identity/evaluation bounds and does not inspect
 through composite scales, adjoints, or other previously built subtrees.
-See [local grouping](composite-expression.md#91-structural-local-operator-grouping)
+See [local grouping](composite-expression.md#113-structural-local-operator-grouping)
 for explicit and query-time grouping.
 
 Reuse construction and sharing without extra collection or copying just for
@@ -46,7 +62,14 @@ try_ variants. Unprovided helpers belong in the
 
 ## 2. Coefficient inputs and inference
 
-`scaled` on all four expression types and LinearCombination accepts `impl Into<C>` and converts exactly once at entry. Expressions only store the coefficient without requiring numeric capabilities or Clone; LinearCombination retains `C: Clone + Mul<Output=C>`. The source need not be Clone, and even an empty LinearCombination converts once. C's precision stays fixed without new casts/conversions. Mul, scalar, and term inputs are not broadened.
+`scaled` on all four expression types and LinearCombination accepts `impl Into<C>`
+and converts exactly once at entry, including for an empty LinearCombination.
+The input need not be Clone. Expressions only store the resulting coefficient,
+while LinearCombination requires `C: Clone + Mul<Output=C>`.
+
+The selected C fixes precision; this conversion adds no implicit casts.
+`Mul`, `scalar`, and term constructors take their declared coefficient inputs
+rather than this broader Into interface.
 
 When inference is insufficient, specify C at construction or the type of a Default input, and remove redundant into() calls. Preserve the selected C and minimal bounds:
 

@@ -1,32 +1,49 @@
 # syntaqs-core
 
-The common algebra and expression layer of [syntaqs](../../README.md).
+Build and evaluate quantum states and operators from local algebra rules. This
+crate supplies the shared expressions, Hilbert spaces, tensor composition, and
+basis coordinates used throughout [syntaqs](../../README.md).
 
-## Responsibilities
+Start with the [two-spin Quick start](../../README.md#quick-start). For release
+installation, [select a version tag](../../docs/installation.md) and use that
+tag's documentation. This README describes the current checkout.
 
-- Define capabilities for local primitives: dimension, identity, products, actions, adjoints, inner products, traces, and parity.
-- Store finite linear combinations and shared local/composite expressions.
-- Manage factor identity, tensor ordering, and ordinary/graded composition through `HilbertSpace<I>`.
-- Validate placement and ambient-space bindings, and evaluate expressions using local rules without full matrices.
-- Extend local basis rules to tensor spaces, expression expansion, and sparse coordinates.
+## Building a system
+
+Choose state/operator primitives and a coefficient type through
+`ExpressionFactory<S, O, C>`, or an alias such as `SpinHalf<C>` from a concrete
+algebra crate. Create factors with `HilbertSpace::factor(index)`, compose their
+space in the required order, and place local expressions on those factors.
+Actions, inner products, expectations, and traces use local rules; basis
+expansion and numerical export are separate choices.
+
+Use the built-in [spin-half](../syntaqs-spin-half/README.md),
+[spin-one](../syntaqs-spin-one/README.md), or [fermion](../syntaqs-fermion/README.md)
+algebra, or implement the public capability traits for your own primitives.
+Custom algebras reuse the same expression trees and evaluators.
 
 ## Main API
 
 | Area | Entry points |
 | --- | --- |
-| Algebra contracts | `Act`, `Product`, `Adjoint`, `InnerProduct`, `Trace`, `Identity`, `Dimension` |
+| Local rules | `Act`, `Product`, `Adjoint`, `InnerProduct`, `Trace`, `Identity`, `Dimension` |
 | Grading | `HomogeneousParity`, `ParityOperator`, `Parity`, `TensorKind` |
 | Expressions | `LinearCombination`, `LocalState`, `LocalOperator`, `State`, `Operator` |
 | Construction | `ExpressionFactory`, `QuantumSystem`, `StateOf`, `OperatorOf` |
 | Spaces and bases | `HilbertSpace`, `Basis`, `Coordinates`, `dim_state`, `dim_op` |
 | Coefficients | `Conjugate`, `Divide`, `ImaginaryUnit`, `RealPart` |
 
-Numeric bounds are requested by individual operations. A coefficient type may be `Complex<f32>`, `Complex<f64>`, or a custom type implementing the required capabilities.
+Each operation requests its own capabilities. Storage, sharing, and delayed
+construction impose no uniform evaluation or coefficient-arithmetic bounds.
+Coefficients can be `Complex<f32>`, `Complex<f64>`, or a custom compatible type.
 
-## Integration
+## Integration and detailed contracts
 
-This crate uses `no_std + alloc` and has no default features. Concrete primitive rules come from the [spin-half](../syntaqs-spin-half/README.md), [spin-one](../syntaqs-spin-one/README.md), and [fermion](../syntaqs-fermion/README.md) crates, or from your own implementations of the public traits. The core does not depend on those crates, geometry, index generation, normalization, or numerical backends.
+Core uses `no_std + alloc` and has no default features. It is independent of
+concrete algebras, geometry, identifier generation, normalization, and numerical
+backends. Squared norms and ordinary expectations belong here;
+[normalize](../syntaqs-normalize/README.md) adds square-root norms and normalized
+expectations, and [export](../syntaqs-export/README.md) adds numerical containers.
 
-Use [syntaqs-normalize](../syntaqs-normalize/README.md) for square-root-based norms and normalization, and [syntaqs-export](../syntaqs-export/README.md) for numerical containers. Squared norms, expectations, and full traces belong to the core.
-
-See the [crate API overview](src/lib.rs), [architecture](../../docs/architecture.md), [expression design](../../docs/design/composite-expression.md), and [basis design](../../docs/design/basis.md). Installation and development commands are in the [project README](../../README.md).
+See the [API overview](src/lib.rs), [expression contracts](../../docs/design/composite-expression.md),
+[basis contracts](../../docs/design/basis.md), and [architecture](../../docs/architecture.md).

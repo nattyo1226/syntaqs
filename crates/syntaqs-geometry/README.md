@@ -1,21 +1,54 @@
 # syntaqs-geometry
 
-Site geometries, relations, and borrowing connections to caller-owned data for [syntaqs](../../README.md).
+Describe sites and interactions independently of quantum states and operators.
+A `Geometry` gives the site count, a `Relation` selects ordered site groups, and
+a `SiteMapper` connects those groups to caller-owned data.
 
-## Responsibilities
+The built-in geometry is an open or periodic one-dimensional `Chain`. Custom
+geometries and relations use the same interfaces; the
+[square-lattice example](../../examples/src/bin/geometry_relations.rs) shows how.
 
-- Describe site counts through `Geometry` and provide one-dimensional open/periodic chains through `Chain` and `Boundary`.
-- Enumerate site groups through `Relation<G>`, including `NearestNeighbors` and `Consecutive<K>` for chains.
-- Represent bounded-capacity groups with `SiteGroup<CAP>`.
-- Connect groups to an external site-ordered slice through `SiteMapper` and `MappedGroup`.
-- Combine the leaves of mapped Hilbert spaces with `leaves_cartesian`, `leaves_zip`, or a custom `combine_leaves` iterator.
+Follow the [tagged installation guide](../../docs/installation.md) and use
+release-matched documentation. The example below uses current-checkout paths.
+See the [API overview](src/lib.rs), [geometry contracts](../../docs/design/geometry.md),
+and [model construction](../../docs/design/models.md).
 
-`NearestNeighbors` enumerates each undirected edge once, including a single edge for a two-site periodic chain. `Consecutive<K>` preserves role order and periodic rotations, so its groups have different semantics from undirected edges.
 
-## Integration
+## Enumerating chain edges
 
-The caller owns site data, factor identifiers, and Hilbert spaces. `Chain` stores only a site count and boundary condition. Hamiltonian and state helpers live in the concrete algebra crates, which use these geometric relations to place core expressions.
+This example lists the two edges of a three-site open chain:
 
-This crate uses `no_std + alloc` and depends on [syntaqs-core](../syntaqs-core/README.md) for Hilbert-space connections. Custom geometries and relations can implement the public traits; a square-lattice implementation is shown in the examples rather than provided as a built-in geometry.
+```rust
+use syntaqs_geometry::{
+    geometry::{Boundary, chain::Chain},
+    relation::{Relation, nearest_neighbor::NearestNeighbors},
+};
 
-See the [crate API overview](src/lib.rs), [geometry design](../../docs/design/geometry.md), and [custom relation example](../../examples/src/bin/geometry_relations.rs). Installation is covered by the [project README](../../README.md).
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let chain = Chain::new(3, Boundary::Open);
+    let edges: Vec<_> = NearestNeighbors
+        .groups(&chain)?
+        .map(|edge| edge.as_ref().to_vec())
+        .collect();
+    assert_eq!(edges, vec![vec![0, 1], vec![1, 2]]);
+    Ok(())
+}
+```
+
+`NearestNeighbors` yields each undirected edge once, including one edge for a
+two-site periodic chain. `Consecutive<K>` instead preserves ordered roles and
+periodic rotations. Choose the relation that matches the interaction's meaning.
+
+## Connecting sites to quantum factors
+
+`SiteMapper` borrows a site-ordered slice. For Hilbert spaces, use
+`leaves_cartesian()`, `leaves_zip()`, or `combine_leaves()` to select factors
+within each site. `MappedGroup` retains the original relation group;
+`SiteGroup<CAP>` supplies a bounded-capacity group representation.
+
+The caller owns identifiers, spaces, and data. `Chain` stores site count and
+boundary conditions; model helpers in the concrete algebra crates turn selected
+groups into expressions. Geometry uses `no_std + alloc` and depends on core for
+Hilbert-space connections.
+
+## Integration and references

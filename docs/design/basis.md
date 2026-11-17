@@ -1,10 +1,12 @@
 # Basis expansion, coordinates, and enumeration
 
-Updated: 2026-11-16
+Updated: 2026-11-17
 
 ## 1. Scope and contract
 
-Under [requirements](../requirements.md) and [architecture](../architecture.md), this document specifies local state/operator bases, tensor-product bases, and expression expansion, detailing the basis connection of [local expressions](primitive-expression.md).
+`Basis<P,C>` expresses a primitive P as coefficients C in a selected complete
+basis. Core extends those rules to whole expressions and tensor spaces, returning
+either an expression in basis members or aggregated sparse coordinates.
 
 Core owns basis capabilities, whole-expression expansion, composite bases, and coordinates. Concrete algebras implement local bases and primitive expansion rules; export stores the resulting coefficients in numerical containers.
 
@@ -46,7 +48,10 @@ Independence makes these coefficients unique. Expansion represents the whole obj
 | State primitive S | `LinearCombination<S, C>` |
 | Operator primitive O | `LinearCombination<O, C>` |
 
-Results contain only selected basis primitives. A coefficient/order-preserving map and common constructors produce ordinary Primitive/Scale/Sum syntax. Neither combinations nor expressions retain basis metadata or a special expanded state; they remain usable for ordinary operations and re-expansion. Verify membership and conversion consistency.
+Results contain only selected basis primitives. A coefficient/order-preserving
+map and common constructors produce ordinary Primitive/Scale/Sum syntax; the
+[result contract](#52-expansion-returns-ordinary-expression-trees) specifies its
+ownership and reuse. Verify membership and conversion consistency.
 
 Indices are zero-based basis coordinates, not implicit label/value order or factor identity. `index(&self, primitive: &P) -> Option<usize>` returns None for nonmembers.
 
@@ -80,9 +85,18 @@ These laws, independence, and completeness are implementation contracts and veri
 
 `Basis::expand` expands one primitive; core extends this linearly to expressions, evaluating local/composition rules as needed for products/actions. Basis indices associate coefficients with coordinates and aggregate equal members.
 
-Core provides explicit expansion/coordinates separately from local-rule evaluate. Coordinates are mathematically unique without requiring a generally optimal simplification normal form. Inputs remain unchanged.
+Choose the result according to how it will be used:
 
-expand returns the ordinary expression type. Coordinates are a separate public operation on an expression and basis, without prior expand or a dedicated expanded type. Expanded trees gain no coordinate containers, basis labels, markers, or caches. Separate single-component access and unaggregated contribution enumeration are not required APIs. Section 7 defines numbering/results.
+| Operation | Result and purpose |
+| --- | --- |
+| `expand(&basis)` | An ordinary expression in selected basis members, usable in further algebra. |
+| `coordinates(&basis)` | Aggregated sparse coefficients with basis/space interpretation, suitable for numerical conversion. |
+| Ordinary evaluation | Actions or scalar contractions from local rules, without selecting a basis. |
+
+Both basis operations preserve the input. Coordinates are mathematically unique
+without requiring an optimal expression normal form or a prior call to expand.
+The API does not require separate single-component access or unaggregated
+contribution enumeration. Section 7 defines the result interfaces and numbering.
 
 Inner products, Gram matrices, and dual bases may implement expansion, but are not mandatory Basis capabilities. Direct rules suffice even for non-orthonormal bases, without a shared generic Gram solver or extra numeric dependency. Operator inner products use [dimension-normalized HS](primitive-expression.md#41-dimension-normalized-hilbertschmidt-inner-products), `Tr(A†B)/D`, where D is the action-space dimension.
 
@@ -90,7 +104,8 @@ For a complete Hermitian basis with `Tr(B_mu B_nu)=D delta_mu,nu`, coefficients 
 
 Ordinary evaluation/coordinates do not approximately discard components. Explicit pruning remains [future expression work](../future-work.md#22-expression-and-space-operations).
 
-Expansion/coordinates are separate from ordinary product/action/inner-product/trace paths, which need no basis. Expand necessary parts when explicitly requested, without complete numerical matrices as intermediates. Aggregate by basis index rather than structural expression comparison.
+Basis processing expands only the parts required by the explicit request and
+aggregates by basis index, without a complete numerical matrix intermediate.
 
 Distribution, local multiplication, and coefficient handling are internal expansion steps, not independently selectable simplification APIs. Follow [numerics](numerics.md); comparison tolerances never silently discard components.
 
@@ -113,7 +128,11 @@ Graded operator bases follow [composite composition](composite-expression.md). O
 
 ### 5.2. Expansion returns ordinary expression trees
 
-The basis is an operation input. Expansion returns ordinary syntax in selected members; local LinearCombination results transfer data for constructing that syntax. No retained basis identity or special expanded state is required. Inputs are unchanged; indices, local algebra, and definite state/ambient spaces remain. Original sources are not automatically retained.
+The basis is an operation input, not expression metadata. Expansion transfers
+local LinearCombination results into ordinary syntax in selected members, with
+no basis labels, coordinate containers, expanded markers, or caches on the tree.
+It preserves indices, local algebra, and definite state/ambient spaces. Original
+sources are not automatically retained.
 
 Expanded expressions support products, actions, inner products, traces, and expansion again. Re-expanding in a different basis needs neither previous basis metadata nor a separate tree basis-change mechanism. Direct expansion and re-expansion have equal mathematical coordinates, subject to ordinary floating-point ordering differences.
 
@@ -159,10 +178,10 @@ expansion, without primitive Product. Local state queries require coefficient
 One; composite state queries additionally require coefficient PartialEq. Operator expansion requires Identity/Product/Adjoint. Coefficients need operation-specific Clone/Zero/multiplication/conjugation, and composite unit coefficients use One. Shared processing needs neither Float nor division, though concrete rules/bases may. Ordinary action/inner-product/trace paths gain no basis dependency.
 
 Composite operator queries first validate the original expression, then apply
-[structural local grouping](composite-expression.md#91-structural-local-operator-grouping)
+[structural local grouping](composite-expression.md#113-structural-local-operator-grouping)
 before distributing composite sums or resolving intrinsic graded signs.
-This preparation introduces no new query bounds, does not change the public
-coordinate format, and preserves later basis-error checks. Operator generation shares spectator identity expansion within the query and
+Preparation uses the public query bounds and preserves basis-error checks and
+the coordinate format. Operator generation shares spectator identity expansion within the query and
 emits complete coordinate contributions directly, as described below.
 
 ### 7.2. Coordinate interpretation and indices
@@ -181,7 +200,7 @@ For `2(Up⊗Down)+3(Up⊗Down)−(Down⊗Up)`, SzBasis coordinates are 5 at `[0,
 
 Internally, BTreeMap aggregates sparse digit keys. Remove exact zeros during aggregation and composite state scaling before later tensor products, without approximate pruning. State evaluation can eliminate terms before basis
 expansion; reached operator-coordinate terms still validate specified local
-expansions even when a numerical coefficient is zero. LinearCombination's order/duplicate/zero-preserving contract stays unchanged. Aggregated sparse coefficients are stored, but no full basis, dense vector, or matrix is materialized.
+expansions even when a numerical coefficient is zero. LinearCombination preserves order, duplicates, and zero coefficients. Aggregated sparse coefficients are stored, but no full basis, dense vector, or matrix is materialized.
 
 #### Operator coordinate generation
 
@@ -216,8 +235,8 @@ identity of a reached term in ambient order before pruning numerical zero
 contributions. An empty expansion, zero coefficient, or underflowed prefix cannot
 hide an error in another reached factor. Cached identity validation is reused
 only within that query; explicit local products yielding identity are still
-expanded independently. Existing basis errors, metadata, coordinate format and
-public operator-query bounds are unchanged.
+expanded independently. Basis errors, metadata, coordinate format, and public
+operator-query bounds follow the contracts above.
 
 Operator coordinates are operator-basis coefficients, distinct from action matrices. [Export](export.md) stores coordinates numerically and generates action-matrix columns by applying operators to state-basis inputs.
 
@@ -242,4 +261,4 @@ enumeration checks are independent of numerical state collection.
 
 Tensor state bases add no sign and preserve space kind in enumeration/expansion/coordinates. Operator bases are factor-ordered placement products. expand/coordinates and explicit-space variants use intrinsic sorted terms, not ordinary matrices containing parity strings. Reconstruct placements bound to the original space, preserving action/coordinates under re-expansion. For second-mode annihilation c_1, intrinsic `I ⊗g a` has coefficient 1 while its ordinary state-basis matrix is `P⊗a`. Reconstructing ordinary `P_0 a_1` placements would insert P twice and is wrong for operator coordinates. basis_operators enumerates ordered placements without local Product evaluation or full matrices.
 
-The empty basis `{1}`, rightmost-fastest order, and non-orthonormal state bases retain the same contracts. See [common evaluation bounds](composite-expression.md#112-shared-apis-and-minimal-capabilities) and [intrinsic/ordinary representations](composite-expression.md#114-intrinsic-terms-and-ordinary-representations).
+The empty basis `{1}`, rightmost-fastest order, and non-orthonormal state bases retain the same contracts. See [common evaluation bounds](composite-expression.md#42-shared-apis-and-minimal-capabilities) and [intrinsic/ordinary representations](composite-expression.md#111-intrinsic-terms-and-ordinary-representations).

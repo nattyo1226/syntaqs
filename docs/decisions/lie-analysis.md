@@ -2,6 +2,12 @@
 
 Status: Accepted
 
+Keep Lie analysis in a separate crate that reuses core operator expressions and
+normalized HS contractions. Retain results with their source family, validate
+complete center/simple-ideal splitting, and let applications select native
+BLAS/LAPACK providers. The decisions below explain these boundaries and their
+consequences.
+
 ## Context
 
 The implementation reference was

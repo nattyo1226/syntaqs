@@ -1,10 +1,13 @@
 # Model construction on chains
 
-Updated: 2026-11-02
+Updated: 2026-11-17
 
 ## 1. Scope and responsibilities
 
-Each concrete algebra's models module constructs ordinary operator expressions from a Chain and caller-owned site-ordered spaces. Geometry enumerates edges/placements; models assign operators, coefficients, and couplings, without separate model expression types or evaluators.
+Model helpers turn a Chain and caller-owned site spaces into shared core
+operator expressions. Geometry selects the edges or placements; the concrete
+algebra's models module assigns operators, coefficients, and physical couplings.
+The resulting Hamiltonian uses the same evaluator as a manually constructed one.
 
 Callers issue indices. Construction validates length, duplicates, and model-specific site shape while delaying local evaluation and matrices. See [geometry](geometry.md) for connections and [local algebras](local-structure.md) for primitive normalization.
 
@@ -67,7 +70,7 @@ Since `n−I/2=−Mz/2`, the symmetric local interaction is also `(U/4) Mz↑Mz�
 
 ### 3.2. Public construction and placement
 
-Construct in models.rs through `models::FermionModels<Fermion<C>>`, without model-specific QuantumSystem methods.
+Call the associated functions on `models::FermionModels<Fermion<C>>`:
 
 ```rust,ignore
 FermionModels::<Fermion<C>>::hubbard(&chain, &sites, t, u)
