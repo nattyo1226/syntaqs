@@ -75,11 +75,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     #[cfg(feature = "export")]
     {
-        use syntaqs_export::{Export, Exported, MatrixArgs};
+        use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
         use syntaqs_spin_one::SzBasis;
         let dense: Exported<Vec<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
-        let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<f64>>, _> =
+        let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
         assert_eq!(dense.metadata().shape(), [3, 3]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {
@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let dense: Exported<Vec<Complex<f64>>, _> =
             blbq.export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
-        let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<f64>>, _> =
+        let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =
             blbq.export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
         assert_eq!(dense.metadata().shape(), [9, 9]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {

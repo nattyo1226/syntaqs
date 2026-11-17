@@ -8,7 +8,10 @@ use syntaqs_core::{
     expression::local::LocalState, expression::parts::linear_combination::LinearCombination,
     space::Dimension, space::DimensionOverflow, space::HilbertSpace,
 };
-use syntaqs_export::{Export, ExportError, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
+use syntaqs_export::{
+    Export, ExportError, Exported, matrix::args::MatrixArgs, matrix::metadata::MatrixMetadata,
+    vector::metadata::VectorMetadata,
+};
 
 // These primitives deliberately lack Clone/Eq, and the operator lacks Product/Identity.
 #[derive(PartialEq)]
@@ -101,7 +104,7 @@ fn exports_need_neither_primitive_cloning_nor_operator_products_or_index_cloning
     assert_eq!(v.data(), &[0., 0., 1., 0.]);
     #[cfg(feature = "sprs")]
     {
-        let sparse: Exported<syntaqs_export::sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, _>> = (&op)
+        let sparse: Exported<sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, _>> = (&op)
             .export(MatrixArgs::new(&Ordered).in_space(&space))
             .unwrap();
         assert_eq!(sparse.data().nnz(), 4);
@@ -209,12 +212,12 @@ fn unit_zero_and_identity_preserve_spaces_and_shapes() {
     assert_eq!(vector.data(), &[Complex::new(0., 0.)]);
     #[cfg(feature = "sprs")]
     {
-        let vector: Exported<syntaqs_export::sprs::CsVec<_>, VectorMetadata<'_, _, _, S>> =
+        let vector: Exported<sprs::CsVec<_>, VectorMetadata<'_, _, _, S>> =
             (&zero).export(&SzBasis).unwrap();
         assert_eq!(vector.data().dim(), 1);
         assert_eq!(vector.data().nnz(), 0);
         let zero = Operator::<u8, O, Complex<f64>>::zero();
-        let matrix: Exported<syntaqs_export::sprs::CsMat<_>, MatrixMetadata<'_, S, _, _>> = (&zero)
+        let matrix: Exported<sprs::CsMat<_>, MatrixMetadata<'_, S, _, _>> = (&zero)
             .export(MatrixArgs::new(&SzBasis).in_space(&space))
             .unwrap();
         assert_eq!(matrix.data().shape(), (1, 1));
@@ -261,7 +264,7 @@ fn sparse_coordinates_preserve_small_values_and_non_finite_values() {
     assert!(output.data()[1].is_nan());
     #[cfg(feature = "sprs")]
     {
-        let output: Exported<syntaqs_export::sprs::CsVec<_>, VectorMetadata<'_, _, (), Ket>> =
+        let output: Exported<sprs::CsVec<_>, VectorMetadata<'_, _, (), Ket>> =
             (&state).export(&Ordered).unwrap();
         assert_eq!(output.data().nnz(), 2);
         assert_eq!(output.data().data()[0], tiny);
@@ -275,7 +278,7 @@ fn owned_sparse_coordinate_exports_do_not_add_clone_or_numeric_bounds() {
     // This generic function compiles without Clone/Zero or any arithmetic on C.
     fn convert<'b, B, C, H: Clone>(
         coords: Coordinates<'b, B, C, H>,
-    ) -> Exported<syntaqs_export::sprs::CsVec<C>, VectorMetadata<'b, B, H>> {
+    ) -> Exported<sprs::CsVec<C>, VectorMetadata<'b, B, H>> {
         coords.export(()).unwrap()
     }
     let basis = Ordered;
@@ -323,12 +326,12 @@ fn a_result_outlives_its_source_without_borrowing_it() {
 fn owned_ndarray_conversions_add_no_coefficient_or_primitive_bounds() {
     fn vector<'b, B, C, H, P>(
         source: Exported<Vec<C>, VectorMetadata<'b, B, H, P>>,
-    ) -> Exported<syntaqs_export::ndarray::Array1<C>, VectorMetadata<'b, B, H, P>> {
+    ) -> Exported<ndarray::Array1<C>, VectorMetadata<'b, B, H, P>> {
         source.export(()).unwrap()
     }
     fn matrix<'b, S, B, C, H>(
         source: Exported<Vec<C>, MatrixMetadata<'b, S, B, H>>,
-    ) -> Exported<syntaqs_export::ndarray::Array2<C>, MatrixMetadata<'b, S, B, H>> {
+    ) -> Exported<ndarray::Array2<C>, MatrixMetadata<'b, S, B, H>> {
         source.export(()).unwrap()
     }
     let basis = Ordered;
@@ -364,23 +367,14 @@ fn export_errors_retain_the_original_error_as_their_source() {
     );
     #[cfg(feature = "ndarray")]
     {
-        let shape = syntaqs_export::ndarray::Array2::from_shape_vec((2, 2), vec![1.]).unwrap_err();
+        let shape = ndarray::Array2::from_shape_vec((2, 2), vec![1.]).unwrap_err();
         let e = ExportError::from(shape);
-        assert!(
-            e.source()
-                .unwrap()
-                .is::<syntaqs_export::ndarray::ShapeError>()
-        );
+        assert!(e.source().unwrap().is::<ndarray::ShapeError>());
     }
     #[cfg(feature = "sprs")]
     {
-        let (_, _, structure) =
-            syntaqs_export::sprs::CsVec::try_new(2, vec![2usize], vec![1.]).unwrap_err();
+        let (_, _, structure) = sprs::CsVec::try_new(2, vec![2usize], vec![1.]).unwrap_err();
         let e = ExportError::from(structure);
-        assert!(
-            e.source()
-                .unwrap()
-                .is::<syntaqs_export::sprs::errors::StructureError>()
-        );
+        assert!(e.source().unwrap().is::<sprs::errors::StructureError>());
     }
 }

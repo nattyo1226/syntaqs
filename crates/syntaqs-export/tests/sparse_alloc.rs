@@ -10,7 +10,10 @@ use syntaqs_core::{
     expression::composite::Operator, expression::composite::State, expression::local::LocalState,
     space::HilbertSpace,
 };
-use syntaqs_export::{Export, ExportError, Exported, MatrixArgs, MatrixMetadata, VectorMetadata};
+use syntaqs_export::{
+    Export, ExportError, Exported, matrix::args::MatrixArgs, matrix::metadata::MatrixMetadata,
+    vector::metadata::VectorMetadata,
+};
 use syntaqs_spin_half::{SpinHalfOperator as O, SpinHalfState as S, SzBasis};
 
 struct BoundedAllocator;
@@ -75,7 +78,7 @@ fn sparse_exports_need_no_dense_intermediate_and_dense_allocation_failure_is_rep
         }),
     )
     .unwrap();
-    let sparse: Exported<syntaqs_export::sprs::CsVec<_>, VectorMetadata<'_, _, _, S>> =
+    let sparse: Exported<sprs::CsVec<_>, VectorMetadata<'_, _, _, S>> =
         bounded(|| (&state).export(&basis)).unwrap();
     assert_eq!(sparse.data().dim(), 1usize << 40);
     assert_eq!(sparse.data().nnz(), 1);
@@ -85,7 +88,7 @@ fn sparse_exports_need_no_dense_intermediate_and_dense_allocation_failure_is_rep
     assert!(matches!(dense, Err(ExportError::Allocation(_))));
     let space = HilbertSpace::tensor_all((0..9u8).map(HilbertSpace::factor)).unwrap();
     let identity = Operator::<u8, O, Complex<f64>>::identity();
-    let matrix: Exported<syntaqs_export::sprs::CsMat<_>, MatrixMetadata<'_, S, _, _>> =
+    let matrix: Exported<sprs::CsMat<_>, MatrixMetadata<'_, S, _, _>> =
         bounded(|| (&identity).export(MatrixArgs::new(&basis).in_space(&space))).unwrap();
     assert_eq!(matrix.data().shape(), (512, 512));
     assert_eq!(matrix.data().nnz(), 512);

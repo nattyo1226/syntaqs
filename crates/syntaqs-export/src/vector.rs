@@ -1,6 +1,5 @@
 //! Vector export metadata and implementations.
 
 mod export;
-mod metadata;
-
-pub use metadata::VectorMetadata;
+/// Vector shape and basis metadata.
+pub mod metadata;

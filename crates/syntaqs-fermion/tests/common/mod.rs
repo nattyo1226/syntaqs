@@ -127,15 +127,15 @@ pub fn fock_matrix(mode: usize, modes: usize, create: bool) -> Matrix {
 pub fn exported_matrix<T: Real, I: Eq>(
     op: &syntaqs_core::expression::composite::Operator<I, O, Complex<T>>,
 ) -> Matrix {
-    use syntaqs_export::{Export, Exported, MatrixArgs};
+    use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
     use syntaqs_fermion::OccupationBasis;
     let dense: Exported<Vec<Complex<T>>, _> = op
         .export(MatrixArgs::<S, _>::new(&OccupationBasis))
         .unwrap();
-    let array: Exported<syntaqs_export::ndarray::Array2<Complex<T>>, _> = op
+    let array: Exported<ndarray::Array2<Complex<T>>, _> = op
         .export(MatrixArgs::<S, _>::new(&OccupationBasis))
         .unwrap();
-    let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<T>>, _> = op
+    let sparse: Exported<sprs::CsMat<Complex<T>>, _> = op
         .export(MatrixArgs::<S, _>::new(&OccupationBasis))
         .unwrap();
     let result: Matrix = dense.data().iter().map(|x| to64(*x)).collect();

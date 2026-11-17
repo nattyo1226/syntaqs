@@ -44,11 +44,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Neel norm: {}", psi.norm()?);
     #[cfg(feature = "export")]
     {
-        use syntaqs_export::{
-            Export, Exported, MatrixArgs,
-            ndarray::{Array1, Array2},
-            sprs::{CsMat, CsVec},
-        };
+        use ndarray::{Array1, Array2};
+        use sprs::{CsMat, CsVec};
+        use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
         use syntaqs_spin_half::SzBasis;
         // The Vec output is also usable with other numerical libraries.
         let raw: Exported<Vec<_>, _> = (&psi).export(&SzBasis)?;

@@ -216,11 +216,9 @@ fn models_match_analytic_energies_and_independent_matrices_both_precisions() {
 
 #[cfg(feature = "export")]
 fn check_exports<T: Real + num_traits::NumAssign + Default + Send + Sync + 'static>() {
-    use syntaqs_export::{
-        Export, Exported, MatrixArgs,
-        ndarray::{Array1, Array2},
-        sprs::{CsMat, CsVec},
-    };
+    use ndarray::{Array1, Array2};
+    use sprs::{CsMat, CsVec};
+    use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
     use syntaqs_spin_half::SzBasis;
     for n in 0..=4 {
         for boundary in [Boundary::Open, Boundary::Periodic] {

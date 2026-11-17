@@ -18,7 +18,7 @@ Basis-aware numerical export and interpretation metadata for [syntaqs](../../REA
 | `ndarray` | `ndarray::Array1<C>` | `ndarray::Array2<C>` |
 | `sprs` | `sprs::CsVec<C>` | `sprs::CsMat<C>` in CSC format |
 
-The default feature set is empty. Enable `ndarray` and `sprs` independently or together. The corresponding container crates are re-exported when enabled.
+The default feature set is empty. Enable `ndarray` and `sprs` independently or together, and add direct dependencies on the container crates used by the application. `Export`, `Exported`, and `ExportError` are defined at the crate root. Matrix arguments and metadata are under `matrix`; vector metadata is under `vector`. The prelude provides `Export`, `Exported`, and `MatrixArgs`.
 
 `Export` is the common conversion trait. Use a state basis directly for vector export and `MatrixArgs::<StatePrimitive, _>` for operator matrices. MatrixArgs can supply an explicit ambient space; otherwise a composite operator needs an existing binding. `VectorMetadata` and `MatrixMetadata` describe how to interpret the output.
 

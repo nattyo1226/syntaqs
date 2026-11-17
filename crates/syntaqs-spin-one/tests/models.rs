@@ -7,7 +7,7 @@ use syntaqs_core::{
     expression::error::ExpressionError, space::HilbertSpace as H, space::SpaceError,
     system::OperatorOf,
 };
-use syntaqs_export::{Export, Exported, MatrixArgs};
+use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, mapping::MappingError};
 use syntaqs_spin_one::{SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis};
 

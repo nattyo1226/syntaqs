@@ -3,7 +3,7 @@ mod common;
 use common::*;
 use num_complex::Complex;
 use syntaqs_core::{basis::Basis, space::HilbertSpace, space::TensorKind};
-use syntaqs_export::{Export, Exported, MatrixArgs};
+use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
 use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 use syntaqs_spin_one::{
     CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,
@@ -22,9 +22,8 @@ fn vector<T: Real>(psi: &Ket<T>) -> Matrix {
 fn exported<T: Real>(op: &Op<T>) -> Matrix {
     let args = || MatrixArgs::<S, _>::new(&SzBasis);
     let dense: Exported<Vec<Complex<T>>, _> = op.export(args()).unwrap();
-    let array: Exported<syntaqs_export::ndarray::Array2<Complex<T>>, _> =
-        op.export(args()).unwrap();
-    let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<T>>, _> = op.export(args()).unwrap();
+    let array: Exported<ndarray::Array2<Complex<T>>, _> = op.export(args()).unwrap();
+    let sparse: Exported<sprs::CsMat<Complex<T>>, _> = op.export(args()).unwrap();
     assert_eq!(dense.metadata().shape(), [9, 9]);
     assert_eq!(dense.metadata().factor_count(), 2);
     assert_eq!(dense.metadata().dim_local(), Some(3));
@@ -197,10 +196,8 @@ fn check<T: Real>() {
         );
         close::<T>(to64(psi.inner_product(&psi).unwrap()), dot(&v, &v));
         // Global vector adapters share exactly the same factor/state order.
-        let array: Exported<syntaqs_export::ndarray::Array1<Complex<T>>, _> =
-            acted.export(&SzBasis).unwrap();
-        let sparse: Exported<syntaqs_export::sprs::CsVec<Complex<T>>, _> =
-            acted.export(&SzBasis).unwrap();
+        let array: Exported<ndarray::Array1<Complex<T>>, _> = acted.export(&SzBasis).unwrap();
+        let sparse: Exported<sprs::CsVec<Complex<T>>, _> = acted.export(&SzBasis).unwrap();
         values::<T>(
             &array.data().iter().map(|z| to64(*z)).collect::<Vec<_>>(),
             &y,

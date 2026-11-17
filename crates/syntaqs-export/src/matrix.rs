@@ -1,8 +1,7 @@
 //! Matrix export arguments, metadata and implementations.
 
-mod args;
+/// Arguments selecting a basis and optional space.
+pub mod args;
 mod export;
-mod metadata;
-
-pub use args::MatrixArgs;
-pub use metadata::{Layout, MatrixMetadata};
+/// Matrix shape and layout metadata.
+pub mod metadata;

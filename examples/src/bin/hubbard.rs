@@ -44,11 +44,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     #[cfg(feature = "export")]
     {
-        use syntaqs_export::{Export, Exported, MatrixArgs};
+        use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
         use syntaqs_fermion::OccupationBasis;
         let dense: Exported<Vec<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
-        let sparse: Exported<syntaqs_export::sprs::CsMat<Complex<f64>>, _> =
+        let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
         assert_eq!(dense.metadata().shape(), [16, 16]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {

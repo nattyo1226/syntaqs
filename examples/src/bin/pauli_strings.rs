@@ -125,7 +125,7 @@ fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
     #[cfg(feature = "export")]
-    use syntaqs_export::{Export, Exported, MatrixArgs};
+    use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
     #[cfg(feature = "export")]
     use syntaqs_spin_half::{SpinHalfState, SzBasis};
 

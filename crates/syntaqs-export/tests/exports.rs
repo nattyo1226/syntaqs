@@ -3,7 +3,10 @@ use syntaqs_core::{
     expression::composite::State, expression::local::LocalOperator, expression::local::LocalState,
     space::HilbertSpace,
 };
-use syntaqs_export::{Export, Exported, Layout, MatrixArgs, MatrixMetadata, VectorMetadata};
+use syntaqs_export::{
+    Export, Exported, matrix::args::MatrixArgs, matrix::metadata::Layout,
+    matrix::metadata::MatrixMetadata, vector::metadata::VectorMetadata,
+};
 use syntaqs_spin_half::{
     CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis,
 };
@@ -32,24 +35,24 @@ fn check_local<T: Real>() {
     #[cfg(feature = "ndarray")]
     {
         let pointer = vector.data().as_ptr();
-        let array: Exported<syntaqs_export::ndarray::Array1<_>, VectorMetadata<'_, _, (), Ket>> =
+        let array: Exported<ndarray::Array1<_>, VectorMetadata<'_, _, (), Ket>> =
             vector.export(()).unwrap();
-        let direct: Exported<syntaqs_export::ndarray::Array1<_>, VectorMetadata<'_, _, (), Ket>> =
+        let direct: Exported<ndarray::Array1<_>, VectorMetadata<'_, _, (), Ket>> =
             (&psi).export(&basis).unwrap();
         assert_eq!(pointer, array.data().as_ptr());
         values(array.data().as_slice().unwrap(), &reference);
         values(direct.data().as_slice().unwrap(), &reference);
         let coords = psi.coordinates(&basis).unwrap();
-        let borrowed: Exported<syntaqs_export::ndarray::Array1<_>, VectorMetadata<'_, _, (), ()>> =
+        let borrowed: Exported<ndarray::Array1<_>, VectorMetadata<'_, _, (), ()>> =
             (&coords).export(()).unwrap();
-        let owned: Exported<syntaqs_export::ndarray::Array1<_>, VectorMetadata<'_, _, (), ()>> =
+        let owned: Exported<ndarray::Array1<_>, VectorMetadata<'_, _, (), ()>> =
             coords.export(()).unwrap();
         values(borrowed.data().as_slice().unwrap(), &reference);
         values(owned.data().as_slice().unwrap(), &reference);
     }
     #[cfg(feature = "sprs")]
     {
-        let sparse: Exported<syntaqs_export::sprs::CsVec<_>, VectorMetadata<'_, _, (), Ket>> =
+        let sparse: Exported<sprs::CsVec<_>, VectorMetadata<'_, _, (), Ket>> =
             (&psi).export(&basis).unwrap();
         assert_eq!(sparse.data().indices(), &[0, 1]);
         values(sparse.data().data(), &reference);
@@ -90,14 +93,10 @@ fn check_local<T: Real>() {
             #[cfg(feature = "ndarray")]
             {
                 let ptr = dense.data().as_ptr();
-                let array: Exported<
-                    syntaqs_export::ndarray::Array2<_>,
-                    MatrixMetadata<'_, Ket, _, ()>,
-                > = dense.export(()).unwrap();
-                let direct: Exported<
-                    syntaqs_export::ndarray::Array2<_>,
-                    MatrixMetadata<'_, Ket, _, ()>,
-                > = (&op).export(MatrixArgs::new(&basis)).unwrap();
+                let array: Exported<ndarray::Array2<_>, MatrixMetadata<'_, Ket, _, ()>> =
+                    dense.export(()).unwrap();
+                let direct: Exported<ndarray::Array2<_>, MatrixMetadata<'_, Ket, _, ()>> =
+                    (&op).export(MatrixArgs::new(&basis)).unwrap();
                 assert_eq!(ptr, array.data().as_ptr());
                 assert!(array.data().is_standard_layout());
                 values(array.data().as_slice().unwrap(), &expected);
@@ -105,10 +104,8 @@ fn check_local<T: Real>() {
             }
             #[cfg(feature = "sprs")]
             {
-                let sparse: Exported<
-                    syntaqs_export::sprs::CsMat<_>,
-                    MatrixMetadata<'_, Ket, _, ()>,
-                > = (&op).export(MatrixArgs::new(&basis)).unwrap();
+                let sparse: Exported<sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, ()>> =
+                    (&op).export(MatrixArgs::new(&basis)).unwrap();
                 assert!(sparse.data().is_csc());
                 for row in 0..2 {
                     for col in 0..2 {
@@ -202,12 +199,11 @@ fn check_composite<T: Real>() {
     #[cfg(feature = "ndarray")]
     {
         let ptr = dense.data().as_ptr();
-        let array: Exported<syntaqs_export::ndarray::Array2<_>, MatrixMetadata<'_, Ket, _, _>> =
+        let array: Exported<ndarray::Array2<_>, MatrixMetadata<'_, Ket, _, _>> =
             dense.export(()).unwrap();
-        let direct: Exported<syntaqs_export::ndarray::Array2<_>, MatrixMetadata<'_, Ket, _, _>> =
-            (&op)
-                .export(MatrixArgs::new(&basis).in_space(&space))
-                .unwrap();
+        let direct: Exported<ndarray::Array2<_>, MatrixMetadata<'_, Ket, _, _>> = (&op)
+            .export(MatrixArgs::new(&basis).in_space(&space))
+            .unwrap();
         assert_eq!(ptr, array.data().as_ptr());
         values(
             array.data().as_slice().unwrap(),
@@ -215,9 +211,9 @@ fn check_composite<T: Real>() {
         );
         values(array.data().as_slice().unwrap(), &expected);
         let ptr = vector.data().as_ptr();
-        let array: Exported<syntaqs_export::ndarray::Array1<_>, VectorMetadata<'_, _, _, Ket>> =
+        let array: Exported<ndarray::Array1<_>, VectorMetadata<'_, _, _, Ket>> =
             vector.export(()).unwrap();
-        let direct: Exported<syntaqs_export::ndarray::Array1<_>, VectorMetadata<'_, _, _, Ket>> =
+        let direct: Exported<ndarray::Array1<_>, VectorMetadata<'_, _, _, Ket>> =
             (&psi).export(&basis).unwrap();
         assert_eq!(ptr, array.data().as_ptr());
         values(
@@ -227,10 +223,10 @@ fn check_composite<T: Real>() {
     }
     #[cfg(feature = "sprs")]
     {
-        let sparse: Exported<syntaqs_export::sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, _>> = (&op)
+        let sparse: Exported<sprs::CsMat<_>, MatrixMetadata<'_, Ket, _, _>> = (&op)
             .export(MatrixArgs::new(&basis).in_space(&space))
             .unwrap();
-        let v: Exported<syntaqs_export::sprs::CsVec<_>, VectorMetadata<'_, _, _, Ket>> =
+        let v: Exported<sprs::CsVec<_>, VectorMetadata<'_, _, _, Ket>> =
             (&psi).export(&basis).unwrap();
         for row in 0..4 {
             for col in 0..4 {
@@ -252,9 +248,9 @@ fn check_composite<T: Real>() {
             );
         }
         let coordinates = psi.coordinates(&basis).unwrap();
-        let borrowed: Exported<syntaqs_export::sprs::CsVec<_>, VectorMetadata<'_, _, _, ()>> =
+        let borrowed: Exported<sprs::CsVec<_>, VectorMetadata<'_, _, _, ()>> =
             (&coordinates).export(()).unwrap();
-        let moved: Exported<syntaqs_export::sprs::CsVec<_>, VectorMetadata<'_, _, _, ()>> =
+        let moved: Exported<sprs::CsVec<_>, VectorMetadata<'_, _, _, ()>> =
             coordinates.export(()).unwrap();
         assert_eq!(borrowed.data(), moved.data());
     }
