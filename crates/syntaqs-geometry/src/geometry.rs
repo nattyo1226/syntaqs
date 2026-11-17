@@ -1,5 +1,6 @@
 //! Geometries and their structural information.
 
+pub(crate) mod boundary;
 pub(crate) mod chain;
 
 /// Common indexing contract for a geometry with a caller-owned site sequence.

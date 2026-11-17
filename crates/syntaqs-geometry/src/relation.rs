@@ -1,6 +1,7 @@
 //! Site relations for each supported geometry.
 
 mod consecutive;
+pub(crate) mod group;
 mod nearest_neighbor;
 use crate::Geometry;
 pub use consecutive::{Consecutive, ConsecutiveError};

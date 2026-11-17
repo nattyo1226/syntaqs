@@ -24,15 +24,13 @@
 
 extern crate alloc;
 
-mod boundary;
-mod connection;
 mod geometry;
-mod group;
+mod mapping;
 mod relation;
 
-pub use boundary::Boundary;
-pub use connection::{MappedGroup, MappedGroupResult, MappingError, SiteMapper};
 pub use geometry::Geometry;
+pub use geometry::boundary::Boundary;
 pub use geometry::chain::Chain;
-pub use group::{SiteGroup, SiteGroupError};
+pub use mapping::{MappedGroup, MappedGroupResult, MappingError, SiteMapper};
+pub use relation::group::{SiteGroup, SiteGroupError};
 pub use relation::{Consecutive, ConsecutiveError, NearestNeighbors, Relation};
