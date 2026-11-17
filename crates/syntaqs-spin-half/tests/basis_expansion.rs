@@ -9,7 +9,8 @@ use syntaqs_core::{
     expression::local::LocalState, space::DimensionOverflow, space::HilbertSpace,
 };
 use syntaqs_spin_half::{
-    CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis,
+    basis::CartesianBasis, basis::LadderBasis, basis::SzBasis, operator::SpinHalfOperator as Op,
+    state::SpinHalfState as Ket,
 };
 
 trait Real: Num + Copy + Neg<Output = Self> + Debug + FromPrimitive + ToPrimitive {

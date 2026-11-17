@@ -10,7 +10,8 @@ use syntaqs_core::{
     expression::parts::linear_combination::LinearCombination as Lc, space::Dimension,
 };
 use syntaqs_spin_half::{
-    CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as State, SzBasis,
+    basis::CartesianBasis, basis::LadderBasis, basis::SzBasis, operator::SpinHalfOperator as Op,
+    state::SpinHalfState as State,
 };
 
 use Op::{I, Sm, Sp, Sx, Sy, Sz};
@@ -469,8 +470,8 @@ fn precision_independent_primitives_and_public_type_contracts() {
 // primitive lifting helpers. Projections also exercise inner-product evaluation.
 fn expression_vector<T: Real>(
     state: &syntaqs_core::expression::local::LocalState<
-        syntaqs_spin_half::SpinHalfState,
-        syntaqs_spin_half::SpinHalfOperator,
+        syntaqs_spin_half::state::SpinHalfState,
+        syntaqs_spin_half::operator::SpinHalfOperator,
         Complex<T>,
     >,
 ) -> Vector {
@@ -478,8 +479,8 @@ fn expression_vector<T: Real>(
     STATES.map(|basis| {
         complex64(
             LocalState::<
-                syntaqs_spin_half::SpinHalfState,
-                syntaqs_spin_half::SpinHalfOperator,
+                syntaqs_spin_half::state::SpinHalfState,
+                syntaqs_spin_half::operator::SpinHalfOperator,
                 Complex<T>,
             >::primitive(basis)
             .inner_product(state),
@@ -488,7 +489,7 @@ fn expression_vector<T: Real>(
 }
 fn expression_matrix<T: Real>(
     op: &syntaqs_core::expression::local::LocalOperator<
-        syntaqs_spin_half::SpinHalfOperator,
+        syntaqs_spin_half::operator::SpinHalfOperator,
         Complex<T>,
     >,
 ) -> Matrix {
@@ -502,10 +503,10 @@ fn matrix_trace(matrix: Matrix) -> Complex<f64> {
 
 fn check_local_expressions<T: Real>() {
     use syntaqs_core::{expression::local::LocalOperator, expression::local::LocalState};
-    type O<T> = LocalOperator<syntaqs_spin_half::SpinHalfOperator, Complex<T>>;
+    type O<T> = LocalOperator<syntaqs_spin_half::operator::SpinHalfOperator, Complex<T>>;
     type S<T> = LocalState<
-        syntaqs_spin_half::SpinHalfState,
-        syntaqs_spin_half::SpinHalfOperator,
+        syntaqs_spin_half::state::SpinHalfState,
+        syntaqs_spin_half::operator::SpinHalfOperator,
         Complex<T>,
     >;
     let up = S::<T>::primitive(Up);
@@ -624,10 +625,10 @@ fn local_expressions_match_independent_matrices_at_both_precisions() {
 )]
 fn all_expression_operator_ownership_forms_agree() {
     use syntaqs_core::{expression::local::LocalOperator, expression::local::LocalState};
-    type O = LocalOperator<syntaqs_spin_half::SpinHalfOperator, Complex<f64>>;
+    type O = LocalOperator<syntaqs_spin_half::operator::SpinHalfOperator, Complex<f64>>;
     type S = LocalState<
-        syntaqs_spin_half::SpinHalfState,
-        syntaqs_spin_half::SpinHalfOperator,
+        syntaqs_spin_half::state::SpinHalfState,
+        syntaqs_spin_half::operator::SpinHalfOperator,
         Complex<f64>,
     >;
     let a = O::primitive(Sp);
@@ -733,7 +734,7 @@ fn long_operator_trace_and_destruction_fit_a_small_stack() {
         .stack_size(128 * 1024)
         .spawn(|| {
             use syntaqs_core::expression::local::LocalOperator;
-            type O = LocalOperator<syntaqs_spin_half::SpinHalfOperator, Complex<f64>>;
+            type O = LocalOperator<syntaqs_spin_half::operator::SpinHalfOperator, Complex<f64>>;
             let mut expression = O::primitive(Sz);
             for _ in 0..20_000 {
                 expression = (expression.clone() * &O::identity())
@@ -761,13 +762,13 @@ fn long_operator_trace_and_destruction_fit_a_small_stack() {
 
 type GlobalState<T> = syntaqs_core::expression::composite::State<
     u8,
-    syntaqs_spin_half::SpinHalfState,
-    syntaqs_spin_half::SpinHalfOperator,
+    syntaqs_spin_half::state::SpinHalfState,
+    syntaqs_spin_half::operator::SpinHalfOperator,
     Complex<T>,
 >;
 type GlobalOperator<T> = syntaqs_core::expression::composite::Operator<
     u8,
-    syntaqs_spin_half::SpinHalfOperator,
+    syntaqs_spin_half::operator::SpinHalfOperator,
     Complex<T>,
 >;
 type GlobalSpace = syntaqs_core::space::HilbertSpace<u8>;
@@ -872,8 +873,8 @@ fn check_composite_expressions<T: Real>() {
         .unwrap();
     let [a, b, d] = &factors;
     let local = LS::<
-        syntaqs_spin_half::SpinHalfState,
-        syntaqs_spin_half::SpinHalfOperator,
+        syntaqs_spin_half::state::SpinHalfState,
+        syntaqs_spin_half::operator::SpinHalfOperator,
         Complex<T>,
     >::primitive(Up)
     .scaled(c(0.7, 0.2))
@@ -919,13 +920,14 @@ fn check_composite_expressions<T: Real>() {
     );
     for oa in OPS {
         for ob in OPS {
-            let a = (LO::<syntaqs_spin_half::SpinHalfOperator, Complex<T>>::primitive(oa)
-                .at(d)
-                .unwrap()
-                .scaled(c(0.4, -0.2))
-                .clone()
-                + &GlobalOperator::scalar(c(-0.3, 0.1)))
-                .unwrap();
+            let a =
+                (LO::<syntaqs_spin_half::operator::SpinHalfOperator, Complex<T>>::primitive(oa)
+                    .at(d)
+                    .unwrap()
+                    .scaled(c(0.4, -0.2))
+                    .clone()
+                    + &GlobalOperator::scalar(c(-0.3, 0.1)))
+                    .unwrap();
             let b = (LO::primitive(ob).at(&factors[0]).unwrap().clone()
                 + &LO::primitive(Sy)
                     .at(&factors[1])
@@ -1004,8 +1006,8 @@ fn check_subsystem_contractions<T: Real>() {
     let factors = [9, 2, 7].map(GlobalSpace::factor);
     let ket = |site: usize, state| {
         LocalState::<
-            syntaqs_spin_half::SpinHalfState,
-            syntaqs_spin_half::SpinHalfOperator,
+            syntaqs_spin_half::state::SpinHalfState,
+            syntaqs_spin_half::operator::SpinHalfOperator,
             Complex<T>,
         >::primitive(state)
         .at(&factors[site])
@@ -1103,9 +1105,13 @@ fn composite_empty_zero_spectator_and_overflow_contracts() {
         expression::error::ExpressionError as E, expression::local::LocalOperator as LO,
         expression::local::LocalState as LS,
     };
-    type Op = O<u32, syntaqs_spin_half::SpinHalfOperator, Complex<f64>>;
-    type Ket =
-        S<u32, syntaqs_spin_half::SpinHalfState, syntaqs_spin_half::SpinHalfOperator, Complex<f64>>;
+    type Op = O<u32, syntaqs_spin_half::operator::SpinHalfOperator, Complex<f64>>;
+    type Ket = S<
+        u32,
+        syntaqs_spin_half::state::SpinHalfState,
+        syntaqs_spin_half::operator::SpinHalfOperator,
+        Complex<f64>,
+    >;
     let unit = Ket::unit();
     let identity = Op::identity();
     assert_eq!(identity.trace_in(unit.space()).unwrap(), c(1.0, 0.0));
@@ -1152,11 +1158,12 @@ fn composite_empty_zero_spectator_and_overflow_contracts() {
     );
     assert!(nested.space().unwrap().is_compatible_with(&factors[0]));
 
-    let placed_identity = LO::<syntaqs_spin_half::SpinHalfOperator, Complex<f64>>::primitive(I)
-        .at(&factors[0])
-        .unwrap()
-        .bind(&factors[0])
-        .unwrap();
+    let placed_identity =
+        LO::<syntaqs_spin_half::operator::SpinHalfOperator, Complex<f64>>::primitive(I)
+            .at(&factors[0])
+            .unwrap()
+            .bind(&factors[0])
+            .unwrap();
     assert_eq!(placed_identity.trace().unwrap(), c(2.0, 0.0));
     assert_eq!(
         placed_identity.trace_in(&space).unwrap(),

@@ -10,7 +10,8 @@ use syntaqs_core::{
     space::HilbertSpace,
 };
 use syntaqs_spin_one::{
-    CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,
+    SpinOne, basis::CartesianBasis, basis::LadderBasis, basis::SzBasis,
+    operator::SpinOneOperator as O, state::SpinOneState as S,
 };
 
 // Exact arithmetic is test-owned. The outer coefficient deliberately implements

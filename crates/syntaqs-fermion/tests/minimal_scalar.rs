@@ -9,7 +9,8 @@ use syntaqs_core::{
     expression::parts::linear_combination::LinearCombination as Lc, space::HilbertSpace,
 };
 use syntaqs_fermion::{
-    Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
+    Fermion, basis::LadderBasis, basis::MajoranaBasis, basis::OccupationBasis,
+    operator::FermionOperator as O, state::FermionState as S,
 };
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 

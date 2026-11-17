@@ -9,6 +9,8 @@ Single-mode fermion rules, Majorana bases, and Hubbard-chain helpers for [syntaq
 - Provide `OccupationBasis` for states and `LadderBasis` / `MajoranaBasis` for operators.
 - Construct standard and symmetric Hubbard Hamiltonians through `models::FermionModels`.
 
+State and operator primitives are defined in `state` and `operator`, bases in `basis`, and model helpers and errors in `models`. The crate prelude provides the system alias, primitives, and model helper.
+
 ## Conventions
 
 For `a = Annihilate`, `Mx = a + a†`, `My = (a - a†)/i`, and `Mz = I - 2n` is the parity operator. Mx and My are odd; Mz is even. Majorana operator-basis elements are orthonormal under `Tr(A†B)/2`. The state basis is ordered `Empty, Occupied`.

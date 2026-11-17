@@ -3,7 +3,7 @@ extern crate blas_provider as _;
 use num_complex::Complex;
 use syntaqs_core::expression::local::LocalOperator;
 use syntaqs_lie::prelude::*;
-use syntaqs_spin_half::SpinHalfOperator as Pauli;
+use syntaqs_spin_half::operator::SpinHalfOperator as Pauli;
 
 #[test]
 fn prelude_constructs_a_family_and_its_bracket() {

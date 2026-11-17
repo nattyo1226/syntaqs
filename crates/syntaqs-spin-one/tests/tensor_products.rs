@@ -6,7 +6,8 @@ use syntaqs_core::{basis::Basis, space::HilbertSpace, space::TensorKind};
 use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
 use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 use syntaqs_spin_one::{
-    CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,
+    SpinOne, basis::CartesianBasis, basis::LadderBasis, basis::SzBasis,
+    operator::SpinOneOperator as O, state::SpinOneState as S,
 };
 
 type Op<T> = syntaqs_core::expression::composite::Operator<u8, O, Complex<T>>;

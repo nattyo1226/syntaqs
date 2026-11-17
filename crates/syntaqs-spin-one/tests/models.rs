@@ -9,7 +9,9 @@ use syntaqs_core::{
 };
 use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, mapping::MappingError};
-use syntaqs_spin_one::{SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis};
+use syntaqs_spin_one::{
+    SpinOne, basis::SzBasis, operator::SpinOneOperator as O, state::SpinOneState as S,
+};
 
 type Spin<T> = SpinOne<Complex<T>>;
 

@@ -5,7 +5,9 @@ use num_traits::{Float, FromPrimitive};
 use syntaqs_core::{
     expression::local::LocalOperator, expression::parts::linear_combination::LinearCombination,
 };
-use syntaqs_fermion::{Fermion, FermionOperator as O, FermionState as S, LadderBasis};
+use syntaqs_fermion::{
+    Fermion, basis::LadderBasis, operator::FermionOperator as O, state::FermionState as S,
+};
 
 pub const OPS: [O; 7] = [
     O::I,
@@ -128,7 +130,7 @@ pub fn exported_matrix<T: Real, I: Eq>(
     op: &syntaqs_core::expression::composite::Operator<I, O, Complex<T>>,
 ) -> Matrix {
     use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
-    use syntaqs_fermion::OccupationBasis;
+    use syntaqs_fermion::basis::OccupationBasis;
     let dense: Exported<Vec<Complex<T>>, _> = op
         .export(MatrixArgs::<S, _>::new(&OccupationBasis))
         .unwrap();

@@ -8,7 +8,8 @@ use syntaqs_core::{
     space::Dimension,
 };
 use syntaqs_fermion::{
-    Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
+    Fermion, basis::LadderBasis, basis::MajoranaBasis, basis::OccupationBasis,
+    operator::FermionOperator as O, state::FermionState as S,
 };
 
 fn primitive_rules<T: Real>() {

@@ -9,6 +9,8 @@ Spin-1/2 primitive rules, bases, and chain-model helpers for [syntaqs](../../REA
 - Provide `SzBasis` for states and `CartesianBasis` / `LadderBasis` for operators.
 - Construct XYZ and Heisenberg Hamiltonians through `models::SpinHalfModels` and product states from expression building blocks.
 
+State and operator primitives are defined in `state` and `operator`, bases in `basis`, and model helpers and errors in `models`. The crate prelude provides the system alias, primitives, and model helper.
+
 ## Conventions
 
 With `hbar = 1`, `Sx`, `Sy`, and `Sz` are Pauli matrices, and physical spins are `J = S/2`. The ladder operators are `Sp = (Sx + i Sy)/2` and `Sm = (Sx - i Sy)/2`. The state basis is ordered `Up, Down`. Cartesian operator-basis elements are orthonormal under `Tr(A†B)/2`.

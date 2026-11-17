@@ -124,7 +124,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
     /// use num_complex::Complex;
     /// use syntaqs_core::space::HilbertSpace;
     /// use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
-    /// use syntaqs_spin_one::{SpinOne, SpinOneState as Ket};
+    /// use syntaqs_spin_one::{SpinOne, state::SpinOneState as Ket};
     /// type Spin = SpinOne<Complex<f64>>;
     /// let sites = [HilbertSpace::factor("a"), HilbertSpace::factor("b")];
     /// let h = syntaqs_spin_one::models::SpinOneModels::<Spin>::blbq(&Chain::new(2, Boundary::Open), &sites, 1.0, 0.5)?;

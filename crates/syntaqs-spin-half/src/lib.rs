@@ -1,5 +1,15 @@
 //! Spin-1/2 primitives, local rules, and ordered bases.
 //!
+//! ```compile_fail
+//! use syntaqs_spin_half::SpinHalfState;
+//! ```
+//! ```compile_fail
+//! use syntaqs_spin_half::SpinHalfOperator;
+//! ```
+//! ```compile_fail
+//! use syntaqs_spin_half::SzBasis;
+//! ```
+//!
 //! Cartesian primitives are Pauli matrices: physical spins are `J = S/2`
 //! with `hbar = 1`. `Sp = (Sx + i Sy)/2`, `Sm = (Sx - i Sy)/2`.
 //! States are ordered `Up, Down`; CartesianBasis is orthonormal under `Tr(A†B)/2`.
@@ -10,7 +20,7 @@
 //! ```
 //! use num_complex::Complex;
 //! use syntaqs_core::{algebra::Act, expression::parts::linear_combination::LinearCombination, algebra::Product};
-//! use syntaqs_spin_half::{SpinHalfOperator as Op, SpinHalfState as State};
+//! use syntaqs_spin_half::{operator::SpinHalfOperator as Op, state::SpinHalfState as State};
 //!
 //! let raised: LinearCombination<State, Complex<f64>> = State::Down.act(&Op::Sp);
 //! assert_eq!(raised, LinearCombination::primitive(State::Up));
@@ -24,7 +34,7 @@
 //! ```
 //! use num_complex::Complex;
 //! use syntaqs_core::{basis::Basis, expression::parts::linear_combination::LinearCombination, algebra::Product};
-//! use syntaqs_spin_half::{CartesianBasis, SpinHalfOperator as Op};
+//! use syntaqs_spin_half::{basis::CartesianBasis, operator::SpinHalfOperator as Op};
 //!
 //! let product: LinearCombination<Op, Complex<f64>> = Op::I.product(&Op::Sp);
 //! assert_eq!(product, LinearCombination::primitive(Op::Sp));
@@ -46,7 +56,7 @@
 //!
 //! ```
 //! use num_complex::Complex;
-//! use syntaqs_spin_half::{SpinHalf, SpinHalfState as State, SpinHalfOperator as Op};
+//! use syntaqs_spin_half::{SpinHalf, state::SpinHalfState as State, operator::SpinHalfOperator as Op};
 //! type Spin = SpinHalf<Complex<f64>>;
 //! let up = Spin::state(State::Up);
 //! let sx = Spin::operator(Op::Sx);
@@ -61,7 +71,7 @@
 //! ```
 //! use num_complex::Complex;
 //! use syntaqs_core::space::HilbertSpace;
-//! use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket};
+//! use syntaqs_spin_half::{SpinHalf, operator::SpinHalfOperator as Op, state::SpinHalfState as Ket};
 //! type Spin = SpinHalf<Complex<f64>>;
 //!
 //! let a = HilbertSpace::<_>::factor("a");
@@ -90,9 +100,8 @@ pub mod state;
 
 mod coefficient;
 
-pub use basis::{CartesianBasis, LadderBasis, SzBasis};
-pub use operator::SpinHalfOperator;
-pub use state::SpinHalfState;
+pub(crate) use operator::SpinHalfOperator;
+pub(crate) use state::SpinHalfState;
 
 /// Selects spin-1/2 primitives and a coefficient type without storing any values.
 ///
@@ -101,7 +110,7 @@ pub use state::SpinHalfState;
 ///
 /// ```
 /// use num_complex::Complex;
-/// use syntaqs_spin_half::{SpinHalf, SpinHalfState as Ket, SpinHalfOperator as Op};
+/// use syntaqs_spin_half::{SpinHalf, state::SpinHalfState as Ket, operator::SpinHalfOperator as Op};
 /// type Spin = SpinHalf<Complex<f32>>;
 /// let up = Spin::state(Ket::Up);
 /// let sx = Spin::operator(Op::Sx);
@@ -112,9 +121,16 @@ pub use state::SpinHalfState;
 ///
 /// ```compile_fail
 /// use num_complex::Complex;
-/// use syntaqs_spin_half::{SpinHalf, SpinHalfState as Ket, SpinHalfOperator as Op};
+/// use syntaqs_spin_half::{SpinHalf, state::SpinHalfState as Ket, operator::SpinHalfOperator as Op};
 /// let up = SpinHalf::<Complex<f32>>::state(Ket::Up);
 /// let sx = SpinHalf::<Complex<f64>>::operator(Op::Sx);
 /// let _ = up.act(&sx);
 /// ```
 pub type SpinHalf<C> = syntaqs_core::system::ExpressionFactory<SpinHalfState, SpinHalfOperator, C>;
+
+/// Common system, primitive, and model types.
+pub mod prelude {
+    pub use crate::{
+        SpinHalf, models::SpinHalfModels, operator::SpinHalfOperator, state::SpinHalfState,
+    };
+}

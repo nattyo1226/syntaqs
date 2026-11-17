@@ -2,7 +2,9 @@
 use num_complex::Complex;
 use syntaqs_basic::index::Id128;
 use syntaqs_core::space::HilbertSpace;
-use syntaqs_fermion::{Fermion, FermionOperator as O, FermionState as S, MajoranaBasis};
+use syntaqs_fermion::{
+    Fermion, basis::MajoranaBasis, operator::FermionOperator as O, state::FermionState as S,
+};
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
 use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Normalize};
@@ -45,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "export")]
     {
         use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
-        use syntaqs_fermion::OccupationBasis;
+        use syntaqs_fermion::basis::OccupationBasis;
         let dense: Exported<Vec<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
         let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =

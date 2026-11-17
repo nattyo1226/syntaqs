@@ -265,7 +265,7 @@ macro_rules! precision_tests {
 
             #[test]
             fn spin_workflow_agrees_with_pauli_matrices() {
-                use syntaqs_spin_half::SpinHalfOperator as P;
+                use syntaqs_spin_half::operator::SpinHalfOperator as P;
                 type Op = LocalOperator<P, C>;
                 let x = Op::primitive(P::Sx);
                 let y = Op::primitive(P::Sy);
@@ -277,7 +277,7 @@ macro_rules! precision_tests {
             }
             #[test]
             fn fermion_workflow_agrees_with_majorana_matrices() {
-                use syntaqs_fermion::FermionOperator as F;
+                use syntaqs_fermion::operator::FermionOperator as F;
                 type Op = LocalOperator<F, C>;
                 let x = Op::primitive(F::Mx);
                 let y = Op::primitive(F::My);
@@ -345,7 +345,7 @@ macro_rules! precision_tests {
             }
             #[test]
             fn eighty_spectators_do_not_require_a_physical_action_matrix() {
-                use syntaqs_spin_half::SpinHalfOperator as P;
+                use syntaqs_spin_half::operator::SpinHalfOperator as P;
                 type Local = LocalOperator<P, C>;
                 let factors: Vec<_> = (0..80u8).map(|i| HilbertSpace::factor(Factor(i))).collect();
                 let space = HilbertSpace::tensor_all(factors.iter().cloned()).unwrap();

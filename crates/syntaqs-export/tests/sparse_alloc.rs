@@ -14,7 +14,9 @@ use syntaqs_export::{
     Export, ExportError, Exported, matrix::args::MatrixArgs, matrix::metadata::MatrixMetadata,
     vector::metadata::VectorMetadata,
 };
-use syntaqs_spin_half::{SpinHalfOperator as O, SpinHalfState as S, SzBasis};
+use syntaqs_spin_half::{
+    basis::SzBasis, operator::SpinHalfOperator as O, state::SpinHalfState as S,
+};
 
 struct BoundedAllocator;
 thread_local! { static LIMIT: Cell<Option<usize>>=const {Cell::new(None)}; }

@@ -4,7 +4,7 @@ use num_complex::Complex;
 use syntaqs_core::{
     expression::composite::Operator, expression::local::LocalOperator, space::HilbertSpace,
 };
-use syntaqs_spin_half::SpinHalfOperator as Pauli;
+use syntaqs_spin_half::operator::SpinHalfOperator as Pauli;
 
 macro_rules! precision_tests {
     ($module:ident,$real:ty) => {

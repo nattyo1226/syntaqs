@@ -5,7 +5,7 @@ use syntaqs_core::{
 };
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, mapping::MappingError};
 use syntaqs_spin_half::models::ModelError;
-use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket};
+use syntaqs_spin_half::{SpinHalf, operator::SpinHalfOperator as Op, state::SpinHalfState as Ket};
 
 type Spin = SpinHalf<Complex<f64>>;
 

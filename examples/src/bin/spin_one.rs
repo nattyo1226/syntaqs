@@ -4,7 +4,8 @@ use num_complex::Complex;
 use syntaqs_core::space::HilbertSpace;
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 use syntaqs_spin_one::{
-    CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as Op, SpinOneState as Ket,
+    SpinOne, basis::CartesianBasis, basis::LadderBasis, operator::SpinOneOperator as Op,
+    state::SpinOneState as Ket,
 };
 
 fn assert_close(actual: Complex<f64>, expected: Complex<f64>) {
@@ -76,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "export")]
     {
         use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
-        use syntaqs_spin_one::SzBasis;
+        use syntaqs_spin_one::basis::SzBasis;
         let dense: Exported<Vec<Complex<f64>>, _> =
             (&h).export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
         let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =

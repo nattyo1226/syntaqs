@@ -14,7 +14,7 @@ use syntaqs_core::{
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
 use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
-use syntaqs_spin_half::{SpinHalf, SpinHalfState};
+use syntaqs_spin_half::{SpinHalf, state::SpinHalfState};
 
 trait Real: Num + Copy + PartialOrd + Neg<Output = Self> + FromPrimitive + ToPrimitive + Debug {
     const ATOL: f64;
@@ -219,7 +219,7 @@ fn check_exports<T: Real + num_traits::NumAssign + Default + Send + Sync + 'stat
     use ndarray::{Array1, Array2};
     use sprs::{CsMat, CsVec};
     use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
-    use syntaqs_spin_half::SzBasis;
+    use syntaqs_spin_half::basis::SzBasis;
     for n in 0..=4 {
         for boundary in [Boundary::Open, Boundary::Periodic] {
             let chain = Chain::new(n, boundary);

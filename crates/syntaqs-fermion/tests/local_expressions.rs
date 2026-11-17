@@ -4,7 +4,8 @@ use num_complex::Complex;
 use syntaqs_core::{expression::local::LocalOperator, expression::local::LocalState};
 use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
 use syntaqs_fermion::{
-    Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
+    Fermion, basis::LadderBasis, basis::MajoranaBasis, basis::OccupationBasis,
+    operator::FermionOperator as O, state::FermionState as S,
 };
 use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};
 

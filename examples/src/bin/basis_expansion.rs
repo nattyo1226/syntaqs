@@ -3,7 +3,8 @@
 use num_complex::Complex;
 use syntaqs_core::space::HilbertSpace;
 use syntaqs_spin_half::{
-    CartesianBasis, LadderBasis, SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis,
+    SpinHalf, basis::CartesianBasis, basis::LadderBasis, basis::SzBasis,
+    operator::SpinHalfOperator as Op, state::SpinHalfState as Ket,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

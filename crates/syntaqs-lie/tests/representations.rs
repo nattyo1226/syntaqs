@@ -8,7 +8,7 @@ use syntaqs_lie::{
     LieError, family::OperatorFamily, lie_bracket, numerical::error::NumericalError,
     numerical::options::NumericalOptions, numerical::tolerance::Tolerance,
 };
-use syntaqs_spin_half::SpinHalfOperator as Pauli;
+use syntaqs_spin_half::operator::SpinHalfOperator as Pauli;
 
 macro_rules! precision_tests {
     ($module:ident, $real:ty) => {
@@ -393,7 +393,7 @@ macro_rules! precision_tests {
 
             #[test]
             fn graded_odd_majoranas_use_ordinary_brackets_and_match_jordan_wigner() {
-                use syntaqs_fermion::FermionOperator as F;
+                use syntaqs_fermion::operator::FermionOperator as F;
                 type Local = LocalOperator<F, C>;
                 let a = HilbertSpace::factor(0u8);
                 let b = HilbertSpace::factor(1u8);

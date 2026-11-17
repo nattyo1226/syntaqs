@@ -13,7 +13,7 @@ use syntaqs_lie::{
     decomposition::DecompositionOptions, family::OperatorFamily,
     numerical::options::NumericalOptions, numerical::tolerance::Tolerance,
 };
-use syntaqs_spin_half::SpinHalfOperator as Pauli;
+use syntaqs_spin_half::operator::SpinHalfOperator as Pauli;
 
 type Local = LocalOperator<Pauli, Complex<f64>>;
 type Placed = Operator<&'static str, Pauli, Complex<f64>>;

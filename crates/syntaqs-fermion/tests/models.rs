@@ -4,7 +4,8 @@ use common::*;
 use num_complex::Complex;
 use syntaqs_core::{space::HilbertSpace as H, space::SpaceError, space::TensorKind};
 use syntaqs_fermion::{
-    Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
+    Fermion, basis::LadderBasis, basis::MajoranaBasis, basis::OccupationBasis,
+    operator::FermionOperator as O, state::FermionState as S,
 };
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, mapping::MappingError};
 use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm, norm::Normalize};

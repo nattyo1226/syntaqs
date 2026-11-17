@@ -7,7 +7,8 @@ use syntaqs_normalize::{
     NormalizationError, expectation::NormalizedExpectation, norm::Norm, norm::Normalize,
 };
 use syntaqs_spin_one::{
-    CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis,
+    SpinOne, basis::CartesianBasis, basis::LadderBasis, basis::SzBasis,
+    operator::SpinOneOperator as O, state::SpinOneState as S,
 };
 
 fn vector<T: Real>(psi: &LocalKet<T>) -> Matrix {

@@ -9,7 +9,7 @@ use syntaqs_core::{expression::composite::State, space::HilbertSpace};
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
 use syntaqs_normalize::{expectation::NormalizedExpectation, norm::Norm};
-use syntaqs_spin_half::{SpinHalf, SpinHalfState};
+use syntaqs_spin_half::{SpinHalf, state::SpinHalfState};
 
 type Spin = SpinHalf<Complex<f64>>;
 type Models = syntaqs_spin_half::models::SpinHalfModels<Spin>;
@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         use ndarray::{Array1, Array2};
         use sprs::{CsMat, CsVec};
         use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
-        use syntaqs_spin_half::SzBasis;
+        use syntaqs_spin_half::basis::SzBasis;
         // The Vec output is also usable with other numerical libraries.
         let raw: Exported<Vec<_>, _> = (&psi).export(&SzBasis)?;
         println!("Vector shape: {:?}", raw.metadata().shape());

@@ -8,7 +8,7 @@ use syntaqs_core::{
 };
 use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 use syntaqs_spin_half::{
-    SpinHalf, SpinHalfOperator as O, SpinHalfState as S, models::SpinHalfModels,
+    SpinHalf, models::SpinHalfModels, operator::SpinHalfOperator as O, state::SpinHalfState as S,
 };
 
 type Spin = SpinHalf<Complex<f64>>;

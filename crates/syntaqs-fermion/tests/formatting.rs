@@ -1,7 +1,7 @@
 use syntaqs_core::{
     expression::local::LocalOperator, expression::local::LocalState, space::HilbertSpace,
 };
-use syntaqs_fermion::{FermionOperator as O, FermionState as S};
+use syntaqs_fermion::{operator::FermionOperator as O, state::FermionState as S};
 
 #[test]
 fn every_primitive_has_a_label_and_states_gain_kets_only_in_expressions() {

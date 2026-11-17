@@ -7,7 +7,7 @@ use syntaqs_core::{
     expression::local::LocalOperator, expression::local::LocalState,
     expression::parts::linear_combination::LinearCombination,
 };
-use syntaqs_spin_one::{SpinOneOperator as O, SpinOneState as S};
+use syntaqs_spin_one::{operator::SpinOneOperator as O, state::SpinOneState as S};
 
 pub trait Real: Float + FromPrimitive + ToPrimitive + core::fmt::Debug {
     const ATOL: f64;

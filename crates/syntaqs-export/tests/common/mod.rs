@@ -2,7 +2,7 @@
 use num_complex::Complex;
 use num_traits::{FromPrimitive, Num, NumAssign, ToPrimitive};
 use std::{fmt::Debug, ops::Neg};
-use syntaqs_spin_half::SpinHalfOperator as Op;
+use syntaqs_spin_half::operator::SpinHalfOperator as Op;
 
 pub trait Real:
     Num

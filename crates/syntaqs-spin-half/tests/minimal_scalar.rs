@@ -9,7 +9,8 @@ use syntaqs_core::{
     expression::parts::linear_combination::LinearCombination as Lc, space::Dimension,
 };
 use syntaqs_spin_half::{
-    CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as State, SzBasis,
+    basis::CartesianBasis, basis::LadderBasis, basis::SzBasis, operator::SpinHalfOperator as Op,
+    state::SpinHalfState as State,
 };
 
 use Op::{I, Sm, Sp, Sx, Sy, Sz};

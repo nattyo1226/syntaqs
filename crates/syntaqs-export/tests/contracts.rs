@@ -194,7 +194,9 @@ fn malformed_bases_and_unbound_or_invalid_spaces_are_errors_even_for_zero() {
 #[test]
 fn unit_zero_and_identity_preserve_spaces_and_shapes() {
     use num_complex::Complex;
-    use syntaqs_spin_half::{SpinHalfOperator as O, SpinHalfState as S, SzBasis};
+    use syntaqs_spin_half::{
+        basis::SzBasis, operator::SpinHalfOperator as O, state::SpinHalfState as S,
+    };
     let space = HilbertSpace::<u8>::unit();
     let state = State::<u8, S, O, Complex<f64>>::unit();
     let vector: Exported<Vec<_>, VectorMetadata<'_, _, _, S>> = (&state).export(&SzBasis).unwrap();

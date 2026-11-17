@@ -11,7 +11,7 @@ use syntaqs_lie::{
     LieError, family::OperatorFamily, numerical::error::NumericalError,
     numerical::options::NumericalOptions, numerical::tolerance::Tolerance,
 };
-use syntaqs_spin_half::SpinHalfOperator as Pauli;
+use syntaqs_spin_half::operator::SpinHalfOperator as Pauli;
 
 macro_rules! precision_tests {
     ($module:ident,$real:ty) => {
@@ -377,7 +377,7 @@ macro_rules! precision_tests {
 
             #[test]
             fn graded_odd_generator_algebra_has_scalar_commutant_and_no_center() {
-                use syntaqs_fermion::FermionOperator as F;
+                use syntaqs_fermion::operator::FermionOperator as F;
                 use syntaqs_lie::lie_bracket;
                 let a = HilbertSpace::factor(0u8);
                 let b = HilbertSpace::factor(1u8);

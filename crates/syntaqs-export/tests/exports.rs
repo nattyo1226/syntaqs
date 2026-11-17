@@ -8,7 +8,8 @@ use syntaqs_export::{
     matrix::metadata::MatrixMetadata, vector::metadata::VectorMetadata,
 };
 use syntaqs_spin_half::{
-    CartesianBasis, LadderBasis, SpinHalfOperator as Op, SpinHalfState as Ket, SzBasis,
+    basis::CartesianBasis, basis::LadderBasis, basis::SzBasis, operator::SpinHalfOperator as Op,
+    state::SpinHalfState as Ket,
 };
 mod common;
 use common::*;

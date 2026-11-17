@@ -12,7 +12,7 @@ use syntaqs_lie::{
     LieError, family::OperatorFamily, numerical::error::NumericalError,
     numerical::options::NumericalOptions, numerical::tolerance::Tolerance,
 };
-use syntaqs_spin_half::SpinHalfOperator as Pauli;
+use syntaqs_spin_half::operator::SpinHalfOperator as Pauli;
 
 macro_rules! precision_tests {
     ($module:ident, $real:ty) => {

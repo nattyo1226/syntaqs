@@ -12,7 +12,7 @@
 //! use num_complex::Complex;
 //! use syntaqs_core::expression::local::LocalOperator;
 //! use syntaqs_lie::{decomposition::DecompositionOptions, LieError, numerical::options::NumericalOptions, family::OperatorFamily};
-//! use syntaqs_spin_half::SpinHalfOperator as Pauli;
+//! use syntaqs_spin_half::operator::SpinHalfOperator as Pauli;
 //!
 //! type Op = LocalOperator<Pauli, Complex<f64>>;
 //! let x = Op::primitive(Pauli::Sx);
