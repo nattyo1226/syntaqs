@@ -1,7 +1,7 @@
 //! Geometries and their structural information.
 
-pub(crate) mod boundary;
-pub(crate) mod chain;
+/// A one-dimensional chain.
+pub mod chain;
 
 /// Common indexing contract for a geometry with a caller-owned site sequence.
 ///
@@ -11,4 +11,13 @@ pub(crate) mod chain;
 pub trait Geometry {
     /// Returns the number of sites, including any assigned empty sites.
     fn num_sites(&self) -> usize;
+}
+
+/// Boundary condition shared by geometries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Boundary {
+    /// Connect consecutive sites only.
+    Open,
+    /// Also connect the last site to the first, without loops or duplicate edges.
+    Periodic,
 }

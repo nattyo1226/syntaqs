@@ -11,7 +11,7 @@ use syntaqs_core::{
     coefficient::Divide, expression::composite::State, expression::local::LocalState,
     space::HilbertSpace,
 };
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
 use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
 use syntaqs_spin_half::{SpinHalf, SpinHalfState};

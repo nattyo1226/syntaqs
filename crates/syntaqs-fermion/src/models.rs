@@ -9,7 +9,10 @@ use syntaqs_core::{
     expression::error::ExpressionError, space::HilbertSpace, space::SpaceError, space::TensorKind,
     system::OperatorOf,
 };
-use syntaqs_geometry::{Chain, MappingError, NearestNeighbors, SiteMapper};
+use syntaqs_geometry::{
+    geometry::chain::Chain, mapping::MappingError, mapping::SiteMapper,
+    relation::nearest_neighbor::NearestNeighbors,
+};
 
 /// Failure to construct a Hubbard model on a site-ordered space assignment.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
@@ -53,7 +56,7 @@ impl<C> FermionModels<Fermion<C>> {
     /// ```
     /// use num_complex::Complex;
     /// use syntaqs_core::space::HilbertSpace;
-    /// use syntaqs_geometry::{Boundary, Chain};
+    /// use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
     /// use syntaqs_fermion::Fermion;
     /// type F = Fermion<Complex<f64>>;
     /// let site = HilbertSpace::tensor_all_g([HilbertSpace::factor("up"), HilbertSpace::factor("down")])?;

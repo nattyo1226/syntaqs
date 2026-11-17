@@ -3,7 +3,7 @@
 
 use num_complex::Complex64;
 use syntaqs_core::{space::HilbertSpace, system::OperatorOf};
-use syntaqs_geometry::SiteGroup;
+use syntaqs_geometry::relation::SiteGroup;
 use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op};
 
 type Error = Box<dyn std::error::Error>;

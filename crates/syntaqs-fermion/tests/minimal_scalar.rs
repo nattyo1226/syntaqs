@@ -11,7 +11,7 @@ use syntaqs_core::{
 use syntaqs_fermion::{
     Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
 };
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 
 // A small exact rational implementation used only by these capability tests.
 #[derive(Clone, Copy)]

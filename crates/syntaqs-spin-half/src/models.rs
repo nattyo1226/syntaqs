@@ -8,7 +8,10 @@ use num_traits::One;
 use syntaqs_core::{
     expression::error::ExpressionError, space::HilbertSpace, space::SpaceError, system::OperatorOf,
 };
-use syntaqs_geometry::{Chain, MappingError, NearestNeighbors, SiteMapper};
+use syntaqs_geometry::{
+    geometry::chain::Chain, mapping::MappingError, mapping::SiteMapper,
+    relation::nearest_neighbor::NearestNeighbors,
+};
 
 /// Failure to construct a spin model on a site-ordered space assignment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]

@@ -1,7 +1,9 @@
 use syntaqs_core::space::HilbertSpace;
 use syntaqs_core::space::HilbertSpace as H;
 use syntaqs_geometry::{
-    Boundary::*, Chain, Consecutive, MappingError, NearestNeighbors, Relation, SiteMapper,
+    geometry::Boundary::*, geometry::chain::Chain, mapping::MappingError, mapping::SiteMapper,
+    relation::Relation, relation::consecutive::Consecutive,
+    relation::nearest_neighbor::NearestNeighbors,
 };
 
 fn pairs<'s, I>(
@@ -184,7 +186,7 @@ fn leaf_connections_need_neither_eq_nor_clone_and_validate_empty_cases() {
 struct TestGroups {
     groups: Vec<Vec<usize>>,
 }
-impl<G: syntaqs_geometry::Geometry> Relation<G> for TestGroups {
+impl<G: syntaqs_geometry::geometry::Geometry> Relation<G> for TestGroups {
     type Error = core::convert::Infallible;
     type Group<'a>
         = &'a [usize]

@@ -3,7 +3,7 @@ use syntaqs_core::{
     expression::composite::State, expression::error::ExpressionError, space::HilbertSpace as H,
     space::SpaceError, system::StateOf,
 };
-use syntaqs_geometry::{Boundary, Chain, MappingError};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, mapping::MappingError};
 use syntaqs_spin_half::models::ModelError;
 use syntaqs_spin_half::{SpinHalf, SpinHalfOperator as Op, SpinHalfState as Ket};
 

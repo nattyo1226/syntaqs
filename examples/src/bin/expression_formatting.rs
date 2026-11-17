@@ -6,7 +6,7 @@ use syntaqs_core::{
     expression::composite::State, expression::local::LocalOperator, expression::local::LocalState,
     space::HilbertSpace,
 };
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 use syntaqs_spin_half::{
     SpinHalf, SpinHalfOperator as O, SpinHalfState as S, models::SpinHalfModels,
 };

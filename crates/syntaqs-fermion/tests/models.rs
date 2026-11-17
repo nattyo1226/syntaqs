@@ -6,7 +6,7 @@ use syntaqs_core::{space::HilbertSpace as H, space::SpaceError, space::TensorKin
 use syntaqs_fermion::{
     Fermion, FermionOperator as O, FermionState as S, LadderBasis, MajoranaBasis, OccupationBasis,
 };
-use syntaqs_geometry::{Boundary, Chain, MappingError};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, mapping::MappingError};
 use syntaqs_normalize::{Norm, Normalize, NormalizedExpectation};
 
 fn sites(n: usize) -> Vec<H<usize>> {

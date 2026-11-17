@@ -2,7 +2,7 @@
 
 use num_complex::Complex;
 use syntaqs_core::space::HilbertSpace;
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 use syntaqs_spin_one::{
     CartesianBasis, LadderBasis, SpinOne, SpinOneOperator as Op, SpinOneState as Ket,
 };

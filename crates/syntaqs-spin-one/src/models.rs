@@ -7,7 +7,10 @@ use num_traits::One;
 use syntaqs_core::{
     expression::error::ExpressionError, space::HilbertSpace, space::SpaceError, system::OperatorOf,
 };
-use syntaqs_geometry::{Chain, MappingError, NearestNeighbors, SiteMapper};
+use syntaqs_geometry::{
+    geometry::chain::Chain, mapping::MappingError, mapping::SiteMapper,
+    relation::nearest_neighbor::NearestNeighbors,
+};
 
 /// Failure to construct a spin-1 model on a site-ordered space assignment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
@@ -120,7 +123,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
     /// ```
     /// use num_complex::Complex;
     /// use syntaqs_core::space::HilbertSpace;
-    /// use syntaqs_geometry::{Boundary, Chain};
+    /// use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
     /// use syntaqs_spin_one::{SpinOne, SpinOneState as Ket};
     /// type Spin = SpinOne<Complex<f64>>;
     /// let sites = [HilbertSpace::factor("a"), HilbertSpace::factor("b")];

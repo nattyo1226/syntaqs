@@ -6,7 +6,7 @@ use syntaqs_basic::index::Id128;
 #[cfg(not(feature = "normalize"))]
 use syntaqs_core::coefficient::Divide;
 use syntaqs_core::{expression::composite::State, space::HilbertSpace};
-use syntaqs_geometry::{Boundary, Chain};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain};
 #[cfg(feature = "normalize")]
 use syntaqs_normalize::{Norm, NormalizedExpectation};
 use syntaqs_spin_half::{SpinHalf, SpinHalfState};

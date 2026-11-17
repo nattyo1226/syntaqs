@@ -3,10 +3,12 @@
 
 use syntaqs_core::space::HilbertSpace;
 use syntaqs_geometry::{
-    Boundary, Chain, Consecutive, Geometry, MappedGroup, NearestNeighbors, Relation, SiteMapper,
+    geometry::Boundary, geometry::Geometry, geometry::chain::Chain, mapping::MappedGroup,
+    mapping::SiteMapper, relation::Relation, relation::consecutive::Consecutive,
+    relation::nearest_neighbor::NearestNeighbors,
 };
 #[cfg(test)]
-use syntaqs_geometry::{ConsecutiveError, MappingError};
+use syntaqs_geometry::{mapping::MappingError, relation::consecutive::ConsecutiveError};
 
 type Error = Box<dyn std::error::Error>;
 

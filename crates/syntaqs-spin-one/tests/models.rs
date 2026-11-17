@@ -8,7 +8,7 @@ use syntaqs_core::{
     system::OperatorOf,
 };
 use syntaqs_export::{Export, Exported, MatrixArgs};
-use syntaqs_geometry::{Boundary, Chain, MappingError};
+use syntaqs_geometry::{geometry::Boundary, geometry::chain::Chain, mapping::MappingError};
 use syntaqs_spin_one::{SpinOne, SpinOneOperator as O, SpinOneState as S, SzBasis};
 
 type Spin<T> = SpinOne<Complex<T>>;
