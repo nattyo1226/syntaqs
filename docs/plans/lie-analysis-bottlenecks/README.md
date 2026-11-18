@@ -4,6 +4,10 @@ Measured on 2026-11-18 at revision `690b7b4ca6a59f88c48d0310d9faa80ab258aff1`.
 
 ## Findings
 
+- The [comparison with LieAlgebra.jl](comparison.md) explains how the two
+  implementations scale and records stability checks on the same small bases.
+- The [internal profiles](hotspots.md) locate the cost within closure,
+  the full adjoint commutant, and decomposition.
 - **Closure follows expression cost.** The Heisenberg family has `n=5`
   throughout, and its closure time grows from 3.36 ms on two sites to 136 ms
   on eight. At fixed `D=4` and `n=15`, mixing pairs of Pauli strings raises

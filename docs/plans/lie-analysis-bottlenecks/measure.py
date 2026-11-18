@@ -91,14 +91,49 @@ def profile(binary, directory):
             print(f"Completed profiling trial {trial}", flush=True)
 
 
+def measure_hotspots(binary, directory, baseline):
+    with (directory / "hotspots.csv").open("w", newline="") as data:
+        writer = csv.writer(data, lineterminator="\n")
+        writer.writerow([
+            "case", "run", "build", "stage", "phase", "operation", "calls",
+            "elapsed_ms", "tensor_terms", "local_traces",
+        ])
+        for trial in range(1, 4):
+            for case in PROFILE_CASES:
+                for build, executable in (("baseline", baseline), ("instrumented", binary)):
+                    output, _ = run(executable, case)
+                    if ("# hotspot," in output) != (build == "instrumented"):
+                        raise SystemExit(f"Unexpected hotspot output from {build} executable: {executable}")
+                    for line in output.splitlines():
+                        if line.startswith("# hotspot,"):
+                            _, stage, phase, operation, calls, elapsed_ms, terms, traces = line.split(",")
+                        elif not line.startswith("#"):
+                            stage, elapsed_ms = line.split(",")
+                            phase, operation, calls, terms, traces = "root", "stage_total", 1, 0, 0
+                        else:
+                            continue
+                        if stage in PROFILE_STAGES:
+                            writer.writerow([case, trial, build, stage, phase, operation, calls,
+                                             elapsed_ms, terms, traces])
+                data.flush()
+            print(f"Completed hotspot trial {trial}", flush=True)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("binary", type=Path)
     parser.add_argument("directory", type=Path, help="output directory for CSV files")
-    parser.add_argument("--profile", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--profile", action="store_true")
+    mode.add_argument("--hotspots", type=Path, metavar="BASELINE", help="measure alongside the baseline executable")
     args = parser.parse_args()
     if sys.platform != "darwin" and not sys.platform.startswith("linux"):
         parser.error("peak RSS units are defined for macOS and Linux")
     args.directory.mkdir(parents=True, exist_ok=True)
-    collector = profile if args.profile else measure
-    collector(str(args.binary.resolve()), args.directory)
+    binary = str(args.binary.resolve())
+    if args.hotspots is not None:
+        measure_hotspots(binary, args.directory, str(args.hotspots.resolve()))
+    elif args.profile:
+        profile(binary, args.directory)
+    else:
+        measure(binary, args.directory)

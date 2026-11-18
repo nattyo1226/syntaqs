@@ -1,0 +1,653 @@
+--- a/crates/syntaqs-core/src/lib.rs
++++ b/crates/syntaqs-core/src/lib.rs
+@@ -109,6 +109,8 @@
+
+ pub mod coefficient;
+ mod evaluate;
++#[doc(hidden)]
++pub mod hotspot;
+
+ pub mod algebra;
+ pub mod basis;
+--- /dev/null
++++ b/crates/syntaqs-core/src/hotspot.rs
+@@ -0,0 +1,81 @@
++//! Timers for the isolated Lie-analysis profiling build.
++
++extern crate std;
++
++pub use self::std::time::Instant;
++use self::std::{
++    cell::{Cell, RefCell},
++    collections::BTreeMap,
++    time::Duration,
++};
++
++type Key = (&'static str, &'static str);
++
++#[derive(Default)]
++struct Sample {
++    calls: u64,
++    elapsed: Duration,
++    terms: u64,
++    local_traces: u64,
++}
++
++std::thread_local! {
++    static PHASE: Cell<&'static str> = const { Cell::new("root") };
++    static TOTALS: RefCell<BTreeMap<Key, Sample>> = RefCell::default();
++}
++
++fn record(key: Key, elapsed: Duration, calls: u64, terms: u64, local_traces: u64) {
++    TOTALS.with_borrow_mut(|totals| {
++        let sample = totals.entry(key).or_default();
++        sample.elapsed += elapsed;
++        sample.calls += calls;
++        sample.terms += terms;
++        sample.local_traces += local_traces;
++    });
++}
++
++pub fn observe(
++    operation: &'static str,
++    elapsed: Duration,
++    calls: u64,
++    terms: u64,
++    local_traces: u64,
++) {
++    record(
++        (PHASE.get(), operation),
++        elapsed,
++        calls,
++        terms,
++        local_traces,
++    );
++}
++
++pub fn measure<T>(operation: &'static str, run: impl FnOnce() -> T) -> T {
++    let start = Instant::now();
++    let result = run();
++    observe(operation, start.elapsed(), 1, 0, 0);
++    result
++}
++
++pub fn phase<T>(phase: &'static str, run: impl FnOnce() -> T) -> T {
++    let parent = PHASE.replace(phase);
++    let start = Instant::now();
++    let result = run();
++    let elapsed = start.elapsed();
++    PHASE.set(parent);
++    record((phase, "phase_total"), elapsed, 1, 0, 0);
++    result
++}
++
++pub fn print_and_reset(stage: &str) {
++    let samples = TOTALS.with_borrow_mut(core::mem::take);
++    for ((phase, operation), sample) in samples {
++        std::println!(
++            "# hotspot,{stage},{phase},{operation},{},{:.6},{},{}",
++            sample.calls,
++            sample.elapsed.as_secs_f64() * 1e3,
++            sample.terms,
++            sample.local_traces
++        );
++    }
++}
+--- a/crates/syntaqs-core/src/evaluate/collect.rs
++++ b/crates/syntaqs-core/src/evaluate/collect.rs
+@@ -150,11 +150,17 @@
+             + Neg<Output = C>,
+         O: PartialEq + Identity + HomogeneousParity + Product<C, Term = O> + Adjoint<C, Term = O>,
+     {
++        let prepare_start = crate::hotspot::Instant::now();
+         let ambient = self.select_space(Some(ambient), None)?;
+         let factors: Vec<_> = ambient.leaves().collect();
+         let expression = self.expression.group_local();
++        crate::hotspot::observe("collect_prepare", prepare_start.elapsed(), 1, 0, 0);
++        let reduce_start = crate::hotspot::Instant::now();
++        let mut merge_elapsed = core::time::Duration::ZERO;
++        let mut visited = 0;
+         let mut terms = Vec::new();
+         for (coefficient, locals) in IntrinsicOpTerms::new(&expression, ambient) {
++            visited += 1;
+             let mut product = Vec::with_capacity(factors.len());
+             for factor in &factors {
+                 let identity;
+@@ -170,8 +176,12 @@
+                 };
+                 product.push(local_terms(local));
+             }
++            let merge_start = crate::hotspot::Instant::now();
+             merge_tensor(&mut terms, (coefficient.unwrap_or_else(C::one), product));
++            merge_elapsed += merge_start.elapsed();
+         }
++        crate::hotspot::observe("collect_reduce", reduce_start.elapsed(), 1, visited, 0);
++        crate::hotspot::observe("collect_merge", merge_elapsed, 1, visited, 0);
+         let operators = terms
+             .into_iter()
+             .filter(|(c, _)| !c.is_zero())
+@@ -181,6 +191,8 @@
+                 }))
+                 .map(|op| op.scaled(c))
+             });
+-        Self::try_sum(operators)?.bind(ambient)
++        crate::hotspot::measure("collect_rebuild", || {
++            Self::try_sum(operators)?.bind(ambient)
++        })
+     }
+ }
+--- a/crates/syntaqs-core/src/evaluate/trace.rs
++++ b/crates/syntaqs-core/src/evaluate/trace.rs
+@@ -118,14 +118,28 @@
+         O: Identity + crate::HomogeneousParity + crate::ParityOperator,
+         O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
+     {
+-        let expression = self.expression.group_local();
++        let expression = crate::hotspot::measure("trace_prepare", || self.expression.group_local());
+         let mut result = zero();
+-        for (coefficient, factors) in OrdinaryOpTerms::new(&expression, ambient) {
++        let mut terms = OrdinaryOpTerms::new(&expression, ambient);
++        let mut walk_elapsed = core::time::Duration::ZERO;
++        let mut reduce_elapsed = core::time::Duration::ZERO;
++        let mut tensor_terms = 0;
++        let mut local_traces = 0;
++        loop {
++            let start = crate::hotspot::Instant::now();
++            let next = terms.next();
++            walk_elapsed += start.elapsed();
++            let Some((coefficient, factors)) = next else {
++                break;
++            };
++            tensor_terms += 1;
+             if coefficient.as_ref().is_some_and(Zero::is_zero) {
+                 continue;
+             }
++            let reduce_start = crate::hotspot::Instant::now();
+             let mut value = one();
+             for index in ambient.indices() {
++                local_traces += 1;
+                 let local_trace_value = match factors
+                     .iter()
+                     .find(|(factor, _)| factor.factor_index() == Some(index))
+@@ -142,6 +156,7 @@
+                     break;
+                 }
+             }
++            reduce_elapsed += reduce_start.elapsed();
+             if value.is_zero() {
+                 continue;
+             }
+@@ -153,6 +168,19 @@
+             }
+             result = add(result, value);
+         }
++        if let Some((enumerate, lower, insertions)) = terms.hotspot_metrics() {
++            crate::hotspot::observe("trace_graded_enumerate", enumerate, 1, 0, 0);
++            crate::hotspot::observe("trace_graded_lower", lower, 1, 0, 0);
++            crate::hotspot::observe(
++                "trace_parity_insertions",
++                core::time::Duration::ZERO,
++                insertions,
++                0,
++                0,
++            );
++        }
++        crate::hotspot::observe("trace_walk", walk_elapsed, 1, tensor_terms, 0);
++        crate::hotspot::observe("trace_local_reduce", reduce_elapsed, 1, 0, local_traces);
+         Ok(result)
+     }
+
+--- a/crates/syntaqs-core/src/expression/traversal.rs
++++ b/crates/syntaqs-core/src/expression/traversal.rs
+@@ -354,6 +354,9 @@
+     ordinary: OpTerms<'a, I, O, C>,
+     graded: Option<HomogeneousTerms<'a, I, O, C>>,
+     ambient: &'a HilbertSpace<I>,
++    enumerate_elapsed: core::time::Duration,
++    lower_elapsed: core::time::Duration,
++    parity_insertions: u64,
+ }
+ impl<'a, I, O, C> OrdinaryOpTerms<'a, I, O, C> {
+     pub(crate) fn new(root: &'a OpExpr<I, O, C>, ambient: &'a HilbertSpace<I>) -> Self {
+@@ -362,7 +365,21 @@
+             graded: (ambient.effective_kind() == Some(crate::TensorKind::Graded))
+                 .then(|| HomogeneousTerms::new(root)),
+             ambient,
+-        }
++            enumerate_elapsed: core::time::Duration::ZERO,
++            lower_elapsed: core::time::Duration::ZERO,
++            parity_insertions: 0,
++        }
++    }
++
++    pub(crate) fn hotspot_metrics(
++        &self,
++    ) -> Option<(core::time::Duration, core::time::Duration, u64)> {
++        self.graded.as_ref()?;
++        Some((
++            self.enumerate_elapsed,
++            self.lower_elapsed,
++            self.parity_insertions,
++        ))
+     }
+ }
+ impl<'a, I: Eq, O, C> Iterator for OrdinaryOpTerms<'a, I, O, C>
+@@ -378,7 +395,11 @@
+         let Some(graded) = &mut self.graded else {
+             return self.ordinary.next();
+         };
+-        let (coefficient, placements) = graded.next()?;
++        let start = crate::hotspot::Instant::now();
++        let next = graded.next();
++        self.enumerate_elapsed += start.elapsed();
++        let (coefficient, placements) = next?;
++        let start = crate::hotspot::Instant::now();
+         let mut factors: OperatorFactors<'a, I, O, C> = Vec::new();
+         let mut append = |factor: &'a HilbertSpace<I>, local: LocalOperator<O, C>| {
+             if let Some((_, previous)) = factors
+@@ -397,11 +418,13 @@
+                     .leaves()
+                     .take_while(|f| f.factor_index() != factor.factor_index())
+                 {
++                    self.parity_insertions += 1;
+                     append(prefix, LocalOperator::primitive(O::parity_operator()));
+                 }
+             }
+             append(factor, local);
+         }
++        self.lower_elapsed += start.elapsed();
+         Some((coefficient, factors))
+     }
+ }
+--- a/crates/syntaqs-lie/src/expression.rs
++++ b/crates/syntaqs-lie/src/expression.rs
+@@ -47,7 +47,11 @@
+             .scaled(Complex::new(R::zero(), -R::one())))
+     }
+     fn hs_in(&self, rhs: &Self, _: &()) -> Result<Complex<R>, ExpressionError> {
+-        Ok(self.collect_terms().hs_inner_product(&rhs.collect_terms()))
++        let left = syntaqs_core::hotspot::measure("hs_collect_left", || self.collect_terms());
++        let right = syntaqs_core::hotspot::measure("hs_collect_right", || rhs.collect_terms());
++        Ok(syntaqs_core::hotspot::measure("hs_contract", || {
++            left.hs_inner_product(&right)
++        }))
+     }
+ }
+
+@@ -101,7 +105,10 @@
+             .scaled(Complex::new(R::zero(), -R::one())))
+     }
+     fn hs_in(&self, rhs: &Self, context: &Self::Context) -> Result<Complex<R>, ExpressionError> {
+-        self.collect_terms_in(context)?
+-            .hs_inner_product_in(&rhs.collect_terms_in(context)?, context)
++        let left =
++            syntaqs_core::hotspot::measure("hs_collect_left", || self.collect_terms_in(context))?;
++        let right =
++            syntaqs_core::hotspot::measure("hs_collect_right", || rhs.collect_terms_in(context))?;
++        syntaqs_core::hotspot::measure("hs_contract", || left.hs_inner_product_in(&right, context))
+     }
+ }
+--- a/crates/syntaqs-lie/src/family/projection.rs
++++ b/crates/syntaqs-lie/src/family/projection.rs
+@@ -323,29 +323,37 @@
+     }
+
+     fn solve_target(&self, target: &E) -> Result<TargetCoordinates<'a, E>, LieError<E::Real>> {
+-        target.in_context(&self.family.context)?;
+-        let target_norm = norm(target, &self.family.context, E::Real::zero(), &self.options)?;
+-        let check = hermiticity(target, &self.family.context, target_norm, &self.options)?;
++        syntaqs_core::hotspot::measure("target_context", || {
++            target.in_context(&self.family.context)
++        })?;
++        let target_norm = syntaqs_core::hotspot::phase("target_norm", || {
++            norm(target, &self.family.context, E::Real::zero(), &self.options)
++        })?;
++        let check = syntaqs_core::hotspot::phase("target_hermiticity", || {
++            hermiticity(target, &self.family.context, target_norm, &self.options)
++        })?;
+         if !check.passed() {
+             return Err(LieError::NonHermitianTarget { check });
+         }
+-        let rhs = self
+-            .family
+-            .iter()
+-            .zip(&self.norms)
+-            .map(|(operator, &operator_norm)| {
+-                let value = operator.hs_in(target, &self.family.context)?;
+-                Ok(real_coordinate(
+-                    value,
+-                    operator_norm * target_norm,
+-                    &self.options,
+-                )?)
+-            })
+-            .collect::<Result<Vec<_>, LieError<E::Real>>>()?;
+-        let values = self
+-            .factor
+-            .solve(&Array1::from_vec(rhs))
+-            .map_err(NumericalError::from)?;
++        let rhs = syntaqs_core::hotspot::phase("rhs", || {
++            self.family
++                .iter()
++                .zip(&self.norms)
++                .map(|(operator, &operator_norm)| {
++                    let value = operator.hs_in(target, &self.family.context)?;
++                    Ok(real_coordinate(
++                        value,
++                        operator_norm * target_norm,
++                        &self.options,
++                    )?)
++                })
++                .collect::<Result<Vec<_>, LieError<E::Real>>>()
++        })?;
++        let values = syntaqs_core::hotspot::measure("projection_lu", || {
++            self.factor
++                .solve(&Array1::from_vec(rhs))
++                .map_err(NumericalError::from)
++        })?;
+         finite(values.iter().copied())?;
+         Ok(TargetCoordinates {
+             coordinates: FamilyCoordinates {
+@@ -367,24 +375,29 @@
+             coordinates,
+             norm: target_norm,
+         } = self.solve_target(target)?;
+-        let operator = coordinates.reconstruct()?;
+-        let projection_norm = norm(
+-            &operator,
+-            &self.family.context,
+-            E::Real::zero(),
+-            &self.options,
+-        )?;
++        let operator =
++            syntaqs_core::hotspot::measure("projection_reconstruct", || coordinates.reconstruct())?;
++        let projection_norm = syntaqs_core::hotspot::phase("projection_norm", || {
++            norm(
++                &operator,
++                &self.family.context,
++                E::Real::zero(),
++                &self.options,
++            )
++        })?;
+         let residual = E::sum_in(
+             vec![target.clone(), operator.scaled_real(-E::Real::one())],
+             &self.family.context,
+         )?;
+         let sum_norm = target_norm + projection_norm;
+-        let residual_norm = norm(
+-            &residual,
+-            &self.family.context,
+-            sum_norm * sum_norm,
+-            &self.options,
+-        )?;
++        let residual_norm = syntaqs_core::hotspot::phase("residual_norm", || {
++            norm(
++                &residual,
++                &self.family.context,
++                sum_norm * sum_norm,
++                &self.options,
++            )
++        })?;
+         let check = self.options.residual.check(residual_norm, target_norm)?;
+         Ok(Projection {
+             coordinates,
+--- a/crates/syntaqs-lie/src/representation.rs
++++ b/crates/syntaqs-lie/src/representation.rs
+@@ -230,7 +230,9 @@
+         left: usize,
+         right: usize,
+     ) -> Result<Projection<'a, E>, LieError<E::Real>> {
+-        self.project(&self.family().bracket(left, right)?)
++        let bracket =
++            syntaqs_core::hotspot::measure("bracket_build", || self.family().bracket(left, right))?;
++        self.project(&bracket)
+     }
+     /// Reuses the Gram factorization to obtain real bracket projection coefficients.
+     pub fn bracket_coefficients(
+--- a/crates/syntaqs-lie/src/numerical/kernels.rs
++++ b/crates/syntaqs-lie/src/numerical/kernels.rs
+@@ -1,7 +1,7 @@
+ //! Internal real dense kernels. No physical Hilbert-space matrix is constructed here.
+
+ use ndarray::{Array1, Array2};
+-use ndarray_linalg::{Eigh, Lapack, SVD, Scalar, Solve, UPLO};
++use ndarray_linalg::{Eigh, Lapack, SVDInto, Scalar, Solve, UPLO};
+ use num_complex::Complex;
+ use num_traits::{Float, FromPrimitive};
+
+@@ -133,8 +133,13 @@
+ {
+     let (m, n) = matrix.dim();
+     let relative_cutoff = options.rank_cutoff(m, n)?;
+-    finite(matrix.iter().copied())?;
+-    if m == 0 || n == 0 || matrix.iter().all(|&x| x == R::zero()) {
++    syntaqs_core::hotspot::measure("rank_finite", || finite(matrix.iter().copied()))?;
++    if m == 0
++        || n == 0
++        || syntaqs_core::hotspot::measure("rank_zero_scan", || {
++            matrix.iter().all(|&x| x == R::zero())
++        })
++    {
+         return Ok(RankAnalysis {
+             rank: 0,
+             singular_values: Array1::zeros(m.min(n)),
+@@ -146,7 +151,11 @@
+     }
+     // gesvd returns the complete n-by-n Vt; an economy SVD would lose the
+     // n-m structural nullspace directions when the matrix is wide.
+-    let (_, singular_values, vt) = matrix.svd(false, true)?;
++    // Reuse the implementation of SVD for borrowed arrays, with separate timers.
++    let work = syntaqs_core::hotspot::measure("svd_input_copy", || matrix.to_owned());
++    let (_, singular_values, vt) =
++        syntaqs_core::hotspot::measure("svd_driver", || work.svd_into(false, true))?;
++    let rank_start = syntaqs_core::hotspot::Instant::now();
+     let vt = vt.ok_or(NumericalError::MissingSingularVectors)?;
+     finite(singular_values.iter().copied().chain(vt.iter().copied()))?;
+     let maximum = singular_values.iter().copied().fold(R::zero(), Float::max);
+@@ -162,6 +171,7 @@
+         .filter(|&i| singular_values[i] > threshold)
+         .collect();
+     let complement = Array2::from_shape_fn((n, rank), |(i, j)| vt[(range_indices[j], i)]);
++    syntaqs_core::hotspot::observe("rank_extract_vectors", rank_start.elapsed(), 1, 0, 0);
+     Ok(RankAnalysis {
+         rank,
+         singular_values,
+--- a/crates/syntaqs-lie/src/invariant.rs
++++ b/crates/syntaqs-lie/src/invariant.rs
+@@ -143,10 +143,14 @@
+     R: Float + Scalar<Real = R> + Lapack,
+     NumericalOptions<R>: Default,
+ {
++    let start = syntaqs_core::hotspot::Instant::now();
+     finite(constraints.iter().copied().chain(basis.iter().copied()))?;
+-    let constraint_norm = vector_norm(constraints.iter().copied());
++    let constraint_norm = syntaqs_core::hotspot::measure("constraint_frobenius", || {
++        vector_norm(constraints.iter().copied())
++    });
+     finite([constraint_norm])?;
+-    let residual = constraints.dot(basis);
++    let residual =
++        syntaqs_core::hotspot::measure("constraint_residual_dot", || constraints.dot(basis));
+     finite(residual.iter().copied())?;
+     let mut checks = Vec::new();
+     for (index, vector) in basis.columns().into_iter().enumerate() {
+@@ -162,6 +166,7 @@
+         }
+         checks.push(check);
+     }
++    syntaqs_core::hotspot::observe("constraint_checks", start.elapsed(), 1, 0, 0);
+     Ok(checks)
+ }
+
+@@ -195,7 +200,10 @@
+ fn commutant_constraints<R: Float>(matrices: &[Array2<R>], n: usize) -> Array2<R> {
+     // Rows (generator,k,l), unknowns C[a,b] in row-major order.
+     // (CA-AC)[k,l] = sum_b C[k,b] A[b,l] - sum_a A[k,a] C[a,l].
+-    let mut result = Array2::zeros((matrices.len() * n * n, n * n));
++    let mut result = syntaqs_core::hotspot::measure("constraint_alloc", || {
++        Array2::zeros((matrices.len() * n * n, n * n))
++    });
++    let fill_start = syntaqs_core::hotspot::Instant::now();
+     for (i, matrix) in matrices.iter().enumerate() {
+         for k in 0..n {
+             for l in 0..n {
+@@ -207,6 +215,7 @@
+             }
+         }
+     }
++    syntaqs_core::hotspot::observe("constraint_fill", fill_start.elapsed(), 1, 0, 0);
+     result
+ }
+
+@@ -223,9 +232,14 @@
+     NumericalOptions<E::Real>: Default,
+ {
+     let family = adjoint.family();
+-    let transform = family.orthonormalize(adjoint.options())?;
++    let transform = syntaqs_core::hotspot::measure("center_orthonormalize", || {
++        family.orthonormalize(adjoint.options())
++    })?;
+     let forward = transform.matrix().clone();
+-    let gram = family.gram(adjoint.options())?.values().mapv(|z| z.re);
++    let gram =
++        syntaqs_core::hotspot::measure("center_recompute_gram", || family.gram(adjoint.options()))?
++            .values()
++            .mapv(|z| z.re);
+     let inverse = forward.t().dot(&gram);
+     let n = family.len();
+     let mut adjoints = Vec::new();
+@@ -375,6 +389,7 @@
+     let pairs: Vec<_> = (0..n).flat_map(|a| (a..n).map(move |b| (a, b))).collect();
+     let weight = R::one() / Float::sqrt(R::one() + R::one());
+     let full = commutant_constraints(orthonormal_adjoints, n);
++    let projection_start = syntaqs_core::hotspot::Instant::now();
+     let constraints = Array2::from_shape_fn((full.nrows(), pairs.len()), |(row, col)| {
+         let (a, b) = pairs[col];
+         if a == b {
+@@ -383,6 +398,13 @@
+             (full[(row, a * n + b)] + full[(row, b * n + a)]) * weight
+         }
+     });
++    syntaqs_core::hotspot::observe(
++        "constraint_symmetric_project",
++        projection_start.elapsed(),
++        1,
++        0,
++        0,
++    );
+     let analysis = rank_nullspace(&constraints, options)?;
+     let diagnostics = diagnostics(
+         &constraints,
+--- a/crates/syntaqs-lie/src/decomposition/spectral.rs
++++ b/crates/syntaqs-lie/src/decomposition/spectral.rs
+@@ -28,7 +28,9 @@
+ where
+     NumericalOptions<E::Real>: Default,
+ {
+-    let report = component.family.orthonormality(&component.options)?;
++    let report = syntaqs_core::hotspot::phase("component_orthonormality", || {
++        component.family.orthonormality(&component.options)
++    })?;
+     for (index, check) in report.validation().hermiticity().iter().enumerate() {
+         if !check.passed() {
+             return Err(LieError::NonHermitianElement {
+@@ -174,15 +176,20 @@
+         let restricted_norm = vector_norm(restricted.iter().flat_map(|a| a.iter().copied()));
+         abelianity.push(options.residual.check(restricted_norm, ambient_norm)?);
+         let kernel = adjoint_kernel(&restricted, axes.ncols());
+-        let analysis = rank_nullspace(&kernel, options)?;
++        let analysis =
++            syntaqs_core::hotspot::phase("ideal_center", || rank_nullspace(&kernel, options))?;
+         ideal_centers.push(diagnostics(
+             &kernel,
+             &analysis,
+             options,
+             "restricted ideal center",
+         )?);
+-        simple_commutants
+-            .push(symmetric_commutant(&restricted, axes.ncols(), options)?.diagnostics);
++        simple_commutants.push(
++            syntaqs_core::hotspot::phase("ideal_commutant", || {
++                symmetric_commutant(&restricted, axes.ncols(), options)
++            })?
++            .diagnostics,
++        );
+     }
+     for (i, left) in ideals.iter().enumerate() {
+         for right in &ideals[i + 1..] {
+@@ -225,7 +232,7 @@
+     settings.validate()?;
+     let options = adjoint.options();
+     options.validate()?;
+-    let split = adjoint.center()?;
++    let split = syntaqs_core::hotspot::phase("center_split", || adjoint.center())?;
+     let ambient = &split.orthonormal.adjoints;
+     let semisimple = &split.complement_axes;
+     let dimension = semisimple.ncols();
+@@ -253,12 +260,16 @@
+         accepted = Some((Vec::new(), validation));
+     } else {
+         let restricted = restricted_adjoints(ambient, semisimple)?;
+-        let commutant = symmetric_commutant(&restricted, dimension, options)?;
++        let commutant = syntaqs_core::hotspot::phase("semisimple_commutant", || {
++            symmetric_commutant(&restricted, dimension, options)
++        })?;
+         let expected = commutant.matrices.len();
+         let relative_gap = options.eigenvalue_cutoff(dimension)?;
+         commutant_diagnostics = Some(commutant.diagnostics);
+         for _ in 0..settings.max_attempts {
+-            let spectrum = symmetric_eigen(&sample(dimension, &commutant.matrices), options)?;
++            let spectrum = syntaqs_core::hotspot::measure("sample_and_eigh", || {
++                symmetric_eigen(&sample(dimension, &commutant.matrices), options)
++            })?;
+             let largest = spectrum
+                 .values
+                 .iter()
+@@ -294,7 +305,9 @@
+                     )
+                 })
+                 .collect();
+-            let validation = match validate_candidate(ambient, &split.center_axes, &axes, options) {
++            let validation = match syntaqs_core::hotspot::phase("candidate_validation", || {
++                validate_candidate(ambient, &split.center_axes, &axes, options)
++            }) {
+                 Ok(validation) => validation,
+                 Err(LieError::ConstraintResidual {
+                     operation,
+@@ -332,15 +345,21 @@
+     let center = if split.center_axes.ncols() == 0 {
+         None
+     } else {
+-        Some(component(
+-            adjoint.family(),
+-            split.center_coordinates().clone(),
+-            options,
+-        )?)
++        Some(syntaqs_core::hotspot::phase("component_build", || {
++            component(
++                adjoint.family(),
++                split.center_coordinates().clone(),
++                options,
++            )
++        })?)
+     };
+     let simple_ideals = axes
+         .iter()
+-        .map(|q| component(adjoint.family(), split.orthonormal.forward.dot(q), options))
++        .map(|q| {
++            syntaqs_core::hotspot::phase("component_build", || {
++                component(adjoint.family(), split.orthonormal.forward.dot(q), options)
++            })
++        })
+         .collect::<Result<Vec<_>, _>>()?;
+     for (index, component) in center.iter().chain(&simple_ideals).enumerate() {
+         check_reconstruction(component, index)?;
+--- a/examples/src/bin/lie_analysis_bench.rs
++++ b/examples/src/bin/lie_analysis_bench.rs
+@@ -42,6 +42,7 @@
+     let result = f()?;
+     let ms = start.elapsed().as_secs_f64() * 1_000.0;
+     println!("{stage},{ms:.6}");
++    syntaqs_core::hotspot::print_and_reset(stage);
+     Ok(black_box(result))
+ }
+
