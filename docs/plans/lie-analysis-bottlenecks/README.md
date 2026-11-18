@@ -193,6 +193,60 @@ series retains its constraint shape, `125 × 25` for Heisenberg and
 `216 × 36` for the Majorana bilinears. All 22 cases pass closure and the
 expected center, commutant, and ideal dimension checks. [Reproduction](site-scaling.md#reproduction).
 
+### Improvement candidates
+
+1. **Skip commuting term pairs before building bracket products.** Prepare
+   the support of each term as the sites where it may act nontrivially.
+   Enumerate overlapping pairs via a site-to-term index and process each pair
+   once even if it overlaps on multiple sites. For an ordinary tensor product,
+   disjoint terms commute. In a graded product, skip disjoint pairs with an
+   even homogeneous operand. Two disjoint odd operands anticommute and their
+   ordinary bracket contributes `−2iAB`. Handle mixed parity through the
+   existing homogeneous decomposition. On the raw 16-site Heisenberg sums,
+   a single Hamiltonian/total-spin bracket has `45 × 16 = 720` term pairs,
+   of which 90 overlap. These counts estimate candidate work before local
+   multiplication and collection. Apply the shortcut after space validation
+   and check that it reduces both examined pairs and constructed products.
+   [Graded composition laws](../../design/composite-expression.md#7-ordinary-and-graded-composition-laws).
+2. **Index the compatible tensor terms.** After the pending RHS-reuse change
+   has been measured, use its closure profiles to decide whether to prototype
+   the index. Assign integer IDs to local sums using the existing equality
+   rules. On the current factor representation, index by the omitted position
+   and the IDs of the remaining factors. If the factor representation becomes
+   sparse, look up the exact key and one-factor deletions. Match deletions at
+   the same site for terms with two different explicit factors, and match an
+   exact key against a deletion for one explicit and one implicit factor.
+   Preserve the choice of the earliest retained candidate and reindex the
+   result after each merge. Measure candidate comparisons, ID assignment and
+   index costs, and total collection time. [Tensor merge implementation](../../../crates/syntaqs-core/src/evaluate/collect.rs#L62).
+3. **Keep spectators implicit throughout evaluation.** The deferred
+   identity-elision work starts by omitting exact `1 · I` placements from the
+   rebuilt expression. A later sparse representation would let collection
+   and matching operate on specified factors. In contractions, combine the
+   validated ambient factor order with the surviving nonidentity factors.
+   Include `Tr(I)` for implicit factors in ordinary trace. In normalized HS
+   those factors contribute one after graded lowering. Preserve the validation
+   of input references, and measure both rebuilt tree size and time per
+   contraction on the two-active-site spectator sweep. [Future work on implicit identities](../../future-work/evaluation-improvements.md#6-implicit-identity-factors-in-operator-evaluation).
+4. **Cancel parity prefixes before materializing them.** For a homogeneous
+   term, establish intrinsic site order with the existing crossing signs and
+   preserve product order within each site. Then scan the ordered sites from
+   right to left. At site `i`, multiply the local operator on the right by
+   `P_i` if and only if an odd number of odd factors lie to its right. Store
+   surviving intervals of parity factors until contraction. In particular,
+   the two prefixes on sites preceding an adjacent odd pair cancel before
+   construction. Compare the ordered and explicit-prefix forms on separated
+   sites, mixed-parity sums, adjoints, and repeated placements, then measure
+   the front/tail pair at fixed support. [Ordinary representation of graded terms](../../design/composite-expression.md#111-intrinsic-terms-and-ordinary-representations).
+
+The design checks compared the suffix-parity rule with explicit prefixes for
+97,207 Pauli placement sequences of lengths zero through four. They also
+checked sparse deletion keys against the dense compatibility rule on two to
+four factors. Compare pairwise closure diagnostics and structure constants
+under the same numerical settings when evaluating the candidates. The first
+measurement remains the pending RHS operand reuse. Use that profile to
+choose the next optimization from the remaining costs.
+
 ## Adjoint constraints and decomposition
 
 The full adjoint commutant has `n²` unknown matrix entries and `n³` scalar
