@@ -36,6 +36,21 @@ the dominant stages in a temporary copy. The driver checks closure and the
 expected center, full adjoint commutant, and simple-ideal dimensions on each full
 run.
 
+## Pending fixes
+
+- [ ] **Reuse collected operators when building the closure right-hand side.**
+  Collect each basis operator once per closure evaluation and each bracket once
+  per ordered pair. Contract the collected operands directly in the family's
+  context. Collect the full residual expression after subtracting the projection
+  so terms can cancel across the difference. Verify that right-hand-side
+  bracket collections fall from `n³` to at most `n²`, and compare pairwise
+  closure diagnostics and structure constants on ordinary and graded families.
+
+  After implementing reuse, rerun the same workloads and compare total closure
+  time and time spent in `merge_tensor` against the recorded baseline. Revisit
+  indexing merge candidates by all but one factor if `merge_tensor` still
+  materially limits closure performance. [Closure profile](hotspots.md#closure-and-projection).
+
 ## Workloads
 
 | Case | Construction | Lie algebra |
