@@ -1,6 +1,6 @@
 # Future work
 
-Updated: 2026-11-17
+Updated: 2026-11-18
 
 The topics below are deferred investigations and unadopted proposals, not a
 release commitment. Use [architecture](architecture.md) and the
@@ -76,3 +76,4 @@ Deferred investigations are described in [evaluation improvements](future-work/e
 - [Inner-product acceleration](future-work/evaluation-improvements.md#2-inner-product-acceleration): investigate basis-aware contraction, lazy group preparation, and partial reuse.
 - [Natural-state collection overhead](future-work/evaluation-improvements.md#3-natural-state-collection-overhead): reduce query preparation and allocation without persistent collection assumptions.
 - [Expression management and reuse](future-work/evaluation-improvements.md#4-expression-management-and-reuse): assess caches, retained parity structure, sharing, and parallelism.
+- [Implicit identity factors](future-work/evaluation-improvements.md#6-implicit-identity-factors-in-operator-evaluation): elide redundant local identity placements during collection, reconstruction, and contraction.
