@@ -2,7 +2,7 @@
 
 extern crate blas_provider as _;
 
-use std::{env, error::Error, hint::black_box, time::Instant};
+use std::{env, error::Error, hint::black_box, ops::Range, time::Instant};
 
 use num_complex::Complex64;
 use syntaqs_core::{expression::composite::Operator, space::HilbertSpace};
@@ -32,7 +32,7 @@ enum Run {
 }
 
 struct Expected<'a> {
-    hilbert: usize,
+    hilbert: u128,
     center: usize,
     ideals: &'a [usize],
 }
@@ -212,13 +212,19 @@ fn spin_one(cartesian: bool, run: Run) -> Result<()> {
     )
 }
 
-fn heisenberg(sites: usize, run: Run) -> Result<()> {
+fn heisenberg(sites: usize, active: usize, run: Run) -> Result<()> {
     let factors: Vec<_> = (0..sites).map(Space::factor).collect();
-    let h = SpinHalfModels::<Half>::heisenberg(&Chain::new(sites, Boundary::Open), &factors, 1.0)?;
-    let space = h.space().expect("Heisenberg model binds its space").clone();
+    let space = Space::tensor_all(factors.iter().cloned())?;
+    let active_factors = &factors[..active];
+    let h = SpinHalfModels::<Half>::heisenberg(
+        &Chain::new(active, Boundary::Open),
+        active_factors,
+        1.0,
+    )?
+    .bind(&space)?;
     let mut operators = Vec::new();
     for axis in AXES {
-        let terms = factors
+        let terms = active_factors
             .iter()
             .map(|factor| Half::operator(axis).at(factor))
             .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -257,19 +263,21 @@ fn pauli_z(run: Run) -> Result<()> {
     )
 }
 
-fn fermion_quadratics(modes: usize, run: Run) -> Result<()> {
+fn fermion_quadratics(sites: usize, active: Range<usize>, run: Run) -> Result<()> {
     type F = Fermion<Complex64>;
-    let factors: Vec<_> = (0..modes).map(Space::factor).collect();
+    let factors: Vec<_> = (0..sites).map(Space::factor).collect();
     let space = Space::tensor_all_g(factors.iter().cloned())?;
+    let active = &factors[active];
+    let modes = active.len();
     let mut operators = Vec::new();
     for a in 0..2 * modes {
         for b in a + 1..2 * modes {
             if a / 2 == b / 2 {
-                operators.push(F::operator(Majorana::Mz).at(&factors[a / 2])?);
+                operators.push(F::operator(Majorana::Mz).at(&active[a / 2])?);
             } else {
                 let axis = [Majorana::Mx, Majorana::My];
-                let left = F::operator(axis[a % 2]).at(&factors[a / 2])?;
-                let right = F::operator(axis[b % 2]).at(&factors[b / 2])?;
+                let left = F::operator(axis[a % 2]).at(&active[a / 2])?;
+                let right = F::operator(axis[b % 2]).at(&active[b / 2])?;
                 operators.push((left * right)?.scaled(Complex64::new(0.0, -1.0)));
             }
         }
@@ -279,12 +287,29 @@ fn fermion_quadratics(modes: usize, run: Run) -> Result<()> {
     measure(
         OperatorFamily::new_in(&space, operators)?,
         Expected {
-            hilbert: 1 << modes,
+            hilbert: 1 << sites,
             center: 0,
             ideals,
         },
         run,
     )
+}
+
+fn site_scaling_case(case: &str, run: Run) -> Result<()> {
+    let (family, size) = case
+        .rsplit_once('-')
+        .ok_or("expected a case with a site count")?;
+    let sites: usize = size.parse()?;
+    if !(2..=64).contains(&sites) {
+        return Err("expected a site count between 2 and 64".into());
+    }
+    match family {
+        "heisenberg" => heisenberg(sites, sites, run),
+        "heisenberg-2-in" => heisenberg(sites, 2, run),
+        "fermion-front" => fermion_quadratics(sites, 0..2, run),
+        "fermion-tail" => fermion_quadratics(sites, sites - 2..sites, run),
+        _ => Err(format!("unknown benchmark case: {case}").into()),
+    }
 }
 
 fn main() -> Result<()> {
@@ -306,13 +331,10 @@ fn main() -> Result<()> {
         "pauli-2-mixed" => two_site_paulis(true, run),
         "spin-one-dipole" => spin_one(false, run),
         "spin-one-cartesian" => spin_one(true, run),
-        "heisenberg-2" => heisenberg(2, run),
-        "heisenberg-4" => heisenberg(4, run),
-        "heisenberg-8" => heisenberg(8, run),
         "pauli-z-4" => pauli_z(run),
-        "fermion-2" => fermion_quadratics(2, run),
-        "fermion-3" => fermion_quadratics(3, run),
-        "fermion-4" => fermion_quadratics(4, run),
-        _ => Err(format!("unknown benchmark case: {case}").into()),
+        "fermion-2" => fermion_quadratics(2, 0..2, run),
+        "fermion-3" => fermion_quadratics(3, 0..3, run),
+        "fermion-4" => fermion_quadratics(4, 0..4, run),
+        _ => site_scaling_case(&case, run),
     }
 }

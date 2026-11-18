@@ -8,6 +8,9 @@ Measured on 2026-11-18 at revision `690b7b4ca6a59f88c48d0310d9faa80ab258aff1`.
   implementations scale and records stability checks on the same small bases.
 - The [internal profiles](hotspots.md) locate the cost within closure,
   the full adjoint commutant, and decomposition.
+- [Site-count scaling](#site-count-scaling-at-fixed-lie-dimension) compares
+  active chains, spectator extensions, and graded site placement at fixed Lie
+  dimension.
 - **Closure follows expression cost.** The Heisenberg family has `n=5`
   throughout, and its closure time grows from 3.36 ms on two sites to 136 ms
   on eight. At fixed `D=4` and `n=15`, mixing pairs of Pauli strings raises
@@ -130,6 +133,65 @@ family adapter. `LU solve` sums all retained-factor solves in the stage.
 | `pauli-2` | 4275 | 22.46 | 6.58 | 0.118 | 31.92 |
 | `pauli-2-mixed` | 4275 | 61.04 | 12.61 | 0.107 | 77.82 |
 | `fermion-4` | 25088 | 260.82 | 78.70 | 0.867 | 358.56 |
+
+## Site-count scaling at fixed Lie dimension
+
+The site-count sweep used 22 workloads at revision `e1e2ebd`. The tables
+report medians in milliseconds across three fresh processes per case with
+`f64` and one OpenBLAS thread. Closure starts with a retained Gram
+factorization. Decomposition starts with the retained adjoint. [Raw runs](site-scaling.csv).
+
+### Ordinary spins
+
+The active-chain family contains the three collective Pauli components, the
+open Heisenberg Hamiltonian, and identity (`n=5`). The control retains that
+family on the first two sites and extends the bound space with spectators.
+
+| Sites | Active-chain closure | Two-site closure | Active-chain decomposition | Two-site decomposition |
+| ---: | ---: | ---: | ---: | ---: |
+| 2 | 3.28 | 3.28 | 0.74 | 0.74 |
+| 4 | 17.14 | 4.46 | 2.80 | 1.04 |
+| 8 | 134.15 | 6.86 | 14.19 | 1.59 |
+| 12 | 588.97 | 9.28 | 40.48 | 2.31 |
+| 16 | 1830.79 | 11.72 | 87.97 | 2.94 |
+| 32 | — | 22.06 | — | 5.85 |
+| 64 | — | 43.55 | — | 12.64 |
+
+Each case makes 125 right-hand-side HS calls during closure. The two-site
+and 16-site active chains visit 1,250 and 90,710 intrinsic tensor terms,
+respectively, while collecting the RHS operands. On the 16-site chain the
+instrumented RHS phase takes 736 ms, including 472 ms in `merge_tensor`,
+and the residual norm takes another 306 ms. The spectator series retains
+the same 1,250 intrinsic terms across sizes. Collection, reconstruction, and
+trace traversal visit the ambient factors, so the work per term still grows.
+[Closure details](site-scaling.md#ordinary-spins).
+
+### Graded fermions
+
+The same six Majorana bilinears (`n=6`) act on two adjacent modes at the front
+or tail of the ordered graded space.
+
+| Sites | Front closure | Tail closure | Front decomposition | Tail decomposition |
+| ---: | ---: | ---: | ---: | ---: |
+| 2 | 4.04 | 4.04 | 1.79 | 1.79 |
+| 4 | 5.12 | 5.48 | 2.75 | 3.20 |
+| 8 | 7.52 | 8.44 | 5.01 | 6.18 |
+| 16 | 12.68 | 14.92 | 10.24 | 13.21 |
+| 32 | 24.14 | 28.52 | 23.26 | 29.51 |
+| 64 | 55.02 | 64.83 | 58.49 | 72.13 |
+
+The orthonormality checks after the split visit 288 tensor terms at every
+size and either position. On 64 sites, moving the active modes to the tail
+raises parity-factor insertions from 288 to 36,000. The local trace reduction
+within those checks rises from 1.52 to 9.39 ms. At the front, grading-aware
+term enumeration inside the same checks rises from 0.36 ms on two sites to
+24.76 ms on 64 sites as it processes additional spectator placements.
+[Graded traversal details](site-scaling.md#graded-fermions).
+
+The full adjoint commutant stays below 0.26 ms across the sweep. Each family
+series retains its constraint shape, `125 × 25` for Heisenberg and
+`216 × 36` for the Majorana bilinears. All 22 cases pass closure and the
+expected center, commutant, and ideal dimension checks. [Reproduction](site-scaling.md#reproduction).
 
 ## Adjoint constraints and decomposition
 
