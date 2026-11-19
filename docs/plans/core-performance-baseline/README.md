@@ -1,9 +1,11 @@
-# Core expression performance baseline
+# Core expression performance and refactoring plan
 
 This baseline measures the public construction, evaluation, contraction, and
 basis expansion APIs on spin-1/2, spin-1, and graded fermionic chains. It
 records where cost follows the ambient space, the number of intermediate
 contributions, or the requested output size.
+
+[Implementation stages](#implementation-plan) · [Refactoring targets](#refactoring-targets-supported-by-this-baseline) · [Reproduction commands](#reproduction)
 
 The largest avoidable workload measured was operator expansion of an XX gate
 layer followed by its inverse. At 16 sites, the query considered 65,536
@@ -166,6 +168,195 @@ builds a temporary map for each prefix of a tensor product, copies prefix
 digits, and constructs a final coordinate map. The required output size puts
 a floor on work, while the temporary maps and copies are implementation
 costs. [State basis traversal](../../../crates/syntaqs-core/src/basis/expansion/composite.rs).
+
+## Implementation plan
+
+Reduce avoidable work in space construction, state and operator evaluation,
+scalar contractions, and basis expansion. Use the agreed refactoring targets
+as the design reference and the recorded measurements as the historical
+baseline. The implementation includes the affected workspace callers and
+basis implementations where API bounds or methods change.
+[Refactoring targets](#refactoring-targets-supported-by-this-baseline)
+
+The space index and ordered operator products come first because later
+evaluators and basis queries consume them. State evaluation precedes state
+contraction so both can share normalized structures. Operator evaluation
+precedes direct operator contractions and basis conversion so each can use
+the same factor blocks and collected terms.
+
+### 0. Prepare the comparison
+
+Record the production revision and run the existing probe on the environment
+used for implementation. Check the probe's result assertions and match cases
+to the original CSVs. Add an isolated comparison before a change when the
+probe lacks the corresponding counter or case. Measure a first-use `bind`
+with a fresh equivalent space prepared outside the timed call, and measure
+repeated `bind` separately on a reused space. Capture a few controls for
+binary `*` construction and explicit-space rebinding.
+[Probe and reproduction commands](#reproduction)
+
+### 1. Space construction and binding
+
+Introduce the ordered factor-ID bounds at the affected constructors and
+replace duplicate detection with a temporary `BTreeSet`. Then reuse binding
+validation for actions on the same bound space. Add the lazily initialized
+position index on shared tensor nodes and use it for `bind`, operator basis
+placement, and graded operator ordering. Choose initialization compatible
+with core's `no_std` and shared `Arc` handles.
+
+Measure these changes separately with `tensor_all`, `build_model`, first and
+repeated `bind`, and `act` at 128–1,024 sites. Record equality and ordering
+comparisons, index initialization counts, and allocations. Verify duplicate
+and mixed-kind errors, missing indices, explicit rebinds, and factor orders
+that differ from ID order.
+[Duplicate detection](#check-duplicate-factor-ids-with-a-temporary-ordered-set) ·
+[Binding reuse](#reuse-operator-binding-during-delayed-action) ·
+[Shared factor positions](#share-factor-positions-on-the-hilbert-space)
+
+### 2. Ordered operator products
+
+Replace binary composite product nodes with ordered operand sequences. Migrate
+construction, grouping, action, term traversal, formatting, destruction, and
+basis product construction together. Store two operands inline for `*` and
+use a shared handle for a nested operand. Check right-first action, adjoint
+reversal, graded signs, and binding and error precedence for product sequences.
+
+Measure binary `*`, sequence construction, and `expand()` of 64-site
+Heisenberg `H²`. Count product nodes and operand-array allocations before
+introducing placed-node sharing.
+[Ordered operator product design](#store-composite-operator-products-as-ordered-sequences)
+
+### 3. State evaluation
+
+Replace temporary factor IDs in state-term keys with ordered factor IDs.
+Then change graded action to follow the state expression in tensor order.
+Finally, keep normalized state terms through the full evaluation and build
+returned syntax from the surviving structures. Verify collection between
+actions, nested sums and graded scopes, exact cancellation, first-occurrence
+order, and deep expressions at each applicable change.
+
+Measure each step with the last-site `X` sweep, near/middle/far hopping, and
+one through eight Heisenberg actions on Néel states. Track index comparisons,
+created expression nodes, final configurations, and allocations. Include
+the action-free product state as a control.
+[State term keys](#use-ordered-factor-indices-in-state-term-keys) ·
+[Graded action traversal](#traverse-the-state-expression-in-order-for-graded-actions) ·
+[Returned state syntax](#construct-the-returned-state-expression-after-evaluation)
+
+### 4. State contractions
+
+Generate matching blocks on demand and verify exact-zero stopping with
+differently grouped operands. Then use one normalization context and
+conjugate symmetry at the common contraction entry point, including nested
+matching sums and distinct outer coefficients.
+
+Measure prepared blocks and evaluated pairs separately on W norms and the
+factored plus norm. Check the W64 pair target of 2,080 against the original
+4,096. Compare numerical results with independent references, including
+complex off-diagonal terms and changes in floating-point summation order.
+[On-demand blocks](#generate-matching-contraction-blocks-on-demand) ·
+[Conjugate symmetry](#use-conjugate-symmetry-within-matching-contraction-blocks)
+
+### 5. Operator evaluation and basis conversion order
+
+Keep independent factor blocks in operator evaluation and combine overlapping
+blocks in product order. Exercise the result through `collect_terms_in()`
+and the basis queries. Validate the original placements before evaluation,
+then apply basis rules to the surviving terms. Verify partially overlapping
+supports, graded exchanges and adjoints, and the agreed zero and basis-error
+behavior.
+
+Measure the forward XX layer, XX echo, and Heisenberg `H²`. Count reached
+intermediate products, surviving coordinates, and allocation requests. Use
+the 16-site echo with one output coordinate and the forward layer with 256
+coordinates to distinguish eliminated intermediate work from required output.
+[Independent blocks](#preserve-independent-blocks-during-operator-evaluation) ·
+[Basis conversion after evaluation](#convert-surviving-operator-terms-to-basis-coordinates)
+
+### 6. Operator contractions
+
+Use the block representation to contract Hilbert–Schmidt operands directly.
+Measure direct contraction before adding symmetry within matching sums.
+Apply local parity in `trace()` and Hilbert–Schmidt contraction, resolving
+coefficient bounds for graded exchange signs. Compare against independent
+ordinary matrices and cover mixed parity, repeated factors, scale order, and
+the existing normalization of local traces.
+
+Measure Heisenberg Hilbert–Schmidt self products and graded Hubbard `trace`.
+Record evaluated pairs, pairs rejected by local parity or zero, parity
+strings created, and allocations. The 64-site Heisenberg baseline has 35,721
+candidate pairs, of which 17,955 are in one triangle including the diagonal.
+Track the 252 hopping terms in the 64-site Hubbard trace.
+[Direct Hilbert–Schmidt contraction](#contract-hilbertschmidt-operands-directly) ·
+[Local parity](#use-local-parity-in-operator-contractions)
+
+### 7. Basis coordinates and expanded syntax
+
+Make the following changes in order and checkpoint each separately.
+
+1. Introduce `Basis::expand_indices()` and `Basis::element()` and migrate
+   built-in and test bases. Measure direct indexed conversion before adding
+   query-local reuse of conversion results. Check basis order, invalid
+   indices, and agreement between index and element APIs.
+2. Enumerate operator coordinates using specified positions and spectator
+   gaps. Check single-component identities with unit and nonunit
+   coefficients and multi-component identities. Hold operator term
+   collection fixed for this comparison.
+3. Enumerate state tensor blocks with a reusable key and collect complete
+   coordinates. Check nested tensors, sums within blocks, and exact zero.
+4. Share the placed local nodes used to reconstruct states and operators
+   by `(factor position, basis index)`. Check sharing and round trips from
+   expansion back to coordinates.
+
+Measure basis calls, visited factors, intermediate map entries, and placed
+node counts as applicable. Use 64-site Heisenberg `H` and `H²`, the BLBQ and
+Hubbard basis controls, 14-site GHZ and plus for both APIs, and 18-site plus
+for `coordinates()`. Compare sharing against the post-product-change run.
+[Indexed basis API](#expand-primitives-to-indexed-basis-coefficients) ·
+[Operator enumeration](#enumerate-operator-coordinates-from-specified-positions-and-gaps) ·
+[State enumeration](#enumerate-state-basis-coordinates-by-tensor-block) ·
+[Placed-node sharing](#share-placed-basis-elements-across-expanded-terms)
+
+### 8. Run the full comparison
+
+Rerun the 310 baseline timing and allocation cases and the diagnostic
+assertions. Compare end-to-end `evaluate()`, `expectation()`, contractions,
+`coordinates()`, and `expand()` across spin-1/2, spin-1, and fermionic
+workloads. Run workspace checks and downstream integration tests for the
+affected APIs, using the repository verification guide. Summarize changes
+by workload, including regressions and the behavior of the controls.
+[Workspace verification](../../design/verification.md) ·
+[Original measurements](#measurement-method)
+
+### Performance records
+
+Save each checkpoint's raw timing, allocation, and diagnostic output under
+`measurements/` in this plan directory. Record the code revision, command,
+configuration, and case selection alongside the results. Use the original
+release workload definitions, case IDs, and coefficient types for matched
+comparisons. Keep existing baseline CSVs as the historical record.
+
+Summarize each checkpoint in a small table with the previous value, new
+value, and change. Report median thread CPU and elapsed time, allocation
+requests, cumulative requested bytes, and the relevant work counters. Record
+output counts or scalar reference checks alongside the performance results.
+Investigate regressions beyond observed timing variation before attributing
+them to a change. Use the preceding checkpoint to attribute individual changes
+and the stage 0 run on the same environment to report the cumulative result.
+
+### Progress and completion
+
+The baseline and refactoring decisions are recorded. Implementation and
+checkpoint measurements are pending. Record the verification and link to the
+measurement summary as each stage completes. Completion requires the agreed
+changes, passing applicable correctness and workspace checks, and a full
+comparison with explanations for material regressions or missing measurements.
+
+After the refactoring comparison, benchmark `Ord` and `PartialOrd` for state
+and operator primitives using the agreed workloads with few and many
+distinct primitives. Use those results to decide whether to change primitive
+bounds. Orthogonality-based pruning of contraction pairs remains a separate
+investigation. [Primitive ordering experiment](#measure-the-effect-of-ordering-primitive-values)
 
 ## Refactoring targets supported by this baseline
 
@@ -551,14 +742,18 @@ approach. [State primitive interning](../../../crates/syntaqs-core/src/evaluate/
 
 The probe uses a standalone Cargo workspace and the production crates from the
 current checkout. Run the commands from the repository root with Cargo on PATH.
-Timing uses the thread CPU clock on macOS or Linux.
+Timing uses the thread CPU clock on macOS or Linux. Set the results
+directory for the checkpoint being measured. The example records the
+stage 0 reference run.
 
 ```sh
-baseline=docs/plans/core-performance-baseline
-probe="$baseline/probe/Cargo.toml"
-cargo run --release --locked --manifest-path "$probe" --target-dir target -- diagnostics > "$baseline/diagnostics.csv"
-cargo run --release --locked --manifest-path "$probe" --target-dir target -- time > "$baseline/timings.csv"
-cargo run --release --locked --manifest-path "$probe" --target-dir target --features allocations -- allocations > "$baseline/allocations.csv"
+plan=docs/plans/core-performance-baseline
+probe="$plan/probe/Cargo.toml"
+results="$plan/measurements/stage-0"
+mkdir -p "$results"
+cargo run --release --locked --manifest-path "$probe" --target-dir target -- diagnostics > "$results/diagnostics.csv"
+cargo run --release --locked --manifest-path "$probe" --target-dir target -- time > "$results/timings.csv"
+cargo run --release --locked --manifest-path "$probe" --target-dir target --features allocations -- allocations > "$results/allocations.csv"
 ```
 
 An optional argument after the mode filters cases by substring of
