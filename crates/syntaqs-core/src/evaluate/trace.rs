@@ -5,6 +5,7 @@ use crate::{
     Product, Trace,
     coefficient::{add, multiply, zero},
     expression::traversal::{LinearTerms, OrdinaryOpTerms, operator_view},
+    space::FactorPositions,
 };
 use core::ops::Mul;
 use num_traits::{One, Zero};
@@ -72,7 +73,7 @@ fn one<C: One>() -> C {
     C::one()
 }
 
-impl<I: Eq, O, C> Operator<I, O, C> {
+impl<I: Ord, O, C> Operator<I, O, C> {
     /// Computes the ordinary full trace using the existing binding.
     /// An exact-zero local trace stops that tensor term, not the enclosing sum.
     pub fn trace(&self) -> Result<C, ExpressionError>
@@ -81,8 +82,7 @@ impl<I: Eq, O, C> Operator<I, O, C> {
         O: Identity + crate::HomogeneousParity + crate::ParityOperator,
         O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
     {
-        let ambient = self.select_space(None, None)?;
-        self.trace_on(ambient)
+        self.trace_in(self.bound_space()?)
     }
 
     /// Computes full trace on an explicit space, overriding an old binding.
@@ -92,7 +92,7 @@ impl<I: Eq, O, C> Operator<I, O, C> {
         O: Identity + crate::HomogeneousParity + crate::ParityOperator,
         O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
     {
-        let ambient = self.select_space(Some(ambient), None)?;
+        self.validate(&FactorPositions::new(ambient))?;
         self.trace_on(ambient)
     }
 
@@ -182,7 +182,8 @@ impl<I: Eq, O, C> Operator<I, O, C> {
         O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
     {
         let product = (self.adjoint() * rhs)?;
-        let ambient = product.select_space(None, None)?;
+        let ambient = product.bound_space()?;
+        product.validate(&FactorPositions::new(ambient))?;
         product.normalized_trace_on(ambient)
     }
 

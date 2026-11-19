@@ -28,7 +28,7 @@ pub enum ModelError {
 }
 
 // Validate independently of edge enumeration, sharing the existing site trees.
-fn model_space<I: Eq>(
+fn model_space<I: Ord>(
     chain: &Chain,
     factors: &[HilbertSpace<I>],
 ) -> Result<HilbertSpace<I>, ModelError> {
@@ -52,7 +52,7 @@ impl<C> SpinHalfModels<SpinHalf<C>> {
     /// Zero sites return a zero Hamiltonian bound to the unit space.
     /// Couplings refer to physical spins J = S/2; fractions must be represented
     /// by mathematical division, rather than truncating integer arithmetic.
-    pub fn xyz<I: Eq, R>(
+    pub fn xyz<I: Ord, R>(
         chain: &Chain,
         factors: &[HilbertSpace<I>],
         jx: R,
@@ -88,7 +88,7 @@ impl<C> SpinHalfModels<SpinHalf<C>> {
 
     /// Builds isotropic XYZ, with positive coupling ferromagnetic.
     /// Uses the same validation, all-leaf pairing and space binding as [`Self::xyz`].
-    pub fn heisenberg<I: Eq, R: Clone>(
+    pub fn heisenberg<I: Ord, R: Clone>(
         chain: &Chain,
         factors: &[HilbertSpace<I>],
         coupling: R,

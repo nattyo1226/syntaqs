@@ -3,7 +3,9 @@
 use alloc::{sync::Arc, vec::Vec};
 
 use super::parts::{AdjointExpr, ProductExpr, ScaleExpr, SumExpr};
-use crate::{ExpressionError, HilbertSpace, Identity, LocalOperator, LocalState};
+use crate::{
+    ExpressionError, HilbertSpace, Identity, LocalOperator, LocalState, space::FactorPositions,
+};
 
 /// A composite state with primitive types S and O and an immutable factor space.
 /// See [`crate::expression`] for mathematical Display and structural Debug formats.
@@ -335,6 +337,9 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         let states: SumExpr<Self> = states.into_iter().collect::<Result<_, _>>()?;
         Self::tensor_collected(space, states)
     }
+}
+
+impl<I: Ord, S, O, C> State<I, S, O, C> {
     /// Constructs a delayed action using a binding or this state's space.
     pub fn act(&self, operator: &Operator<I, O, C>) -> Result<Self, ExpressionError> {
         self.act_selected(operator, None)
@@ -352,7 +357,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         operator: &Operator<I, O, C>,
         ambient: Option<&HilbertSpace<I>>,
     ) -> Result<Self, ExpressionError> {
-        let space = operator.select_space(ambient, Some(&self.space))?;
+        let space = operator.action_space(ambient, &self.space)?;
         if !space.is_compatible_with(&self.space) {
             return Err(ExpressionError::IncompatibleSpaces);
         }
@@ -366,7 +371,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         })
     }
     pub(crate) fn into_act(self, operator: Operator<I, O, C>) -> Result<Self, ExpressionError> {
-        let space = operator.select_space(None, Some(&self.space))?;
+        let space = operator.action_space(None, &self.space)?;
         if !space.is_compatible_with(&self.space) {
             return Err(ExpressionError::IncompatibleSpaces);
         }
@@ -416,6 +421,9 @@ impl<I, O, C> Operator<I, O, C> {
     /// Borrows the ambient space, if bound.
     pub fn space(&self) -> Option<&HilbertSpace<I>> {
         self.ambient.as_ref()
+    }
+    pub(crate) fn bound_space(&self) -> Result<&HilbertSpace<I>, ExpressionError> {
+        self.space().ok_or(ExpressionError::UnboundOperator)
     }
     /// Borrows the source space of a bound endomorphism.
     pub fn domain(&self) -> Option<&HilbertSpace<I>> {
@@ -521,32 +529,49 @@ impl<I: Eq, O, C> Operator<I, O, C> {
     pub fn anticommutator(&self, rhs: &Self) -> Result<Self, ExpressionError> {
         Self::sum([(self * rhs)?, (rhs * self)?])
     }
+}
+
+impl<I: Ord, O, C> Operator<I, O, C> {
     /// Binds or rebinds this syntax to an explicit space, leaving the input intact.
     pub fn bind(&self, ambient: &HilbertSpace<I>) -> Result<Self, ExpressionError> {
-        self.validate(ambient)?;
+        self.validate(&FactorPositions::new(ambient))?;
         Ok(Self {
             expression: self.expression.clone(),
             ambient: Some(ambient.clone()),
         })
     }
-    pub(crate) fn select_space<'a>(
+    fn action_space<'a>(
         &'a self,
         explicit: Option<&'a HilbertSpace<I>>,
-        state: Option<&'a HilbertSpace<I>>,
+        state: &'a HilbertSpace<I>,
     ) -> Result<&'a HilbertSpace<I>, ExpressionError> {
-        let space = explicit
-            .or(self.ambient.as_ref())
-            .or(state)
-            .ok_or(ExpressionError::UnboundOperator)?;
-        self.validate(space)?;
+        let space = explicit.or(self.space()).unwrap_or(state);
+        // Delayed action can trust a binding to the very same space node.
+        if !self
+            .space()
+            .is_some_and(|bound| bound.shares_node_with(space))
+        {
+            self.validate(&FactorPositions::new(space))?;
+        }
         Ok(space)
     }
-    fn validate(&self, space: &HilbertSpace<I>) -> Result<(), ExpressionError> {
+    pub(crate) fn validate(
+        &self,
+        positions: &FactorPositions<'_, I>,
+    ) -> Result<(), ExpressionError> {
         let mut pending = alloc::vec![&self.expression];
+        let mut first = true;
         while let Some(op) = pending.pop() {
             match op.node() {
                 OpNode::Local(factor, _) => {
-                    if !space.contains_index(factor.factor_index().expect("placed factor")) {
+                    let index = factor.factor_index().expect("placed factor");
+                    // A single local reference needs only one membership scan.
+                    let present = if core::mem::take(&mut first) {
+                        positions.space().contains_index(index)
+                    } else {
+                        positions.position(index).is_some()
+                    };
+                    if !present {
                         return Err(ExpressionError::MissingIndex);
                     }
                 }

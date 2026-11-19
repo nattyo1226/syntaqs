@@ -13,7 +13,7 @@ impl Identity for Primitive {
         Self(0)
     }
 }
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Index(u8);
 struct OpaqueCoefficient;
 type Bare = Operator<Index, Primitive, OpaqueCoefficient>;

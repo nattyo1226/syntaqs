@@ -8,6 +8,7 @@ use super::{
 use crate::{
     Conjugate, HilbertSpace, LocalOperator,
     coefficient::{conjugate, multiply},
+    space::FactorPositions,
 };
 use alloc::{vec, vec::Vec};
 use core::ops::Mul;
@@ -281,22 +282,25 @@ where
 }
 
 /// Intrinsic graded factors. Never contains inserted parity strings.
-pub(crate) struct IntrinsicOpTerms<'a, I, O, C> {
+pub(crate) struct IntrinsicOpTerms<'a, 'query, 'space, I, O, C> {
     ordinary: OpTerms<'a, I, O, C>,
     graded: Option<HomogeneousTerms<'a, I, O, C>>,
-    ambient: &'a HilbertSpace<I>,
+    positions: &'query FactorPositions<'space, I>,
 }
-impl<'a, I, O, C> IntrinsicOpTerms<'a, I, O, C> {
-    pub(crate) fn new(root: &'a OpExpr<I, O, C>, ambient: &'a HilbertSpace<I>) -> Self {
+impl<'a, 'query, 'space, I, O, C> IntrinsicOpTerms<'a, 'query, 'space, I, O, C> {
+    pub(crate) fn new(
+        root: &'a OpExpr<I, O, C>,
+        positions: &'query FactorPositions<'space, I>,
+    ) -> Self {
         Self {
             ordinary: OpTerms::new(root),
-            graded: (ambient.effective_kind() == Some(crate::TensorKind::Graded))
+            graded: (positions.space().effective_kind() == Some(crate::TensorKind::Graded))
                 .then(|| HomogeneousTerms::new(root)),
-            ambient,
+            positions,
         }
     }
 }
-impl<'a, I: Eq, O, C> Iterator for IntrinsicOpTerms<'a, I, O, C>
+impl<'a, I: Ord, O, C> Iterator for IntrinsicOpTerms<'a, '_, '_, I, O, C>
 where
     O: crate::HomogeneousParity + crate::Product<C, Term = O> + crate::Adjoint<C, Term = O>,
     C: Clone
@@ -315,9 +319,8 @@ where
         let mut negative = false;
         for (factor, local, parity) in factors {
             let position = self
-                .ambient
-                .indices()
-                .position(|i| Some(i) == factor.factor_index())
+                .positions
+                .position(factor.factor_index().expect("placed factor"))
                 .expect("validated factor");
             let odd = parity == crate::Parity::Odd;
             for (p, _, _, previous_odd) in &sorted {

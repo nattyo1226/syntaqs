@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 use core::cell::Cell;
 use num_complex::Complex;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Index(u8);
 #[derive(Default)]
 struct Counts {
@@ -379,6 +379,13 @@ fn binding_merges_and_explicit_contexts_follow_the_selected_space() {
     assert!(matches!(state.act(&small), Err(E::IncompatibleSpaces)));
     assert!(state.act_in(&small, &ab).is_ok());
     assert!(state.act(&op).is_ok());
+    assert!(state.act(&large).unwrap().space().shares_node_with(&ab));
+    assert!((&large * &state).unwrap().space().shares_node_with(&ab));
+    assert!(matches!(state.act_in(&large, &b), Err(E::MissingIndex)));
+    assert!(matches!(
+        state.act_in(&large, &a),
+        Err(E::IncompatibleSpaces)
+    ));
     assert!(matches!(left.act(&large), Err(E::IncompatibleSpaces)));
     assert!(left.act_in(&large, &a).is_ok());
     assert!(matches!(op.bind(&b), Err(E::MissingIndex)));

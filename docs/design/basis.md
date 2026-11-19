@@ -171,7 +171,7 @@ Expanded syntax works without metadata: expand Sx into Sp+Sm, then back into Car
 | Local expressions / State / Operator | `coordinates(&basis)` | Independent aggregated sparse Coordinates. |
 | Operator | `coordinates_in(&basis, &ambient)` | Coordinates using the preferred explicit space. |
 
-All return `Result<_,BasisError>`, applying the same local basis to all factors and aggregating indices after evaluating local rules. States use their own space; operators prefer explicit space, then binding. A local basis never implies an unbound operator's ambient space. Operator queries need no primitive comparison/Clone or index Clone/Hash/Ord. Expand identity spectators too, even when identity is not itself a basis member. Zero retains its selected space as an empty sum; zero-factor states/operators use unit/scalar identity syntax.
+All return `Result<_,BasisError>`, applying the same local basis to all factors and aggregating indices after evaluating local rules. States use their own space. Operators prefer explicit space, then binding. A local basis never implies an unbound operator's ambient space. Operator queries require `I: Ord` and share a factor position lookup across membership checks, graded ordering, and coordinate placement. They need no primitive comparison or cloning. Expand identity spectators too, even when identity is not itself a basis member. Zero retains its selected space as an empty sum. Zero-factor states and operators use unit and scalar identity syntax respectively.
 
 State evaluation collects natural-state terms using PartialEq before basis
 expansion, without primitive Product. Local state queries require coefficient

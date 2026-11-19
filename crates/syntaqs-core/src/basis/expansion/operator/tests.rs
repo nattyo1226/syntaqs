@@ -1,5 +1,5 @@
 use super::*;
-use crate::{Dimension, DimensionOverflow, LinearCombination as Lc, TensorKind};
+use crate::{Dimension, DimensionOverflow, HilbertSpace, LinearCombination as Lc, TensorKind};
 use core::ops::{Add, Mul};
 use std::{cell::RefCell, num::NonZeroUsize};
 
@@ -191,8 +191,8 @@ impl<C: From<f64> + 'static> Basis<P, C> for B {
         .into_iter()
     }
 }
-#[derive(PartialEq, Eq)]
-struct Index(u8); // No Clone/Hash/Ord/Debug.
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+struct Index(u8); // No Clone/Hash/Debug.
 type Op<C = f64> = Operator<Index, P, C>;
 fn sites(n: u8) -> Vec<HilbertSpace<Index>> {
     (0..n)
@@ -471,9 +471,9 @@ fn expanded_payloads_share_identity_handles_and_join_only_for_new_keys() {
             Self(values.map(|v| v.0).sum())
         }
     }
-    let factors: Vec<_> = h.leaves().collect();
+    let positions = FactorPositions::new(&h);
     reset();
-    let result = operator_expansion(&op, &b, &h, &factors, Some(4), |_| Payload(1)).unwrap();
+    let result = operator_expansion(&op, &b, &positions, Some(4), |_| Payload(1)).unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result.values().next().unwrap().0, 2.0);
     assert_eq!(result.values().next().unwrap().1.0, 3);

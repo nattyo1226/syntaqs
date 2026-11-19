@@ -69,7 +69,7 @@ fn for_each_pauli_string<C, I, Group>(
     mut emit: impl FnMut(PauliString<I, C>),
 ) -> Result<(), Error>
 where
-    I: Eq,
+    I: Ord,
     Group: AsRef<[usize]>,
 {
     if sites.iter().any(|site| site.factor_index().is_none()) {
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn construction_needs_neither_clone_on_index_or_coefficient_nor_evaluation() {
-        #[derive(PartialEq, Eq)]
+        #[derive(PartialEq, Eq, PartialOrd, Ord)]
         struct Index(usize);
         struct Coefficient;
         impl From<f64> for Coefficient {

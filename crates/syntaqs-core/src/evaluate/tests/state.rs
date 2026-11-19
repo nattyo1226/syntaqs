@@ -60,7 +60,7 @@ impl<'a> Act<f64> for Ket<'a> {
         ])
     }
 }
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Index(u8);
 type St<'a> = State<Index, Ket<'a>, Gate, f64>;
 fn sum<'a>(parts: impl IntoIterator<Item = St<'a>>) -> Result<St<'a>, crate::ExpressionError> {

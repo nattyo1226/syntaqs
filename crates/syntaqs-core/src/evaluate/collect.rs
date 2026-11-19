@@ -11,6 +11,7 @@ use crate::{
         local::OperatorNode,
         traversal::{IntrinsicOpTerms, LinearTerms, LinearView},
     },
+    space::FactorPositions,
 };
 
 fn handle_view<O, C>(
@@ -129,7 +130,7 @@ impl<O, C> LocalOperator<O, C> {
     }
 }
 
-impl<I: Eq, O, C> Operator<I, O, C> {
+impl<I: Ord, O, C> Operator<I, O, C> {
     /// Collects local primitives and merges compatible intrinsic tensor terms.
     ///
     /// Uses the existing ordinary/graded traversal, including Koszul signs, and
@@ -150,13 +151,14 @@ impl<I: Eq, O, C> Operator<I, O, C> {
             + Neg<Output = C>,
         O: PartialEq + Identity + HomogeneousParity + Product<C, Term = O> + Adjoint<C, Term = O>,
     {
-        let ambient = self.select_space(Some(ambient), None)?;
-        let factors: Vec<_> = ambient.leaves().collect();
+        let positions = FactorPositions::new(ambient);
+        self.validate(&positions)?;
+        let factors = positions.leaves();
         let expression = self.expression.group_local();
         let mut terms = Vec::new();
-        for (coefficient, locals) in IntrinsicOpTerms::new(&expression, ambient) {
+        for (coefficient, locals) in IntrinsicOpTerms::new(&expression, &positions) {
             let mut product = Vec::with_capacity(factors.len());
-            for factor in &factors {
+            for factor in factors {
                 let identity;
                 let local = match locals
                     .iter()
@@ -176,11 +178,14 @@ impl<I: Eq, O, C> Operator<I, O, C> {
             .into_iter()
             .filter(|(c, _)| !c.is_zero())
             .map(|(c, operands)| {
-                Self::try_product(operands.iter().zip(&factors).map(|(terms, factor)| {
+                Self::try_product(operands.iter().zip(factors).map(|(terms, factor)| {
                     LocalOperator::sum(terms.iter().map(|(c, op)| op.scaled(c.clone()))).at(factor)
                 }))
                 .map(|op| op.scaled(c))
             });
-        Self::try_sum(operators)?.bind(ambient)
+        let mut collected = Self::try_sum(operators)?;
+        // Every placement above comes from the selected space's leaves.
+        collected.ambient = Some(ambient.clone());
+        Ok(collected)
     }
 }

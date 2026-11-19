@@ -162,7 +162,7 @@ H's direct children are `[T_o(a,b),c]` and indices `[Index(a),Index(b),Index(c)]
 | API | Result and constraints |
 | --- | --- |
 | `HilbertSpace::factor(index)`, `unit()` | Construct an existing-index factor or empty tensor; no index Clone/Default. |
-| `tensor_all_with(kind, children)`, `tensor_all(children)`, `tensor_all_g(children)` | Explicit, ordinary, or graded construction; Eq checks duplicates/kinds; returns `Result<Self, SpaceError>`. |
+| `tensor_all_with(kind, children)`, `tensor_all(children)`, `tensor_all_g(children)` | Explicit, ordinary, or graded construction. Requires `I: Ord` to check duplicates. Returns `Result<Self, SpaceError>`. |
 | `tensor_with(kind, &rhs)`, `tensor(&rhs)`, `tensor_g(&rhs)` | Corresponding binary forms, left factors before right. |
 | `kind()`, `effective_kind()` | Stored tensor kind and effective `Option<TensorKind>` after unit/singleton identification. |
 | `factor_index()`, `children()`, `indices()` | Borrow a factor's `Option<&I>`, immediate children, or all leaf indices. |
@@ -191,4 +191,7 @@ Handles retain only a structural leaf-count class (zero, one, multiple) and effe
 
 Thus `T_o(E,T_g(a,b))` is allowed while `T_o(a,T_g(b,c))` returns `SpaceError::MixedTensorKinds`. Zero/one-leaf spaces have no effective kind and both rules agree. Multi-factor compatibility, subsystem checks, and evaluation use effective_kind().
 
-Retain trees and child grouping. Singleton wrappers inherit child metadata in constant time without rescanning descendants; duplicate checks add no Hash/Ord/Clone beyond Eq. Traversal and destruction remain iterative.
+Trees retain child grouping. Singleton wrappers inherit child metadata in
+constant time. After checking tensor kinds, constructors detect repeated IDs
+with a temporary ordered set of borrowed IDs. Traversal and destruction remain
+iterative.

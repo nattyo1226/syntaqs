@@ -50,7 +50,13 @@ There is no separate operator tensor-product operation or node. Ordinary multipl
 
 Placing a state creates a state on the factor with that Index. Adding a new factor requires a state for that factor or an explicit embedding map; identity spectators do not fill missing state factors.
 
-An explicit space takes precedence over an existing binding. Applying an unbound operator uses the state's space. Composite-operator trace and basis operations without either a binding or an explicit space return `UnboundOperator`. The selected space validates factor existence and compatibility with the state space, without modifying the original expression.
+An explicit space takes precedence over an existing binding. Applying an unbound
+operator uses the state's space. Delayed action trusts a binding to the selected
+space's shared root. Otherwise it checks each referenced factor before checking
+compatibility with the state. Composite operator trace and basis operations
+without either a binding or an explicit space return `UnboundOperator`.
+Binding, delayed action, and composite operator queries that resolve factor
+positions require `I: Ord`.
 
 Operator sums and products compare spaces only when every operand is bound. Any unbound operand makes the result unbound, and old bindings are not retained in child nodes. Conditions known at construction are checked immediately; conditions depending on the full space are checked during binding or evaluation. Zero, identity, and zero coefficients do not bypass invalid-reference checks.
 

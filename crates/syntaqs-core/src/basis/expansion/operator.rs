@@ -5,9 +5,10 @@ use num_traits::{One, Zero};
 
 use super::{Expansion, accumulate_with, local::local_operator};
 use crate::{
-    Adjoint, Basis, BasisError, Conjugate, HilbertSpace, HomogeneousParity, Identity,
-    LocalOperator, Operator, Product,
+    Adjoint, Basis, BasisError, Conjugate, HomogeneousParity, Identity, LocalOperator, Operator,
+    Product,
     expression::{parts::SumExpr, traversal::IntrinsicOpTerms},
+    space::FactorPositions,
 };
 
 // Coordinates need no payload. Expanded syntax joins cheap local handles only
@@ -136,11 +137,10 @@ fn enumerate<V: OperatorValue, C: Clone + Zero + One>(
     }
 }
 
-pub(super) fn operator_expansion<I: Eq, O, C, B, V: OperatorValue>(
+pub(super) fn operator_expansion<I: Ord, O, C, B, V: OperatorValue>(
     op: &Operator<I, O, C>,
     basis: &B,
-    ambient: &HilbertSpace<I>,
-    factors: &[&HilbertSpace<I>],
+    positions: &FactorPositions<'_, I>,
     dimension: Option<usize>,
     make: impl Fn(O) -> V,
 ) -> Result<Expansion<V, C>, BasisError>
@@ -152,17 +152,17 @@ where
     let expression = op.expression.group_local();
     let mut result = Expansion::new();
     let mut identity: Option<Choices<V, C>> = None;
-    let mut key = vec![0; factors.len()];
-    for (coefficient, locals) in IntrinsicOpTerms::new(&expression, ambient) {
+    let factor_count = positions.leaves().len();
+    let mut key = vec![0; factor_count];
+    for (coefficient, locals) in IntrinsicOpTerms::new(&expression, positions) {
         // Ordinary intrinsic terms retain encounter order; graded terms have
         // already resolved crossing signs. Position sorting here exchanges no
         // local algebra and never recomputes a graded sign.
         let mut locals: Vec<_> = locals
             .into_iter()
             .map(|(factor, local)| {
-                let position = factors
-                    .iter()
-                    .position(|f| f.factor_index() == factor.factor_index())
+                let position = positions
+                    .position(factor.factor_index().expect("placed factor"))
                     .expect("validated factor");
                 (position, local)
             })
@@ -172,7 +172,7 @@ where
         let mut locals = locals.into_iter().peekable();
         let mut spectators = false;
         // Validate every reached local expansion, even when another is zero.
-        for position in 0..factors.len() {
+        for position in 0..factor_count {
             if locals.peek().is_some_and(|(p, _)| *p == position) {
                 let (_, local) = locals.next().unwrap();
                 let choices =
@@ -215,7 +215,7 @@ where
         });
         let axes: Vec<_> = if spectators && single.is_none() {
             let mut next = 0;
-            (0..factors.len())
+            (0..factor_count)
                 .map(|position| {
                     let choices = if specified.get(next).is_some_and(|f| f.position == position) {
                         let choices = specified[next].choices.as_slice();
@@ -244,7 +244,7 @@ where
             |digits, c, selected| {
                 accumulate_with(&mut result, digits.to_vec(), c, || {
                     let mut next = 0;
-                    V::product((0..factors.len()).map(|position| {
+                    V::product((0..factor_count).map(|position| {
                         if axes.get(next).is_some_and(|a| a.position == position) {
                             let i = next;
                             next += 1;

@@ -389,6 +389,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// Computes the unnormalized expectation without requiring prior evaluation.
     pub fn expectation(&self, operator: &Operator<I, O, C>) -> Result<C, ExpressionError>
     where
+        I: Ord,
         C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
         S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
         O: Adjoint<C, Term = O> + crate::HomogeneousParity + crate::ParityOperator,
@@ -403,6 +404,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         ambient: &HilbertSpace<I>,
     ) -> Result<C, ExpressionError>
     where
+        I: Ord,
         C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
         S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
         O: Adjoint<C, Term = O> + crate::HomogeneousParity + crate::ParityOperator,

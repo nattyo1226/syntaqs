@@ -136,7 +136,7 @@ impl<I: Eq, O, C> Mul for Operator<I, O, C> {
     }
 }
 
-impl<I: Eq, S, O, C> Mul<State<I, S, O, C>> for Operator<I, O, C> {
+impl<I: Ord, S, O, C> Mul<State<I, S, O, C>> for Operator<I, O, C> {
     type Output = Result<State<I, S, O, C>, ExpressionError>;
     fn mul(self, rhs: State<I, S, O, C>) -> Self::Output {
         rhs.into_act(self)

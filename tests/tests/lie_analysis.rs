@@ -86,7 +86,7 @@ impl<R: graded::Real> Trace<Complex<R>> for GradedPrimitive {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Factor(u8);
 
 macro_rules! precision_tests {

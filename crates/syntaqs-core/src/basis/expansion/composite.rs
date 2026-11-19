@@ -9,6 +9,7 @@ use crate::{
         composite::{OpExpr, OpNode, StateExpr, StateNode},
         parts::{ProductExpr, ScaleExpr, SumExpr},
     },
+    space::FactorPositions,
 };
 use alloc::{collections::BTreeMap, vec, vec::Vec};
 use core::ops::Mul;
@@ -194,7 +195,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     }
 }
 
-impl<I: Eq, O, C> Operator<I, O, C> {
+impl<I: Ord, O, C> Operator<I, O, C> {
     /// Expands on the existing binding; an unbound operator returns an error.
     pub fn expand<B>(&self, basis: &B) -> Result<Self, BasisError>
     where
@@ -206,7 +207,7 @@ impl<I: Eq, O, C> Operator<I, O, C> {
             + Adjoint<C, Term = O>,
         B: Basis<O, C>,
     {
-        self.expand_in(basis, self.select_space(None, None)?)
+        self.expand_in(basis, self.bound_space()?)
     }
 
     /// Expands on an explicit space, overriding any previous binding.
@@ -224,10 +225,11 @@ impl<I: Eq, O, C> Operator<I, O, C> {
             + Adjoint<C, Term = O>,
         B: Basis<O, C>,
     {
-        let ambient = self.select_space(Some(ambient), None)?;
-        let factors = collect_leaves(ambient);
+        let positions = FactorPositions::new(ambient);
+        self.validate(&positions)?;
+        let factors = positions.leaves();
         let dimension = local_size::<O>(factors.len())?;
-        let terms = operator_expansion(self, basis, ambient, &factors, dimension, |p| {
+        let terms = operator_expansion(self, basis, &positions, dimension, |p| {
             vec![LocalOperator::primitive(p)]
         })?;
         let expressions = terms
@@ -235,7 +237,7 @@ impl<I: Eq, O, C> Operator<I, O, C> {
             .map(|(c, locals)| {
                 let mut iter = locals
                     .into_iter()
-                    .zip(&factors)
+                    .zip(factors)
                     .map(|(local, factor)| OpExpr::new(OpNode::Local((*factor).clone(), local)));
                 let product = match iter.next() {
                     None => OpExpr::new(OpNode::Identity),
@@ -269,7 +271,7 @@ impl<I: Eq, O, C> Operator<I, O, C> {
             + Adjoint<C, Term = O>,
         B: Basis<O, C>,
     {
-        self.coordinates_in(basis, self.select_space(None, None)?)
+        self.coordinates_in(basis, self.bound_space()?)
     }
 
     /// Obtains operator-basis coordinates on an explicit space, overriding a binding.
@@ -289,10 +291,11 @@ impl<I: Eq, O, C> Operator<I, O, C> {
             + Adjoint<C, Term = O>,
         B: Basis<O, C>,
     {
-        let ambient = self.select_space(Some(ambient), None)?;
-        let factors = collect_leaves(ambient);
+        let positions = FactorPositions::new(ambient);
+        self.validate(&positions)?;
+        let factors = positions.leaves();
         let dimension = local_size::<O>(factors.len())?;
-        let terms = operator_expansion(self, basis, ambient, &factors, dimension, |_| ())?;
+        let terms = operator_expansion(self, basis, &positions, dimension, |_| ())?;
         Ok(Coordinates {
             basis,
             space: ambient.clone(),

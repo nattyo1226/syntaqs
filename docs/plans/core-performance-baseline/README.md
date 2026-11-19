@@ -199,10 +199,10 @@ binary `*` construction and explicit-space rebinding.
 
 Introduce the ordered factor-ID bounds at the affected constructors and
 replace duplicate detection with a temporary `BTreeSet`. Then reuse binding
-validation for actions on the same bound space. Add the lazily initialized
-position index on shared tensor nodes and use it for `bind`, operator basis
-placement, and graded operator ordering. Choose initialization compatible
-with core's `no_std` and shared `Arc` handles.
+validation for actions on the same bound space. Use a lazily initialized
+position index within each `bind` or operator query. Share it across validation,
+operator basis placement, and graded operator ordering in that query. Keep
+index construction compatible with core's `no_std` and current dependencies.
 
 Measure these changes separately with `tensor_all`, `build_model`, first and
 repeated `bind`, and `act` at 128–1,024 sites. Record equality and ordering
@@ -348,11 +348,12 @@ and the stage 0 run on the same environment to report the cumulative result.
 
 Stage 0 is complete. The reference run covers the original cases and adds
 controls for first-use binding, explicit rebinding, and product construction.
-Stages 1–8 are pending. Record the verification and link to the measurement
-summary as each stage completes. Completion requires the agreed changes,
-passing applicable correctness and workspace checks, and a full comparison
-with explanations for material regressions or missing measurements.
-[Stage 0 measurements](measurements/stage-0/README.md)
+Stage 1 is complete with factor positions scoped to one query. Sharing the
+index across separate calls is deferred. Stages 2–8 are pending. Completion
+requires the agreed changes, passing applicable correctness and workspace
+checks, and a full comparison with explanations for material regressions or
+missing measurements.
+[Stage 0 measurements](measurements/stage-0/README.md) · [Stage 1 measurements](measurements/stage-1/README.md)
 
 After the refactoring comparison, benchmark `Ord` and `PartialOrd` for state
 and operator primitives using the agreed workloads with few and many
@@ -399,8 +400,8 @@ clocks retained for reassessment.
 `bind` validates that every referenced factor belongs to the target space.
 Use this guarantee when `act` selects the operator's stored binding or when
 `act_in` selects a space sharing that binding's root node. For an unbound
-operator or an explicit space with a different root, call `bind` on the
-selected space before constructing the delayed action. Then check that the
+operator or an explicit space with a different root, apply the same membership
+validation as `bind` before constructing the delayed action. Then check that the
 selected space and the state's space are compatible. Keep the selection
 order of explicit space, stored binding, then state space, and record the
 selected space as the scope of the action.
@@ -417,19 +418,20 @@ references. [Diagnostic counts](diagnostics.csv).
 
 ### Share factor positions on the Hilbert space
 
-Build the index on the first factor ID lookup for a shared tensor node.
-Collect its leaf handles in tensor order and store a second array containing
-their positions sorted by `I: Ord`. Find a leaf directly by position. Find
-the position of an ID by binary searching the second array and comparing
-the indices borrowed from the corresponding leaves. Derive both arrays from
-the child tree and share them with every handle to the same space node.
+Stage 1 builds the index within one query. Store borrowed leaves in tensor
+order and lazily sort a separate array of their positions by `I: Ord`. Find a
+leaf directly by its tensor position. Find the position of an ID by binary
+searching the second array. Membership validation scans the first reference
+directly and uses the position index for later references. This avoids sorting
+for an action with just one local reference. Basis queries reuse the index for
+all phases that need reverse lookup.
 
 Use the index for membership checks in `bind`, for axis positions in operator
 basis expansion, and for computing exchange signs when graded operator terms
 are put in factor order. Verify nested spaces, equal IDs on distinct leaf
-handles, missing IDs, and factor orders that differ from ID order. Verify
-that incremental construction initializes the index only on queried spaces
-and that repeated lookups on a shared node reuse it.
+handles, missing IDs, and factor orders that differ from ID order. The
+within-query index takes no new production dependency. A single index shared
+across calls through the same space root remains deferred.
 
 Compare first-use and repeated calls separately in the Heisenberg `bind`,
 `H²` coordinates, and graded hopping coordinate controls. Count index
@@ -444,7 +446,7 @@ Require `I: Ord` in the tensor-space constructors. After checking tensor
 kinds, traverse the leaves in input order when combining two or more
 children. Insert each borrowed ID into a temporary `BTreeSet<&I>` and return
 `DuplicateIndex` at the first repeated ID. Discard the set after validation.
-The space's factor-position index is built on its first lookup.
+Queries build their factor-position index when needed.
 
 Verify duplicates across nested children with distinct handles for the same
 ID, input factor order, and precedence of `MixedTensorKinds`. Compare

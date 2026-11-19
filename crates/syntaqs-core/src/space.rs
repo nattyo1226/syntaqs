@@ -1,7 +1,7 @@
 //! Immutable ordinary and graded tensor spaces, generic over an equality-comparable index.
 
-use alloc::{sync::Arc, vec, vec::Vec};
-use core::{iter::FusedIterator, num::NonZeroUsize, slice};
+use alloc::{collections::BTreeSet, sync::Arc, vec, vec::Vec};
+use core::{cell::OnceCell, iter::FusedIterator, num::NonZeroUsize, slice};
 
 use crate::expression::parts::SumExpr;
 
@@ -190,7 +190,7 @@ impl<I> HilbertSpace<I> {
     }
 }
 
-impl<I: Eq> HilbertSpace<I> {
+impl<I: Ord> HilbertSpace<I> {
     /// Constructs a tensor, retaining children and grouping and rejecting duplicates.
     pub fn tensor_all(children: impl IntoIterator<Item = Self>) -> Result<Self, SpaceError> {
         Self::tensor_all_with(TensorKind::Ordinary, children)
@@ -222,12 +222,11 @@ impl<I: Eq> HilbertSpace<I> {
         // Every existing child is valid. A sole child cannot introduce duplicates,
         // and preserving this case avoids quadratic construction of deep grouping.
         if let SumExpr::Many(parts) = &children {
-            let mut seen: Vec<&I> = Vec::new();
+            let mut seen = BTreeSet::new();
             for index in parts.iter().flat_map(Self::indices) {
-                if seen.contains(&index) {
+                if !seen.insert(index) {
                     return Err(SpaceError::DuplicateIndex);
                 }
-                seen.push(index);
             }
         }
         Ok(Self::new(Node::Tensor(kind, children)))
@@ -245,7 +244,9 @@ impl<I: Eq> HilbertSpace<I> {
     pub fn tensor_with(&self, kind: TensorKind, rhs: &Self) -> Result<Self, SpaceError> {
         Self::tensor_all_with(kind, [self.clone(), rhs.clone()])
     }
+}
 
+impl<I: Eq> HilbertSpace<I> {
     /// Tests equality of ordered factors, independently of grouping and sharing.
     pub fn is_compatible_with(&self, rhs: &Self) -> bool {
         self.shares_node_with(rhs)
@@ -265,6 +266,50 @@ impl<I: Eq> HilbertSpace<I> {
     /// Tests whether this space contains an index, without inferring its structure.
     pub fn contains_index(&self, index: &I) -> bool {
         self.indices().any(|i| i == index)
+    }
+}
+
+/// Factor lookup shared by the phases of one query on a space.
+pub(crate) struct FactorPositions<'a, I> {
+    space: &'a HilbertSpace<I>,
+    leaves: OnceCell<Vec<&'a HilbertSpace<I>>>,
+    by_index: OnceCell<Vec<usize>>,
+}
+
+impl<'a, I> FactorPositions<'a, I> {
+    pub(crate) fn new(space: &'a HilbertSpace<I>) -> Self {
+        Self {
+            space,
+            leaves: OnceCell::new(),
+            by_index: OnceCell::new(),
+        }
+    }
+
+    pub(crate) fn space(&self) -> &'a HilbertSpace<I> {
+        self.space
+    }
+
+    pub(crate) fn leaves(&self) -> &[&'a HilbertSpace<I>] {
+        self.leaves.get_or_init(|| self.space.leaves().collect())
+    }
+}
+
+impl<I: Ord> FactorPositions<'_, I> {
+    pub(crate) fn position(&self, index: &I) -> Option<usize> {
+        if let Some(leaf) = self.space.factor_index() {
+            return (leaf == index).then_some(0);
+        }
+        let leaves = self.leaves();
+        let leaf_index = |position: usize| leaves[position].factor_index().expect("space leaf");
+        let by_index = self.by_index.get_or_init(|| {
+            let mut positions: Vec<_> = (0..leaves.len()).collect();
+            positions.sort_unstable_by(|&a, &b| leaf_index(a).cmp(leaf_index(b)));
+            positions
+        });
+        by_index
+            .binary_search_by(|&position| leaf_index(position).cmp(index))
+            .ok()
+            .map(|slot| by_index[slot])
     }
 }
 
@@ -313,5 +358,34 @@ impl<I> Drop for HilbertSpace<I> {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn positions_are_lazy_and_reused_within_a_query_in_tensor_order() {
+        let a = HilbertSpace::factor(30);
+        let b = HilbertSpace::factor(10);
+        let c = HilbertSpace::factor(20);
+        let space = a.tensor(&b.tensor(&c).unwrap()).unwrap();
+        let positions = FactorPositions::new(&space);
+        assert!(positions.leaves.get().is_none());
+        assert!(positions.by_index.get().is_none());
+
+        let equal_index = HilbertSpace::factor(10);
+        assert_eq!(
+            positions.position(equal_index.factor_index().unwrap()),
+            Some(1)
+        );
+        let sorted = positions.by_index.get().unwrap();
+        assert_eq!(positions.position(&30), Some(0));
+        assert_eq!(positions.position(&20), Some(2));
+        assert_eq!(positions.position(&99), None);
+        assert!(core::ptr::eq(sorted, positions.by_index.get().unwrap()));
+        assert!(positions.leaves()[1].shares_node_with(&b));
+        assert!(FactorPositions::new(&space).by_index.get().is_none());
     }
 }

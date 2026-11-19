@@ -20,7 +20,12 @@ Public entry points are associated functions on `syntaqs_spin_half::models::Spin
 | `Models::xyz(&chain, &factors, jx, jy, jz)` | `OperatorOf<Spin, I>` |
 | `Models::heisenberg(&chain, &factors, coupling)` | `OperatorOf<Spin, I>` |
 
-All return Result and validate sequence length and all leaf duplicates even without edges. Length errors are `ModelError::Mapping(MappingError::SiteCountMismatch { expected, actual })`, duplicates `ModelError::Space(SpaceError::DuplicateIndex)`, and placement/binding errors ModelError::Expression. Original errors remain sources; indices need only Eq.
+All return `Result` and validate sequence length and leaf uniqueness even
+without edges. Length mismatches are
+`ModelError::Mapping(MappingError::SiteCountMismatch { expected, actual })`.
+Duplicate indices are `ModelError::Space(SpaceError::DuplicateIndex)`.
+Placement and binding errors use `ModelError::Expression`. The original errors
+remain available as sources. Indices require `Ord`.
 
 XYZ constructs `−(1/4)Σ_(i,j) Σ_(a∈Li,b∈Lj) (Jx Sx_a Sx_b + Jy Sy_a Sy_b + Jz Sz_a Sz_b)`, using NearestNeighbors and all leaves_cartesian pairs between sites. Li is the leaf set of site i. There are no within-site terms. Heisenberg sets all couplings to J; positive J is ferromagnetic. No positional zip is implicitly chosen.
 
@@ -137,7 +142,7 @@ BLBQ accepts independent bilinear J and biquadratic K. The angular convention `H
 All take &Chain and site spaces and return `Result<_,syntaqs_spin_one::models::ModelError>`. Site, pairing, and binding contracts follow SpinHalf XYZ/Heisenberg:
 
 - One input space is one site; couple every leaf pair across adjacent sites. BLBQ squares each pair's `A_ab=S_a·S_b` separately, without within-site terms or cross terms between different leaf pairs.
-- Check count and global index uniqueness independently of edges/couplings, requiring only Eq on I, not Clone/Hash/Ord.
+- Check count and global index uniqueness independently of edges/couplings, using `I: Ord`.
 - Bind to site handles tensored in input order, retaining local grouping, leaves, and spectators; do not reconstruct another ambient space's upper grouping/order.
 - Empty sites retain positions without reconnecting neighbors. Zero sites give zero on the unit; one/all-empty sites give zero bound to input space structure.
 - Follow [Chain boundaries](geometry.md): no edges for zero/one site, one for two sites with either boundary.
@@ -150,9 +155,9 @@ XYZ composes placed Cartesian products/sums; Heisenberg is its isotropic case. B
 
 | Function | Construction bounds |
 | --- | --- |
-| `xyz<I: Eq,R>` | `C: Clone + From<R> + Neg<Output=C> + One + Add<Output=C> + Div<Output=C>` |
-| `heisenberg<I: Eq,R: Clone>` | `C: Clone + From<R> + Neg<Output=C> + One + Add<Output=C> + Div<Output=C>` |
-| `blbq<I: Eq,R>` | `C: Clone + From<R> + Neg<Output=C> + One + Add<Output=C> + Div<Output=C>` |
+| `xyz<I: Ord,R>` | `C: Clone + From<R> + Neg<Output=C> + One + Add<Output=C> + Div<Output=C>` |
+| `heisenberg<I: Ord,R: Clone>` | `C: Clone + From<R> + Neg<Output=C> + One + Add<Output=C> + Div<Output=C>` |
+| `blbq<I: Ord,R>` | `C: Clone + From<R> + Neg<Output=C> + One + Add<Output=C> + Div<Output=C>` |
 
 Construction performs rational rescaling in C without local evaluation, expansion, matrices, backends, Float, Zero, or conjugation. Evaluation/trace/export retain their own core/primitive bounds. QuantumSystem gets no model-specific methods.
 

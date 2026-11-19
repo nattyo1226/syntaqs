@@ -43,7 +43,7 @@ fn independent_construction_and_aliases_need_no_evaluation_capabilities() {
 
 #[test]
 fn all_system_builders_accept_non_clone_primitives_coefficients_and_indices() {
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, PartialOrd, Ord)]
     struct Index(u8);
     let a = HilbertSpace::factor(Index(3));
     let b = HilbertSpace::factor(Index(1));
@@ -169,7 +169,7 @@ fn explicit_builders_validate_counts_and_operators_still_validate_placement() {
 
 #[test]
 fn builders_share_spaces_without_borrowing_assignment_storage() {
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, PartialOrd, Ord)]
     struct BorrowedIndex<'a>(&'a str);
     let names = [String::from("a"), String::from("b")];
     let (state, operator) = {

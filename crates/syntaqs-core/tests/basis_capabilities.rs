@@ -350,8 +350,8 @@ fn basis_enumeration_needs_no_index_comparison() {
     );
 }
 
-#[derive(PartialEq, Eq)]
-struct Index(u8); // No Clone, Hash, Ord or Debug.
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+struct Index(u8); // No Clone, Hash or Debug.
 
 #[test]
 fn placed_expansion_shares_nonclone_indices_and_does_not_enumerate_all_basis_elements() {

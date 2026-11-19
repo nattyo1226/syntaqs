@@ -70,8 +70,8 @@ impl Basis<Ket, f64> for Ordered {
     }
 }
 
-#[derive(PartialEq, Eq)]
-struct Index(u8); // No Clone, Hash or Ord.
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+struct Index(u8); // No Clone or Hash.
 
 #[test]
 fn exports_need_neither_primitive_cloning_nor_operator_products_or_index_cloning() {

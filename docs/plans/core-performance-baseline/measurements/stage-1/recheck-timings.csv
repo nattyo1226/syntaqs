@@ -1,0 +1,3 @@
+system,workload,sites,factors,order,api,iterations,median_wall_ns,median_cpu_ns,wall_1_ns,wall_2_ns,wall_3_ns,wall_4_ns,wall_5_ns,wall_6_ns,wall_7_ns,cpu_1_ns,cpu_2_ns,cpu_3_ns,cpu_4_ns,cpu_5_ns,cpu_6_ns,cpu_7_ns
+spin_half,single_x_on_neel,16,16,1,evaluate_input,65536,18.116,18.119,18.789,18.804,18.731,17.981,18.116,17.980,17.356,18.792,18.806,18.734,17.984,18.119,17.982,17.357
+spin_half,heisenberg_construction,1024,1024,1,product_state,128,79915.367,79916.344,80169.594,79507.164,80210.938,80225.586,79138.344,79915.367,79848.633,80170.570,79508.141,80211.914,80226.562,79139.320,79916.344,79849.938

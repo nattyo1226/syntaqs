@@ -257,7 +257,7 @@ impl Neg for ModelCoefficient {
         Self(-self.0)
     }
 }
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Index(u8);
 #[test]
 fn hubbard_construction_needs_neither_primitive_evaluation_nor_index_cloning() {
