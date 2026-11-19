@@ -171,10 +171,24 @@ costs. [State basis traversal](../../../crates/syntaqs-core/src/basis/expansion/
 
 | Cost exposed | Change to investigate | Baseline to compare |
 | --- | --- | --- |
-| Ambient lookup and validation recur across construction, action, and graded evaluation. | Reuse ordered leaf information within a query and across operations on the same space where validity is established. Preserve index equality, duplicate detection, explicit rebinding, and ordered graded signs. | Heisenberg `bind`/`act` at 128–1,024 sites, single `X`, and near/far hopping. |
-| Distribution spends work on operator terms that later cancel. | Preserve independent multi-factor support through product evaluation where factor order and graded crossing rules permit it. | XX echo plus its noncancelling layer control, and `H²` coordinates and expansion. |
-| Scalar contractions prepare tensor groups even for orthogonal summands. | Measure lazy preparation of later groups and reuse of prepared operands. Preserve exact-zero handling and general inner-product semantics. | W norms, Heisenberg Hilbert–Schmidt self products, and the factored plus norm. |
-| State enumeration copies partial coordinate maps and reconstructs expanded syntax. | Reduce temporary maps and allocations while preserving complete keys and exact coefficients. | GHZ and plus states at a fixed site count, comparing `coordinates` and `expand`. |
+| Delayed action revalidates references on the operator's own bound space. | [Reuse operator binding during delayed action](#reuse-operator-binding-during-delayed-action). | Heisenberg `bind` and `act` at 128–1,024 sites. |
+| Binding scans the target space for every local reference. | [Share factor positions on the Hilbert space](#share-factor-positions-on-the-hilbert-space). | First and repeated Heisenberg `bind` at 128–1,024 sites. |
+| State evaluation assigns temporary factor IDs by linear search. | [Use ordered factor indices in state-term keys](#use-ordered-factor-indices-in-state-term-keys). | Single `X` on Néel and repeated Heisenberg actions. |
+| Graded state action repeatedly scans the ambient factor prefix. | [Traverse the state expression in order for graded actions](#traverse-the-state-expression-in-order-for-graded-actions). | Directed hopping from mode zero to near, middle, and far destinations. |
+| Intermediate state terms allocate expression nodes during evaluation. | [Construct the returned state expression after evaluation](#construct-the-returned-state-expression-after-evaluation). | One to eight Heisenberg actions on Néel. |
+| Space construction scans previously seen leaves to detect duplicate indices. | [Check duplicate factor IDs with a temporary ordered set](#check-duplicate-factor-ids-with-a-temporary-ordered-set). | `tensor_all` at 128–1,024 sites. |
+| Distributing operator products creates terms that can cancel within a smaller factor range. | [Preserve independent blocks during operator evaluation](#preserve-independent-blocks-during-operator-evaluation). | XX echo, forward XX layer, and `H²` coordinates and expansion. |
+| State contractions prepare tensor groups before checking the first group for zero. | [Generate matching contraction blocks on demand](#generate-matching-contraction-blocks-on-demand). | W norms and the factored plus norm. |
+| Contraction of identical sums evaluates both directions of each off-diagonal pair. | [Use conjugate symmetry within matching contraction blocks](#use-conjugate-symmetry-within-matching-contraction-blocks). | W norms and inner products with matching nested sums. |
+| Hilbert–Schmidt contraction distributes the product of both operands before taking local traces. | [Contract Hilbert–Schmidt operands directly](#contract-hilbertschmidt-operands-directly). | Heisenberg Hilbert–Schmidt self products. |
+| Graded contractions construct parity strings before testing for zero. | [Use local parity in operator contractions](#use-local-parity-in-operator-contractions). | Hubbard trace and graded Hilbert–Schmidt cases. |
+| Operator basis queries validate conversions of terms that evaluate to zero. | [Convert surviving operator terms to basis coordinates](#convert-surviving-operator-terms-to-basis-coordinates). | Zero-scaled and cancelling operators, and errors on retained terms. |
+| Operator basis queries repeatedly resolve factor positions in the selected space. | [Share factor positions on the Hilbert space](#share-factor-positions-on-the-hilbert-space). | Heisenberg `H²` and graded hopping coordinates. |
+| Local basis conversion repeats primitive expansion and basis index lookup. | [Expand primitives to indexed basis coefficients](#expand-primitives-to-indexed-basis-coefficients). | Heisenberg `H²` coordinates and expansion. |
+| Operator basis expansion scans every factor to find spectator positions in each term. | [Enumerate operator coordinates from specified positions and gaps](#enumerate-operator-coordinates-from-specified-positions-and-gaps). | Heisenberg `H` and `H²` coordinates and expansion. |
+| State basis expansion builds a coordinate map for every prefix of a tensor product. | [Enumerate state basis coordinates by tensor block](#enumerate-state-basis-coordinates-by-tensor-block). | GHZ and plus states at a fixed site count, comparing `coordinates` and `expand`. |
+| State and operator expansion allocate a placed local node for every digit of every surviving coordinate. | [Share placed basis elements across expanded terms](#share-placed-basis-elements-across-expanded-terms). | `expand()` on 14-site plus and GHZ states and 64-site Heisenberg `H²`. |
+| Each expanded operator term allocates a chain of binary product nodes. | [Store composite operator products as ordered sequences](#store-composite-operator-products-as-ordered-sequences). | 64-site Heisenberg `H²` expansion. |
 
 The size ranges and basis choices were selected to expose different costs
 while keeping the materialized outputs tractable. The `—` cells denote
@@ -186,6 +200,352 @@ peak, or cross-platform scaling figures were collected. In the full timing
 run, 29 elapsed-time rows and 10 CPU-time rows had a largest sample more
 than twice their smallest. CPU medians are used in the tables, with both
 clocks retained for reassessment.
+
+### Reuse operator binding during delayed action
+
+`bind` validates that every referenced factor belongs to the target space.
+Use this guarantee when `act` selects the operator's stored binding or when
+`act_in` selects a space sharing that binding's root node. For an unbound
+operator or an explicit space with a different root, call `bind` on the
+selected space before constructing the delayed action. Then check that the
+selected space and the state's space are compatible. Keep the selection
+order of explicit space, stored binding, then state space, and record the
+selected space as the scope of the action.
+
+Verify that constructors and operator combinators preserve the binding's
+factor membership guarantee. Cover method and multiplication forms of
+delayed action, compatible state spaces with distinct roots, explicit
+overrides, and the existing precedence of `MissingIndex` over
+`IncompatibleSpaces`. In the shared-space, 1,024-site Heisenberg control,
+expect the 3,145,725 factor-index comparisons in `act` to drop to zero.
+Compare elapsed time and allocation requests against the baseline, and run
+the separate first-binding control to confirm that it still validates
+references. [Diagnostic counts](diagnostics.csv).
+
+### Share factor positions on the Hilbert space
+
+Build the index on the first factor ID lookup for a shared tensor node.
+Collect its leaf handles in tensor order and store a second array containing
+their positions sorted by `I: Ord`. Find a leaf directly by position. Find
+the position of an ID by binary searching the second array and comparing
+the indices borrowed from the corresponding leaves. Derive both arrays from
+the child tree and share them with every handle to the same space node.
+
+Use the index for membership checks in `bind`, for axis positions in operator
+basis expansion, and for computing exchange signs when graded operator terms
+are put in factor order. Verify nested spaces, equal IDs on distinct leaf
+handles, missing IDs, and factor orders that differ from ID order. Verify
+that incremental construction initializes the index only on queried spaces
+and that repeated lookups on a shared node reuse it.
+
+Compare first-use and repeated calls separately in the Heisenberg `bind`,
+`H²` coordinates, and graded hopping coordinate controls. Count index
+comparisons and measure allocation requests, requested bytes, and timing.
+The 1,024-site `bind` baseline made 3,145,725 index comparisons and requested
+50.4 MB cumulatively. [Space construction](../../../crates/syntaqs-core/src/space.rs) ·
+[Allocation counts](allocations.csv) · [Diagnostic counts](diagnostics.csv).
+
+### Check duplicate factor IDs with a temporary ordered set
+
+Require `I: Ord` in the tensor-space constructors. After checking tensor
+kinds, traverse the leaves in input order when combining two or more
+children. Insert each borrowed ID into a temporary `BTreeSet<&I>` and return
+`DuplicateIndex` at the first repeated ID. Discard the set after validation.
+The space's factor-position index is built on its first lookup.
+
+Verify duplicates across nested children with distinct handles for the same
+ID, input factor order, and precedence of `MixedTensorKinds`. Compare
+ordering comparisons, allocations, and timing for `tensor_all` at
+128–1,024 factors. The 1,024-factor baseline made 523,776 index comparisons.
+The ordered set bounds a construction pass over `n` leaves to `O(n log n)`
+comparisons. [Current duplicate check](../../../crates/syntaqs-core/src/space.rs) ·
+[Diagnostic counts](diagnostics.csv).
+
+### Use ordered factor indices in state-term keys
+
+Require `I: Ord` for composite state evaluation. Compare the factor index
+directly in the `BTreeMap` key for a local state term, alongside its primitive
+and coefficient IDs. Share the existing factor handle to access its
+index. This removes the query-local list that assigns a separate integer ID
+to each factor. Carry the `Ord` bound through APIs that invoke state evaluation,
+including state contractions and basis expansion.
+
+Verify that distinct handles with the same index still match. Preserve
+tensor factor order, graded signs, and first-occurrence order in collected
+sums. In the 1,024-site single-`X` control, assigning IDs to the input factors
+accounted for 523,776 of the 526,848 index comparisons. Count both equality
+and ordering comparisons after the change. Compare timing and allocations
+for the single-`X` and repeated-Heisenberg controls. [State-term keys](../../../crates/syntaqs-core/src/evaluate/state_terms.rs) ·
+[Diagnostic counts](diagnostics.csv).
+
+### Traverse the state expression in order for graded actions
+
+Use the selected `Act` space's effective tensor kind to identify graded
+actions. For each odd primitive, traverse that action's input state expression
+in tensor order. Apply the parity operator to factors before the target,
+apply the primitive at the matching index, and share the subsequent factors.
+Pass whether the target has been reached from each tensor child to the next.
+Start every sum branch with the same incoming value and keep the tensor
+product factored. Each nested `Act` uses the order of its own input.
+[Scope of delayed action](../../design/composite-expression.md#43-scope-of-delayed-act).
+
+Verify signs for sums before and containing the target, nested action scopes,
+and near and far targets. Rerun the directed hopping controls and compare index
+comparison counts, timing, and allocations. The current traversal accounts
+for 16,383 prefix-membership comparisons in the 128-mode far-hop control, as
+derived from the implementation. [Diagnostic counts](diagnostics.csv).
+
+### Construct the returned state expression after evaluation
+
+Run operator actions and collect matching terms using the evaluator's
+normalized state representation. Keep the local states, ordered child shape
+IDs, and coefficient values needed for the result. Once `evaluate()` finishes
+its actions and collection, construct `StateExpr` nodes for the structures
+reachable from the final result. Reuse existing expression nodes where they
+represent the normalized structure, and build newly needed nodes iteratively.
+
+Preserve right-to-left product application, collection between actions,
+coefficient evaluation order, exact-zero handling, and first-occurrence
+order. Verify sums, nested graded actions, and deep expressions. Compare
+`StateExpr` node creation, allocation requests, and timing for one and eight
+Heisenberg actions. The eight-action, ten-site baseline took 47.3 ms and
+issued 1,024,034 allocation requests. [State collection contract](../../design/composite-expression.md#114-natural-state-collection-between-actions) ·
+[Allocation counts](allocations.csv).
+
+### Generate matching contraction blocks on demand
+
+Align the left and right factor sequences until their cumulative factor
+counts agree, then contract that block before preparing the next one. When
+a block has no further shared tensor boundary, evaluate its local inner
+product or distribute one sum and process each branch through the same
+contraction entry point. Stop a product when its running contraction reaches
+exact zero and continue the other summands. Preserve the processing order
+for scalar expressions that cover zero factors.
+
+Verify differently grouped tensors and exact-zero contractions at early and
+late factors. Compare how many blocks are prepared, allocation requests,
+and timing for the W and factored plus controls. [Scalar contraction contract](../../design/composite-expression.md#115-incremental-scalar-contractions).
+
+### Use conjugate symmetry within matching contraction blocks
+
+Normalize both operands in one evaluation context so their structure IDs
+can be compared. At the common contraction entry point, extract each block's
+outer scalar coefficients and compare the normalized structures, including
+the order and internal coefficients of any sum. When both sides have the
+same normalized sum and its values compare equal to themselves, evaluate the
+diagonal and one triangle of the sum's pair matrix. Add each off-diagonal
+value `z` together with `conjugate(z)`. Apply the extracted scalars according
+to the existing conjugation and exact-zero rules. Use the same entry for
+the whole inner product and for nested blocks.
+
+Verify matching sums inside otherwise different tensors, distinct outer
+coefficients, and the existing equality rules for nonreflexive values.
+Check numerical differences from the changed addition order. In the W64
+control, expect the top-level pair count to fall from 4,096 to 2,080. Compare
+the pair count and timing with the baseline. [State collection contract](../../design/composite-expression.md#114-natural-state-collection-between-actions).
+
+### Contract Hilbert–Schmidt operands directly
+
+Keep the two operator operands available separately during contraction.
+Align independent blocks in ambient factor order and contract each block
+before preparing later blocks. Distribute sums by linearity within a block
+when needed. Compute the normalized local Hilbert–Schmidt inner product
+and stop the current term pair on exact zero. Normalize primitive traces
+before combining their coefficients, as in the current contraction.
+
+Require `O: PartialEq` and `C: PartialEq` on composite `hs_inner_product()`
+and `hs_inner_product_in()` so independently constructed expressions can
+match by value. At the shared entry for whole and nested blocks, extract
+outer coefficients and compare the normalized structure, primitive values,
+and internal coefficients. For matching sums with reflexive values, evaluate
+the diagonal and one triangle and use the complex conjugate for the reverse
+pair. Restore the extracted coefficients with the existing conjugation rules.
+
+Verify nested matching blocks, different scalar multiples, and numerical
+differences from the changed addition order. In the 64-site Heisenberg
+self product, the diagonal and one triangle contain 17,955 of the 35,721
+candidate pairs. Compare pair counts, allocations, and timing. [Current Hilbert–Schmidt implementation](../../../crates/syntaqs-core/src/evaluate/trace.rs).
+
+### Use local parity in operator contractions
+
+Work with homogeneous terms and determine parity per factor after composing
+same-factor operators in order. For `trace()`, a term with an odd local
+product has zero trace. For Hilbert–Schmidt contraction, stop a pair when
+the local parities differ at any factor. When they agree at every factor,
+the parity factors cancel under the trace, so use the ordinary normalized
+local Hilbert–Schmidt inner product. Stop the current pair on an exact-zero
+local inner product and continue the other summands.
+
+Preserve the exchange sign from ordering odd operators on different factors.
+Determine how to apply that sign with the existing trace coefficient
+capabilities. `IntrinsicOpTerms` currently applies it using `C: Neg`.
+Verify products of odd operators at the same factor, mixed-parity sums,
+and exchange signs against independent small ordinary matrices. In the
+64-site Hubbard trace, local parity can discard all 252 hopping terms
+before parity string construction. Compare timing and allocations against the
+baseline. [Graded operator representation](../../design/composite-expression.md#111-intrinsic-terms-and-ordinary-representations).
+
+### Preserve independent blocks during operator evaluation
+
+Determine the set of referenced factors for each operator subexpression.
+Use each local placement's index, the empty set for identity, and the union
+of the children's sets for a sum or product. Process product operands in
+order, including the reversal from an adjoint. Keep disjoint supports as
+factored blocks. Where supports overlap, evaluate the partial product on
+their combined factors and collect identical terms there. Preserve the
+order of operations on shared factors and account for graded exchange signs
+whenever reordering disjoint homogeneous operands. Decompose mixed-parity
+operands before using the homogeneous exchange rule.
+
+Make this processing available to `collect_terms_in()`, basis expansion,
+and contractions. Use local algebra rules to evaluate products and adjoints,
+and use `O: PartialEq` and `C: PartialEq` on paths that collect terms by
+value. Convert to a chosen basis at the basis-query boundary.
+[Current operator collection](../../../crates/syntaqs-core/src/evaluate/collect.rs).
+
+Verify partially overlapping supports, disjoint supports, and graded product
+and adjoint order. Compare intermediate term counts, allocations, and timing
+for the XX echo, the forward XX layer, and `H²`. The 16-site XX echo has
+65,536 syntactic term products and one output coordinate in the baseline.
+[Diagnostic counts](diagnostics.csv).
+
+### Convert surviving operator terms to basis coordinates
+
+Validate the original operator's factor references against the selected
+space. Then evaluate the operator and collect matching terms. Run basis
+conversion and validate its output for terms that survive, expanding
+spectator identities as needed. When evaluation produces zero, return empty
+coordinates or a zero operator on the selected space.
+
+Update the existing zero-scaled operator tests to expect zero when an invalid
+basis rule applies only to a removed term. Cover exact cancellation, invalid
+basis outputs for retained terms, and missing factor references in the
+original expression. [Current basis error rules](../../design/basis.md#74-errors-and-examples) ·
+[Zero-scaled operator test](../../../tests/tests/core_basis_expansion.rs).
+
+### Expand primitives to indexed basis coefficients
+
+Keep integer basis indices as coordinate keys. Add
+`Basis::expand_indices(&self, primitive: &P) -> LinearCombination<usize, C>`
+to return indices and coefficients directly, and
+`Basis::element(&self, index: usize) -> Option<P>` to retrieve a basis
+element by its zero-based index. Implement `Basis::expand()` as a fallible
+convenience that replaces each index with its basis element and reports a
+missing element as a basis error.
+
+Aggregate indexed contributions directly in core basis queries. Cache the
+validated expansion of each encountered primitive within the query, and
+apply each contribution's coefficient when using it. When returning an
+expanded expression, fetch and share the basis element for each index that
+appears in the final result.
+
+Verify index bounds, missing elements, basis order, and agreement between
+coordinate and expression results. Measure direct indexed conversion and
+within-query reuse separately. The 64-site Heisenberg `H²` coordinate
+control made 140,635 `Basis::expand()` calls in the baseline. Compare basis
+call counts, allocations, and timing. [Current local basis conversion](../../../crates/syntaqs-core/src/basis/expansion/local.rs) ·
+[Diagnostic counts](diagnostics.csv).
+
+### Enumerate operator coordinates from specified positions and gaps
+
+For each surviving operator term, order the specified factors by their
+positions in the selected space. Derive the spectator ranges from the gaps
+between those positions and the space boundaries. Convert the specified
+local operators in factor order. At the first spectator range in the query,
+expand and validate the local identity in the chosen basis, and reuse those
+indexed coefficients for every spectator.
+
+For a single identity component, prefill the working key with its index and
+restore the changed digits between terms. Apply its coefficient across each
+gap in factor order, skipping unit multiplications where the coefficient
+arithmetic permits it. For a multi-component identity, enumerate its
+choices at each spectator position in the ranges. Accumulate full coordinate
+keys after all their digits are set.
+
+Verify identities with a unit coefficient, a nonunit coefficient, and
+multiple components. Cover terms that specify every factor, the unit space,
+and coordinate and expression round trips. Compare factor visits, allocation
+requests, and timing for Heisenberg `H` and `H²`, with the operator term
+collection held fixed. [Current operator coordinate enumeration](../../../crates/syntaqs-core/src/basis/expansion/operator.rs) ·
+[Existing identity cases](../../../crates/syntaqs-core/src/basis/expansion/operator/tests.rs).
+
+### Enumerate state basis coordinates by tensor block
+
+Expand each child of a tensor node once into coordinate and coefficient pairs.
+A local child contributes a single digit. A child spanning several factors
+contributes an ordered tuple as one choice, preserving correlations such as
+the paired digits in `|00⟩ + |11⟩`. Use the same traversal for nested tensor
+nodes and combine equal coordinates within each sum before using its result
+as a child of an enclosing tensor.
+
+Enumerate the Cartesian product of child coordinates in tensor order. Reuse
+one working digit buffer sized to the tensor's factor count, writing each
+child's tuple into its corresponding slice. Carry the coefficient product
+in the existing multiplication order and drop exact-zero prefixes. Copy a
+key into the result map when all digits of the tensor are filled. Share this
+enumeration between `coordinates()` and `expand()`, building expanded
+expression nodes from the surviving coordinates.
+
+Verify block correlations on `(|00⟩ + |11⟩) ⊗ |+⟩` and cover nested tensors,
+factor order, and exact cancellation. Compare allocations and timing for
+both APIs on 14-site GHZ and plus states and for `coordinates()` on the
+18-site plus state. The latter currently stores 262,142 entries in maps for
+its nonempty proper prefixes and 262,144 entries in the full product.
+[Current state basis traversal](../../../crates/syntaqs-core/src/basis/expansion/composite.rs).
+
+### Share placed basis elements across expanded terms
+
+In each state or operator expansion, build the returned terms from the
+surviving coordinates. Retrieve basis elements by index and share each
+`LocalState` or `LocalOperator` across positions. Lazily create one placed
+`StateNode::Local` or `OpNode::Local` per `(factor position, basis index)`.
+Populate the tensor or product of each scaled term by cloning the
+`Arc`-backed handles. Operator expansion uses the same sharing for basis
+elements at spectator factors, including each component of a spectator
+identity with several basis coefficients.
+
+Verify shared node identity, factor order, and agreement between expanded
+terms and sparse coordinates. The 14-site plus control creates 229,376
+placed local nodes in the baseline. The target is 28 placed nodes for the
+same 16,384 terms. For 64-site Heisenberg `H²` in the Cartesian basis, the
+baseline creates 1,113,280 placed nodes for 17,395 terms and the target is
+at most 256 placed nodes. Compare placed node counts, allocation requests,
+and timing for these workloads and the 14-site GHZ control, where reuse
+is low. [Current term construction](../../../crates/syntaqs-core/src/basis/expansion/composite.rs).
+
+### Store composite operator products as ordered sequences
+
+Replace the composite binary `OpNode::Product` representation with one
+ordered sequence of operands. Construct the sequence directly in
+`Operator::product()`, `try_product()`, operator basis enumeration, and
+expansion. Store two operands inline for binary `*`. Use shared handles for
+existing product operands so successive `*` calls avoid copying their child
+lists. Use identity for an empty product and the operand for a singleton.
+
+Use the sequence in validation, structural grouping, term traversal, state
+action, formatting, and iterative destruction. Apply the operands from right
+to left, reverse their order under adjoint, and calculate graded exchange
+signs when changing factor order. Preserve nested product grouping and the
+sequence constructors' binding and input-error precedence.
+
+Verify order-sensitive products on one factor, graded products and
+adjoints, and basis expansion round trips. In the 64-site Heisenberg `H²`
+control, the baseline builds 1,095,885 product nodes. The target is one
+product node and one child array per coordinate, giving 17,395 product
+nodes. Measure this cost separately from local node reuse and compare
+binary `*` construction as well. [Current product construction](../../../crates/syntaqs-core/src/expression/composite.rs) ·
+[Current expansion construction](../../../crates/syntaqs-core/src/basis/expansion/composite.rs).
+
+### Measure the effect of ordering primitive values
+
+In a later benchmark, compare the current `PartialEq` scans with approaches
+that require `Ord` or `PartialOrd` on state and operator primitives. Measure
+state primitive interning in `evaluate()` and operator primitive collection
+in `collect_terms()` and `collect_terms_in()`. Include both built-in spin and
+fermion cases and a workload with many distinct primitives. Track timing and
+comparison counts, and account for incomparable values in any `PartialOrd`
+approach. [State primitive interning](../../../crates/syntaqs-core/src/evaluate/state_terms.rs) ·
+[Operator primitive collection](../../../crates/syntaqs-core/src/evaluate/collect.rs).
 
 ## Reproduction
 
