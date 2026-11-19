@@ -17,7 +17,7 @@ use syntaqs_spin_half::{
 
 use crate::{
     C, Space, close, factors,
-    measure::{Case, CountedIndex, Mode, Runner, count_comparisons},
+    measure::{Case, CountedIndex, Mode, Runner},
 };
 
 type Q = SpinHalf<C>;
@@ -37,6 +37,7 @@ fn case(workload: &'static str, n: usize, order: usize) -> Case {
 
 pub fn run(r: &Runner) {
     construction(r);
+    product_construction(r);
     heisenberg(r);
     states(r);
     local_action(r);
@@ -65,6 +66,17 @@ fn construction(r: &Runner) {
         r.measure(&c, "build_model", || hamiltonian(black_box(&sites)));
         r.measure(&c, "bind", || black_box(&h).bind(&space).unwrap());
         r.measure(&c, "act", || black_box(&psi).act(&h).unwrap());
+        if n >= 128 {
+            r.measure_prepared(
+                &c,
+                "bind_fresh",
+                || HilbertSpace::tensor_all(sites.iter().cloned()).unwrap(),
+                |fresh| black_box(&h).bind(fresh).unwrap(),
+            );
+            r.measure(&c, "act_in_equivalent", || {
+                black_box(&psi).act_in(&h, &space).unwrap()
+            });
+        }
 
         if !matches!(r.mode, Mode::Diagnostics) {
             continue;
@@ -76,24 +88,65 @@ fn construction(r: &Runner) {
         let space = HilbertSpace::tensor_all(sites.iter().cloned()).unwrap();
         let h = Models::heisenberg(&chain, &sites, 1.0).unwrap();
         let psi = Q::product_state(h.space().unwrap(), std::iter::repeat_n(Up, n)).unwrap();
-        for (api, comparisons) in [
-            (
-                "tensor_all",
-                count_comparisons(|| HilbertSpace::tensor_all(sites.iter().cloned()).unwrap()),
-            ),
-            (
-                "product_state",
-                count_comparisons(|| Q::product_state(&space, std::iter::repeat_n(Up, n)).unwrap()),
-            ),
-            (
-                "build_model",
-                count_comparisons(|| Models::heisenberg(&chain, &sites, 1.0).unwrap()),
-            ),
-            ("bind", count_comparisons(|| h.bind(&space).unwrap())),
-            ("act", count_comparisons(|| psi.act(&h).unwrap())),
-        ] {
-            r.diagnose(&c, api, "index_comparisons", || comparisons);
+        r.diagnose_index_comparisons(&c, "tensor_all", || {
+            HilbertSpace::tensor_all(sites.iter().cloned()).unwrap()
+        });
+        r.diagnose_index_comparisons(&c, "product_state", || {
+            Q::product_state(&space, std::iter::repeat_n(Up, n)).unwrap()
+        });
+        r.diagnose_index_comparisons(&c, "build_model", || {
+            Models::heisenberg(&chain, &sites, 1.0).unwrap()
+        });
+        h.bind(&space).unwrap();
+        r.diagnose_index_comparisons(&c, "bind", || h.bind(&space).unwrap());
+        r.diagnose_index_comparisons(&c, "act", || psi.act(&h).unwrap());
+        if n >= 128 {
+            let fresh = HilbertSpace::tensor_all(sites.iter().cloned()).unwrap();
+            r.diagnose_index_comparisons(&c, "bind_fresh", || h.bind(&fresh).unwrap());
+            r.diagnose_index_comparisons(&c, "act_in_equivalent", || {
+                psi.act_in(&h, &space).unwrap()
+            });
         }
+    }
+}
+
+fn product_construction(r: &Runner) {
+    for n in [8, 64, 1024] {
+        let sites = factors(n);
+        let space = HilbertSpace::tensor_all(sites.iter().cloned()).unwrap();
+        let operands: Vec<Op> = sites
+            .iter()
+            .map(|site| Q::operator(O::Sx).at(site).unwrap())
+            .collect();
+        let product = Op::product(operands.iter().cloned())
+            .unwrap()
+            .bind(&space)
+            .unwrap();
+        let sequence = case("operator_product_construction", n, n);
+        let binary = case("operator_product_construction", n, 2);
+        r.measure(&sequence, "product_sequence", || {
+            Op::product(black_box(&operands).iter().cloned()).unwrap()
+        });
+        r.measure(&binary, "binary_mul", || {
+            (black_box(&product) * black_box(&product)).unwrap()
+        });
+        r.diagnose(&sequence, "product_sequence", "nnz", || {
+            let out = product.coordinates(&CartesianBasis).unwrap();
+            assert_eq!(out.len(), 1);
+            let (digits, &value) = out.entries().next().unwrap();
+            assert_eq!(digits, vec![1; n]);
+            close(value, 1.0);
+            out.len()
+        });
+        r.diagnose(&binary, "binary_mul", "nnz", || {
+            let squared = (&product * &product).unwrap();
+            let out = squared.coordinates(&CartesianBasis).unwrap();
+            assert_eq!(out.len(), 1);
+            let (digits, &value) = out.entries().next().unwrap();
+            assert_eq!(digits, vec![0; n]);
+            close(value, 1.0);
+            out.len()
+        });
     }
 }
 
@@ -386,12 +439,8 @@ fn local_action(r: &Runner) {
             let state = Q::product_state(&space, [Up, Down].into_iter().cycle().take(n)).unwrap();
             let op = Q::operator(O::Sx).at(&sites[n - 1]).unwrap();
             let delayed = state.act(&op).unwrap();
-            r.diagnose(&c, "act", "index_comparisons", || {
-                count_comparisons(|| state.act(&op).unwrap())
-            });
-            r.diagnose(&c, "evaluate", "index_comparisons", || {
-                count_comparisons(|| delayed.evaluate().unwrap())
-            });
+            r.diagnose_index_comparisons(&c, "act", || state.act(&op).unwrap());
+            r.diagnose_index_comparisons(&c, "evaluate", || delayed.evaluate().unwrap());
         }
     }
 }

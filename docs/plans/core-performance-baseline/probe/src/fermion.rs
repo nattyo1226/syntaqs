@@ -12,7 +12,7 @@ use syntaqs_geometry::geometry::{Boundary, chain::Chain};
 
 use crate::{
     C, Space, close, factors,
-    measure::{Case, CountedIndex, Mode, Runner, count_comparisons},
+    measure::{Case, CountedIndex, Mode, Runner},
 };
 
 type Q = Fermion<C>;
@@ -157,9 +157,7 @@ fn hopping(r: &Runner) {
                         .bind(&space)
                         .unwrap();
                 let delayed = state.act(&hop).unwrap();
-                r.diagnose(&c, "evaluate", "index_comparisons", || {
-                    count_comparisons(|| delayed.evaluate().unwrap())
-                });
+                r.diagnose_index_comparisons(&c, "evaluate", || delayed.evaluate().unwrap());
             }
         }
     }

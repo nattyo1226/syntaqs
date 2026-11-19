@@ -1,7 +1,8 @@
-use std::{cell::Cell, hint::black_box, time::Instant};
+use std::{cell::Cell, cmp::Ordering, hint::black_box, time::Instant};
 
 thread_local! {
-    static INDEX_COMPARISONS: Cell<usize> = const { Cell::new(0) };
+    static INDEX_EQUALITY_COMPARISONS: Cell<usize> = const { Cell::new(0) };
+    static INDEX_ORDER_COMPARISONS: Cell<usize> = const { Cell::new(0) };
 }
 
 #[derive(Eq)]
@@ -9,15 +10,22 @@ pub struct CountedIndex(pub usize);
 
 impl PartialEq for CountedIndex {
     fn eq(&self, other: &Self) -> bool {
-        INDEX_COMPARISONS.set(INDEX_COMPARISONS.get() + 1);
+        INDEX_EQUALITY_COMPARISONS.set(INDEX_EQUALITY_COMPARISONS.get() + 1);
         self.0 == other.0
     }
 }
 
-pub fn count_comparisons<T>(call: impl FnOnce() -> T) -> usize {
-    INDEX_COMPARISONS.set(0);
-    drop(black_box(call()));
-    INDEX_COMPARISONS.get()
+impl PartialOrd for CountedIndex {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for CountedIndex {
+    fn cmp(&self, other: &Self) -> Ordering {
+        INDEX_ORDER_COMPARISONS.set(INDEX_ORDER_COMPARISONS.get() + 1);
+        self.0.cmp(&other.0)
+    }
 }
 
 #[cfg(feature = "allocations")]
@@ -130,6 +138,49 @@ impl Runner {
     }
 
     pub fn measure<T>(&self, case: &Case, api: &str, mut call: impl FnMut() -> T) {
+        self.measure_batches(
+            case,
+            api,
+            65_536,
+            |_| (),
+            |&(), iterations| {
+                for _ in 0..iterations {
+                    drop(black_box(call()));
+                }
+            },
+        );
+    }
+
+    pub fn measure_prepared<I, T>(
+        &self,
+        case: &Case,
+        api: &str,
+        prepare: impl Fn() -> I,
+        call: impl Fn(&I) -> T,
+    ) {
+        // Bound the number of fresh inputs held at once. Build and drop them
+        // outside the timing and allocation windows.
+        self.measure_batches(
+            case,
+            api,
+            256,
+            |iterations| (0..iterations).map(|_| prepare()).collect::<Vec<_>>(),
+            |inputs, _| {
+                for input in inputs {
+                    drop(black_box(call(input)));
+                }
+            },
+        );
+    }
+
+    fn measure_batches<I>(
+        &self,
+        case: &Case,
+        api: &str,
+        max_iterations: usize,
+        mut prepare: impl FnMut(usize) -> I,
+        mut call_batch: impl FnMut(&I, usize),
+    ) {
         if matches!(self.mode, Mode::Diagnostics) {
             return;
         }
@@ -137,10 +188,13 @@ impl Runner {
         if !id.contains(&self.filter) {
             return;
         }
-        drop(black_box(call()));
+        call_batch(&prepare(1), 1);
         match self.mode {
             Mode::Time => {
-                let (iterations, wall, cpu) = timings(&mut call);
+                let (iterations, wall, cpu) = timings(max_iterations, |iterations| {
+                    let inputs = prepare(iterations);
+                    elapsed(|| call_batch(&inputs, iterations))
+                });
                 print!("{id},{iterations},{:.3},{:.3}", median(wall), median(cpu));
                 for sample in wall.into_iter().chain(cpu) {
                     print!(",{sample:.3}");
@@ -150,7 +204,8 @@ impl Runner {
             Mode::Allocations => {
                 #[cfg(feature = "allocations")]
                 {
-                    let (requests, bytes) = allocations::measure(call);
+                    let input = prepare(1);
+                    let (requests, bytes) = allocations::measure(|| call_batch(&input, 1));
                     println!("{id},{requests},{bytes}");
                 }
                 #[cfg(not(feature = "allocations"))]
@@ -161,12 +216,33 @@ impl Runner {
     }
 
     pub fn diagnose(&self, case: &Case, api: &str, metric: &str, check: impl FnOnce() -> usize) {
-        if matches!(self.mode, Mode::Diagnostics) {
-            let id = case.id(api);
-            if id.contains(&self.filter) {
-                println!("{id},{metric},{}", check());
-            }
+        if let Some(id) = self.diagnostic_id(case, api) {
+            println!("{id},{metric},{}", check());
         }
+    }
+
+    pub fn diagnose_index_comparisons<T>(&self, case: &Case, api: &str, call: impl FnOnce() -> T) {
+        if let Some(id) = self.diagnostic_id(case, api) {
+            INDEX_EQUALITY_COMPARISONS.set(0);
+            INDEX_ORDER_COMPARISONS.set(0);
+            drop(black_box(call()));
+            println!(
+                "{id},index_comparisons,{}",
+                INDEX_EQUALITY_COMPARISONS.get()
+            );
+            println!(
+                "{id},index_order_comparisons,{}",
+                INDEX_ORDER_COMPARISONS.get()
+            );
+        }
+    }
+
+    fn diagnostic_id(&self, case: &Case, api: &str) -> Option<String> {
+        if !matches!(self.mode, Mode::Diagnostics) {
+            return None;
+        }
+        let id = case.id(api);
+        id.contains(&self.filter).then_some(id)
     }
 }
 
@@ -192,25 +268,26 @@ fn median(mut samples: [f64; 7]) -> f64 {
     samples[3]
 }
 
-fn timings<T>(call: &mut impl FnMut() -> T) -> (usize, [f64; 7], [f64; 7]) {
-    fn elapsed<T>(call: &mut impl FnMut() -> T, iterations: usize) -> (f64, u64) {
-        let cpu_start = thread_cpu_ns();
-        let wall_start = Instant::now();
-        for _ in 0..iterations {
-            drop(black_box(call()));
-        }
-        let wall_ns = wall_start.elapsed().as_secs_f64() * 1e9;
-        (wall_ns, thread_cpu_ns() - cpu_start)
-    }
+fn elapsed(call: impl FnOnce()) -> (f64, u64) {
+    let cpu_start = thread_cpu_ns();
+    let wall_start = Instant::now();
+    call();
+    let wall_ns = wall_start.elapsed().as_secs_f64() * 1e9;
+    (wall_ns, thread_cpu_ns() - cpu_start)
+}
 
+fn timings(
+    max_iterations: usize,
+    mut sample: impl FnMut(usize) -> (f64, u64),
+) -> (usize, [f64; 7], [f64; 7]) {
     let mut iterations = 1;
-    while elapsed(call, iterations).1 < 10_000_000 && iterations < 65_536 {
+    while sample(iterations).1 < 10_000_000 && iterations < max_iterations {
         iterations *= 2;
     }
     let mut wall = [0.0; 7];
     let mut cpu = [0.0; 7];
     for (w, c) in wall.iter_mut().zip(&mut cpu) {
-        let (wall_ns, cpu_ns) = elapsed(call, iterations);
+        let (wall_ns, cpu_ns) = sample(iterations);
         *w = wall_ns / iterations as f64;
         *c = cpu_ns as f64 / iterations as f64;
     }

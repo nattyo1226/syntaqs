@@ -346,11 +346,13 @@ and the stage 0 run on the same environment to report the cumulative result.
 
 ### Progress and completion
 
-The baseline and refactoring decisions are recorded. Implementation and
-checkpoint measurements are pending. Record the verification and link to the
-measurement summary as each stage completes. Completion requires the agreed
-changes, passing applicable correctness and workspace checks, and a full
-comparison with explanations for material regressions or missing measurements.
+Stage 0 is complete. The reference run covers the original cases and adds
+controls for first-use binding, explicit rebinding, and product construction.
+Stages 1–8 are pending. Record the verification and link to the measurement
+summary as each stage completes. Completion requires the agreed changes,
+passing applicable correctness and workspace checks, and a full comparison
+with explanations for material regressions or missing measurements.
+[Stage 0 measurements](measurements/stage-0/README.md)
 
 After the refactoring comparison, benchmark `Ord` and `PartialOrd` for state
 and operator primitives using the agreed workloads with few and many
