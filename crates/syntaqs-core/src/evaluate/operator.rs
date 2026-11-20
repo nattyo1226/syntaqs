@@ -43,6 +43,13 @@ struct Factored<C> {
     coefficient: C,
     blocks: Vec<Block<C>>,
 }
+
+#[derive(Clone, Copy)]
+enum ProductEnd {
+    Front,
+    Back,
+}
+
 impl<C> Factored<C> {
     fn scalar(coefficient: C) -> Self {
         Self {
@@ -308,6 +315,100 @@ where
             })
     }
 
+    fn take_common_blocks(&self, parts: &mut [Factored<C>]) -> (Vec<Block<C>>, Vec<Block<C>>) {
+        if parts.iter().any(|part| part.blocks.is_empty()) {
+            return (Vec::new(), Vec::new());
+        }
+        let first = &parts[0].blocks;
+        // The first support position uniquely identifies a block within a product.
+        let mut common: BTreeMap<_, _> = first
+            .iter()
+            .enumerate()
+            .map(|(index, block)| (block.support[0], (index, Vec::new())))
+            .collect();
+        for (part_index, part) in parts.iter().enumerate().skip(1) {
+            for (index, block) in part.blocks.iter().enumerate() {
+                if let Some((first_index, matches)) = common.get_mut(&block.support[0]) {
+                    if self.same_terms(&first[*first_index].terms, &block.terms) {
+                        matches.push(index);
+                    }
+                }
+            }
+            common.retain(|_, (_, matches)| matches.len() == part_index);
+            if common.is_empty() {
+                return (Vec::new(), Vec::new());
+            }
+        }
+        let mut common: Vec<_> = common.into_values().collect();
+        common.sort_unstable_by_key(|(index, _)| *index);
+        let mut taken: Vec<_> = parts
+            .iter()
+            .map(|part| vec![None; part.blocks.len()])
+            .collect();
+        let candidates = common
+            .iter()
+            .map(|candidate| (ProductEnd::Front, candidate))
+            .chain(
+                common
+                    .iter()
+                    .rev()
+                    .map(|candidate| (ProductEnd::Back, candidate)),
+            );
+        let mut signs = Vec::with_capacity(parts.len());
+        for (end, (first_index, matches)) in candidates {
+            if taken[0][*first_index].is_some() {
+                continue;
+            }
+            let indices = || core::iter::once(*first_index).chain(matches.iter().copied());
+            let odd = parts[0].blocks[*first_index].odd;
+            signs.clear();
+            signs.extend(parts.iter().zip(&taken).zip(indices()).map_while(
+                |((part, taken), index)| {
+                    if !self.graded || odd == Some(false) {
+                        return Some(false);
+                    }
+                    let crossed = match end {
+                        ProductEnd::Front => 0..index,
+                        ProductEnd::Back => index + 1..part.blocks.len(),
+                    };
+                    // Extracted blocks are already outside the remaining product.
+                    crossed
+                        .filter(|&i| taken[i].is_none())
+                        .try_fold(false, |sign, i| {
+                            exchange(odd, part.blocks[i].odd).map(|negative| sign ^ negative)
+                        })
+                },
+            ));
+            if signs.len() == parts.len() {
+                for (((part, taken), index), &negative) in
+                    parts.iter_mut().zip(&mut taken).zip(indices()).zip(&signs)
+                {
+                    taken[index] = Some(end);
+                    if negative {
+                        part.coefficient = -part.coefficient.clone();
+                    }
+                }
+            }
+        }
+
+        let mut leading = Vec::new();
+        let mut trailing = Vec::new();
+        for (index, (part, taken)) in parts.iter_mut().zip(taken).enumerate() {
+            if taken.iter().all(Option::is_none) {
+                continue;
+            }
+            for (block, end) in core::mem::take(&mut part.blocks).into_iter().zip(taken) {
+                match end {
+                    None => part.blocks.push(block),
+                    Some(ProductEnd::Front) if index == 0 => leading.push(block),
+                    Some(ProductEnd::Back) if index == 0 => trailing.push(block),
+                    Some(_) => {}
+                }
+            }
+        }
+        (leading, trailing)
+    }
+
     fn add(&self, mut parts: Vec<Factored<C>>) -> Factored<C> {
         parts.retain(|part| !part.coefficient.is_zero());
         match parts.len() {
@@ -346,17 +447,17 @@ where
             })
             .count();
 
+        let first = &mut parts[0].blocks;
+        let trailing = first.split_off(first.len() - suffix);
+        let mut leading: Vec<_> = first.drain(..prefix).collect();
+        for part in &mut parts[1..] {
+            part.blocks.truncate(part.blocks.len() - suffix);
+            part.blocks.drain(..prefix);
+        }
+        let (common_leading, common_trailing) = self.take_common_blocks(&mut parts);
+
         let mut sum = Sum::new();
-        let mut leading = Vec::new();
-        let mut trailing = Vec::new();
-        for (index, mut part) in parts.into_iter().enumerate() {
-            if index == 0 {
-                trailing = part.blocks.split_off(part.blocks.len() - suffix);
-                leading.extend(part.blocks.drain(..prefix));
-            } else {
-                part.blocks.truncate(part.blocks.len() - suffix);
-                part.blocks.drain(..prefix);
-            }
+        for part in parts {
             for term in self.product_terms(part.coefficient, &part.blocks) {
                 sum.add(term, &self.primitives);
             }
@@ -365,8 +466,10 @@ where
         if middle.coefficient.is_zero() {
             return middle;
         }
+        leading.extend(common_leading);
         leading.append(&mut middle.blocks);
-        leading.append(&mut trailing);
+        leading.extend(common_trailing);
+        leading.extend(trailing);
         middle.blocks = leading;
         middle
     }

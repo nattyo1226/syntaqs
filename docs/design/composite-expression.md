@@ -549,8 +549,11 @@ The basis generator visits combinations of independent blocks when constructing
 coordinates. Collection rebuilds their factored expression directly.
 
 Before collecting a sum, the evaluator puts ordinary products and products of
-even blocks in ambient order. It pulls out equal leading and trailing blocks
-by distributivity, preserving the order of graded products with mixed sectors.
+even blocks in ambient order. It factors out equal blocks across the addends,
+moving them to a common end of each product when every crossed block gives a
+uniform exchange sign. Each addend's coefficient includes its exchange signs.
+An exchange that depends on the chosen summands keeps the affected blocks in
+their relative order.
 The remaining additive block enumerates candidate natural terms to collect
 matching primitive products. This can still require large intermediates if
 the addends have different factorizations. Term matching uses reflexive

@@ -628,6 +628,37 @@ fn graded_parity_rejects_before_calling_primitive_traces() {
 }
 
 #[test]
+fn sums_keep_shared_interior_operator_blocks_factored() {
+    let factors: Vec<_> = (0..12u8).rev().map(H::factor).collect();
+    let local = LocalOperator::<Op, Scalar<true>>::sum([
+        LocalOperator::primitive(Op {
+            matrix: [[1.0, 0.0], [0.0, 0.0]],
+            site: None,
+        }),
+        LocalOperator::primitive(Op {
+            matrix: [[0.0, 0.0], [0.0, 1.0]],
+            site: None,
+        }),
+    ]);
+    let common = Operator::try_product(factors[1..11].iter().map(|f| local.at(f))).unwrap();
+    let left = local.at(&factors[0]).unwrap();
+    let right = local.at(&factors[11]).unwrap();
+    let sum = ((left * &common).unwrap() + (common * right).unwrap()).unwrap();
+    for kind in [TensorKind::Ordinary, TensorKind::Graded] {
+        let space = H::tensor_all_with(kind, factors.iter().cloned()).unwrap();
+        reset();
+        let collected = sum.collect_terms_in(&space).unwrap();
+        // Expanding a single addend would multiply coefficients for 2^11 products.
+        COUNTS.with(|c| assert!(c.borrow().multiply < 256));
+        for operator in [&sum, &collected] {
+            reset();
+            assert_eq!(operator.trace_in(&space).unwrap().0, 8192.0);
+            COUNTS.with(|c| assert!(c.borrow().multiply < 256));
+        }
+    }
+}
+
+#[test]
 fn trace_and_hs_sums_keep_other_branches_and_original_space_checks() {
     let f = sites();
     let space = H::tensor_all(f.iter().cloned()).unwrap();
