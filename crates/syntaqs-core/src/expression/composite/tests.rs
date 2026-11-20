@@ -1,10 +1,10 @@
 use super::{OpNode, StateNode};
 use crate::{
-    Act, Adjoint, ExpressionError as E, HilbertSpace, InnerProduct, LinearCombination as Lc,
-    LocalOperator, LocalState, Operator, State,
+    Act, Adjoint, Dimension, DimensionOverflow, ExpressionError as E, HilbertSpace, InnerProduct,
+    LinearCombination as Lc, LocalOperator, LocalState, Operator, State,
 };
-use alloc::vec::Vec;
-use core::cell::Cell;
+use alloc::{collections::BTreeMap, vec::Vec};
+use core::{cell::Cell, num::NonZeroUsize};
 use num_complex::Complex;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -16,6 +16,11 @@ struct Counts {
     drops: Cell<usize>,
 }
 struct Primitive<'a>(u8, &'a Counts);
+impl Dimension for Primitive<'_> {
+    fn dim() -> Result<NonZeroUsize, DimensionOverflow> {
+        Ok(NonZeroUsize::new(2).unwrap())
+    }
+}
 impl PartialEq for Primitive<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
@@ -77,6 +82,78 @@ impl InnerProduct<Complex<f64>> for Primitive<'_> {
 type H = HilbertSpace<Index>;
 type S<'a, T = f64> = State<Index, Primitive<'a>, Op, Complex<T>>;
 type O<T = f64> = Operator<Index, Op, Complex<T>>;
+
+#[test]
+fn expanded_state_shares_placed_basis_nodes() {
+    use crate::Basis;
+    use crate::expression::local::StateNode as LocalNode;
+    struct BinaryBasis<'a>(&'a Counts);
+    impl<'a> Basis<Primitive<'a>, Complex<f64>> for BinaryBasis<'a> {
+        fn expand_indices(&self, primitive: &Primitive<'a>) -> Lc<usize, Complex<f64>> {
+            Lc::primitive(usize::from(primitive.0))
+        }
+        fn element(&self, index: usize) -> Option<Primitive<'a>> {
+            (index < 2).then(|| Primitive(index as u8, self.0))
+        }
+        fn index(&self, primitive: &Primitive<'a>) -> Option<usize> {
+            Some(usize::from(primitive.0))
+        }
+    }
+
+    let counts = Counts::default();
+    let basis = BinaryBasis(&counts);
+    let factors = [7, 1, 5].map(|i| H::factor(Index(i)));
+    let space = H::tensor_all(factors.iter().cloned()).unwrap();
+    let plus =
+        LocalState::primitive(Primitive(0, &counts)) + LocalState::primitive(Primitive(1, &counts));
+    let state = S::tensor_in(
+        &space,
+        factors.iter().map(|factor| plus.at(factor).unwrap()),
+    )
+    .unwrap();
+    let expanded = state.expand(&basis).unwrap();
+    let StateNode::Sum(terms) = expanded.expression.node() else {
+        panic!("expanded sum");
+    };
+    assert_eq!(terms.len(), 8);
+    let mut placements = BTreeMap::new();
+    for term in terms.iter() {
+        let tensor = match term.node() {
+            StateNode::Scale(scale) => scale.operand.node(),
+            node => node,
+        };
+        let StateNode::Tensor(operands) = tensor else {
+            panic!("expanded tensor");
+        };
+        assert_eq!(operands.len(), factors.len());
+        for (operand, expected_factor) in operands.iter().zip(&factors) {
+            let StateNode::Local(factor, local) = operand.node() else {
+                panic!("placed tensor factor");
+            };
+            let LocalNode::Primitive(primitive) = local.node() else {
+                panic!("expanded basis element");
+            };
+            assert!(factor.factor_index() == expected_factor.factor_index());
+            let key = (factor.factor_index().unwrap().0, primitive.0);
+            if let Some(previous) = placements.insert(key, operand.node()) {
+                assert!(core::ptr::eq(previous, operand.node()));
+            }
+        }
+    }
+    assert_eq!(placements.len(), 6);
+    assert_eq!(
+        expanded
+            .coordinates(&basis)
+            .unwrap()
+            .into_entries()
+            .collect::<Vec<_>>(),
+        state
+            .coordinates(&basis)
+            .unwrap()
+            .into_entries()
+            .collect::<Vec<_>>()
+    );
+}
 
 #[test]
 fn evaluated_contraction_only_requires_primitive_inner_products() {

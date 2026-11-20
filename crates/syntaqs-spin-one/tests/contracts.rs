@@ -200,7 +200,7 @@ fn bases<T: Real>() {
         assert_eq!(elements, expected);
         for p in OPS {
             assert_eq!(basis.index(&p), expected.iter().position(|v| *v == p));
-            let expansion = basis.expand(&p);
+            let expansion = basis.expand(&p).unwrap();
             assert!(expansion.terms().all(|t| expected.contains(&t.operand)));
             values::<T>(&combination(expansion), &matrix(p));
             let expr = SpinOne::<Complex<T>>::operator(p);
@@ -246,7 +246,7 @@ fn bases<T: Real>() {
             Some(i)
         );
         assert_eq!(
-            <SzBasis as Basis<S, Complex<T>>>::expand(&SzBasis, &s),
+            <SzBasis as Basis<S, Complex<T>>>::expand(&SzBasis, &s).unwrap(),
             Lc::primitive(s)
         );
     }

@@ -1,0 +1,10 @@
+system,workload,sites,factors,order,api,metric,value
+spin_half,heisenberg,64,64,1,operator_coordinates_cartesian,visited_factors,378
+spin_half,heisenberg,64,64,1,operator_expand_cartesian,placed_nodes,256
+spin_half,heisenberg,64,64,2,operator_coordinates_cartesian,visited_factors,68826
+spin_half,heisenberg,64,64,2,operator_expand_cartesian,placed_nodes,256
+spin_half,ghz,14,14,0,state_coordinates_sz,prefix_entries,0
+spin_half,ghz,14,14,0,state_expand_sz,placed_nodes,28
+spin_half,plus,14,14,0,state_coordinates_sz,prefix_entries,0
+spin_half,plus,14,14,0,state_expand_sz,placed_nodes,28
+spin_half,plus,18,18,0,state_coordinates_sz,prefix_entries,0

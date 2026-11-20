@@ -227,13 +227,13 @@ fn independent_three_level_expansion_at_both_precisions() {
 
 struct BrokenBasis(u8);
 impl Basis<Ket, Complex<f64>> for BrokenBasis {
-    fn expand(
+    fn expand_indices(
         &self,
         _: &Ket,
-    ) -> syntaqs_core::expression::parts::linear_combination::LinearCombination<Ket, Complex<f64>>
+    ) -> syntaqs_core::expression::parts::linear_combination::LinearCombination<usize, Complex<f64>>
     {
         syntaqs_core::expression::parts::linear_combination::LinearCombination::primitive(
-            Ket::Phase,
+            if self.0 == 1 { 3 } else { 0 },
         )
     }
     fn index(&self, _: &Ket) -> Option<usize> {
@@ -243,8 +243,8 @@ impl Basis<Ket, Complex<f64>> for BrokenBasis {
             _ => Some(0),
         }
     }
-    fn elements(&self) -> impl Iterator<Item = Ket> {
-        [Ket::Phase].into_iter()
+    fn element(&self, index: usize) -> Option<Ket> {
+        (index == 0 && self.0 != 3).then_some(Ket::Phase)
     }
 }
 
@@ -252,7 +252,7 @@ impl Basis<Ket, Complex<f64>> for BrokenBasis {
 fn malformed_expansion_of_retained_states_and_enumeration_are_errors() {
     let state = Ls::<f64>::primitive(Ket::Phase);
     assert!(matches!(
-        state.coordinates(&BrokenBasis(0)),
+        state.expand(&BrokenBasis(0)),
         Err(BasisError::NonBasisElement)
     ));
     assert!(matches!(
@@ -261,6 +261,15 @@ fn malformed_expansion_of_retained_states_and_enumeration_are_errors() {
             index: 3,
             dimension: 3
         })
+    ));
+    assert_eq!(state.coordinates(&BrokenBasis(3)).unwrap().len(), 1);
+    assert!(matches!(
+        state.expand(&BrokenBasis(3)),
+        Err(BasisError::InvalidEnumeration)
+    ));
+    assert!(matches!(
+        BrokenBasis(3).expand(&Ket::Phase),
+        Err(BasisError::InvalidEnumeration)
     ));
     let factor = HilbertSpace::factor(0u8);
     let mut elements = factor
@@ -312,20 +321,24 @@ fn zero_state_factor_is_removed_before_basis_expansion() {
 
 struct BrokenOperatorBasis;
 impl Basis<Operator, Complex<f64>> for BrokenOperatorBasis {
-    fn expand(
+    fn expand_indices(
         &self,
         p: &Operator,
-    ) -> syntaqs_core::expression::parts::linear_combination::LinearCombination<
-        Operator,
-        Complex<f64>,
-    > {
-        syntaqs_core::expression::parts::linear_combination::LinearCombination::primitive(*p)
+    ) -> syntaqs_core::expression::parts::linear_combination::LinearCombination<usize, Complex<f64>>
+    {
+        syntaqs_core::expression::parts::linear_combination::LinearCombination::primitive(
+            if matches!(p, Operator::Identity) {
+                0
+            } else {
+                9
+            },
+        )
     }
     fn index(&self, p: &Operator) -> Option<usize> {
         matches!(p, Operator::Identity).then_some(0)
     }
-    fn elements(&self) -> impl Iterator<Item = Operator> {
-        std::iter::once(Operator::Identity)
+    fn element(&self, index: usize) -> Option<Operator> {
+        (index == 0).then_some(Operator::Identity)
     }
 }
 
@@ -339,7 +352,10 @@ fn operator_zeros_are_removed_before_basis_expansion() {
         .unwrap();
     assert!(matches!(
         operator.coordinates_in(&BrokenOperatorBasis, &space),
-        Err(BasisError::NonBasisElement)
+        Err(BasisError::IndexOutOfBounds {
+            index: 9,
+            dimension: 9
+        })
     ));
     for zero in [
         operator.scaled(c(0.0, 0.0)),

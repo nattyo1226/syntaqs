@@ -29,8 +29,10 @@ pub struct CartesianBasis;
 pub struct LadderBasis;
 
 impl<C: One> Basis<S, C> for SzBasis {
-    fn expand(&self, primitive: &S) -> LinearCombination<S, C> {
-        LinearCombination::primitive(*primitive)
+    fn expand_indices(&self, primitive: &S) -> LinearCombination<usize, C> {
+        LinearCombination::primitive(
+            Basis::<_, C>::index(self, primitive).expect("basis primitive"),
+        )
     }
     fn index(&self, primitive: &S) -> Option<usize> {
         Some(match primitive {
@@ -39,23 +41,23 @@ impl<C: One> Basis<S, C> for SzBasis {
             S::Minus => 2,
         })
     }
-    fn elements(&self) -> impl Iterator<Item = S> + '_ {
-        [S::Plus, S::Zero, S::Minus].into_iter()
+    fn element(&self, index: usize) -> Option<S> {
+        [S::Plus, S::Zero, S::Minus].get(index).copied()
     }
 }
 
 impl<C: One + Neg<Output = C> + ImaginaryUnit> Basis<O, C> for CartesianBasis {
-    fn expand(&self, primitive: &O) -> LinearCombination<O, C> {
+    fn expand_indices(&self, primitive: &O) -> LinearCombination<usize, C> {
         use LinearCombination as Lc;
         use O::*;
         match primitive {
-            Sp => Lc::primitive(Sx) + Lc::term(imaginary(C::one()), Sy),
-            Sm => Lc::primitive(Sx) + Lc::term(imaginary(-C::one()), Sy),
-            Q1p => Lc::primitive(Qzx) + Lc::term(imaginary(C::one()), Qyz),
-            Q1m => Lc::primitive(Qzx) + Lc::term(imaginary(-C::one()), Qyz),
-            Q2p => Lc::primitive(Dxy) + Lc::term(imaginary(C::one()), Qxy),
-            Q2m => Lc::primitive(Dxy) + Lc::term(imaginary(-C::one()), Qxy),
-            _ => Lc::primitive(*primitive),
+            Sp => Lc::primitive(1) + Lc::term(imaginary(C::one()), 2),
+            Sm => Lc::primitive(1) + Lc::term(imaginary(-C::one()), 2),
+            Q1p => Lc::primitive(8) + Lc::term(imaginary(C::one()), 7),
+            Q1m => Lc::primitive(8) + Lc::term(imaginary(-C::one()), 7),
+            Q2p => Lc::primitive(4) + Lc::term(imaginary(C::one()), 6),
+            Q2m => Lc::primitive(4) + Lc::term(imaginary(-C::one()), 6),
+            _ => Lc::primitive(Basis::<_, C>::index(self, primitive).expect("basis primitive")),
         }
     }
     fn index(&self, primitive: &O) -> Option<usize> {
@@ -73,9 +75,9 @@ impl<C: One + Neg<Output = C> + ImaginaryUnit> Basis<O, C> for CartesianBasis {
             Sp | Sm | Q1p | Q1m | Q2p | Q2m => None,
         }
     }
-    fn elements(&self) -> impl Iterator<Item = O> + '_ {
+    fn element(&self, index: usize) -> Option<O> {
         use O::*;
-        [I, Sx, Sy, Sz, Dxy, Q0, Qxy, Qyz, Qzx].into_iter()
+        [I, Sx, Sy, Sz, Dxy, Q0, Qxy, Qyz, Qzx].get(index).copied()
     }
 }
 
@@ -83,17 +85,17 @@ impl<C> Basis<O, C> for LadderBasis
 where
     C: One + Add<Output = C> + Div<Output = C> + Neg<Output = C> + ImaginaryUnit,
 {
-    fn expand(&self, primitive: &O) -> LinearCombination<O, C> {
+    fn expand_indices(&self, primitive: &O) -> LinearCombination<usize, C> {
         use LinearCombination as Lc;
         use O::*;
         match primitive {
-            Sx => Lc::term(half(), Sp) + Lc::term(half(), Sm),
-            Sy => Lc::term(imaginary(-half::<C>()), Sp) + Lc::term(imaginary(half()), Sm),
-            Qzx => Lc::term(half(), Q1p) + Lc::term(half(), Q1m),
-            Qyz => Lc::term(imaginary(-half::<C>()), Q1p) + Lc::term(imaginary(half()), Q1m),
-            Dxy => Lc::term(half(), Q2p) + Lc::term(half(), Q2m),
-            Qxy => Lc::term(imaginary(-half::<C>()), Q2p) + Lc::term(imaginary(half()), Q2m),
-            _ => Lc::primitive(*primitive),
+            Sx => Lc::term(half(), 1) + Lc::term(half(), 2),
+            Sy => Lc::term(imaginary(-half::<C>()), 1) + Lc::term(imaginary(half()), 2),
+            Qzx => Lc::term(half(), 5) + Lc::term(half(), 6),
+            Qyz => Lc::term(imaginary(-half::<C>()), 5) + Lc::term(imaginary(half()), 6),
+            Dxy => Lc::term(half(), 7) + Lc::term(half(), 8),
+            Qxy => Lc::term(imaginary(-half::<C>()), 7) + Lc::term(imaginary(half()), 8),
+            _ => Lc::primitive(Basis::<_, C>::index(self, primitive).expect("basis primitive")),
         }
     }
     fn index(&self, primitive: &O) -> Option<usize> {
@@ -111,8 +113,8 @@ where
             Sx | Sy | Dxy | Qxy | Qyz | Qzx => None,
         }
     }
-    fn elements(&self) -> impl Iterator<Item = O> + '_ {
+    fn element(&self, index: usize) -> Option<O> {
         use O::*;
-        [I, Sp, Sm, Sz, Q0, Q1p, Q1m, Q2p, Q2m].into_iter()
+        [I, Sp, Sm, Sz, Q0, Q1p, Q1m, Q2p, Q2m].get(index).copied()
     }
 }

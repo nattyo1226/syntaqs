@@ -28,8 +28,10 @@ pub struct LadderBasis;
 pub struct MajoranaBasis;
 
 impl<C: One> Basis<FermionState, C> for OccupationBasis {
-    fn expand(&self, primitive: &FermionState) -> LinearCombination<FermionState, C> {
-        LinearCombination::primitive(*primitive)
+    fn expand_indices(&self, primitive: &FermionState) -> LinearCombination<usize, C> {
+        LinearCombination::primitive(
+            Basis::<_, C>::index(self, primitive).expect("basis primitive"),
+        )
     }
     fn index(&self, primitive: &FermionState) -> Option<usize> {
         Some(match primitive {
@@ -37,8 +39,10 @@ impl<C: One> Basis<FermionState, C> for OccupationBasis {
             FermionState::Occupied => 1,
         })
     }
-    fn elements(&self) -> impl Iterator<Item = FermionState> + '_ {
-        [FermionState::Empty, FermionState::Occupied].into_iter()
+    fn element(&self, index: usize) -> Option<FermionState> {
+        [FermionState::Empty, FermionState::Occupied]
+            .get(index)
+            .copied()
     }
 }
 
@@ -46,16 +50,14 @@ impl<C> Basis<FermionOperator, C> for LadderBasis
 where
     C: One + Add<Output = C> + Neg<Output = C> + ImaginaryUnit,
 {
-    fn expand(&self, primitive: &FermionOperator) -> LinearCombination<FermionOperator, C> {
+    fn expand_indices(&self, primitive: &FermionOperator) -> LinearCombination<usize, C> {
         use FermionOperator::*;
         use LinearCombination as Lc;
         match primitive {
-            Mx => Lc::primitive(Annihilate) + Lc::primitive(Create),
-            My => {
-                Lc::term(imaginary(-C::one()), Annihilate) + Lc::term(imaginary(C::one()), Create)
-            }
-            Mz => Lc::primitive(I) + Lc::term(-(C::one() + C::one()), Number),
-            _ => Lc::primitive(*primitive),
+            Mx => Lc::primitive(1) + Lc::primitive(2),
+            My => Lc::term(imaginary(-C::one()), 1) + Lc::term(imaginary(C::one()), 2),
+            Mz => Lc::primitive(0) + Lc::term(-(C::one() + C::one()), 3),
+            _ => Lc::primitive(Basis::<_, C>::index(self, primitive).expect("basis primitive")),
         }
     }
     fn index(&self, primitive: &FermionOperator) -> Option<usize> {
@@ -68,9 +70,9 @@ where
             _ => None,
         }
     }
-    fn elements(&self) -> impl Iterator<Item = FermionOperator> + '_ {
+    fn element(&self, index: usize) -> Option<FermionOperator> {
         use FermionOperator::*;
-        [I, Annihilate, Create, Number].into_iter()
+        [I, Annihilate, Create, Number].get(index).copied()
     }
 }
 
@@ -78,14 +80,14 @@ impl<C> Basis<FermionOperator, C> for MajoranaBasis
 where
     C: One + Add<Output = C> + Div<Output = C> + Neg<Output = C> + ImaginaryUnit,
 {
-    fn expand(&self, primitive: &FermionOperator) -> LinearCombination<FermionOperator, C> {
+    fn expand_indices(&self, primitive: &FermionOperator) -> LinearCombination<usize, C> {
         use FermionOperator::*;
         use LinearCombination as Lc;
         match primitive {
-            Annihilate => Lc::term(half(), Mx) + Lc::term(imaginary(half()), My),
-            Create => Lc::term(half(), Mx) + Lc::term(imaginary(-half::<C>()), My),
-            Number => Lc::term(half(), I) + Lc::term(-half::<C>(), Mz),
-            _ => Lc::primitive(*primitive),
+            Annihilate => Lc::term(half(), 1) + Lc::term(imaginary(half()), 2),
+            Create => Lc::term(half(), 1) + Lc::term(imaginary(-half::<C>()), 2),
+            Number => Lc::term(half(), 0) + Lc::term(-half::<C>(), 3),
+            _ => Lc::primitive(Basis::<_, C>::index(self, primitive).expect("basis primitive")),
         }
     }
     fn index(&self, primitive: &FermionOperator) -> Option<usize> {
@@ -98,8 +100,8 @@ where
             _ => None,
         }
     }
-    fn elements(&self) -> impl Iterator<Item = FermionOperator> + '_ {
+    fn element(&self, index: usize) -> Option<FermionOperator> {
         use FermionOperator::*;
-        [I, Mx, My, Mz].into_iter()
+        [I, Mx, My, Mz].get(index).copied()
     }
 }

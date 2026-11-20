@@ -455,7 +455,9 @@ already match. Action-presence flags describe pending actions.
 The full state-evaluation bounds are listed with the
 [public evaluation contracts](#42-shared-apis-and-minimal-capabilities).
 
-State coordinates follow `evaluate -> basis expansion -> basis-index collection`.
+State coordinates evaluate the state, apply the indexed basis rules, and
+collect complete coordinate tuples. A tensor child spanning several factors
+contributes a tuple as one choice.
 Validation of spaces/references precedes removal of zero states. Basis expansion
 checks primitives retained by evaluation; removed terms no longer run basis rules,
 including a tensor annihilated by a zero state factor. This boundary differs from
@@ -513,15 +515,14 @@ Public state paths inherit the [evaluation bounds](#42-shared-apis-and-minimal-c
 
 ### 11.6. Sparse operator basis generation
 
-Operator expand/coordinates consume signed intrinsic factors and use
-[direct coordinate generation](basis.md#operator-coordinate-generation):
-query-local spectator identity choices, sparse specified-factor data, a working
-full-length key, and one final accumulator. The single-component identity path
-uses its actual basis digit and coefficient; general identities share their
-local choices across spectator positions. Expression expansion additionally
-shares local basis payloads. Operator queries use the public bounds and
-coordinate format defined in basis design. Trace and HS use the evaluated
-operator blocks directly.
+Operator `expand()` and `coordinates()` consume signed intrinsic factors.
+Query-local basis conversions feed a working full-length key and one final
+accumulator. The gap between specified factors determines the spectator
+positions. A single-component identity uses its own basis index and
+coefficient. General identities share their local choices across spectators.
+`expand()` reconstructs the surviving coordinates using shared placed nodes
+for equal factor positions and basis indices. Trace and HS use the evaluated
+operator blocks directly. [Direct coordinate generation](basis.md#operator-coordinate-generation)
 
 ### 11.7. Operator block evaluation
 

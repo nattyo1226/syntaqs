@@ -356,7 +356,10 @@ and deferred state syntax construction. Stage 4 is complete with on-demand
 contraction blocks and conjugate symmetry for matching state sums. Stage 5 is
 complete with support-aware operator evaluation and basis conversion after
 natural term collection. Stage 6 is complete with direct Hilbert–Schmidt
-contraction, conjugate symmetry, and local parity checks. Stages 7–8 are pending.
+contraction, conjugate symmetry, and local parity checks. Stage 7 is complete
+with indexed basis conversion, query-local reuse, sparse operator enumeration,
+state tensor block enumeration, and shared placed expression nodes. Stage 8
+is pending.
 Completion requires the agreed changes, passing applicable correctness and
 workspace checks, and a full comparison with explanations for material
 regressions or missing measurements.
@@ -364,6 +367,7 @@ regressions or missing measurements.
 [Stage 4 measurements](measurements/stage-4/README.md)
 [Stage 5 measurements](measurements/stage-5/README.md)
 [Stage 6 measurements](measurements/stage-6/README.md)
+[Stage 7 measurements](measurements/stage-7/README.md)
 
 After the refactoring comparison, benchmark `Ord` and `PartialOrd` for state
 and operator primitives using the agreed workloads with few and many

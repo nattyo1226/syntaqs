@@ -128,14 +128,11 @@ fn exact_value(lc: Lc<O, Exact>) -> Matrix {
 fn basis_conversions_accept_nonclone_exact_coefficients() {
     for a in OPS {
         values::<f64>(
-            &exact_value(<CartesianBasis as Basis<O, Exact>>::expand(
-                &CartesianBasis,
-                &a,
-            )),
+            &exact_value(<CartesianBasis as Basis<O, Exact>>::expand(&CartesianBasis, &a).unwrap()),
             &matrix(a),
         );
         values::<f64>(
-            &exact_value(<LadderBasis as Basis<O, Exact>>::expand(&LadderBasis, &a)),
+            &exact_value(<LadderBasis as Basis<O, Exact>>::expand(&LadderBasis, &a).unwrap()),
             &matrix(a),
         );
         assert_eq!(
@@ -197,7 +194,8 @@ fn individual_capabilities_keep_their_small_bounds() {
             .unwrap();
         assert_eq!(term.coefficient.0, 1);
         assert_eq!(<O as Trace<u32>>::trace(&a), if a == O::I { 3 } else { 0 });
-        let expanded = <CartesianBasis as Basis<O, SignedComplex>>::expand(&CartesianBasis, &a);
+        let expanded =
+            <CartesianBasis as Basis<O, SignedComplex>>::expand(&CartesianBasis, &a).unwrap();
         let actual = expanded.into_iter().fold(vec![0.0.into(); 9], |sum, t| {
             add(
                 &sum,
@@ -211,6 +209,7 @@ fn individual_capabilities_keep_their_small_bounds() {
     }
     for s in STATES {
         let term = <SzBasis as Basis<S, OneOnly>>::expand(&SzBasis, &s)
+            .unwrap()
             .into_iter()
             .next()
             .unwrap();

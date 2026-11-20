@@ -1,0 +1,17 @@
+system,workload,sites,factors,order,api,requests,requested_bytes
+spin_half,heisenberg,64,64,1,operator_coordinates_cartesian,4917,616064
+spin_half,heisenberg,64,64,1,operator_expand_cartesian,6764,855344
+spin_half,heisenberg,64,64,2,operator_coordinates_cartesian,167424,25770512
+spin_half,heisenberg,64,64,2,operator_expand_cartesian,306926,45525408
+spin_one,blbq_neel,64,64,1,state_coordinates_sz,92214,24201392
+spin_one,blbq_neel,64,64,1,operator_coordinates_cartesian,32890,3146080
+spin_one,blbq_neel,64,64,1,operator_coordinates_ladder,34864,3806416
+spin_one,blbq_neel,64,64,1,operator_expand_cartesian,37592,3762112
+fermion,hubbard,64,128,1,operator_coordinates_ladder,8174,1203776
+fermion,hubbard,64,128,1,operator_coordinates_majorana,9805,2233832
+fermion,hubbard,64,128,1,operator_expand_majorana,14467,3249816
+spin_half,ghz,14,14,0,state_coordinates_sz,434,68992
+spin_half,ghz,14,14,0,state_expand_sz,500,76912
+spin_half,plus,14,14,0,state_coordinates_sz,19406,3155416
+spin_half,plus,14,14,0,state_expand_sz,117788,13909736
+spin_half,plus,18,18,0,state_coordinates_sz,306203,58322512

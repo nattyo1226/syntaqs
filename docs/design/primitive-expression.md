@@ -176,7 +176,11 @@ preserving local-algebra and factor checks.
 
 Exact expansion/coordinates explicitly organize expressions and connect them to bases, preserving linear relations and aggregating members. Primitives do not fix a selected basis, and ordinary actions/inner products/traces need no expansion. Approximate comparison and action equivalence follow [numerics](numerics.md).
 
-A basis struct implements Basis<P,C> with primitive expansion, indices, and ordered enumeration. State/operator outputs are LinearCombination<S,C>/LinearCombination<O,C>, restricted to selected primitive members and mapped into ordinary syntax. Members form a primitive subset; size derives from local structure and target kind, and core extends expansion linearly. See [bases](basis.md).
+A basis implements `Basis<P,C>` with indexed primitive expansion and lookup
+in both directions. `Basis::expand()` resolves the indices into an owned
+primitive combination and reports a missing element as an error. The basis
+size derives from local structure and target kind. Core extends the indexed
+rules linearly to expressions. See [bases](basis.md).
 
 The basis is an input; the result is ordinary syntax without basis identity or special expanded status. Preserve inputs/local structure and permit ordinary operations and re-expansion without an independent tree basis-change mechanism.
 

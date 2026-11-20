@@ -156,17 +156,17 @@ struct CountedCartesian {
 }
 
 impl Basis<O, C> for CountedCartesian {
-    fn expand(&self, primitive: &O) -> LinearCombination<O, C> {
+    fn expand_indices(&self, primitive: &O) -> LinearCombination<usize, C> {
         self.calls.set(self.calls.get() + 1);
-        CartesianBasis.expand(primitive)
+        CartesianBasis.expand_indices(primitive)
     }
 
     fn index(&self, primitive: &O) -> Option<usize> {
         <CartesianBasis as Basis<O, C>>::index(&CartesianBasis, primitive)
     }
 
-    fn elements(&self) -> impl Iterator<Item = O> + '_ {
-        <CartesianBasis as Basis<O, C>>::elements(&CartesianBasis)
+    fn element(&self, index: usize) -> Option<O> {
+        <CartesianBasis as Basis<O, C>>::element(&CartesianBasis, index)
     }
 }
 

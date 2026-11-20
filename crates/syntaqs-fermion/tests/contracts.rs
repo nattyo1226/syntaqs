@@ -139,7 +139,7 @@ fn bases<T: Real>() {
                 basis.index(&primitive),
                 elements.iter().position(|p| *p == primitive)
             );
-            let expansion = basis.expand(&primitive);
+            let expansion = basis.expand(&primitive).unwrap();
             for term in expansion.terms() {
                 assert!(elements.contains(&term.operand));
             }
@@ -168,7 +168,8 @@ fn bases<T: Real>() {
             <OccupationBasis as Basis<S, Complex<T>>>::index(&OccupationBasis, state),
             Some(j)
         );
-        let expanded = <OccupationBasis as Basis<S, Complex<T>>>::expand(&OccupationBasis, state);
+        let expanded =
+            <OccupationBasis as Basis<S, Complex<T>>>::expand(&OccupationBasis, state).unwrap();
         assert_eq!(expanded.into_iter().next().unwrap().operand, *state);
     }
     let majoranas = [O::I, O::Mx, O::My, O::Mz].map(Fermion::<Complex<T>>::operator);

@@ -59,14 +59,14 @@ impl Adjoint<f64> for Op {
     }
 }
 impl Basis<Ket, f64> for Ordered {
-    fn expand(&self, p: &Ket) -> LinearCombination<Ket, f64> {
-        LinearCombination::primitive(Ket(p.0))
+    fn expand_indices(&self, p: &Ket) -> LinearCombination<usize, f64> {
+        LinearCombination::primitive(usize::from(p.0))
     }
     fn index(&self, p: &Ket) -> Option<usize> {
         Some(usize::from(p.0))
     }
-    fn elements(&self) -> impl Iterator<Item = Ket> {
-        [Ket(0), Ket(1)].into_iter()
+    fn element(&self, index: usize) -> Option<Ket> {
+        (index < 2).then_some(Ket(index as u8))
     }
 }
 
@@ -113,8 +113,8 @@ fn exports_need_neither_primitive_cloning_nor_operator_products_or_index_cloning
 
 struct Broken(u8);
 impl Basis<Ket, f64> for Broken {
-    fn expand(&self, _: &Ket) -> LinearCombination<Ket, f64> {
-        LinearCombination::primitive(Ket(if self.0 == 3 { 3 } else { 0 }))
+    fn expand_indices(&self, _: &Ket) -> LinearCombination<usize, f64> {
+        LinearCombination::primitive(if self.0 == 3 { 3 } else { 0 })
     }
     fn index(&self, p: &Ket) -> Option<usize> {
         if self.0 == 4 {
@@ -123,14 +123,14 @@ impl Basis<Ket, f64> for Broken {
             Some(usize::from(p.0))
         }
     }
-    fn elements(&self) -> impl Iterator<Item = Ket> {
-        match self.0 {
-            0 => vec![Ket(1), Ket(0)],
-            1 => vec![Ket(0)],
-            2 => vec![Ket(0), Ket(1), Ket(0)],
-            _ => vec![Ket(0), Ket(1)],
-        }
-        .into_iter()
+    fn element(&self, index: usize) -> Option<Ket> {
+        let elements: &[u8] = match self.0 {
+            0 => &[1, 0],
+            1 => &[0],
+            2 => &[0, 1, 0],
+            _ => &[0, 1],
+        };
+        elements.get(index).copied().map(Ket)
     }
 }
 
@@ -154,12 +154,9 @@ fn malformed_bases_and_unbound_or_invalid_spaces_are_errors_even_for_zero() {
         result,
         Err(ExportError::Basis(BasisError::IndexOutOfBounds { .. }))
     ));
-    let basis = Broken(4);
-    let result: Result<Exported<Vec<_>, VectorMetadata<'_, _, (), Ket>>, _> =
-        (&state).export(&basis);
     assert!(matches!(
-        result,
-        Err(ExportError::Basis(BasisError::NonBasisElement))
+        state.expand(&Broken(4)),
+        Err(BasisError::NonBasisElement)
     ));
 
     let a = HilbertSpace::factor(0u8);

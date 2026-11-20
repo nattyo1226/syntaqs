@@ -38,7 +38,7 @@
 //!
 //! let product: LinearCombination<Op, Complex<f64>> = Op::I.product(&Op::Sp);
 //! assert_eq!(product, LinearCombination::primitive(Op::Sp));
-//! let expanded = <CartesianBasis as Basis<Op, Complex<f64>>>::expand(&CartesianBasis, &Op::Sp);
+//! let expanded = <CartesianBasis as Basis<Op, Complex<f64>>>::expand(&CartesianBasis, &Op::Sp).unwrap();
 //! assert_eq!(expanded, LinearCombination::term(Complex::new(0.5, 0.0), Op::Sx)
 //!     + LinearCombination::term(Complex::new(0.0, 0.5), Op::Sy));
 //! let elements: Vec<_> = <CartesianBasis as Basis<Op, Complex<f64>>>::elements(&CartesianBasis).collect();

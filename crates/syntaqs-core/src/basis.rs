@@ -12,20 +12,30 @@ mod expansion;
 /// construction. Implementations must expand every valid target primitive into
 /// elements of this basis while preserving its mathematical value.
 ///
-/// Numeric bounds belong to each concrete implementation, rather than this
-/// trait. All three methods use that implementation's coefficient precision.
+/// Numeric bounds belong to each concrete implementation. All methods use
+/// that implementation's coefficient precision.
 pub trait Basis<P, C> {
-    /// Expands a primitive into a combination of elements of this basis.
-    fn expand(&self, primitive: &P) -> LinearCombination<P, C>;
+    /// Expands a primitive into coefficients of zero-based basis indices.
+    fn expand_indices(&self, primitive: &P) -> LinearCombination<usize, C>;
+
+    /// Retrieves the basis element at a zero-based index, or `None` outside the basis.
+    fn element(&self, index: usize) -> Option<P>;
 
     /// Returns the zero-based index, or `None` for a non-basis primitive.
     fn index(&self, primitive: &P) -> Option<usize>;
 
+    /// Expands a primitive and resolves the returned indices into owned elements.
+    /// Returns [`BasisError::InvalidEnumeration`] if an index has no element.
+    fn expand(&self, primitive: &P) -> Result<LinearCombination<P, C>, BasisError> {
+        self.expand_indices(primitive)
+            .try_map(|index| self.element(index).ok_or(BasisError::InvalidEnumeration))
+    }
+
     /// Yields each basis element exactly once in index order.
-    ///
-    /// Elements are owned; allocation and an exact-size iterator are not required.
     /// Use a qualified call when `C` cannot be inferred from context.
-    fn elements(&self) -> impl Iterator<Item = P> + '_;
+    fn elements(&self) -> impl Iterator<Item = P> + '_ {
+        (0..).map_while(|index| self.element(index))
+    }
 }
 
 use alloc::{collections::BTreeMap, vec::Vec};
@@ -35,7 +45,7 @@ use crate::{DimensionOverflow, ExpressionError};
 /// An invalid basis expansion, coordinate, or selected expression space.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum BasisError {
-    /// A primitive returned by a basis rule has no index in that basis.
+    /// An element returned by the basis has no index in that basis.
     #[error("basis expansion returned a non-basis primitive")]
     NonBasisElement,
     /// A basis index does not fit the primitive's span dimension.

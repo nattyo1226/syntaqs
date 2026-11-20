@@ -1,6 +1,6 @@
 # Basis expansion, coordinates, and enumeration
 
-Updated: 2026-11-17
+Updated: 2026-11-20
 
 ## 1. Scope and contract
 
@@ -10,7 +10,9 @@ either an expression in basis members or aggregated sparse coordinates.
 
 Core owns basis capabilities, whole-expression expansion, composite bases, and coordinates. Concrete algebras implement local bases and primitive expansion rules; export stores the resulting coefficients in numerical containers.
 
-A struct such as CartesianBasis defines a basis through `Basis<P,C>`, selecting primitive members and expansion rules. State expansion returns `LinearCombination<S,C>`, operator expansion `LinearCombination<O,C>`; expressions map these elements into ordinary syntax. Callers need not supply arrays/sets of basis elements.
+A struct such as `CartesianBasis` defines a basis through `Basis<P,C>`.
+It selects primitive members and defines the rule that returns their indices
+and coefficients for a given primitive.
 
 One Basis implementation provides expansion, indexing, and enumeration. The trait has no numeric bounds; concrete implementations request their rule's capabilities, which consequently apply to index/elements too. Use a qualified call such as `<B as Basis<P,C>>::elements` when precision cannot be inferred.
 
@@ -31,9 +33,9 @@ Composite bases currently apply one local basis to all factors of the same S/O t
 
 | Capability | Input | Result and contract |
 | --- | --- | --- |
-| Primitive expansion | A primitive in the target space | Finite combination of selected basis primitives. |
-| Basis index | A primitive | Its index if it is itself a basis member, otherwise none. |
-| Ordered enumeration | Basis definition/parameters | Basis primitives generated as needed in index order. |
+| `expand_indices(&self, primitive: &P)` | A primitive in the target space | `LinearCombination<usize, C>` with zero-based indices and coefficients. |
+| `element(&self, index: usize)` | A zero-based index | `Some(P)` for a basis element within range, `None` outside the basis. |
+| `index(&self, primitive: &P)` | A primitive | `Some(usize)` for a basis member, `None` for a nonmember. |
 
 For `B={b_0,…,b_(n−1)}` and every target primitive p:
 
@@ -43,19 +45,12 @@ p=\sum_{\mu=0}^{n-1}c_\mu(p)b_\mu.
 
 Independence makes these coefficients unique. Expansion represents the whole object without projection/pruning. Nonmembers expand but have no index identifying themselves.
 
-| Input | Result |
-| --- | --- |
-| State primitive S | `LinearCombination<S, C>` |
-| Operator primitive O | `LinearCombination<O, C>` |
-
-Results contain only selected basis primitives. A coefficient/order-preserving
-map and common constructors produce ordinary Primitive/Scale/Sum syntax; the
-[result contract](#52-expansion-returns-ordinary-expression-trees) specifies its
-ownership and reuse. Verify membership and conversion consistency.
-
-Indices are zero-based basis coordinates, not implicit label/value order or factor identity. `index(&self, primitive: &P) -> Option<usize>` returns None for nonmembers.
-
-`elements(&self) -> impl Iterator<Item=P> + '_` lazily yields owned elements without materializing all of them. Index-to-element lookup can be derived from enumeration and is not a separate mandatory capability. Representation and shared primitive storage are implementation details.
+`expand(&self, primitive: &P)` returns `Result<LinearCombination<P, C>, BasisError>`.
+It maps each index to an owned basis element and preserves the coefficients and
+term order. A missing element returns `InvalidEnumeration`. `elements()`
+lazily yields owned elements in index order by calling `element()` by default.
+Indices represent coordinates in the selected basis independently of factor
+identity and primitive ordering.
 
 ## 3. Deriving basis sizes
 
@@ -75,15 +70,17 @@ This contract assumes complete bases, excluding subspace/projection and fermion-
 - Enumerate each basis element once; element k has index k.
 - Enumeration and indexing agree for the same definition/parameters.
 - Enumeration count equals the derived dimension.
-- A basis member expands to itself with coefficient 1.
-- Every output primitive is a selected basis member.
+- A basis member expands to its index with coefficient 1.
+- Every index returned by `expand_indices()` is in the local basis range.
 - Preserve primitive linear relations, giving mathematically identical coordinates for equivalent expressions.
 
 These laws, independence, and completeness are implementation contracts and verification obligations, not runtime automatic proofs over every possible primitive. Precision, special values, and comparisons follow [numerics](numerics.md).
 
 ## 5. Expressions, coordinates, and numerical conversion
 
-`Basis::expand` expands one primitive; core extends this linearly to expressions, evaluating local/composition rules as needed for products/actions. Basis indices associate coefficients with coordinates and aggregate equal members.
+Core extends `Basis::expand_indices()` linearly to expressions. It evaluates
+local and composition rules and aggregates contributions with equal basis
+indices. Both expression queries use the resulting indexed coefficients.
 
 Choose the result according to how it will be used:
 
@@ -202,39 +199,57 @@ Coordinates does not retain a primitive type parameter. If B implements Basis fo
 
 For `2(Up⊗Down)+3(Up⊗Down)−(Down⊗Up)`, SzBasis coordinates are 5 at `[0,1]` and −1 at `[1,0]`, with flat indices 1 and 2.
 
-Internally, BTreeMap aggregates sparse digit keys. Remove exact zeros during aggregation and composite state scaling before later tensor products, without approximate pruning. State evaluation can eliminate terms before basis
-expansion; reached operator-coordinate terms still validate specified local
-expansions even when a numerical coefficient is zero. LinearCombination preserves order, duplicates, and zero coefficients. Aggregated sparse coefficients are stored, but no full basis, dense vector, or matrix is materialized.
+Internally, `BTreeMap` aggregates sparse digit keys. Exact zeros are removed
+during aggregation and composite state scaling. Every index returned by a
+reached basis rule is checked against the local dimension, including indices
+with zero coefficients. `LinearCombination` preserves order, duplicates, and
+zero coefficients. Coordinates store the aggregated sparse coefficients.
+
+#### State coordinate generation
+
+A composite state query reuses validated basis conversions for equal local
+primitives. Each tensor child contributes a choice of an entire digit tuple,
+preserving correlations inside that block. A reusable key holds the selected
+tuples in factor order. The tensor traversal writes completed coordinates into
+the result map. Sums aggregate overlapping coordinates before their maps are
+used as tensor children.
 
 #### Operator coordinate generation
 
 The generator receives specified primitives in ambient position order with
-graded signs resolved. It expands the specified primitives for each surviving
-term and lazily expands identity once for all spectator positions. A local
-product evaluated to the natural identity uses the same spectator expansion.
+graded signs resolved. It reuses the indexed conversion of each specified
+primitive and expands identity at the first spectator gap in the query.
+A local product evaluated to the natural identity uses the same spectator
+expansion.
 
 For a single-component identity `I = gamma B_q`, a reusable working key starts
 with digit q at every factor. Only specified positions are overwritten, then
 restored for the next term. Coefficient multiplication follows ambient order,
-including gamma at each spectator. Multiplying gamma in sequence avoids the
-additional overflow or underflow that can arise from computing powers first.
+including gamma at each spectator when gamma differs from one. Multiplying
+gamma in sequence avoids the additional overflow or underflow that can arise
+from computing powers first.
 For a multi-component identity, all spectator
 axes borrow the same choices and an iterative traversal enumerates required
 combinations. Single-choice products use a direct path; general enumeration uses
 an explicit work stack. No spectator tensor map or factor-by-factor coordinate
 prefix maps are constructed.
 
-Every complete contribution enters one final sparse accumulator. `coordinates()`
-keeps no operator payload. `expand()` shares local basis-expression handles and
-joins them only when a key first enters the accumulator, before reconstructing
-factor-ordered placements on the selected space. Full-length keys and genuinely
-large basis output retain their unavoidable storage and enumeration costs.
+Every complete contribution enters one final sparse accumulator. Full-length
+keys and genuinely large basis output retain their storage and enumeration
+costs.
 
 For each surviving term, validate the specified factors and the first needed
 spectator identity in ambient order. An empty basis conversion at one factor
 still leaves the other conversions subject to validation.
 
 Operator coordinates are operator-basis coefficients, distinct from action matrices. [Export](export.md) stores coordinates numerically and generates action-matrix columns by applying operators to state-basis inputs.
+
+#### Reconstructing expanded expressions
+
+`expand()` resolves only the basis indices that remain after aggregation. It
+shares a local basis-expression node for each index and a placed node for each
+pair of factor position and index. Each term uses those shared nodes in a
+state tensor or ordered operator product on the selected space.
 
 ### 7.3. Lazy composite enumeration
 
@@ -244,7 +259,14 @@ Generation needs Dimension/Basis, not index Eq/Clone, primitive Clone, local act
 
 ### 7.4. Errors and examples
 
-BasisError distinguishes non-basis outputs (NonBasisElement), out-of-range local indices (IndexOutOfBounds), inconsistent enumeration/counts (InvalidEnumeration), dimension overflow (Dimension), and incompatible/unbound spaces (Expression). Validate original placements before evaluating any term, including zero products. State and composite operator queries apply basis rules to terms that survive evaluation and collection. Enumeration checks apply independently of numerical collection.
+`BasisError` distinguishes missing membership (`NonBasisElement`), out-of-range
+indices (`IndexOutOfBounds`), missing elements or inconsistent ordering and
+counts (`InvalidEnumeration`), dimension overflow (`Dimension`), and invalid
+expression spaces (`Expression`). Core validates placements before applying
+basis rules to terms that survive evaluation and collection. `coordinates()`
+checks the local index bounds. Expression expansion and lazy composite
+enumeration also check the retrieved element against `index()` when they
+materialize it.
 
 `Basis`, `BasisError`, and `Coordinates` are defined in `syntaqs_core::basis`; `Basis` is also available in the core prelude. See [basis_expansion.rs](../../examples/src/bin/basis_expansion.rs) and section 6 for verification.
 

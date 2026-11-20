@@ -86,6 +86,22 @@ impl<P, C> LinearCombination<P, C> {
         }
     }
 
+    pub(crate) fn try_map<Q, E>(
+        self,
+        mut f: impl FnMut(P) -> Result<Q, E>,
+    ) -> Result<LinearCombination<Q, C>, E> {
+        let terms = self
+            .into_iter()
+            .map(|term| {
+                Ok(Term {
+                    coefficient: term.coefficient,
+                    operand: f(term.operand)?,
+                })
+            })
+            .collect::<Result<_, E>>()?;
+        Ok(LinearCombination { terms })
+    }
+
     /// Constructs one operand with coefficient one.
     pub fn primitive(operand: P) -> Self
     where
