@@ -2,7 +2,11 @@ use std::hint::black_box;
 
 use syntaqs_core::space::HilbertSpace;
 
-use crate::measure::{Case, CountedIndex, Mode, Runner};
+use crate::{
+    Space,
+    measure::{Case, CountedIndex, Mode, Runner},
+    spin_half::hamiltonian,
+};
 
 #[derive(Clone, Copy)]
 enum Construction {
@@ -98,6 +102,42 @@ fn prepare<I: Ord>(indices: impl Iterator<Item = I>, grouped: bool) -> Vec<Hilbe
     }
 }
 
+fn measure_binding(r: &Runner, input: &Case, parts: &[Space]) {
+    let leaves: Vec<_> = parts
+        .iter()
+        .flat_map(|part| part.leaves().cloned())
+        .collect();
+    let operator = hamiltonian(&leaves);
+    for construction in CONSTRUCTIONS {
+        if matches!(construction, Construction::Successive(_, Retention::All)) {
+            continue;
+        }
+        let api = construction.api();
+        let reused = Case {
+            system: "space_bind",
+            ..*input
+        };
+        if reused.id(api).contains(&r.filter) {
+            let (space, _) = construction.build(parts);
+            r.measure(&reused, api, || operator.bind(black_box(&space)).unwrap());
+        }
+        for order in [1, 8] {
+            let combined = Case {
+                system: "space_build_bind",
+                order,
+                ..*input
+            };
+            r.measure(&combined, api, || {
+                let (space, _) = construction.build(black_box(parts));
+                for _ in 0..order {
+                    drop(black_box(operator.bind(&space).unwrap()));
+                }
+                space
+            });
+        }
+    }
+}
+
 pub fn run(r: &Runner) {
     for n in [8, 32, 128, 512, 1_024] {
         let ordered = (0..n).collect::<Vec<_>>();
@@ -166,6 +206,10 @@ pub fn run(r: &Runner) {
                     r.measure_construction(&case, construction.api(), || {
                         construction.build(black_box(&parts))
                     });
+                }
+                if matches!(r.mode, Mode::Time | Mode::Allocations) && matches!(n, 32 | 128 | 1_024)
+                {
+                    measure_binding(r, &case, &parts);
                 }
             }
         }

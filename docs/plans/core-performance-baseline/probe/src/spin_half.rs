@@ -48,7 +48,7 @@ fn neel(space: &Space, n: usize) -> St {
     Q::product_state(space, [Up, Down].into_iter().cycle().take(n)).unwrap()
 }
 
-fn hamiltonian(sites: &[Space]) -> Op {
+pub(crate) fn hamiltonian(sites: &[Space]) -> Op {
     Models::heisenberg(&Chain::new(sites.len(), Boundary::Open), sites, 1.0).unwrap()
 }
 

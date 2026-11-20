@@ -167,7 +167,7 @@ pub struct Case {
 }
 
 impl Case {
-    fn id(&self, api: &str) -> String {
+    pub(crate) fn id(&self, api: &str) -> String {
         format!(
             "{},{},{},{},{},{}",
             self.system, self.workload, self.sites, self.factors, self.order, api

@@ -446,17 +446,17 @@ construction APIs in separate checkpoints.
    persistent regressions with their measured cost.
    [Workspace verification](../../design/verification.md)
 
-Steps 1–6 are complete. At 1,024 factors, successive `tensor().flatten()`
-with only the final root retained reduced heap retention from 8.54 MB to
-32.9 KB and raised construction and destruction time. Direct
-`tensor_flatten()` keeps the same retained memory and reduces allocation
-requests. Retaining every intermediate root keeps its index and child list
-with either API. Selective state action reduced CPU time by about 35% for
-eight Heisenberg applications at ten sites in the recheck. Save each
-checkpoint's raw timing, allocation, and work-count results under
-`measurements/follow-up/` with its revision and run configuration.
-Compare consecutive checkpoints for individual effects and Stage 8 for the
-cumulative result.
+Steps 1–7 are complete. The end-to-end run compares all 322 Stage 8
+cases and 105 shared follow-up controls. In alternating rechecks, CPU
+time drops about 47% for 1,024-site Heisenberg binding and 36% for eight
+applications at ten sites. With only the final root retained at 1,024
+ordered factors, successive `tensor()` retains 8.54 MB and either
+flattening path retains 32.9 KB. The report includes the cost of keeping
+earlier roots, the construction and binding crossover, and the workspace
+and downstream verification. Each checkpoint's raw data and run
+configuration are recorded under `measurements/follow-up/`.
+[End-to-end comparison](measurements/follow-up/final/README.md)
+
 [Follow-up reference measurements](measurements/follow-up/README.md) · [Exact-zero stopping measurements](measurements/follow-up/zero-product/README.md) · [Factor index measurements](measurements/follow-up/factor-index/README.md) · [Flattening measurements](measurements/follow-up/flatten/README.md) · [Direct flattened construction measurements](measurements/follow-up/tensor-flatten/README.md) · [Selective state action measurements](measurements/follow-up/state-action/README.md)
 
 ### Reduce intermediate work in state action

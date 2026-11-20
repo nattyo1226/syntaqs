@@ -1,0 +1,100 @@
+--- a/docs/plans/core-performance-baseline/probe/src/space_construction.rs
++++ b/docs/plans/core-performance-baseline/probe/src/space_construction.rs
+@@ -17,8 +17,6 @@
+ #[derive(Clone, Copy)]
+ enum Composition {
+     Tensor,
+-    ThenFlatten,
+-    TensorFlatten,
+ }
+
+ #[derive(Clone, Copy)]
+@@ -27,14 +25,10 @@
+     All,
+ }
+
+-const CONSTRUCTIONS: [Construction; 7] = [
++const CONSTRUCTIONS: [Construction; 3] = [
+     Construction::OneShot,
+     Construction::Successive(Composition::Tensor, Retention::FinalOnly),
+     Construction::Successive(Composition::Tensor, Retention::All),
+-    Construction::Successive(Composition::ThenFlatten, Retention::FinalOnly),
+-    Construction::Successive(Composition::ThenFlatten, Retention::All),
+-    Construction::Successive(Composition::TensorFlatten, Retention::FinalOnly),
+-    Construction::Successive(Composition::TensorFlatten, Retention::All),
+ ];
+
+ impl Construction {
+@@ -43,18 +37,6 @@
+             Self::OneShot => "tensor_all",
+             Self::Successive(Composition::Tensor, Retention::FinalOnly) => "tensor_successive",
+             Self::Successive(Composition::Tensor, Retention::All) => "tensor_successive_retained",
+-            Self::Successive(Composition::ThenFlatten, Retention::FinalOnly) => {
+-                "tensor_successive_flatten"
+-            }
+-            Self::Successive(Composition::ThenFlatten, Retention::All) => {
+-                "tensor_successive_flatten_retained"
+-            }
+-            Self::Successive(Composition::TensorFlatten, Retention::FinalOnly) => {
+-                "tensor_flatten_successive"
+-            }
+-            Self::Successive(Composition::TensorFlatten, Retention::All) => {
+-                "tensor_flatten_successive_retained"
+-            }
+         }
+     }
+
+@@ -76,11 +58,6 @@
+         for (i, next) in rest.iter().enumerate() {
+             match composition {
+                 Composition::Tensor => space = space.tensor(next).unwrap(),
+-                Composition::ThenFlatten => {
+-                    space = space.tensor(next).unwrap();
+-                    space = space.flatten();
+-                }
+-                Composition::TensorFlatten => space = space.tensor_flatten(next).unwrap(),
+             }
+             if retain && i + 1 < rest.len() {
+                 retained.push(space.clone());
+@@ -156,15 +133,6 @@
+             };
+             if matches!(r.mode, Mode::Diagnostics) {
+                 let parts = prepare(ids.iter().copied().map(CountedIndex), grouped);
+-                let prebuilt = HilbertSpace::tensor_all(parts.iter().cloned()).unwrap();
+-                r.diagnose_index_comparisons(&case, "flatten", || prebuilt.flatten());
+-                r.diagnose(&case, "flatten", "result_children", || {
+-                    let flattened = prebuilt.flatten();
+-                    assert!(flattened.is_compatible_with(&prebuilt));
+-                    assert_eq!(flattened.children().len(), n);
+-                    flattened.children().len()
+-                });
+-                drop(prebuilt);
+                 for construction in CONSTRUCTIONS {
+                     let api = construction.api();
+                     r.diagnose_index_comparisons(&case, api, || construction.build(&parts));
+@@ -175,15 +143,6 @@
+                             Construction::Successive(_, Retention::All) => parts.len() - 2,
+                             _ => 0,
+                         };
+-                        if matches!(
+-                            construction,
+-                            Construction::Successive(
+-                                Composition::ThenFlatten | Composition::TensorFlatten,
+-                                _
+-                            )
+-                        ) {
+-                            assert_eq!(space.children().len(), n);
+-                        }
+                         assert_eq!(retained.len(), expected);
+                         let width = if grouped { 4 } else { 1 };
+                         for (i, intermediate) in retained.iter().enumerate() {
+@@ -199,9 +158,6 @@
+                 }
+             } else {
+                 let parts = prepare(ids.iter().copied(), grouped);
+-                let prebuilt = HilbertSpace::tensor_all(parts.iter().cloned()).unwrap();
+-                r.measure_construction(&case, "flatten", || black_box(&prebuilt).flatten());
+-                drop(prebuilt);
+                 for construction in CONSTRUCTIONS {
+                     r.measure_construction(&case, construction.api(), || {
+                         construction.build(black_box(&parts))
