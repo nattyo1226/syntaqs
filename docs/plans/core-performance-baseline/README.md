@@ -446,16 +446,16 @@ construction APIs in separate checkpoints.
    persistent regressions with their measured cost.
    [Workspace verification](../../design/verification.md)
 
-Steps 1–4 are complete. At 1,024 factors, successive `tensor().flatten()`
+Steps 1–5 are complete. At 1,024 factors, successive `tensor().flatten()`
 with only the final root retained reduced heap retention from 8.54 MB to
-32.9 KB and raised construction and destruction time. Retaining every
-intermediate root also keeps the wider child lists. Step 5 measures direct
-construction of the flattened tensor. Save each checkpoint's raw timing,
-allocation, and work-count results under `measurements/follow-up/` with its
-revision and run configuration.
+32.9 KB and raised construction and destruction time. Direct
+`tensor_flatten()` keeps the same retained memory and reduces allocation
+requests. Retaining every intermediate root keeps its index and child list
+with either API. Save each checkpoint's raw timing, allocation, and work-count
+results under `measurements/follow-up/` with its revision and run configuration.
 Compare consecutive checkpoints for individual effects and Stage 8 for the
 cumulative result.
-[Follow-up reference measurements](measurements/follow-up/README.md) · [Exact-zero stopping measurements](measurements/follow-up/zero-product/README.md) · [Factor index measurements](measurements/follow-up/factor-index/README.md) · [Flattening measurements](measurements/follow-up/flatten/README.md)
+[Follow-up reference measurements](measurements/follow-up/README.md) · [Exact-zero stopping measurements](measurements/follow-up/zero-product/README.md) · [Factor index measurements](measurements/follow-up/factor-index/README.md) · [Flattening measurements](measurements/follow-up/flatten/README.md) · [Direct flattened construction measurements](measurements/follow-up/tensor-flatten/README.md)
 
 ### Reduce intermediate work in state action
 
@@ -512,9 +512,9 @@ The two checkpoints cover explicit promotion by one level.
   level. Preserve leaf order and effective `TensorKind`. Reuse `by_index`
   because every factor keeps its position.
 - `tensor_flatten()` produces the same space and errors as `tensor()`
-  followed by `flatten()`. Construct the flattened parent directly and
-  build its index once. Preserve the existing precedence of mixed tensor
-  kinds over duplicate IDs.
+  followed by `flatten()`. It constructs the flattened parent directly,
+  builds its index once, and checks for mixed tensor kinds before duplicate
+  IDs.
 
 Measure the eager index separately from the new APIs, using Stage 8 and a
 matched run for the new construction cases. Record CPU and elapsed time,

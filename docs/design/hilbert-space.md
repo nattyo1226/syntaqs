@@ -14,8 +14,8 @@ Core owns generic identity comparison, Hilbert spaces, expressions, and evaluati
 A space is either a basic factor or an ordered tensor product of child spaces.
 Its grouping is the tree's parenthesization. Construction, enumeration,
 compatibility, and subsystem checks inspect this structure. Explicit
-`flatten()` removes one level of grouping. Factor and Tensor name private
-node concepts, while HilbertSpace is the public handle.
+`flatten()` and `tensor_flatten()` remove one level of grouping. Factor and
+Tensor name private node concepts, while HilbertSpace is the public handle.
 
 Spaces store no local algebra types. S/O/C on expressions enforce appropriate homogeneous composition; sharing space structure does not enable implicit mixing of primitive types.
 
@@ -76,6 +76,12 @@ effective kind. For example, `T_o(T_g(a,b)).flatten()` gives `T_g(a,b)`.
 Deeper grouping remains until another call. Factors and tensors whose
 immediate children are all factors share their original node. A new tensor
 root shares the original factor-position index.
+
+`a.tensor_flatten(&b)` directly constructs the group structure of
+`a.tensor(&b)?.flatten()`. The graded and explicit-kind forms follow the
+same rule. Construction tests the original operands for mixed kinds and
+duplicate indices in that order. Their factor-position tables provide the
+entries for the resulting root because promotion preserves factor positions.
 
 These rules concern mathematical compatibility, not mandatory deletion of stored/displayed grouping. Numeric precision, scalars, and grading conditions are also checked separately under [numeric conventions](numerics.md).
 
@@ -178,6 +184,7 @@ H's direct children are `[T_o(a,b),c]` and indices `[Index(a),Index(b),Index(c)]
 | `HilbertSpace::factor(index)`, `unit()` | Construct an existing-index factor or empty tensor; no index Clone/Default. |
 | `tensor_all_with(kind, children)`, `tensor_all(children)`, `tensor_all_g(children)` | Explicit, ordinary, or graded construction. Requires `I: Ord` to check duplicates. Returns `Result<Self, SpaceError>`. |
 | `tensor_with(kind, &rhs)`, `tensor(&rhs)`, `tensor_g(&rhs)` | Corresponding binary forms, left factors before right. |
+| `tensor_flatten_with(kind, &rhs)`, `tensor_flatten(&rhs)`, `tensor_flatten_g(&rhs)` | Corresponding binary forms with one-level promotion and the checks of `tensor_with()` for the selected kind. |
 | `kind()`, `effective_kind()` | Stored tensor kind and effective `Option<TensorKind>` after unit/singleton identification. |
 | `factor_index()`, `children()`, `indices()` | Borrow a factor's `Option<&I>`, immediate children, or all leaf indices. |
 | `flatten()` | Promote the children of immediate tensors by one level and preserve leaf order and effective kind. Requires no index comparison or cloning. |

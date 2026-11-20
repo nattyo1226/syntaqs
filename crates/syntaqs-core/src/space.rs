@@ -288,6 +288,22 @@ impl<I> HilbertSpace<I> {
         }
     }
 
+    fn new_tensor(
+        kind: TensorKind,
+        children: Operands<Self>,
+        by_index: FactorIndex<I>,
+        effective_kind: Option<TensorKind>,
+    ) -> Self {
+        Self::new(
+            Node::Tensor {
+                kind,
+                children,
+                by_index,
+            },
+            effective_kind,
+        )
+    }
+
     fn node(&self) -> &Node<I> {
         self.root.as_deref().expect("live space handle")
     }
@@ -299,12 +315,10 @@ impl<I> HilbertSpace<I> {
 
     /// Creates the empty tensor space, of dimension one.
     pub fn unit() -> Self {
-        Self::new(
-            Node::Tensor {
-                kind: TensorKind::Ordinary,
-                children: Operands::Empty,
-                by_index: FactorIndex::Empty,
-            },
+        Self::new_tensor(
+            TensorKind::Ordinary,
+            Operands::Empty,
+            FactorIndex::Empty,
             None,
         )
     }
@@ -353,14 +367,28 @@ impl<I> HilbertSpace<I> {
             return self.clone();
         }
 
+        Self::new_flattened_tensor(
+            *kind,
+            children.as_slice(),
+            FactorIndex::reuse(self),
+            self.effective_kind,
+        )
+    }
+
+    fn new_flattened_tensor(
+        kind: TensorKind,
+        children: &[Self],
+        by_index: FactorIndex<I>,
+        effective_kind: Option<TensorKind>,
+    ) -> Self {
         let groups = children.iter().map(Self::promoted_children);
         let mut promoted = Vec::with_capacity(groups.clone().map(<[_]>::len).sum());
         for group in groups {
             promoted.extend_from_slice(group);
         }
-        let kind = match self.effective_kind {
+        let kind = match effective_kind {
             Some(effective)
-                if effective != *kind
+                if effective != kind
                     && promoted
                         .iter()
                         .filter(|child| child.factor_count() != 0)
@@ -369,17 +397,10 @@ impl<I> HilbertSpace<I> {
             {
                 effective
             }
-            _ => *kind,
+            _ => kind,
         };
         // Promotion leaves every factor at its original position.
-        Self::new(
-            Node::Tensor {
-                kind,
-                children: promoted.into(),
-                by_index: FactorIndex::reuse(self),
-            },
-            self.effective_kind,
-        )
+        Self::new_tensor(kind, promoted.into(), by_index, effective_kind)
     }
 
     fn promoted_children(&self) -> &[Self] {
@@ -460,10 +481,18 @@ impl<I: Ord> HilbertSpace<I> {
         children: impl IntoIterator<Item = Self>,
     ) -> Result<Self, SpaceError> {
         let children: Operands<Self> = children.into_iter().collect();
+        let (by_index, effective_kind) = Self::tensor_metadata(kind, children.as_slice())?;
+        Ok(Self::new_tensor(kind, children, by_index, effective_kind))
+    }
+
+    fn tensor_metadata(
+        kind: TensorKind,
+        children: &[Self],
+    ) -> Result<(FactorIndex<I>, Option<TensorKind>), SpaceError> {
         let mut nonempty = children.iter().filter(|child| child.factor_count() != 0);
-        let (by_index, effective_kind) = match (nonempty.next(), nonempty.next()) {
-            (None, _) => (FactorIndex::Empty, None),
-            (Some(child), None) => (FactorIndex::reuse(child), child.effective_kind),
+        match (nonempty.next(), nonempty.next()) {
+            (None, _) => Ok((FactorIndex::Empty, None)),
+            (Some(child), None) => Ok((FactorIndex::reuse(child), child.effective_kind)),
             (Some(_), Some(_)) => {
                 if children
                     .iter()
@@ -471,17 +500,9 @@ impl<I: Ord> HilbertSpace<I> {
                 {
                     return Err(SpaceError::MixedTensorKinds);
                 }
-                (FactorIndex::merge(children.as_slice())?, Some(kind))
+                Ok((FactorIndex::merge(children)?, Some(kind)))
             }
-        };
-        Ok(Self::new(
-            Node::Tensor {
-                kind,
-                children,
-                by_index,
-            },
-            effective_kind,
-        ))
+        }
     }
 
     pub(crate) fn factor_position(&self, index: &I) -> Option<usize> {
@@ -502,6 +523,33 @@ impl<I: Ord> HilbertSpace<I> {
     /// Constructs a binary tensor with an explicit rule.
     pub fn tensor_with(&self, kind: TensorKind, rhs: &Self) -> Result<Self, SpaceError> {
         Self::tensor_all_with(kind, [self.clone(), rhs.clone()])
+    }
+
+    /// Constructs an ordinary tensor and promotes the children's grouping by one level.
+    ///
+    /// The result and errors match `self.tensor(rhs)?.flatten()`.
+    pub fn tensor_flatten(&self, rhs: &Self) -> Result<Self, SpaceError> {
+        self.tensor_flatten_with(TensorKind::Ordinary, rhs)
+    }
+
+    /// Constructs a graded tensor and promotes the children's grouping by one level.
+    pub fn tensor_flatten_g(&self, rhs: &Self) -> Result<Self, SpaceError> {
+        self.tensor_flatten_with(TensorKind::Graded, rhs)
+    }
+
+    /// Constructs a tensor with an explicit rule, promoting each tensor operand's
+    /// immediate children into the result.
+    ///
+    /// The result and errors match `self.tensor_with(kind, rhs)?.flatten()`.
+    pub fn tensor_flatten_with(&self, kind: TensorKind, rhs: &Self) -> Result<Self, SpaceError> {
+        let children = [self.clone(), rhs.clone()];
+        let (by_index, effective_kind) = Self::tensor_metadata(kind, &children)?;
+        Ok(Self::new_flattened_tensor(
+            kind,
+            &children,
+            by_index,
+            effective_kind,
+        ))
     }
 }
 
@@ -733,5 +781,67 @@ mod tests {
         struct Unordered;
         let leaf = HilbertSpace::factor(Unordered);
         assert!(leaf.flatten().shares_node_with(&leaf));
+    }
+
+    #[test]
+    fn tensor_flatten_matches_tensor_then_flatten() {
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+        struct Id(u8);
+
+        let a = HilbertSpace::factor(Id(30));
+        let b = HilbertSpace::factor(Id(10));
+        let c = HilbertSpace::factor(Id(20));
+        let ordinary = a.tensor(&b).unwrap();
+        let graded = b.tensor_g(&c).unwrap();
+        let unit = HilbertSpace::unit();
+        let graded_unit = HilbertSpace::tensor_all_g([]).unwrap();
+        let wrapped = unit.tensor(&graded).unwrap();
+        let nested = HilbertSpace::tensor_all_g([wrapped.clone()]).unwrap();
+        let spaces = [unit, graded_unit, a, c, ordinary, graded, wrapped, nested];
+        for left in &spaces {
+            for right in &spaces {
+                for kind in [TensorKind::Ordinary, TensorKind::Graded] {
+                    let expected = left.tensor_with(kind, right).map(|tensor| tensor.flatten());
+                    let actual = match kind {
+                        TensorKind::Ordinary => left.tensor_flatten(right),
+                        TensorKind::Graded => left.tensor_flatten_g(right),
+                    };
+                    match (expected, actual) {
+                        (Ok(expected), Ok(actual)) => {
+                            assert_eq!(actual.kind(), expected.kind());
+                            assert_eq!(actual.effective_kind(), expected.effective_kind());
+                            assert_eq!(actual.children().len(), expected.children().len());
+                            for (child, original) in actual.children().zip(expected.children()) {
+                                assert!(child.shares_node_with(original));
+                            }
+                            assert!(actual.is_compatible_with(&expected));
+                            for (position, index) in expected.indices().enumerate() {
+                                assert_eq!(actual.factor_position(index), Some(position));
+                            }
+                        }
+                        (Err(expected), Err(actual)) => assert_eq!(actual, expected),
+                        (expected, actual) => {
+                            panic!("composition mismatch: {expected:?}, {actual:?}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn tensor_flatten_checks_kind_before_duplicates_in_original_operands() {
+        let left = HilbertSpace::factor(30)
+            .tensor_g(&HilbertSpace::factor(10))
+            .unwrap();
+        let repeated = HilbertSpace::factor(10);
+        assert_eq!(
+            left.tensor_flatten(&repeated).unwrap_err(),
+            SpaceError::MixedTensorKinds,
+        );
+        assert_eq!(
+            left.tensor_flatten_g(&repeated).unwrap_err(),
+            SpaceError::DuplicateIndex,
+        );
     }
 }

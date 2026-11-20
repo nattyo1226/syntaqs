@@ -7,54 +7,55 @@ use crate::measure::{Case, CountedIndex, Mode, Runner};
 #[derive(Clone, Copy)]
 enum Construction {
     OneShot,
-    Successive { flatten: bool, retain: bool },
+    Successive(Composition, Retention),
 }
 
-const CONSTRUCTIONS: [Construction; 5] = [
+#[derive(Clone, Copy)]
+enum Composition {
+    Tensor,
+    ThenFlatten,
+    TensorFlatten,
+}
+
+#[derive(Clone, Copy)]
+enum Retention {
+    FinalOnly,
+    All,
+}
+
+const CONSTRUCTIONS: [Construction; 7] = [
     Construction::OneShot,
-    Construction::Successive {
-        flatten: false,
-        retain: false,
-    },
-    Construction::Successive {
-        flatten: false,
-        retain: true,
-    },
-    Construction::Successive {
-        flatten: true,
-        retain: false,
-    },
-    Construction::Successive {
-        flatten: true,
-        retain: true,
-    },
+    Construction::Successive(Composition::Tensor, Retention::FinalOnly),
+    Construction::Successive(Composition::Tensor, Retention::All),
+    Construction::Successive(Composition::ThenFlatten, Retention::FinalOnly),
+    Construction::Successive(Composition::ThenFlatten, Retention::All),
+    Construction::Successive(Composition::TensorFlatten, Retention::FinalOnly),
+    Construction::Successive(Composition::TensorFlatten, Retention::All),
 ];
 
 impl Construction {
     fn api(self) -> &'static str {
         match self {
             Self::OneShot => "tensor_all",
-            Self::Successive {
-                flatten: false,
-                retain: false,
-            } => "tensor_successive",
-            Self::Successive {
-                flatten: false,
-                retain: true,
-            } => "tensor_successive_retained",
-            Self::Successive {
-                flatten: true,
-                retain: false,
-            } => "tensor_successive_flatten",
-            Self::Successive {
-                flatten: true,
-                retain: true,
-            } => "tensor_successive_flatten_retained",
+            Self::Successive(Composition::Tensor, Retention::FinalOnly) => "tensor_successive",
+            Self::Successive(Composition::Tensor, Retention::All) => "tensor_successive_retained",
+            Self::Successive(Composition::ThenFlatten, Retention::FinalOnly) => {
+                "tensor_successive_flatten"
+            }
+            Self::Successive(Composition::ThenFlatten, Retention::All) => {
+                "tensor_successive_flatten_retained"
+            }
+            Self::Successive(Composition::TensorFlatten, Retention::FinalOnly) => {
+                "tensor_flatten_successive"
+            }
+            Self::Successive(Composition::TensorFlatten, Retention::All) => {
+                "tensor_flatten_successive_retained"
+            }
         }
     }
 
     fn build<I: Ord>(self, parts: &[HilbertSpace<I>]) -> (HilbertSpace<I>, Vec<HilbertSpace<I>>) {
-        let Self::Successive { flatten, retain } = self else {
+        let Self::Successive(composition, retention) = self else {
             return (
                 HilbertSpace::tensor_all(parts.iter().cloned()).unwrap(),
                 Vec::new(),
@@ -62,15 +63,20 @@ impl Construction {
         };
 
         let (first, rest) = parts.split_first().expect("nonempty benchmark input");
+        let retain = matches!(retention, Retention::All);
         let mut retained = Vec::new();
         if retain {
             retained.reserve_exact(rest.len().saturating_sub(1));
         }
         let mut space = first.clone();
         for (i, next) in rest.iter().enumerate() {
-            space = space.tensor(next).unwrap();
-            if flatten {
-                space = space.flatten();
+            match composition {
+                Composition::Tensor => space = space.tensor(next).unwrap(),
+                Composition::ThenFlatten => {
+                    space = space.tensor(next).unwrap();
+                    space = space.flatten();
+                }
+                Composition::TensorFlatten => space = space.tensor_flatten(next).unwrap(),
             }
             if retain && i + 1 < rest.len() {
                 retained.push(space.clone());
@@ -126,10 +132,16 @@ pub fn run(r: &Runner) {
                         let (space, retained) = construction.build(&parts);
                         assert!(space.indices().map(|id| id.0).eq(ids.iter().copied()));
                         let expected = match construction {
-                            Construction::Successive { retain: true, .. } => parts.len() - 2,
+                            Construction::Successive(_, Retention::All) => parts.len() - 2,
                             _ => 0,
                         };
-                        if matches!(construction, Construction::Successive { flatten: true, .. }) {
+                        if matches!(
+                            construction,
+                            Construction::Successive(
+                                Composition::ThenFlatten | Composition::TensorFlatten,
+                                _
+                            )
+                        ) {
                             assert_eq!(space.children().len(), n);
                         }
                         assert_eq!(retained.len(), expected);
