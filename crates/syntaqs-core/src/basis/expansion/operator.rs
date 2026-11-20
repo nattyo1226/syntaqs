@@ -9,10 +9,10 @@ use num_traits::{One, Zero};
 
 use super::{Expansion, accumulate, local::local_operator};
 use crate::{
-    Adjoint, Basis, BasisError, Conjugate, HomogeneousParity, Identity, Operator, Product,
+    Adjoint, Basis, BasisError, Conjugate, HilbertSpace, HomogeneousParity, Identity, Operator,
+    Product,
     evaluate::operator::{EvaluatedOperator, OperatorTerm},
     expression::parts::Operands,
-    space::FactorPositions,
 };
 
 type Choice<C> = (usize, C);
@@ -111,7 +111,7 @@ fn enumerate<C: Clone + PartialEq + Zero + One>(
 pub(super) fn operator_expansion<I: Ord, O, C, B>(
     op: &Operator<I, O, C>,
     basis: &B,
-    positions: &FactorPositions<'_, I>,
+    ambient: &HilbertSpace<I>,
     dimension: Option<usize>,
 ) -> Result<Expansion<C>, BasisError>
 where
@@ -119,11 +119,11 @@ where
     O: PartialEq + HomogeneousParity + Identity + Product<C, Term = O> + Adjoint<C, Term = O>,
     B: Basis<O, C>,
 {
-    let evaluated = EvaluatedOperator::new(&op.expression, positions);
+    let evaluated = EvaluatedOperator::new(&op.expression, ambient);
     let mut result = Expansion::new();
     let mut identity: Option<Choices<C>> = None;
     let mut cache: BTreeMap<usize, Choices<C>> = BTreeMap::new();
-    let factor_count = positions.leaves().len();
+    let factor_count = ambient.factor_count();
     let mut key = vec![0; factor_count];
     for OperatorTerm {
         coefficient,

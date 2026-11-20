@@ -6,8 +6,8 @@ use num_traits::{One, Zero};
 
 use super::{Block, EvaluatedOperator, OperatorTerm, primitive_value};
 use crate::{
-    Adjoint, Conjugate, Divide, HomogeneousParity, Identity, Product, Trace, evaluate::add_pair,
-    expression::composite::OpExpr, space::FactorPositions,
+    Adjoint, Conjugate, Divide, HilbertSpace, HomogeneousParity, Identity, Product, Trace,
+    evaluate::add_pair, expression::composite::OpExpr,
 };
 
 // A block's support belongs to one component. Overlap on either side joins
@@ -232,11 +232,11 @@ where
     pub(crate) fn hs_inner_product<I: Ord>(
         lhs: &OpExpr<I, O, C>,
         rhs: &OpExpr<I, O, C>,
-        positions: &FactorPositions<'_, I>,
+        space: &HilbertSpace<I>,
     ) -> C {
-        let mut evaluated = Self::new(lhs, positions);
+        let mut evaluated = Self::new(lhs, space);
         let other =
-            (!core::ptr::eq(lhs.node(), rhs.node())).then(|| evaluated.evaluate(rhs, positions));
+            (!core::ptr::eq(lhs.node(), rhs.node())).then(|| evaluated.evaluate(rhs, space));
         let left = &evaluated.product;
         let right = other.as_ref().unwrap_or(left);
         if left.coefficient.is_zero() || right.coefficient.is_zero() {
@@ -245,7 +245,7 @@ where
         let (groups, negative) = aligned_groups(
             &left.blocks,
             &right.blocks,
-            positions.leaves().len(),
+            space.factor_count(),
             evaluated.graded,
         );
         let mut contraction = HilbertSchmidt {

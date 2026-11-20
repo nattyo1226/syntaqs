@@ -76,6 +76,12 @@ fn construction(r: &Runner) {
             r.measure(&c, "act_in_equivalent", || {
                 black_box(&psi).act_in(&h, &space).unwrap()
             });
+            r.measure_prepared(
+                &c,
+                "act_in_fresh",
+                || HilbertSpace::tensor_all(sites.iter().cloned()).unwrap(),
+                |fresh| black_box(&psi).act_in(&h, fresh).unwrap(),
+            );
         }
 
         if !matches!(r.mode, Mode::Diagnostics) {
@@ -106,6 +112,7 @@ fn construction(r: &Runner) {
             r.diagnose_index_comparisons(&c, "act_in_equivalent", || {
                 psi.act_in(&h, &space).unwrap()
             });
+            r.diagnose_index_comparisons(&c, "act_in_fresh", || psi.act_in(&h, &fresh).unwrap());
         }
     }
 }

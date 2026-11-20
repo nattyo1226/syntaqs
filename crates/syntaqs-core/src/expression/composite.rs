@@ -3,9 +3,7 @@
 use alloc::{sync::Arc, vec::Vec};
 
 use super::parts::{AdjointExpr, Operands, ScaleExpr};
-use crate::{
-    ExpressionError, HilbertSpace, Identity, LocalOperator, LocalState, space::FactorPositions,
-};
+use crate::{ExpressionError, HilbertSpace, Identity, LocalOperator, LocalState};
 
 /// A composite state with primitive types S and O and an immutable factor space.
 /// See [`crate::expression`] for mathematical Display and structural Debug formats.
@@ -542,7 +540,7 @@ impl<I: Eq, O, C> Operator<I, O, C> {
 impl<I: Ord, O, C> Operator<I, O, C> {
     /// Binds or rebinds this syntax to an explicit space, leaving the input intact.
     pub fn bind(&self, ambient: &HilbertSpace<I>) -> Result<Self, ExpressionError> {
-        self.validate(&FactorPositions::new(ambient))?;
+        self.validate(ambient)?;
         Ok(Self {
             expression: self.expression.clone(),
             ambient: Some(ambient.clone()),
@@ -559,27 +557,17 @@ impl<I: Ord, O, C> Operator<I, O, C> {
             .space()
             .is_some_and(|bound| bound.shares_node_with(space))
         {
-            self.validate(&FactorPositions::new(space))?;
+            self.validate(space)?;
         }
         Ok(space)
     }
-    pub(crate) fn validate(
-        &self,
-        positions: &FactorPositions<'_, I>,
-    ) -> Result<(), ExpressionError> {
+    pub(crate) fn validate(&self, space: &HilbertSpace<I>) -> Result<(), ExpressionError> {
         let mut pending = alloc::vec![&self.expression];
-        let mut first = true;
         while let Some(op) = pending.pop() {
             match op.node() {
                 OpNode::Local(factor, _) => {
                     let index = factor.factor_index().expect("placed factor");
-                    // A single local reference needs only one membership scan.
-                    let present = if core::mem::take(&mut first) {
-                        positions.space().contains_index(index)
-                    } else {
-                        positions.position(index).is_some()
-                    };
-                    if !present {
+                    if space.factor_position(index).is_none() {
                         return Err(ExpressionError::MissingIndex);
                     }
                 }

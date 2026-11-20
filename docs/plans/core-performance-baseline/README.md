@@ -446,12 +446,15 @@ construction APIs in separate checkpoints.
    persistent regressions with their measured cost.
    [Workspace verification](../../design/verification.md)
 
-The reference measurements in step 1 and exact-zero stopping in step 2 are
-complete. Save each checkpoint's raw timing, allocation, and work-count
+Steps 1–3 are complete. The immutable factor index reduced CPU time for
+construction and validation in the measured cases. Successive `tensor()`
+retained 524,799 index entries at 1,024 factors even when callers released
+intermediate handles. Steps 4 and 5 measure the effect of flattening on this
+retained storage. Save each checkpoint's raw timing, allocation, and work-count
 results under `measurements/follow-up/` with its revision and run configuration.
 Compare consecutive checkpoints for individual effects and Stage 8 for the
 cumulative result.
-[Follow-up reference measurements](measurements/follow-up/README.md) · [Exact-zero stopping measurements](measurements/follow-up/zero-product/README.md)
+[Follow-up reference measurements](measurements/follow-up/README.md) · [Exact-zero stopping measurements](measurements/follow-up/zero-product/README.md) · [Factor index measurements](measurements/follow-up/factor-index/README.md)
 
 ### Reduce intermediate work in state action
 
@@ -495,15 +498,12 @@ Include the nonzero Hubbard input and the near and far hopping controls.
 
 ### Reuse factor positions across calls on the same space
 
-`FactorPositions` keeps the tensor-ordered leaves and the index from a
-factor ID to its position for the duration of one call. Repeated `bind()`,
-operator basis queries, and contractions can rebuild that data on the same
-space. Build an immutable `by_index` at space construction and share it
-through the `HilbertSpace` root. Keep the existing tree and use it to
-enumerate leaves. Store entries with the existing factor handle and its
-tensor position, sorted by ID. Merge the children's sorted indices with
-position offsets and check for duplicate IDs during the merge. Use this
-index for membership validation across operators that share the space.
+The immutable `by_index` is built during space construction and shared
+through the `HilbertSpace` root. The tree enumerates leaves in tensor
+order. Entries carry the existing factor handle and its tensor position and
+are sorted by ID. Construction merges child indices with position offsets
+and checks for repeated IDs. Placement validation, operator basis queries,
+and contractions reuse the same index across calls on the space.
 
 Add two explicit ways to remove one level of grouping.
 

@@ -6,7 +6,6 @@ use crate::{
     Product, Trace,
     coefficient::{add, multiply, zero},
     expression::traversal::{LinearTerms, operator_view},
-    space::FactorPositions,
 };
 use core::ops::{Mul, Neg};
 use num_traits::{One, Zero};
@@ -97,10 +96,9 @@ impl<I: Ord, O, C> Operator<I, O, C> {
             + Adjoint<C, Term = O>
             + Trace<C>,
     {
-        let positions = FactorPositions::new(ambient);
-        self.validate(&positions)?;
-        let operator = EvaluatedOperator::new(&self.expression, &positions);
-        Ok(operator.full_trace(positions.leaves().len()))
+        self.validate(ambient)?;
+        let operator = EvaluatedOperator::new(&self.expression, ambient);
+        Ok(operator.full_trace(ambient.factor_count()))
     }
 
     /// Computes the normalized Hilbert–Schmidt inner product `Tr(self† rhs)/D`.
@@ -153,13 +151,12 @@ impl<I: Ord, O, C> Operator<I, O, C> {
             + Adjoint<C, Term = O>
             + Trace<C>,
     {
-        let positions = FactorPositions::new(ambient);
-        self.validate(&positions)?;
-        rhs.validate(&positions)?;
+        self.validate(ambient)?;
+        rhs.validate(ambient)?;
         Ok(EvaluatedOperator::hs_inner_product(
             &self.expression,
             &rhs.expression,
-            &positions,
+            ambient,
         ))
     }
 }

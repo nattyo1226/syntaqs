@@ -118,7 +118,12 @@ Iterators primarily borrow: `children()` reads direct children, `leaves()` all f
 
 This inspects existing structure rather than extracting a new subsystem. Callers borrow site-ordered spaces into geometry; connection checks lengths, while models/spaces check all leaf duplicates. See [geometry](geometry.md).
 
-Embedding checks the specified index against ambient basic factors. No special object records subtree origins/positions. Core may traverse factors for validation/evaluation under [composite-expression](composite-expression.md) contracts.
+Embedding checks the specified index against ambient basic factors. A tensor
+node shares an immutable table of factor handles and their positions in leaf
+order, sorted by index for binary search. Placement validation and operator
+evaluation use this lookup under the [composite expression contracts](composite-expression.md).
+The public Eq-based membership and subsystem queries still accept indices
+without an ordering operation.
 
 HilbertSpace shares immutable nodes through Arc with private Factor/Tensor enums. Cloning preserves indices and avoids deep copies. Traversal and final-owner destruction use explicit work stacks rather than depth-proportional recursion. Ordinary compatibility compares leaf sequences; subsystems use ordered subsequences without changing stored trees.
 
@@ -183,7 +188,8 @@ Specify `TensorKind::{Ordinary, Graded}` at construction. tensor_all/tensor are 
 
 ### 9.1. Effective kinds and mixture validation
 
-Handles retain only a structural leaf-count class (zero, one, multiple) and effective kind, not local dimensions, full bases, or evaluation caches. Let m count nonempty children:
+Handles retain the effective kind. The factor index supplies the leaf count.
+Let m count nonempty children:
 
 1. m=0 is the unit with effective kind None.
 2. m=1 inherits its sole nonempty child's effective kind; the outer kind does not affect compatibility.
@@ -191,7 +197,10 @@ Handles retain only a structural leaf-count class (zero, one, multiple) and effe
 
 Thus `T_o(E,T_g(a,b))` is allowed while `T_o(a,T_g(b,c))` returns `SpaceError::MixedTensorKinds`. Zero/one-leaf spaces have no effective kind and both rules agree. Multi-factor compatibility, subsystem checks, and evaluation use effective_kind().
 
-Trees retain child grouping. Singleton wrappers inherit child metadata in
-constant time. After checking tensor kinds, constructors detect repeated IDs
-with a temporary ordered set of borrowed IDs. Traversal and destruction remain
+Trees retain child grouping. A tensor with one nonempty child reuses its
+lookup table. A tensor with multiple nonempty children checks effective kinds
+before merging their sorted entries and rejecting repeated IDs. The merge
+offsets each child's positions by the preceding children's total leaf count.
+Each branching node owns its combined table, so nested tensors retain the
+tables of their child nodes as well. Traversal and destruction remain
 iterative.

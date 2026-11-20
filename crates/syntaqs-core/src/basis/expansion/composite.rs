@@ -14,7 +14,6 @@ use crate::{
         composite::{OpExpr, OpNode, StateExpr, StateNode},
         traversal::{LinearTerms, state_view},
     },
-    space::FactorPositions,
 };
 use alloc::{
     collections::{BTreeMap, btree_map},
@@ -253,11 +252,10 @@ impl<I: Ord, O, C> Operator<I, O, C> {
             + Adjoint<C, Term = O>,
         B: Basis<O, C>,
     {
-        let positions = FactorPositions::new(ambient);
-        self.validate(&positions)?;
-        let factors = positions.leaves();
-        let dimension = local_size::<O>(factors.len())?;
-        let terms = operator_expansion(self, basis, &positions, dimension)?;
+        self.validate(ambient)?;
+        let dimension = local_size::<O>(ambient.factor_count())?;
+        let terms = operator_expansion(self, basis, ambient, dimension)?;
+        let factors: Vec<_> = ambient.leaves().collect();
         let expressions = reconstruct(
             terms,
             basis,
@@ -308,15 +306,13 @@ impl<I: Ord, O, C> Operator<I, O, C> {
             + Adjoint<C, Term = O>,
         B: Basis<O, C>,
     {
-        let positions = FactorPositions::new(ambient);
-        self.validate(&positions)?;
-        let factors = positions.leaves();
-        let dimension = local_size::<O>(factors.len())?;
-        let terms = operator_expansion(self, basis, &positions, dimension)?;
+        self.validate(ambient)?;
+        let dimension = local_size::<O>(ambient.factor_count())?;
+        let terms = operator_expansion(self, basis, ambient, dimension)?;
         Ok(Coordinates {
             basis,
             space: ambient.clone(),
-            factor_count: factors.len(),
+            factor_count: ambient.factor_count(),
             dim_local: dimension,
             entries: terms,
         })

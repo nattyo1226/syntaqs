@@ -476,9 +476,8 @@ fn expanded_terms_share_identity_handles_and_keep_aggregated_coefficients() {
     let b = B::new(Mode::Cartesian);
     let term = (placed::<f64>(P::Unit(1), &f[0]) * placed(P::Unit(1), &f[1])).unwrap();
     let op = Op::sum([term.clone(), term]).unwrap();
-    let positions = FactorPositions::new(&h);
     assert_eq!(
-        operator_expansion(&op, &b, &positions, Some(4)).unwrap(),
+        operator_expansion(&op, &b, &h, Some(4)).unwrap(),
         alloc::collections::BTreeMap::from([(vec![1, 1, 0], 2.0)])
     );
     let op = Op::sum(f.iter().map(|f| placed::<f64>(P::Unit(1), f))).unwrap();

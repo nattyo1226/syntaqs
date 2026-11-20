@@ -11,7 +11,6 @@ use crate::{
         local::OperatorNode,
         traversal::{LinearTerms, operator_handle_view},
     },
-    space::FactorPositions,
 };
 
 fn equal_primitive<O: PartialEq, C>(
@@ -76,11 +75,11 @@ impl<I: Ord, O, C> Operator<I, O, C> {
         C: Clone + PartialEq + Zero + One + Conjugate<Output = C> + Neg<Output = C>,
         O: PartialEq + Identity + HomogeneousParity + Product<C, Term = O> + Adjoint<C, Term = O>,
     {
-        let positions = FactorPositions::new(ambient);
-        self.validate(&positions)?;
-        let evaluated = super::operator::EvaluatedOperator::new(&self.expression, &positions);
+        self.validate(ambient)?;
+        let evaluated = super::operator::EvaluatedOperator::new(&self.expression, ambient);
+        let factors: Vec<_> = ambient.leaves().collect();
         Ok(Self {
-            expression: evaluated.expression(positions.leaves()),
+            expression: evaluated.expression(&factors),
             ambient: Some(ambient.clone()),
         })
     }

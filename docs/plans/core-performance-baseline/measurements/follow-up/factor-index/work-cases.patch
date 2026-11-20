@@ -1,0 +1,62 @@
+--- a/docs/plans/core-performance-baseline/probe/src/spin_half.rs
++++ b/docs/plans/core-performance-baseline/probe/src/spin_half.rs
+@@ -105,14 +105,29 @@
+         });
+         h.bind(&space).unwrap();
+         r.diagnose_index_comparisons(&c, "bind", || h.bind(&space).unwrap());
++        r.diagnose_work(&c, "bind", syntaqs_core::probe_work::FACTOR_INDEX, || {
++            h.bind(&space).unwrap()
++        });
+         r.diagnose_index_comparisons(&c, "act", || psi.act(&h).unwrap());
++        r.diagnose_work(&c, "act", syntaqs_core::probe_work::FACTOR_INDEX, || {
++            psi.act(&h).unwrap()
++        });
+         if n >= 128 {
+             let fresh = HilbertSpace::tensor_all(sites.iter().cloned()).unwrap();
+             r.diagnose_index_comparisons(&c, "bind_fresh", || h.bind(&fresh).unwrap());
++            r.diagnose_work(&c, "bind_fresh", syntaqs_core::probe_work::FACTOR_INDEX, || {
++                h.bind(&fresh).unwrap()
++            });
+             r.diagnose_index_comparisons(&c, "act_in_equivalent", || {
+                 psi.act_in(&h, &space).unwrap()
+             });
++            r.diagnose_work(&c, "act_in_equivalent", syntaqs_core::probe_work::FACTOR_INDEX, || {
++                psi.act_in(&h, &space).unwrap()
++            });
+             r.diagnose_index_comparisons(&c, "act_in_fresh", || psi.act_in(&h, &fresh).unwrap());
++            r.diagnose_work(&c, "act_in_fresh", syntaqs_core::probe_work::FACTOR_INDEX, || {
++                psi.act_in(&h, &fresh).unwrap()
++            });
+         }
+     }
+ }
+@@ -185,6 +200,9 @@
+         let c = case("heisenberg", n, 1);
+         r.measure(&c, "operator_coordinates_cartesian", || {
+             black_box(&h).coordinates(&CartesianBasis).unwrap()
++        });
++        r.diagnose_work(&c, "operator_coordinates_cartesian", syntaqs_core::probe_work::FACTOR_INDEX, || {
++            h.coordinates(&CartesianBasis).unwrap()
+         });
+         r.measure(&c, "operator_expand_cartesian", || {
+             black_box(&h).expand(&CartesianBasis).unwrap()
+@@ -261,6 +279,9 @@
+             r.measure(&c, "operator_coordinates_cartesian", || {
+                 black_box(&squared).coordinates(&CartesianBasis).unwrap()
+             });
++            r.diagnose_work(&c, "operator_coordinates_cartesian", syntaqs_core::probe_work::FACTOR_INDEX, || {
++                squared.coordinates(&CartesianBasis).unwrap()
++            });
+             r.measure(&c, "operator_expand_cartesian", || {
+                 black_box(&squared).expand(&CartesianBasis).unwrap()
+             });
+@@ -447,6 +468,9 @@
+             let op = Q::operator(O::Sx).at(&sites[n - 1]).unwrap();
+             let delayed = state.act(&op).unwrap();
+             r.diagnose_index_comparisons(&c, "act", || state.act(&op).unwrap());
++            r.diagnose_work(&c, "act", syntaqs_core::probe_work::FACTOR_INDEX, || {
++                state.act(&op).unwrap()
++            });
+             r.diagnose_index_comparisons(&c, "evaluate", || delayed.evaluate().unwrap());
+         }
+     }

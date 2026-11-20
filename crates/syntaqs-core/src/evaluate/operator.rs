@@ -4,13 +4,13 @@ use alloc::{collections::BTreeMap, vec, vec::Vec};
 use num_traits::{One, Zero};
 
 use crate::{
-    Adjoint, Conjugate, HomogeneousParity, Identity, LocalOperator, Parity, Product, TensorKind,
+    Adjoint, Conjugate, HilbertSpace, HomogeneousParity, Identity, LocalOperator, Parity, Product,
+    TensorKind,
     expression::{
         composite::{OpExpr, OpNode},
         local::OperatorNode,
         traversal::{LinearTerms, operator_handle_view},
     },
-    space::FactorPositions,
 };
 use core::{borrow::Borrow, cell::OnceCell, ops::Neg};
 
@@ -169,22 +169,18 @@ where
     O: PartialEq + Identity + HomogeneousParity + Product<C, Term = O> + Adjoint<C, Term = O>,
     C: Clone + PartialEq + Zero + One + Conjugate<Output = C> + Neg<Output = C>,
 {
-    pub(crate) fn new<I: Ord>(root: &OpExpr<I, O, C>, positions: &FactorPositions<'_, I>) -> Self {
+    pub(crate) fn new<I: Ord>(root: &OpExpr<I, O, C>, space: &HilbertSpace<I>) -> Self {
         let mut result = Self {
             product: Factored::scalar(C::zero()),
             primitives: Vec::new(),
             identity: OnceCell::new(),
-            graded: positions.space().effective_kind() == Some(TensorKind::Graded),
+            graded: space.effective_kind() == Some(TensorKind::Graded),
         };
-        result.product = result.evaluate(root, positions);
+        result.product = result.evaluate(root, space);
         result
     }
 
-    fn evaluate<I: Ord>(
-        &mut self,
-        root: &OpExpr<I, O, C>,
-        positions: &FactorPositions<'_, I>,
-    ) -> Factored<C> {
+    fn evaluate<I: Ord>(&mut self, root: &OpExpr<I, O, C>, space: &HilbertSpace<I>) -> Factored<C> {
         // Collapse purely local syntax through the existing local algebra.
         let root = root.group_local();
         let mut tasks = vec![Task::Visit(&root, false)];
@@ -194,8 +190,8 @@ where
                 Task::Visit(op, adjoint) => match op.node() {
                     OpNode::Identity => values.push(Factored::scalar(C::one())),
                     OpNode::Local(factor, local) => {
-                        let position = positions
-                            .position(factor.factor_index().expect("placed factor"))
+                        let position = space
+                            .factor_position(factor.factor_index().expect("placed factor"))
                             .expect("validated factor");
                         let local = if adjoint {
                             local.adjoint()

@@ -1,7 +1,18 @@
 //! Immutable ordinary and graded tensor spaces, generic over an equality-comparable index.
 
-use alloc::{collections::BTreeSet, sync::Arc, vec, vec::Vec};
-use core::{cell::OnceCell, iter::FusedIterator, num::NonZeroUsize, slice};
+use alloc::{
+    collections::{BinaryHeap, binary_heap::PeekMut},
+    sync::Arc,
+    vec,
+    vec::Vec,
+};
+use core::{
+    cmp::{Ordering, Reverse},
+    fmt,
+    iter::FusedIterator,
+    num::NonZeroUsize,
+    slice,
+};
 
 use crate::expression::parts::Operands;
 
@@ -40,11 +51,204 @@ pub enum SpaceError {
     MixedTensorKinds,
 }
 
-#[derive(Debug)]
 enum Node<I> {
     Factor(I),
-    Tensor(TensorKind, Operands<HilbertSpace<I>>),
+    Tensor {
+        kind: TensorKind,
+        children: Operands<HilbertSpace<I>>,
+        by_index: FactorIndex<I>,
+    },
 }
+
+impl<I> Node<I> {
+    fn index(&self) -> Option<&I> {
+        match self {
+            Self::Factor(index) => Some(index),
+            Self::Tensor { .. } => None,
+        }
+    }
+}
+
+impl<I: fmt::Debug> fmt::Debug for Node<I> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Factor(index) => f.debug_tuple("Factor").field(index).finish(),
+            Self::Tensor { kind, children, .. } => {
+                f.debug_tuple("Tensor").field(kind).field(children).finish()
+            }
+        }
+    }
+}
+
+struct FactorPosition<I> {
+    factor: Arc<Node<I>>,
+    position: usize,
+}
+
+// Entries refer only to factor nodes. They are ordered by ID and carry their
+// positions in the tensor's independent, left-to-right leaf order.
+enum FactorIndex<I> {
+    Empty,
+    Single(Arc<Node<I>>),
+    Many(Arc<Vec<FactorPosition<I>>>),
+}
+
+impl<I> FactorIndex<I> {
+    fn len(&self) -> usize {
+        match self {
+            Self::Empty => 0,
+            Self::Single(_) => 1,
+            Self::Many(entries) => entries.len(),
+        }
+    }
+
+    fn reuse(child: &HilbertSpace<I>) -> Self {
+        match child.node() {
+            Node::Factor(_) => Self::Single(child.root.as_ref().expect("live space").clone()),
+            Node::Tensor { by_index, .. } => match by_index {
+                Self::Empty => Self::Empty,
+                Self::Single(factor) => Self::Single(factor.clone()),
+                Self::Many(entries) => Self::Many(entries.clone()),
+            },
+        }
+    }
+}
+
+impl<I: Ord> FactorIndex<I> {
+    fn merge(children: &[HilbertSpace<I>]) -> Result<Self, SpaceError> {
+        let mut factor_count = 0;
+        let mut nonempty_count = 0;
+        for child in children {
+            let count = child.factor_count();
+            factor_count += count;
+            nonempty_count += usize::from(count != 0);
+        }
+        let mut entries: Vec<FactorPosition<I>> = Vec::with_capacity(factor_count);
+        if factor_count == nonempty_count {
+            // Singleton runs can be sorted in place without an auxiliary heap.
+            for child in children {
+                if let Some(run) = FactorRun::new(child, entries.len()) {
+                    entries.push(run.entry());
+                }
+            }
+            entries.sort_unstable_by(|a, b| a.index().cmp(b.index()));
+            if entries
+                .windows(2)
+                .any(|pair| pair[0].index() == pair[1].index())
+            {
+                return Err(SpaceError::DuplicateIndex);
+            }
+        } else {
+            // Merge sorted child runs without traversing descendants.
+            let mut offset = 0;
+            let mut runs = Vec::with_capacity(nonempty_count);
+            for child in children {
+                if let Some(run) = FactorRun::new(child, offset) {
+                    runs.push(Reverse(run));
+                    offset += child.factor_count();
+                }
+            }
+            let mut runs = BinaryHeap::from(runs);
+            while let Some(mut next) = runs.peek_mut() {
+                let run = &mut next.0;
+                if entries
+                    .last()
+                    .is_some_and(|last| last.index() == run.index())
+                {
+                    return Err(SpaceError::DuplicateIndex);
+                }
+                entries.push(run.entry());
+                if let Some((head, tail)) = run.rest.split_first() {
+                    run.factor = &head.factor;
+                    run.position = head.position;
+                    run.rest = tail;
+                } else {
+                    PeekMut::pop(next);
+                }
+            }
+        }
+        Ok(Self::Many(Arc::new(entries)))
+    }
+
+    fn position(&self, index: &I) -> Option<usize> {
+        match self {
+            Self::Empty => None,
+            Self::Single(factor) => (factor.index() == Some(index)).then_some(0),
+            Self::Many(entries) => entries
+                .binary_search_by(|entry| entry.index().cmp(index))
+                .ok()
+                .map(|slot| entries[slot].position),
+        }
+    }
+}
+
+impl<I> FactorPosition<I> {
+    fn index(&self) -> &I {
+        self.factor.index().expect("indexed factor")
+    }
+}
+
+// The remaining entries of one child, with their positions relative to that
+// child. The offset makes those positions relative to the parent.
+struct FactorRun<'a, I> {
+    factor: &'a Arc<Node<I>>,
+    position: usize,
+    rest: &'a [FactorPosition<I>],
+    offset: usize,
+}
+
+impl<'a, I> FactorRun<'a, I> {
+    fn new(child: &'a HilbertSpace<I>, offset: usize) -> Option<Self> {
+        let (factor, position, rest) = match child.node() {
+            Node::Factor(_) => (child.root.as_ref().expect("live space"), 0, &[][..]),
+            Node::Tensor { by_index, .. } => match by_index {
+                FactorIndex::Empty => return None,
+                FactorIndex::Single(factor) => (factor, 0, &[][..]),
+                FactorIndex::Many(entries) => {
+                    let (head, tail) = entries.split_first().expect("nonempty factor index");
+                    (&head.factor, head.position, tail)
+                }
+            },
+        };
+        Some(Self {
+            factor,
+            position,
+            rest,
+            offset,
+        })
+    }
+
+    fn index(&self) -> &I {
+        self.factor.index().expect("indexed factor")
+    }
+
+    fn entry(&self) -> FactorPosition<I> {
+        FactorPosition {
+            factor: self.factor.clone(),
+            position: self.offset + self.position,
+        }
+    }
+}
+
+impl<I: Ord> Ord for FactorRun<'_, I> {
+    fn cmp(&self, rhs: &Self) -> Ordering {
+        self.index().cmp(rhs.index())
+    }
+}
+
+impl<I: Ord> PartialOrd for FactorRun<'_, I> {
+    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
+        Some(self.cmp(rhs))
+    }
+}
+
+impl<I: Ord> PartialEq for FactorRun<'_, I> {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.index() == rhs.index()
+    }
+}
+
+impl<I: Ord> Eq for FactorRun<'_, I> {}
 
 /// A shared factor or ordered, possibly nested tensor space.
 ///
@@ -64,9 +268,6 @@ enum Node<I> {
 #[derive(Debug)]
 pub struct HilbertSpace<I> {
     root: Option<Arc<Node<I>>>,
-    // Saturated leaf count: 0 (unit), 1 (factor), 2 (multiple leaves).
-    // Structural metadata only; no dimensions or evaluation results are cached.
-    leaf_class: u8,
     effective_kind: Option<TensorKind>,
 }
 
@@ -74,28 +275,15 @@ impl<I> Clone for HilbertSpace<I> {
     fn clone(&self) -> Self {
         Self {
             root: self.root.clone(),
-            leaf_class: self.leaf_class,
             effective_kind: self.effective_kind,
         }
     }
 }
 
 impl<I> HilbertSpace<I> {
-    fn new(node: Node<I>) -> Self {
-        let (leaf_class, effective_kind) = match &node {
-            Node::Factor(_) => (1, None),
-            Node::Tensor(kind, children) => {
-                let mut nonempty = children.iter().filter(|c| c.leaf_class != 0);
-                match (nonempty.next(), nonempty.next()) {
-                    (None, _) => (0, None),
-                    (Some(child), None) => (child.leaf_class, child.effective_kind),
-                    (Some(_), Some(_)) => (2, Some(*kind)),
-                }
-            }
-        };
+    fn new(node: Node<I>, effective_kind: Option<TensorKind>) -> Self {
         Self {
             root: Some(Arc::new(node)),
-            leaf_class,
             effective_kind,
         }
     }
@@ -106,27 +294,31 @@ impl<I> HilbertSpace<I> {
 
     /// Creates a leaf from an already issued index, without generating an index.
     pub fn factor(index: I) -> Self {
-        Self::new(Node::Factor(index))
+        Self::new(Node::Factor(index), None)
     }
 
     /// Creates the empty tensor space, of dimension one.
     pub fn unit() -> Self {
-        Self::new(Node::Tensor(TensorKind::Ordinary, Operands::Empty))
+        Self::new(
+            Node::Tensor {
+                kind: TensorKind::Ordinary,
+                children: Operands::Empty,
+                by_index: FactorIndex::Empty,
+            },
+            None,
+        )
     }
 
     /// Returns the index of a leaf, or `None` for a tensor (even a singleton).
     pub fn factor_index(&self) -> Option<&I> {
-        match self.node() {
-            Node::Factor(i) => Some(i),
-            Node::Tensor(_, _) => None,
-        }
+        self.node().index()
     }
 
     /// Returns the stored tensor kind, including empty and singleton wrappers.
     pub fn kind(&self) -> Option<TensorKind> {
         match self.node() {
             Node::Factor(_) => None,
-            Node::Tensor(kind, _) => Some(*kind),
+            Node::Tensor { kind, .. } => Some(*kind),
         }
     }
 
@@ -139,7 +331,14 @@ impl<I> HilbertSpace<I> {
     pub fn children(&self) -> slice::Iter<'_, Self> {
         match self.node() {
             Node::Factor(_) => [].iter(),
-            Node::Tensor(_, s) => s.iter(),
+            Node::Tensor { children, .. } => children.iter(),
+        }
+    }
+
+    pub(crate) fn factor_count(&self) -> usize {
+        match self.node() {
+            Node::Factor(_) => 1,
+            Node::Tensor { by_index, .. } => by_index.len(),
         }
     }
 
@@ -207,29 +406,35 @@ impl<I: Ord> HilbertSpace<I> {
         children: impl IntoIterator<Item = Self>,
     ) -> Result<Self, SpaceError> {
         let children: Operands<Self> = children.into_iter().collect();
-        if children
-            .iter()
-            .filter(|c| c.leaf_class != 0)
-            .take(2)
-            .count()
-            == 2
-            && children
-                .iter()
-                .any(|c| c.effective_kind.is_some_and(|k| k != kind))
-        {
-            return Err(SpaceError::MixedTensorKinds);
-        }
-        // Every existing child is valid. A sole child cannot introduce duplicates,
-        // and preserving this case avoids quadratic construction of deep grouping.
-        if let Operands::Many(parts) = &children {
-            let mut seen = BTreeSet::new();
-            for index in parts.iter().flat_map(Self::indices) {
-                if !seen.insert(index) {
-                    return Err(SpaceError::DuplicateIndex);
+        let mut nonempty = children.iter().filter(|child| child.factor_count() != 0);
+        let (by_index, effective_kind) = match (nonempty.next(), nonempty.next()) {
+            (None, _) => (FactorIndex::Empty, None),
+            (Some(child), None) => (FactorIndex::reuse(child), child.effective_kind),
+            (Some(_), Some(_)) => {
+                if children
+                    .iter()
+                    .any(|c| c.effective_kind.is_some_and(|k| k != kind))
+                {
+                    return Err(SpaceError::MixedTensorKinds);
                 }
+                (FactorIndex::merge(children.as_slice())?, Some(kind))
             }
+        };
+        Ok(Self::new(
+            Node::Tensor {
+                kind,
+                children,
+                by_index,
+            },
+            effective_kind,
+        ))
+    }
+
+    pub(crate) fn factor_position(&self, index: &I) -> Option<usize> {
+        match self.node() {
+            Node::Factor(leaf) => (leaf == index).then_some(0),
+            Node::Tensor { by_index, .. } => by_index.position(index),
         }
-        Ok(Self::new(Node::Tensor(kind, children)))
     }
 
     /// Constructs a binary tensor with this space's factors on the left.
@@ -255,7 +460,7 @@ impl<I: Eq> HilbertSpace<I> {
 
     /// Tests whether this space's factors form an ordered subsequence of `ambient`.
     pub fn is_subsystem_of(&self, ambient: &Self) -> bool {
-        if self.leaf_class == 2 && self.effective_kind != ambient.effective_kind {
+        if self.effective_kind.is_some() && self.effective_kind != ambient.effective_kind {
             return false;
         }
         let mut ambient = ambient.indices();
@@ -266,50 +471,6 @@ impl<I: Eq> HilbertSpace<I> {
     /// Tests whether this space contains an index, without inferring its structure.
     pub fn contains_index(&self, index: &I) -> bool {
         self.indices().any(|i| i == index)
-    }
-}
-
-/// Factor lookup shared by the phases of one query on a space.
-pub(crate) struct FactorPositions<'a, I> {
-    space: &'a HilbertSpace<I>,
-    leaves: OnceCell<Vec<&'a HilbertSpace<I>>>,
-    by_index: OnceCell<Vec<usize>>,
-}
-
-impl<'a, I> FactorPositions<'a, I> {
-    pub(crate) fn new(space: &'a HilbertSpace<I>) -> Self {
-        Self {
-            space,
-            leaves: OnceCell::new(),
-            by_index: OnceCell::new(),
-        }
-    }
-
-    pub(crate) fn space(&self) -> &'a HilbertSpace<I> {
-        self.space
-    }
-
-    pub(crate) fn leaves(&self) -> &[&'a HilbertSpace<I>] {
-        self.leaves.get_or_init(|| self.space.leaves().collect())
-    }
-}
-
-impl<I: Ord> FactorPositions<'_, I> {
-    pub(crate) fn position(&self, index: &I) -> Option<usize> {
-        if let Some(leaf) = self.space.factor_index() {
-            return (leaf == index).then_some(0);
-        }
-        let leaves = self.leaves();
-        let leaf_index = |position: usize| leaves[position].factor_index().expect("space leaf");
-        let by_index = self.by_index.get_or_init(|| {
-            let mut positions: Vec<_> = (0..leaves.len()).collect();
-            positions.sort_unstable_by(|&a, &b| leaf_index(a).cmp(leaf_index(b)));
-            positions
-        });
-        by_index
-            .binary_search_by(|&position| leaf_index(position).cmp(index))
-            .ok()
-            .map(|slot| by_index[slot])
     }
 }
 
@@ -337,7 +498,7 @@ impl<'a, I> Iterator for Leaves<'a, I> {
         while let Some(space) = self.pending.pop() {
             match space.node() {
                 Node::Factor(_) => return Some(space),
-                Node::Tensor(_, children) => self.pending.extend(children.iter().rev()),
+                Node::Tensor { children, .. } => self.pending.extend(children.iter().rev()),
             }
         }
         None
@@ -350,7 +511,7 @@ impl<I> Drop for HilbertSpace<I> {
         let mut first = self.root.take();
         let mut pending = Vec::new();
         while let Some(root) = first.take().or_else(|| pending.pop()) {
-            if let Some(Node::Tensor(_, children)) = Arc::into_inner(root) {
+            if let Some(Node::Tensor { children, .. }) = Arc::into_inner(root) {
                 for mut child in children {
                     if let Some(root) = child.root.take() {
                         pending.push(root);
@@ -366,26 +527,71 @@ mod tests {
     use super::*;
 
     #[test]
-    fn positions_are_lazy_and_reused_within_a_query_in_tensor_order() {
-        let a = HilbertSpace::factor(30);
-        let b = HilbertSpace::factor(10);
-        let c = HilbertSpace::factor(20);
-        let space = a.tensor(&b.tensor(&c).unwrap()).unwrap();
-        let positions = FactorPositions::new(&space);
-        assert!(positions.leaves.get().is_none());
-        assert!(positions.by_index.get().is_none());
+    fn merged_indices_map_interleaved_ids_to_tensor_order() {
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+        struct Id(u8);
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<HilbertSpace<Id>>();
 
-        let equal_index = HilbertSpace::factor(10);
-        assert_eq!(
-            positions.position(equal_index.factor_index().unwrap()),
-            Some(1)
-        );
-        let sorted = positions.by_index.get().unwrap();
-        assert_eq!(positions.position(&30), Some(0));
-        assert_eq!(positions.position(&20), Some(2));
-        assert_eq!(positions.position(&99), None);
-        assert!(core::ptr::eq(sorted, positions.by_index.get().unwrap()));
-        assert!(positions.leaves()[1].shares_node_with(&b));
-        assert!(FactorPositions::new(&space).by_index.get().is_none());
+        let a = HilbertSpace::factor(Id(30));
+        let b = HilbertSpace::factor(Id(10));
+        let left = a.tensor_g(&b).unwrap();
+        let right = HilbertSpace::tensor_all_g([
+            HilbertSpace::factor(Id(20)),
+            HilbertSpace::factor(Id(40)),
+        ])
+        .unwrap();
+        let unit = HilbertSpace::unit();
+        let space = HilbertSpace::tensor_all_g([
+            left,
+            unit.clone(),
+            right.clone(),
+            HilbertSpace::factor(Id(25)),
+        ])
+        .unwrap();
+        let alias = space.clone();
+        let wrapped = HilbertSpace::tensor_all([unit, space.clone()]).unwrap();
+        for candidate in [&space, &alias, &wrapped] {
+            assert_eq!(candidate.effective_kind(), Some(TensorKind::Graded));
+            assert_eq!(candidate.factor_count(), 5);
+            for (position, id) in [30, 10, 20, 40, 25].into_iter().enumerate() {
+                assert_eq!(candidate.factor_position(&Id(id)), Some(position));
+            }
+            assert_eq!(candidate.factor_position(&Id(99)), None);
+            assert!(candidate.leaves().nth(1).unwrap().shares_node_with(&b));
+        }
+        let Node::Tensor {
+            by_index: FactorIndex::Many(original),
+            ..
+        } = space.node()
+        else {
+            panic!("multi-factor index");
+        };
+        let Node::Tensor {
+            by_index: FactorIndex::Many(reused),
+            ..
+        } = wrapped.node()
+        else {
+            panic!("inherited index");
+        };
+        assert!(Arc::ptr_eq(original, reused));
+        let overlap = right.tensor_g(&HilbertSpace::factor(Id(20)));
+        assert_eq!(overlap.unwrap_err(), SpaceError::DuplicateIndex);
+        let wrong_kind = right.tensor(&HilbertSpace::factor(Id(20)));
+        assert_eq!(wrong_kind.unwrap_err(), SpaceError::MixedTensorKinds);
+    }
+
+    #[test]
+    fn units_and_singleton_wrappers_have_no_position_offset() {
+        let empty = HilbertSpace::tensor_all_g([HilbertSpace::<u8>::unit()]).unwrap();
+        assert_eq!(empty.factor_count(), 0);
+        assert_eq!(empty.factor_position(&4), None);
+        let factor = HilbertSpace::factor(4);
+        let wrapped = empty.tensor(&factor).unwrap();
+        assert_eq!(wrapped.factor_count(), 1);
+        assert_eq!(wrapped.factor_position(&4), Some(0));
+        assert_eq!(wrapped.factor_position(&5), None);
+        let repeated = wrapped.tensor(&HilbertSpace::factor(4));
+        assert_eq!(repeated.unwrap_err(), SpaceError::DuplicateIndex);
     }
 }
