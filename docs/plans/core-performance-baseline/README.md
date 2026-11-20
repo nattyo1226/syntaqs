@@ -446,10 +446,11 @@ construction APIs in separate checkpoints.
    persistent regressions with their measured cost.
    [Workspace verification](../../design/verification.md)
 
-The follow-up starts with the reference measurements. Save each checkpoint's
+The reference measurements in step 1 are complete. Save each checkpoint's
 raw timing, allocation, and work-count results under `measurements/follow-up/`
 with its revision and run configuration. Compare consecutive checkpoints for
 individual effects and Stage 8 for the cumulative result.
+[Follow-up reference measurements](measurements/follow-up/README.md)
 
 ### Reduce intermediate work in state action
 

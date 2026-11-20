@@ -30,6 +30,44 @@ fn case(workload: &'static str, sites: usize, factors: usize) -> Case {
 pub fn run(r: &Runner) {
     hubbard(r);
     hopping(r);
+    product_zero_before_sum(r);
+}
+
+fn product_zero_before_sum(r: &Runner) {
+    let rest = Q::operator(O::Create) + Q::operator(O::Number);
+    let annihilate = Q::operator(O::Annihilate);
+    let product = &rest * &annihilate;
+    let local = Q::state(Empty).act(&(product.clone() + Q::operator(O::I)));
+    let c = case("local_zero_before_sum", 1, 1);
+    r.measure(&c, "evaluate", || black_box(&local).evaluate());
+    r.diagnose(&c, "state_coordinates_occupation", "nnz", || {
+        let out = local.coordinates(&OccupationBasis).unwrap();
+        assert!(out.entries().eq([(&[0][..], &C::new(1.0, 0.0))]));
+        out.len()
+    });
+
+    let modes = factors(2);
+    let space = HilbertSpace::tensor_all_g(modes.iter().cloned()).unwrap();
+    let vacuum = Q::product_state(&space, [Empty; 2]).unwrap();
+    let spanning_sum = (Q::operator(O::Create).at(&modes[0]).unwrap()
+        + Q::operator(O::Number).at(&modes[1]).unwrap())
+    .unwrap();
+    let spanning_product = (&spanning_sum * annihilate.at(&modes[1]).unwrap()).unwrap();
+    for (workload, product) in [
+        ("placed_zero_before_sum", product.at(&modes[1]).unwrap()),
+        ("composite_zero_before_sum", spanning_product),
+    ] {
+        let c = case(workload, 2, 2);
+        let identity = Q::operator(O::I).at(&modes[0]).unwrap();
+        let operator = (product + identity).unwrap();
+        let delayed = vacuum.act(&operator).unwrap();
+        r.measure(&c, "evaluate", || black_box(&delayed).evaluate().unwrap());
+        r.diagnose(&c, "state_coordinates_occupation", "nnz", || {
+            let out = delayed.coordinates(&OccupationBasis).unwrap();
+            assert!(out.entries().eq([(&[0, 0][..], &C::new(1.0, 0.0))]));
+            out.len()
+        });
+    }
 }
 
 fn hubbard(r: &Runner) {

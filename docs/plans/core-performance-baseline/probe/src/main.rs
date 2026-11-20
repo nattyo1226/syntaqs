@@ -1,5 +1,6 @@
 mod fermion;
 mod measure;
+mod space_construction;
 mod spin_half;
 mod spin_one;
 
@@ -26,16 +27,20 @@ fn main() {
     let mode = match args.next().as_deref() {
         None | Some("time") if !cfg!(feature = "allocations") => Mode::Time,
         Some("allocations") if cfg!(feature = "allocations") => Mode::Allocations,
+        Some("retained") if cfg!(feature = "allocations") => Mode::Retained,
         Some("diagnostics") => Mode::Diagnostics,
         _ => {
-            panic!("use time without the allocations feature, allocations with it, or diagnostics")
+            panic!("use time, allocations or retained with the allocations feature, or diagnostics")
         }
     };
     let filter = args.next().unwrap_or_default();
     assert!(args.next().is_none(), "expected at most one case ID filter");
     let runner = Runner { mode, filter };
     runner.print_header();
-    spin_half::run(&runner);
-    spin_one::run(&runner);
-    fermion::run(&runner);
+    if !matches!(runner.mode, Mode::Retained) {
+        spin_half::run(&runner);
+        spin_one::run(&runner);
+        fermion::run(&runner);
+    }
+    space_construction::run(&runner);
 }

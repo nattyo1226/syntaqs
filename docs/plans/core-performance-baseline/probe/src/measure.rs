@@ -42,18 +42,36 @@ mod allocations {
         bytes: usize,
     }
 
+    #[derive(Clone, Copy)]
+    enum Tracking {
+        Requests(Counts),
+        Retained(isize),
+    }
+
     thread_local! {
-        static COUNTS: Cell<Option<Counts>> = const { Cell::new(None) };
+        static TRACKING: Cell<Option<Tracking>> = const { Cell::new(None) };
     }
 
     struct Allocator;
 
-    fn count(bytes: usize) {
-        let _ = COUNTS.try_with(|cell| {
-            if let Some(mut counts) = cell.get() {
+    fn request(bytes: usize, live_delta: isize) {
+        let _ = TRACKING.try_with(|cell| match cell.get() {
+            Some(Tracking::Requests(mut counts)) => {
                 counts.requests += 1;
                 counts.bytes += bytes;
-                cell.set(Some(counts));
+                cell.set(Some(Tracking::Requests(counts)));
+            }
+            Some(Tracking::Retained(total)) => {
+                cell.set(Some(Tracking::Retained(total + live_delta)));
+            }
+            None => {}
+        });
+    }
+
+    fn release(bytes: usize) {
+        let _ = TRACKING.try_with(|cell| {
+            if let Some(Tracking::Retained(total)) = cell.get() {
+                cell.set(Some(Tracking::Retained(total - bytes as isize)));
             }
         });
     }
@@ -61,22 +79,41 @@ mod allocations {
     // Forward each request unchanged. The thread-local counter never allocates.
     unsafe impl GlobalAlloc for Allocator {
         unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-            count(layout.size());
-            unsafe { System.alloc(layout) }
+            let ptr = unsafe { System.alloc(layout) };
+            let delta = if ptr.is_null() {
+                0
+            } else {
+                layout.size() as isize
+            };
+            request(layout.size(), delta);
+            ptr
         }
 
         unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-            count(layout.size());
-            unsafe { System.alloc_zeroed(layout) }
+            let ptr = unsafe { System.alloc_zeroed(layout) };
+            let delta = if ptr.is_null() {
+                0
+            } else {
+                layout.size() as isize
+            };
+            request(layout.size(), delta);
+            ptr
         }
 
         unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+            release(layout.size());
             unsafe { System.dealloc(ptr, layout) }
         }
 
         unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, size: usize) -> *mut u8 {
-            count(size);
-            unsafe { System.realloc(ptr, layout, size) }
+            let ptr = unsafe { System.realloc(ptr, layout, size) };
+            let delta = if ptr.is_null() {
+                0
+            } else {
+                size as isize - layout.size() as isize
+            };
+            request(size, delta);
+            ptr
         }
     }
 
@@ -84,10 +121,40 @@ mod allocations {
     static ALLOCATOR: Allocator = Allocator;
 
     pub fn measure<T>(call: impl FnOnce() -> T) -> (usize, usize) {
-        COUNTS.set(Some(Counts::default()));
+        TRACKING.set(Some(Tracking::Requests(Counts::default())));
         drop(black_box(call()));
-        let counts = COUNTS.replace(None).unwrap();
+        let Some(Tracking::Requests(counts)) = TRACKING.replace(None) else {
+            unreachable!("allocation measurement was interrupted");
+        };
         (counts.requests, counts.bytes)
+    }
+
+    pub fn retained<T>(call: impl FnOnce() -> T) -> isize {
+        TRACKING.set(Some(Tracking::Retained(0)));
+        let result = black_box(call());
+        let Some(Tracking::Retained(bytes)) = TRACKING.replace(None) else {
+            unreachable!("retained allocation measurement was interrupted");
+        };
+        drop(result);
+        bytes
+    }
+
+    #[cfg(test)]
+    #[test]
+    fn retained_bytes_follow_the_live_allocation_after_growth_and_shrink() {
+        fn build() -> Vec<u8> {
+            drop(black_box(Vec::<u8>::with_capacity(32)));
+            let mut output = Vec::with_capacity(8);
+            output.push(1);
+            output.reserve_exact(63);
+            output.shrink_to_fit();
+            output
+        }
+
+        assert_eq!(retained(build), 1);
+        let (_, requested_bytes) = measure(build);
+        assert!(requested_bytes > 32 + 8 + 64);
+        assert_eq!(retained(|| ()), 0);
     }
 }
 
@@ -111,6 +178,7 @@ impl Case {
 pub enum Mode {
     Time,
     Allocations,
+    Retained,
     Diagnostics,
 }
 
@@ -133,6 +201,7 @@ impl Runner {
                 println!();
             }
             Mode::Allocations => println!("{fields},requests,requested_bytes"),
+            Mode::Retained => println!("{fields},retained_bytes"),
             Mode::Diagnostics => println!("{fields},metric,value"),
         }
     }
@@ -173,6 +242,24 @@ impl Runner {
         );
     }
 
+    pub fn measure_construction<T>(&self, case: &Case, api: &str, mut build: impl FnMut() -> T) {
+        if matches!(self.mode, Mode::Retained) {
+            #[cfg(feature = "allocations")]
+            {
+                let id = case.id(api);
+                if id.contains(&self.filter) {
+                    drop(black_box(build()));
+                    let bytes = allocations::retained(build);
+                    println!("{id},{bytes}");
+                }
+            }
+            #[cfg(not(feature = "allocations"))]
+            unreachable!("validated mode");
+        } else {
+            self.measure(case, api, &mut build);
+        }
+    }
+
     fn measure_batches<I>(
         &self,
         case: &Case,
@@ -181,7 +268,7 @@ impl Runner {
         mut prepare: impl FnMut(usize) -> I,
         mut call_batch: impl FnMut(&I, usize),
     ) {
-        if matches!(self.mode, Mode::Diagnostics) {
+        if matches!(self.mode, Mode::Diagnostics | Mode::Retained) {
             return;
         }
         let id = case.id(api);
@@ -211,7 +298,7 @@ impl Runner {
                 #[cfg(not(feature = "allocations"))]
                 unreachable!("validated mode");
             }
-            Mode::Diagnostics => unreachable!("handled before warmup"),
+            Mode::Diagnostics | Mode::Retained => unreachable!("handled before warmup"),
         }
     }
 
