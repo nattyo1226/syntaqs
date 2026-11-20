@@ -455,7 +455,7 @@ flattening path retains 32.9 KB. The report includes the cost of keeping
 earlier roots, the construction and binding crossover, and the workspace
 and downstream verification. Each checkpoint's raw data and run
 configuration are recorded under `measurements/follow-up/`.
-[End-to-end comparison](measurements/follow-up/final/README.md)
+[Stage 8 to final comparison](measurements/follow-up/final/README.md) · [Initial to final comparison](measurements/initial-to-final/README.md)
 
 [Follow-up reference measurements](measurements/follow-up/README.md) · [Exact-zero stopping measurements](measurements/follow-up/zero-product/README.md) · [Factor index measurements](measurements/follow-up/factor-index/README.md) · [Flattening measurements](measurements/follow-up/flatten/README.md) · [Direct flattened construction measurements](measurements/follow-up/tensor-flatten/README.md) · [Selective state action measurements](measurements/follow-up/state-action/README.md)
 
