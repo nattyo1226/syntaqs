@@ -359,7 +359,10 @@ natural term collection. Stage 6 is complete with direct Hilbert–Schmidt
 contraction, conjugate symmetry, and local parity checks. Stage 7 is complete
 with indexed basis conversion, query-local reuse, sparse operator enumeration,
 state tensor block enumeration, and shared placed expression nodes. Stage 8
-is pending.
+is complete with a paired comparison of all 310 original cases and 12
+controls. Follow-up investigations include small operator-coordinate query
+overhead, state action work before zero, repeated factor-position lookup, and
+coordinate storage for dense support.
 Completion requires the agreed changes, passing applicable correctness and
 workspace checks, and a full comparison with explanations for material
 regressions or missing measurements.
@@ -368,6 +371,7 @@ regressions or missing measurements.
 [Stage 5 measurements](measurements/stage-5/README.md)
 [Stage 6 measurements](measurements/stage-6/README.md)
 [Stage 7 measurements](measurements/stage-7/README.md)
+[Stage 8 results](measurements/stage-8/README.md) · [Follow-up investigations](measurements/stage-8/README.md#follow-up-investigations)
 
 After the refactoring comparison, benchmark `Ord` and `PartialOrd` for state
 and operator primitives using the agreed workloads with few and many
