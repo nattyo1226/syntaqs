@@ -153,7 +153,12 @@ Then `||I||_D=1`, and identity spectators preserve inner products. For Hermitian
 
 Trace remains ordinary and unnormalized, with Tr(I)=D. Expectations, purity traces, state inner products/norms, and state normalization keep their meanings. Custom algebras/bases need not be orthonormal.
 
-LocalOperator::hs_inner_product divides by O::identity().trace(). Normalize each evaluated primitive trace before multiplying coefficients and summing. Composite hs_inner_product/hs_inner_product_in use the same [ordinary local-trace traversal](composite-expression.md#111-intrinsic-terms-and-ordinary-representations) before contraction. Scaling before or after placement avoids unnecessary unnormalized intermediates. Each local dimension must be a nonzero C supporting mathematical division through Divide; ordinary trace/trace_in gain no division requirement.
+`LocalOperator::hs_inner_product` divides each evaluated primitive trace by
+`O::identity().trace()` before multiplying coefficients and summing.
+Composite HS uses the same normalization while
+[contracting intrinsic operator blocks](composite-expression.md#115-incremental-scalar-contractions).
+HS requires a nonzero local dimension and mathematical division through
+`Divide`. Full trace uses unnormalized local traces.
 
 This needs no state type, Dimension, integer total dimension, or integer-to-C conversion. Empty spaces have D=1. It avoids usize overflow and growth from multiplying spectator dimensions, without guaranteeing freedom from arbitrary coefficient overflow/rounding. See [trace.rs](../../crates/syntaqs-core/src/evaluate/trace.rs) and [HS regression tests](../../tests/tests/core_hs_inner_product.rs).
 

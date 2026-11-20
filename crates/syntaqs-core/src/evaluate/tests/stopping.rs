@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use core::ops::{Add, Mul};
+use core::ops::{Add, Mul, Neg};
 use num_complex::Complex64;
 use num_traits::{One, Zero};
 use std::cell::RefCell;
@@ -25,22 +25,33 @@ fn reset() {
     COUNTS.with(|c| *c.borrow_mut() = Counts::default());
 }
 
-// No PartialEq, ordering, Copy, Num, or Float; contraction needs only exact Zero.
+// The low-level contraction fixture also exercises equality-free coefficients.
 #[derive(Clone)]
-struct Scalar(f64);
-impl From<f64> for Scalar {
+struct Scalar<const COMPARABLE: bool = false>(f64);
+impl PartialEq for Scalar<true> {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.0 == rhs.0
+    }
+}
+impl Neg for Scalar<true> {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Self(-self.0)
+    }
+}
+impl<const COMPARABLE: bool> From<f64> for Scalar<COMPARABLE> {
     fn from(v: f64) -> Self {
         Self(v)
     }
 }
-impl Add for Scalar {
+impl<const COMPARABLE: bool> Add for Scalar<COMPARABLE> {
     type Output = Self;
     fn add(self, rhs: Self) -> Self {
         COUNTS.with(|c| c.borrow_mut().add += 1);
         Self(self.0 + rhs.0)
     }
 }
-impl Mul for Scalar {
+impl<const COMPARABLE: bool> Mul for Scalar<COMPARABLE> {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
         COUNTS.with(|c| {
@@ -50,7 +61,7 @@ impl Mul for Scalar {
         Self(self.0 * rhs.0)
     }
 }
-impl Zero for Scalar {
+impl<const COMPARABLE: bool> Zero for Scalar<COMPARABLE> {
     fn zero() -> Self {
         Self(0.0)
     }
@@ -58,19 +69,19 @@ impl Zero for Scalar {
         self.0 == 0.0
     }
 }
-impl One for Scalar {
+impl<const COMPARABLE: bool> One for Scalar<COMPARABLE> {
     fn one() -> Self {
         Self(1.0)
     }
 }
-impl Conjugate for Scalar {
+impl<const COMPARABLE: bool> Conjugate for Scalar<COMPARABLE> {
     type Output = Self;
     fn conjugate(&self) -> Self {
         COUNTS.with(|c| c.borrow_mut().conjugate += 1);
         self.clone()
     }
 }
-impl Divide for Scalar {
+impl<const COMPARABLE: bool> Divide for Scalar<COMPARABLE> {
     type Output = Self;
     fn divide(self, rhs: Self) -> Self {
         COUNTS.with(|c| c.borrow_mut().divide += 1);
@@ -123,7 +134,8 @@ impl<C: From<f64>> Act<C> for Ket {
     }
 }
 
-// A homogeneous real 2x2 algebra; no Clone, PartialEq, state, or Dimension bound.
+// A homogeneous real 2x2 algebra without Clone or Dimension.
+#[derive(PartialEq)]
 struct Op {
     matrix: [[f64; 2]; 2],
     site: Option<usize>,
@@ -408,9 +420,9 @@ fn hs_stops_local_traces_and_does_not_divide_zero_traces() {
     let f = sites();
     for kind in [crate::TensorKind::Ordinary, crate::TensorKind::Graded] {
         let space = H::tensor_all_with(kind, f.iter().cloned()).unwrap();
-        let a = operators::<Scalar>(&space, &f, None);
+        let a = operators::<Scalar<true>>(&space, &f, None);
         for zero in [None, Some(0), Some(2), Some(3)] {
-            let b = operators::<Scalar>(&space, &f, zero);
+            let b = operators::<Scalar<true>>(&space, &f, zero);
             reset();
             let value = a.hs_inner_product(&b).unwrap();
             assert_eq!(value.0, if zero.is_some() { 0.0 } else { 1.0 });
@@ -424,6 +436,34 @@ fn hs_stops_local_traces_and_does_not_divide_zero_traces() {
             });
         }
     }
+}
+
+#[test]
+fn graded_parity_rejects_before_calling_primitive_traces() {
+    let f = sites();
+    let space = H::tensor_all_g(f.iter().cloned()).unwrap();
+    let odd = LocalOperator::<Op, Scalar<true>>::primitive(Op {
+        matrix: [[0.0, 1.0], [1.0, 0.0]],
+        site: Some(1),
+    })
+    .at(&f[1])
+    .unwrap();
+    let even = LocalOperator::<Op, Scalar<true>>::primitive(Op {
+        matrix: [[1.0, 0.0], [0.0, 0.0]],
+        site: Some(1),
+    })
+    .at(&f[1])
+    .unwrap();
+    reset();
+    assert_eq!(odd.trace_in(&space).unwrap().0, 0.0);
+    COUNTS.with(|c| assert!(c.borrow().traces.is_empty()));
+    reset();
+    assert_eq!(odd.hs_inner_product_in(&even, &space).unwrap().0, 0.0);
+    COUNTS.with(|c| {
+        let c = c.borrow();
+        assert_eq!(c.traces, [None]); // Only Tr(I) for normalization.
+        assert_eq!(c.divide, 0);
+    });
 }
 
 #[test]
@@ -441,7 +481,7 @@ fn trace_and_hs_sums_keep_other_branches_and_original_space_checks() {
     .unwrap();
     reset();
     assert_eq!(sum.trace().unwrap(), 16.0);
-    COUNTS.with(|c| assert_eq!(c.borrow().traces.len(), 1 + 3 * 4));
+    COUNTS.with(|c| assert_eq!(c.borrow().traces, [Some(0), None]));
     assert_eq!(identity.hs_inner_product(&sum).unwrap(), 1.0);
     let local = LocalOperator::<Op, Scalar>::sum([
         LocalOperator::primitive(Op {

@@ -1,0 +1,12 @@
+system,workload,sites,factors,order,api,metric,value
+spin_half,heisenberg,4,4,1,operator_coordinates_cartesian,nnz,9
+spin_half,heisenberg,8,8,1,operator_coordinates_cartesian,nnz,21
+spin_half,heisenberg,16,16,1,operator_coordinates_cartesian,nnz,45
+spin_half,heisenberg,32,32,1,operator_coordinates_cartesian,nnz,93
+spin_half,heisenberg,64,64,1,operator_coordinates_cartesian,nnz,189
+fermion,hubbard,2,4,1,operator_coordinates_majorana,nnz,11
+fermion,hubbard,4,8,1,operator_coordinates_majorana,nnz,25
+fermion,hubbard,8,16,1,operator_coordinates_majorana,nnz,53
+fermion,hubbard,16,32,1,operator_coordinates_majorana,nnz,109
+fermion,hubbard,32,64,1,operator_coordinates_majorana,nnz,221
+fermion,hubbard,64,128,1,operator_coordinates_majorana,nnz,445

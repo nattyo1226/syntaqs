@@ -12,7 +12,7 @@ use core::{
 };
 use num_traits::{One, Zero};
 
-use super::composite::Evaluator;
+use super::{add_pair, composite::Evaluator};
 use crate::expression::{
     composite::{StateExpr, StateNode},
     traversal::{LinearTerms, state_view},
@@ -466,21 +466,6 @@ where
         }
     }
     values.pop().expect("one contraction result")
-}
-
-fn add_pair<C>(sum: C, value: C, off_diagonal: bool) -> C
-where
-    C: Clone + Zero + Conjugate<Output = C>,
-{
-    if value.is_zero() {
-        return sum;
-    }
-    if off_diagonal {
-        let reflected = value.conjugate();
-        add(sum, add(value, reflected))
-    } else {
-        add(sum, value)
-    }
 }
 
 fn primitive_overlap<S, C>(left: &S, right: &S, a: Option<&C>, b: Option<C>) -> Option<C>

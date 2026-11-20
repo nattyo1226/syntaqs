@@ -1,0 +1,12 @@
+system,workload,sites,factors,order,api,requests,requested_bytes
+spin_half,heisenberg,4,4,1,hs_self,243,25256
+spin_half,heisenberg,8,8,1,hs_self,518,56472
+spin_half,heisenberg,16,16,1,hs_self,1062,118432
+spin_half,heisenberg,32,32,1,hs_self,2145,240832
+spin_half,heisenberg,64,64,1,hs_self,4309,487424
+fermion,hubbard,2,4,1,trace,253,13592
+fermion,hubbard,4,8,1,trace,1054,53648
+fermion,hubbard,8,16,1,trace,3982,209864
+fermion,hubbard,16,32,1,trace,15247,811696
+fermion,hubbard,32,64,1,trace,59339,3174784
+fermion,hubbard,64,128,1,trace,233662,12548024

@@ -1,5 +1,5 @@
 //! Coefficient capabilities are independent of storage and of each other.
-use core::ops::{Add, Mul};
+use core::ops::{Add, Mul, Neg};
 use num_complex::Complex;
 use num_traits::{One, Zero};
 use syntaqs_core::{
@@ -55,7 +55,7 @@ fn opaque_whole_coefficients_move_through_map_and_shared_local_and_composite_syn
     let _ = state.clone().scaled(Opaque(4)).act(&operator).unwrap();
 }
 
-// No Num, Float, Copy, PartialEq, Neg, Div or RealPart. Real-part extraction is
+// No Num, Float, Copy, Div or RealPart. Real-part extraction is
 // deliberately absent: scalar quotients do not need a real projection.
 #[derive(Clone, PartialEq)]
 struct Weight(f64);
@@ -69,6 +69,12 @@ impl Mul for Weight {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
         Self(self.0 * rhs.0)
+    }
+}
+impl Neg for Weight {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Self(-self.0)
     }
 }
 impl Zero for Weight {
@@ -100,6 +106,7 @@ impl Divide for Weight {
 #[test]
 fn normalized_hs_needs_no_dimension_float_cast_or_general_div_trait() {
     use syntaqs_core::{algebra::Identity, algebra::Product, algebra::Trace};
+    #[derive(PartialEq)]
     struct IdentityOnly;
     impl Identity for IdentityOnly {
         fn identity() -> Self {

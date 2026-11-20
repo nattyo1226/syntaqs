@@ -108,8 +108,7 @@ Empty input is accepted only for a zero-factor unit space, retaining the specifi
 | Operation | Required grading capabilities in shared evaluation |
 | --- | --- |
 | Composite-state evaluate / inner product / norm squared / expectation / expansion / coordinates, including explicit-space variants | O: `HomogeneousParity + ParityOperator` |
-| Composite-operator trace / Hilbert–Schmidt inner product, including explicit-space variants | O: `HomogeneousParity + ParityOperator` |
-| Composite-operator expansion / coordinates, including explicit-space variants | O: `HomogeneousParity`; C: `Neg<Output=C>`. Intrinsic ordering needs no P |
+| Composite-operator trace / Hilbert–Schmidt inner product / expansion / coordinates, including explicit-space variants | O: `HomogeneousParity + PartialEq`, C: `PartialEq + Neg<Output=C>` |
 | Export / norm / normalization / normalized expectation | Inherits capabilities from the invoked core evaluation path |
 
 Construction, placement, binding, sums, products, delayed actions, and adjoints do not uniformly require evaluation capabilities; purely local API bounds are preserved. State action requires no Product on O. P acts through local Act and existing Scale nodes, so crossing signs alone add no One / Neg bounds on C and need no direct parity query on S.
@@ -126,8 +125,7 @@ coefficient capabilities:
 primitive Eq/Ord/Hash, coefficient ordering, or primitive operator Product is
 required. Construction has its own operation-specific bounds. State inner products, norms,
 expectations, basis queries, normalization, vector export and action-matrix
-export inherit the corresponding evaluation bounds. Operator-only trace/HS and
-operator-basis queries retain their existing bounds.
+export inherit the corresponding evaluation bounds.
 
 ### 4.3. Scope of delayed Act
 
@@ -288,7 +286,10 @@ Full trace is ordinary unnormalized trace in both ordinary and graded spaces. Fo
 
 It satisfies `Tr(XY) = Tr(YX)` and `Tr(I_H) = dim H`. Cyclicity gains no parity sign; supertrace is not used.
 
-In the ordinary tensor representation, `Tr(A⊗B)=Tr(A)Tr(B)` contracts local products and traces without enumerating the full basis or generating dense or sparse matrices. Graded placements first lower to the ordinary representation, including parity strings in local actions. A syntactically unreferenced factor cannot immediately be treated as an identity spectator.
+In the ordinary tensor representation, `Tr(A⊗B)=Tr(A)Tr(B)` contracts local
+products and traces. For graded operators, the local parity selection rule
+allows the same scalar reduction on surviving intrinsic terms.
+[Scalar contraction](#115-incremental-scalar-contractions)
 
 ## 10. Consistency guarantees and verification targets
 
@@ -328,10 +329,8 @@ Evaluation by local rules and expansion in a selected basis are separate operati
 
 ### 11.1. Intrinsic terms and ordinary representations
 
-| Internal representation | Content and use |
-| --- | --- |
-| Evaluated operator blocks | Products of disjoint blocks with homogeneous primitive placements ordered by the selected space's leaves, used in composite collection and operator-basis queries |
-| `OrdinaryOpTerms` | Local-factor sequences in the ordinary representation, inserting a parity string for each placement; used for full trace |
+Collection, operator-basis queries, and operator contractions share evaluated
+blocks with homogeneous primitive placements in ambient factor order.
 
 Intrinsic ordering adds one negative sign whenever odd components on distinct factors cross, preserving the original local-product order on the same factor. It does not sort by Index values. The same ordering follows product-adjoint reversal; tensor-adjoint signs are not added separately.
 
@@ -347,7 +346,13 @@ P is placed to the right of A: for example, `A ⊗g B` becomes `A P^p(B) ⊗ B`.
 
 State action inserts P on factors preceding an odd primitive within the selected Act scope. Mixed-parity and entangled states use P's actual local action rather than a constant sign. Local sums, products, and adjoints are handled primitive by primitive. A full state sum-of-products expansion, complete basis, or dense matrix is not shared preprocessing; unaffected branches are shared.
 
-State inner products add no signs. Full trace contracts local products and Trace in the ordinary representation. A factor that may receive P cannot be identified as an identity spectator before lowering. Tests also cover the trace of `c_1†c_1 = I_0 ⊗ n_1` for two-mode `c_1 = P_0 ⊗ a_1`. Ordinary trace cyclicity gains no parity sign and requires neither S, a state basis, nor a usize-representable total dimension. Hilbert–Schmidt inner products use the same lowering and local-trace traversal, dividing each local trace by `Tr(I)` before contraction. Only HS inner products add Divide; total dimension D is not converted to an integer. Supertrace and partial trace are outside the current API.
+In the ordinary representation, a local factor in a graded trace has parity
+`p(A_i)` because the parity operators themselves are even. A term therefore
+contributes only when every local factor is even. For a Hilbert–Schmidt pair,
+the parity at factor `i` is `p(A_i) + p(B_i)` modulo two. When these local
+parities agree everywhere, the two prefix parities coincide. Cyclicity of
+each local trace and `P_i² = I` cancel them. The contraction then uses
+`Tr(A_i† B_i)` from the intrinsic factors.
 
 Space validation precedes evaluation even for zero, zero coefficients, and identity, so invalid indices and spaces are not missed. See [tensor_products.rs](../../examples/src/bin/tensor_products.rs) for usage. Concrete implementations using this shared machinery are documented under [Fermion](local-structure.md#8-fermion-local-algebra) and [Spin-one](local-structure.md#9-spin-one-local-algebra). Extensions outside the current scope appear in [future work](../future-work.md).
 
@@ -400,8 +405,8 @@ Operator expand/coordinates, `collect_terms_in`, full trace, and HS queries
 validate the original expression against the selected space before applying
 this same preparation. Structural grouping handles consecutive same-factor
 operands. Operator block evaluation handles separated overlaps and their
-crossing signs. Ordinary trace lowering inserts parity strings. State action
-is basis-free and requires no operator-primitive Product.
+crossing signs. State action is basis-free and requires no operator-primitive
+Product.
 
 Structural grouping differs from exact primitive collection in
 [local expressions](primitive-expression.md): it changes expression placement,
@@ -481,23 +486,30 @@ corresponding primitive call. Nonzero local contributions still accumulate in
 order. Primitive equality is not used to infer orthogonality: each visited
 primitive overlap comes from its InnerProduct rule.
 
-Full trace and normalized HS use the existing ordinary lowering, including
-parity strings. They contract local factors in selected ambient order and stop
-only the current tensor term on an exact-zero local value or running product.
-A zero primitive trace skips its HS normalization division and coefficient work;
-nonzero primitive traces are still divided by `Tr(I)` before coefficient
-multiplication and summation. The identity trace establishing the local dimension
-remains separate from the per-factor work. No total dimension, basis, state type,
-orthogonality metadata, or result cache is introduced for operator HS.
+Operator trace contracts each intrinsic block separately. It discards terms
+with any odd local factor in a graded space and applies `Tr(I)` at spectator
+positions. For normalized HS, overlapping supports on either side join into
+one contraction component. Disjoint components are processed in ambient order.
+Uniform odd exchanges contribute their fixed sign. Exchanges that depend on
+the selected summands join the affected components, preserving internal order.
+Contraction distributes sums within the current component as needed. Equal
+normalized sums with reflexive values use diagonal and upper-triangle
+contributions, and the original outer scales apply after contraction.
 
-Space/reference validation precedes these shortcuts. Operand evaluation, graded
-lowering, and factor coverage metadata are prepared before numerical contraction.
+Within the current pair, graded parity mismatch or exact zero ends the local
+contraction. Nonzero primitive traces are divided by `Tr(I)` before coefficient
+multiplication and summation. Shared identity spectators have normalized
+contribution one. Primitive traces and local HS overlaps are reused within
+the query. The shared coefficient capabilities supply negation for exchange
+signs, while only normalized HS requires division.
+
+Space/reference validation precedes these shortcuts. Operand evaluation and
+factor coverage metadata are prepared before numerical contraction.
 The test for zero is exactly `Zero::is_zero()`, with no threshold or finite-value
 rejection. Nonzero tiny values continue; NaN alone does not stop a product.
 Avoiding arithmetic after a proven zero follows mathematical zero propagation,
 without guaranteeing a particular IEEE sequence's signed-zero or NaN/inf propagation.
-Inner-product helpers gain no coefficient equality bound; public state paths
-inherit only the [evaluation bounds](#42-shared-apis-and-minimal-capabilities).
+Public state paths inherit the [evaluation bounds](#42-shared-apis-and-minimal-capabilities).
 
 ### 11.6. Sparse operator basis generation
 
@@ -508,12 +520,13 @@ full-length key, and one final accumulator. The single-component identity path
 uses its actual basis digit and coefficient; general identities share their
 local choices across spectator positions. Expression expansion additionally
 shares local basis payloads. Operator queries use the public bounds and
-coordinate format defined in basis design. State basis expansion and trace/HS
-contraction use their own paths.
+coordinate format defined in basis design. Trace and HS use the evaluated
+operator blocks directly.
 
 ### 11.7. Operator block evaluation
 
-Composite collection and basis queries share a basis-independent evaluation.
+Composite collection, basis queries, and scalar contractions share a
+basis-independent evaluation.
 A block contains a sum of ordered primitive products and records the union of
 their factor positions. Products retain disjoint blocks in operand order.
 An overlapping operand is multiplied into the blocks it intersects. Local

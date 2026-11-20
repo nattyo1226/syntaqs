@@ -12,12 +12,14 @@ use crate::{
     },
     space::FactorPositions,
 };
-use core::{cell::OnceCell, ops::Neg};
+use core::{borrow::Borrow, cell::OnceCell, ops::Neg};
+
+mod contraction;
 
 // Factor positions are in ambient order. Primitive numbers are valid only in
 // the evaluation that produced the terms.
 type Factors = Vec<(usize, usize)>;
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub(crate) struct OperatorTerm<C> {
     pub(crate) coefficient: C,
     pub(crate) factors: Factors,
@@ -31,7 +33,6 @@ struct Primitive<O, C> {
 
 // A block is a sum of ordered primitive products. Different blocks in a
 // product have disjoint supports, but their factor positions may interleave.
-#[derive(PartialEq)]
 struct Block<C> {
     terms: Vec<OperatorTerm<C>>,
     support: Vec<usize>,
@@ -175,6 +176,15 @@ where
             identity: OnceCell::new(),
             graded: positions.space().effective_kind() == Some(TensorKind::Graded),
         };
+        result.product = result.evaluate(root, positions);
+        result
+    }
+
+    fn evaluate<I: Ord>(
+        &mut self,
+        root: &OpExpr<I, O, C>,
+        positions: &FactorPositions<'_, I>,
+    ) -> Factored<C> {
         // Collapse purely local syntax through the existing local algebra.
         let root = root.group_local();
         let mut tasks = vec![Task::Visit(&root, false)];
@@ -192,7 +202,7 @@ where
                         } else {
                             local.clone()
                         };
-                        values.push(result.evaluate_local(position, &local));
+                        values.push(self.evaluate_local(position, &local));
                     }
                     OpNode::Scale(s) => {
                         if s.coefficient.is_zero() {
@@ -229,20 +239,19 @@ where
                 }
                 Task::Sum(count) => {
                     let parts = values.split_off(values.len() - count);
-                    values.push(result.add(parts));
+                    values.push(self.add(parts));
                 }
                 Task::Product(count) => {
                     let product = values
                         .drain(values.len() - count..)
                         .fold(Factored::scalar(C::one()), |left, right| {
-                            result.multiply(left, right)
+                            self.multiply(left, right)
                         });
                     values.push(product);
                 }
             }
         }
-        result.product = values.pop().expect("evaluated operator");
-        result
+        values.pop().expect("evaluated operator")
     }
 
     pub(crate) fn identity(&self) -> &LocalOperator<O, C> {
@@ -294,6 +303,15 @@ where
         Factored::from_block(sum.finish(&self.primitives))
     }
 
+    fn same_terms(&self, lhs: &[OperatorTerm<C>], rhs: &[OperatorTerm<C>]) -> bool {
+        lhs == rhs
+            && lhs.iter().all(|term| {
+                term.factors
+                    .iter()
+                    .all(|&(_, id)| self.primitives[id].reflexive)
+            })
+    }
+
     fn add(&self, mut parts: Vec<Factored<C>>) -> Factored<C> {
         parts.retain(|part| !part.coefficient.is_zero());
         match parts.len() {
@@ -313,14 +331,7 @@ where
         // either tensor kind. Every remaining block has disjoint support from
         // these common factors, and no exchange is needed to extract them.
         let shortest = parts.iter().map(|part| part.blocks.len()).min().unwrap();
-        let same = |a: &Block<C>, b: &Block<C>| {
-            a == b
-                && a.terms.iter().all(|term| {
-                    term.factors
-                        .iter()
-                        .all(|&(_, id)| self.primitives[id].reflexive)
-                })
-        };
+        let same = |a: &Block<C>, b: &Block<C>| self.same_terms(&a.terms, &b.terms);
         let prefix = (0..shortest)
             .take_while(|&i| {
                 parts[1..]
@@ -350,7 +361,7 @@ where
                 part.blocks.truncate(part.blocks.len() - suffix);
                 part.blocks.drain(..prefix);
             }
-            for term in self.product_terms(&part) {
+            for term in self.product_terms(part.coefficient, &part.blocks) {
                 sum.add(term, &self.primitives);
             }
         }
@@ -514,21 +525,22 @@ where
     }
 
     pub(crate) fn terms(&self) -> impl Iterator<Item = OperatorTerm<C>> + '_ {
-        self.product_terms(&self.product)
+        self.product_terms(self.product.coefficient.clone(), &self.product.blocks)
     }
 
-    fn product_terms<'a>(
+    fn product_terms<'a, B: Borrow<Block<C>> + 'a>(
         &'a self,
-        product: &'a Factored<C>,
+        coefficient: C,
+        blocks: &'a [B],
     ) -> impl Iterator<Item = OperatorTerm<C>> + 'a {
-        let mut next = (!product.coefficient.is_zero()).then(|| vec![0; product.blocks.len()]);
+        let mut next = (!coefficient.is_zero()).then(|| vec![0; blocks.len()]);
         core::iter::from_fn(move || {
             while let Some(indices) = &mut next {
-                let mut coefficient = product.coefficient.clone();
+                let mut coefficient = coefficient.clone();
                 let mut factors: Factors = Vec::new();
                 let mut negative = false;
-                for (block, &index) in product.blocks.iter().zip(indices.iter()) {
-                    let term = &block.terms[index];
+                for (block, &index) in blocks.iter().zip(indices.iter()) {
+                    let term = &block.borrow().terms[index];
                     coefficient = coefficient * term.coefficient.clone();
                     for &(position, id) in &term.factors {
                         if self.primitives[id].odd {
@@ -543,9 +555,9 @@ where
                 }
 
                 let mut carry = true;
-                for (index, block) in indices.iter_mut().zip(&product.blocks).rev() {
+                for (index, block) in indices.iter_mut().zip(blocks).rev() {
                     *index += 1;
-                    if *index < block.terms.len() {
+                    if *index < block.borrow().terms.len() {
                         carry = false;
                         break;
                     }

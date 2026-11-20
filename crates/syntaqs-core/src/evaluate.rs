@@ -34,5 +34,20 @@ fn schedule_product_action<'a, E, T>(
     first.expect("product operand")
 }
 
+fn add_pair<C>(sum: C, value: C, off_diagonal: bool) -> C
+where
+    C: num_traits::Zero + crate::Conjugate<Output = C>,
+{
+    if value.is_zero() {
+        return sum;
+    }
+    if off_diagonal {
+        let reflected = value.conjugate();
+        sum + (value + reflected)
+    } else {
+        sum + value
+    }
+}
+
 #[cfg(test)]
 mod tests;
