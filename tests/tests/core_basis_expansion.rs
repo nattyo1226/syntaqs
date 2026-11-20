@@ -330,20 +330,29 @@ impl Basis<Operator, Complex<f64>> for BrokenOperatorBasis {
 }
 
 #[test]
-fn zero_operator_does_not_hide_invalid_basis_expansion_on_a_later_factor() {
+fn operator_zeros_are_removed_before_basis_expansion() {
     let a = HilbertSpace::factor(0u8);
     let b = HilbertSpace::factor(1u8);
     let space = a.tensor(&b).unwrap();
     let operator = Lo::<f64>::primitive(Operator::Unit(Axis::A, Axis::B))
         .at(&b)
-        .unwrap()
-        .scaled(c(0.0, 0.0));
+        .unwrap();
     assert!(matches!(
         operator.coordinates_in(&BrokenOperatorBasis, &space),
         Err(BasisError::NonBasisElement)
     ));
-    assert!(matches!(
-        operator.expand_in(&BrokenOperatorBasis, &space),
-        Err(BasisError::NonBasisElement)
-    ));
+    for zero in [
+        operator.scaled(c(0.0, 0.0)),
+        (&operator + operator.scaled(c(-1.0, 0.0))).unwrap(),
+    ] {
+        assert_eq!(
+            zero.coordinates_in(&BrokenOperatorBasis, &space)
+                .unwrap()
+                .len(),
+            0
+        );
+        let expanded = zero.expand_in(&BrokenOperatorBasis, &space).unwrap();
+        assert!(expanded.space().unwrap().is_compatible_with(&space));
+        assert_eq!(expanded.coordinates(&BrokenOperatorBasis).unwrap().len(), 0);
+    }
 }

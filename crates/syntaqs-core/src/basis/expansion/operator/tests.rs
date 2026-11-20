@@ -1,5 +1,7 @@
 use super::*;
-use crate::{Dimension, DimensionOverflow, HilbertSpace, LinearCombination as Lc, TensorKind};
+use crate::{
+    Dimension, DimensionOverflow, HilbertSpace, LinearCombination as Lc, LocalOperator, TensorKind,
+};
 use core::ops::{Add, Mul};
 use std::{cell::RefCell, num::NonZeroUsize};
 
@@ -15,7 +17,8 @@ fn reset() {
     COUNTS.with(|c| *c.borrow_mut() = Counts::default());
 }
 
-// No primitive Clone/PartialEq; basis data describes actual real 2x2 matrices.
+// No primitive Clone or Ord. Basis data describes actual real 2x2 matrices.
+#[derive(PartialEq)]
 enum P {
     I,
     HalfI,
@@ -247,8 +250,10 @@ fn identity_expansion_is_shared_once_per_query_and_unused_when_fully_specified()
     assert_eq!(entries(&full(&f), &b, &h).len(), 1);
     COUNTS.with(|c| {
         let c = c.borrow();
-        assert_eq!(c.identities, 0);
-        assert_eq!(c.basis.len(), 5);
+        // Collection recognizes explicit identities with one natural identity
+        // per query. A fully specified term needs no identity basis rule.
+        assert_eq!(c.identities, 1);
+        assert_eq!(c.basis, [11; 5]);
     });
     let reverse = Op::<f64>::try_product(
         f.iter()
@@ -333,38 +338,63 @@ fn multicomponent_identity_and_local_choices_enumerate_complete_keys() {
 }
 
 #[test]
-fn zero_or_empty_contributions_do_not_hide_later_basis_errors() {
+fn basis_errors_are_checked_for_surviving_terms_after_reference_validation() {
     let f = sites(3);
     let h = HilbertSpace::tensor_all(f.iter().cloned()).unwrap();
     for expand in [false, true] {
         let query = |op: &Op, b: &B| {
             if expand {
-                op.expand_in(b, &h).map(|_| ())
+                op.expand_in(b, &h).map(|out| {
+                    matches!(out.expression.node(), crate::expression::composite::OpNode::Sum(s) if s.is_empty())
+                })
             } else {
-                op.coordinates_in(b, &h).map(|_| ())
+                op.coordinates_in(b, &h).map(|out| out.is_empty())
             }
         };
+        let retained = placed(P::Unit(2), &f[2]);
+        let cancelled = Op::sum([retained.clone(), retained.scaled(-1.0)]).unwrap();
+        let x = placed::<f64>(P::X, &f[0]);
+        let sequence = Op::product([x.clone(), retained.clone(), x]).unwrap();
+        let after_product = (sequence + retained.scaled(-1.0)).unwrap();
+        let bad = retained.scaled(0.0);
+        for identity in [
+            IdentityRule::Normal,
+            IdentityRule::Empty,
+            IdentityRule::Bad(4),
+        ] {
+            let mut b = B::new(Mode::Cartesian);
+            b.bad = Some(2);
+            b.identity = identity;
+            reset();
+            for zero in [&bad, &cancelled, &after_product] {
+                assert!(query(zero, &b).unwrap());
+            }
+            COUNTS.with(|c| assert!(c.borrow().basis.is_empty()));
+        }
         let mut b = B::new(Mode::Cartesian);
         b.bad = Some(2);
-        let bad = placed(P::Unit(2), &f[2]).scaled(0.0);
-        assert!(matches!(query(&bad, &b), Err(BasisError::NonBasisElement)));
         let empty = Op::try_product([
             LocalOperator::primitive(P::Zero).at(&f[0]),
             LocalOperator::primitive(P::Unit(2)).at(&f[2]),
         ])
         .unwrap();
+        // The basis maps the first primitive to zero. Both natural primitives
+        // survived evaluation, so the later invalid basis result is reported.
         assert!(matches!(
             query(&empty, &b),
             Err(BasisError::NonBasisElement)
         ));
         b.identity = IdentityRule::Empty;
         reset();
-        assert!(matches!(query(&bad, &b), Err(BasisError::NonBasisElement)));
+        assert!(matches!(
+            query(&retained, &b),
+            Err(BasisError::NonBasisElement)
+        ));
         COUNTS.with(|c| assert_eq!(c.borrow().basis, [0, 12]));
         b.identity = IdentityRule::Bad(4);
         reset();
         assert!(matches!(
-            query(&bad, &b),
+            query(&retained, &b),
             Err(BasisError::IndexOutOfBounds {
                 index: 4,
                 dimension: 4
@@ -374,8 +404,8 @@ fn zero_or_empty_contributions_do_not_hide_later_basis_errors() {
         b.identity = IdentityRule::Normal;
         let sum = Op::sum([placed(P::Unit(1), &f[0]), bad]).unwrap();
         reset();
-        assert!(matches!(query(&sum, &b), Err(BasisError::NonBasisElement)));
-        COUNTS.with(|c| assert_eq!(c.borrow().basis.iter().filter(|t| **t == 0).count(), 1));
+        assert!(query(&sum, &b).is_ok());
+        COUNTS.with(|c| assert_eq!(c.borrow().basis, [11, 0]));
         b.identity = IdentityRule::Bad(0);
         let outside = HilbertSpace::factor(Index(99));
         reset();
@@ -388,9 +418,8 @@ fn zero_or_empty_contributions_do_not_hide_later_basis_errors() {
     }
 }
 
-// Neither PartialEq, division nor Float; all public operator-coordinate bounds
-// remain satisfied with equality-free coefficient and non-Clone primitives/index.
-#[derive(Clone)]
+// Equality supports factoring shared blocks. Coefficients need no division or Float.
+#[derive(Clone, PartialEq)]
 struct Scalar(f64);
 impl From<f64> for Scalar {
     fn from(c: f64) -> Self {

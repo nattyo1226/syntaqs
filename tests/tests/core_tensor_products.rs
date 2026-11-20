@@ -101,6 +101,94 @@ fn matrix_of<T: Real>(op: &OperatorOf<T>, space: &H<u8>) -> Vec<num_complex::Com
     result
 }
 
+fn overlapping_operator_blocks<T: Real>() {
+    let factors = [7, 1, 9].map(H::factor);
+    for kind in [TensorKind::Ordinary, TensorKind::Graded] {
+        let space = H::tensor_all_with(kind, factors.iter().cloned()).unwrap();
+        let op = |p, i: usize| placed::<T>(p, &factors[i]);
+        let dense = |p, i| embedding::<T>(p, i, 3, kind);
+        let add = |left: Vec<_>, right| {
+            left.into_iter()
+                .zip(right)
+                .map(|(a, b)| a + b)
+                .collect::<Vec<_>>()
+        };
+        let scale = |matrix: Vec<_>, coefficient| {
+            matrix
+                .into_iter()
+                .map(|entry| entry * coefficient)
+                .collect::<Vec<_>>()
+        };
+        let c1 = c::<T>(0.5, -0.25);
+        let c2 = c::<T>(-0.5, 0.75);
+        let first =
+            (OperatorOf::<T>::identity() + (op(A, 1) * op(CREATE, 0)).unwrap().scaled(c1)).unwrap();
+        let left = add(
+            dense(Op::I, 0),
+            scale(product(&dense(A, 1), &dense(CREATE, 0)), c1),
+        );
+        let single = op(A, 2);
+        let mixed = (&single + op(Op::P, 2).scaled(c2)).unwrap();
+        let dense_mixed = add(dense(A, 2), scale(dense(Op::P, 2), c2));
+        let tail = op(CREATE, 1);
+        let cross = (&tail * op(Op::P, 2)).unwrap();
+        for (middle, middle_matrix, last, last_matrix) in [
+            // For graded products the intervening odd block exchanges with a
+            // uniform sign in the first case, and a term-dependent sign in the second.
+            (single, dense(A, 2), tail.clone(), dense(CREATE, 1)),
+            (mixed.clone(), dense_mixed.clone(), tail, dense(CREATE, 1)),
+            // The last operand intersects both existing blocks here.
+            (
+                mixed,
+                dense_mixed,
+                cross,
+                product(&dense(CREATE, 1), &dense(Op::P, 2)),
+            ),
+        ] {
+            let expression = OperatorOf::<T>::product([first.clone(), middle, last]).unwrap();
+            let expected = product(&product(&left, &middle_matrix), &last_matrix);
+            for (candidate, expected) in [
+                (expression.clone(), expected.clone()),
+                (expression.adjoint(), adjoint(&expected)),
+            ] {
+                let collected = candidate.collect_terms_in(&space).unwrap();
+                values(&matrix_of(&collected, &space), &expected);
+                let expanded = candidate.expand_in(&Units, &space).unwrap();
+                values(&matrix_of(&expanded, &space), &expected);
+            }
+        }
+
+        // Factor a common prefix and suffix without reordering the two mixed
+        // graded end blocks across the changing middle factor.
+        let prefix = (op(A, 2) + op(Op::P, 2).scaled(c1)).unwrap();
+        let suffix = (op(CREATE, 0) + op(Op::P, 0).scaled(c2)).unwrap();
+        let terms = [Op::P, A]
+            .map(|p| OperatorOf::<T>::product([prefix.clone(), op(p, 1), suffix.clone()]).unwrap());
+        let sum = OperatorOf::<T>::sum(terms).unwrap();
+        let expected = product(
+            &product(
+                &add(dense(A, 2), scale(dense(Op::P, 2), c1)),
+                &add(dense(Op::P, 1), dense(A, 1)),
+            ),
+            &add(dense(CREATE, 0), scale(dense(Op::P, 0), c2)),
+        );
+        values(
+            &matrix_of(&sum.collect_terms_in(&space).unwrap(), &space),
+            &expected,
+        );
+        values(
+            &matrix_of(&sum.expand_in(&Units, &space).unwrap(), &space),
+            &expected,
+        );
+    }
+}
+
+#[test]
+fn overlapping_operator_blocks_keep_order_and_graded_signs() {
+    overlapping_operator_blocks::<f32>();
+    overlapping_operator_blocks::<f64>();
+}
+
 fn check_local_grouping<T: Real>() {
     for kind in [TensorKind::Ordinary, TensorKind::Graded] {
         let factors: Vec<_> = [9, 1, 4].into_iter().map(H::factor).collect();

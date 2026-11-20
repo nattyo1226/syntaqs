@@ -1,0 +1,14 @@
+system,workload,sites,factors,order,api,metric,value
+spin_half,xx_gate_layer,4,4,1,operator_coordinates_cartesian,basis_input_terms,4
+spin_half,xx_gate_echo,4,4,2,operator_coordinates_cartesian,basis_input_terms,16
+spin_half,xx_gate_layer,8,8,1,operator_coordinates_cartesian,basis_input_terms,16
+spin_half,xx_gate_echo,8,8,2,operator_coordinates_cartesian,basis_input_terms,256
+spin_half,xx_gate_layer,12,12,1,operator_coordinates_cartesian,basis_input_terms,64
+spin_half,xx_gate_echo,12,12,2,operator_coordinates_cartesian,basis_input_terms,4096
+spin_half,xx_gate_layer,16,16,1,operator_coordinates_cartesian,basis_input_terms,256
+spin_half,xx_gate_echo,16,16,2,operator_coordinates_cartesian,basis_input_terms,65536
+spin_half,heisenberg,4,4,2,operator_coordinates_cartesian,basis_input_terms,81
+spin_half,heisenberg,8,8,2,operator_coordinates_cartesian,basis_input_terms,441
+spin_half,heisenberg,16,16,2,operator_coordinates_cartesian,basis_input_terms,2025
+spin_half,heisenberg,32,32,2,operator_coordinates_cartesian,basis_input_terms,8649
+spin_half,heisenberg,64,64,2,operator_coordinates_cartesian,basis_input_terms,35721

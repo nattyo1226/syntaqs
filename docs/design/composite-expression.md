@@ -174,15 +174,13 @@ Construction does not expand or evaluate an entire expression. Requested results
 
 Distribution and local multiplication are internal evaluation or expansion steps; there is no independent operation for selecting individual simplification rules.
 
-`Operator::collect_terms_in(&ambient)` collects equal local primitives and merges
-tensor terms differing in at most one factor after resolving products/adjoints.
-Local sums remain factored, avoiding Cartesian expansion. It uses the existing
-ordinary/graded traversal, including Koszul signs, and retains the selected
-space even for zero. Primitive/coefficient PartialEq is required; primitive
-Clone, Dimension, and a state basis are not required. It removes exact zero
-coefficients, does not select a
-complete operator basis. This collection operation is explicit and separate from
-ordinary construction and evaluation.
+`Operator::collect_terms_in(&ambient)` evaluates products and adjoints and
+collects equal natural terms on the validated space. The result retains the
+selected space, including for zero. Disjoint product blocks stay factored.
+Within a block, equal ordered primitive products share a coefficient and exact
+zeros are removed. Primitive equality matches natural terms. Coefficient
+equality compares internal block weights when extracting common factors. See
+[operator block evaluation](#117-operator-block-evaluation).
 
 ## 6. Relations preserved by placement and embedding
 
@@ -332,7 +330,7 @@ Evaluation by local rules and expansion in a selected basis are separate operati
 
 | Internal representation | Content and use |
 | --- | --- |
-| `IntrinsicOpTerms` | Homogeneous operator terms ordered by the selected space's leaves; used for graded operator-basis expansion and coordinates |
+| Evaluated operator blocks | Products of disjoint blocks with homogeneous primitive placements ordered by the selected space's leaves, used in composite collection and operator-basis queries |
 | `OrdinaryOpTerms` | Local-factor sequences in the ordinary representation, inserting a parity string for each placement; used for full trace |
 
 Intrinsic ordering adds one negative sign whenever odd components on distinct factors cross, preserving the original local-product order on the same factor. It does not sort by Index values. The same ordering follows product-adjoint reversal; tensor-adjoint signs are not added separately.
@@ -400,10 +398,10 @@ nodes. No persistent grouping flag or public support cache is stored.
 
 Operator expand/coordinates, `collect_terms_in`, full trace, and HS queries
 validate the original expression against the selected space before applying
-this same preparation. Graded traversal still decomposes homogeneous components
-and owns all crossing signs; ordinary trace lowering still inserts parity strings.
-Grouping never gathers separated same-factor occurrences across another factor.
-State action is basis-free and requires no operator-primitive Product.
+this same preparation. Structural grouping handles consecutive same-factor
+operands. Operator block evaluation handles separated overlaps and their
+crossing signs. Ordinary trace lowering inserts parity strings. State action
+is basis-free and requires no operator-primitive Product.
 
 Structural grouping differs from exact primitive collection in
 [local expressions](primitive-expression.md): it changes expression placement,
@@ -512,6 +510,31 @@ local choices across spectator positions. Expression expansion additionally
 shares local basis payloads. Operator queries use the public bounds and
 coordinate format defined in basis design. State basis expansion and trace/HS
 contraction use their own paths.
+
+### 11.7. Operator block evaluation
+
+Composite collection and basis queries share a basis-independent evaluation.
+A block contains a sum of ordered primitive products and records the union of
+their factor positions. Products retain disjoint blocks in operand order.
+An overlapping operand is multiplied into the blocks it intersects. Local
+products use left-to-right operator order, with reversal and conjugation
+under an adjoint. Placed identities compare by primitive value and are
+represented by the empty product.
+
+During graded multiplication, blocks exchange if their parity sectors give a
+uniform sign. If the sign depends on the chosen summands, the evaluator
+combines the affected blocks before proceeding. Within a term, each odd
+crossing contributes its sign as factors are ordered by ambient position.
+The basis generator visits combinations of independent blocks when constructing
+coordinates. Collection rebuilds their factored expression directly.
+
+Before collecting a sum, the evaluator puts ordinary products and products of
+even blocks in ambient order. It pulls out equal leading and trailing blocks
+by distributivity, preserving the order of graded products with mixed sectors.
+The remaining additive block enumerates candidate natural terms to collect
+matching primitive products. This can still require large intermediates if
+the addends have different factorizations. Term matching uses reflexive
+primitive equality. Shared blocks also require equal internal coefficients.
 
 ## 12. Verification targets and tests
 

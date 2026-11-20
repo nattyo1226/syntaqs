@@ -35,7 +35,7 @@ impl PartialEq for Ket {
         self.0 == other.0
     }
 }
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Op {
     I,
     P,

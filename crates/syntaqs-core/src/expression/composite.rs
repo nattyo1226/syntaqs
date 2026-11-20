@@ -199,7 +199,7 @@ impl<I, O, C> OpExpr<I, O, C> {
             operands => Self::new(OpNode::Product(operands)),
         })
     }
-    fn scaled(self, coefficient: C) -> Self {
+    pub(crate) fn scaled(self, coefficient: C) -> Self {
         Self::new(OpNode::Scale(ScaleExpr {
             operand: self,
             coefficient,

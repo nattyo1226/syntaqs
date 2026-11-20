@@ -8,7 +8,6 @@ use super::{
 use crate::{
     Conjugate, HilbertSpace, LocalOperator,
     coefficient::{conjugate, multiply},
-    space::FactorPositions,
 };
 use alloc::{vec, vec::Vec};
 use core::ops::Mul;
@@ -79,7 +78,16 @@ pub(crate) fn operator_view<O, C>(
     }
 }
 
-type SortedFactor<'a, I, O, C> = (usize, &'a HilbertSpace<I>, LocalOperator<O, C>, bool);
+pub(crate) fn operator_handle_view<O, C>(
+    operator: &LocalOperator<O, C>,
+) -> LinearView<'_, LocalOperator<O, C>, LocalOperator<O, C>, C> {
+    match operator_view(operator) {
+        LinearView::Leaf(_) => LinearView::Leaf(operator),
+        LinearView::Scale(c, op) => LinearView::Scale(c, op),
+        LinearView::Sum(ops) => LinearView::Sum(ops),
+    }
+}
+
 type OperatorFactors<'a, I, O, C> = Vec<(&'a HilbertSpace<I>, LocalOperator<O, C>)>;
 struct OpBranch<'a, I, O, C> {
     pending: Vec<(&'a OpExpr<I, O, C>, bool)>,
@@ -278,76 +286,6 @@ where
                 return Some((branch.coefficient, branch.factors));
             }
         }
-    }
-}
-
-/// Intrinsic graded factors. Never contains inserted parity strings.
-pub(crate) struct IntrinsicOpTerms<'a, 'query, 'space, I, O, C> {
-    ordinary: OpTerms<'a, I, O, C>,
-    graded: Option<HomogeneousTerms<'a, I, O, C>>,
-    positions: &'query FactorPositions<'space, I>,
-}
-impl<'a, 'query, 'space, I, O, C> IntrinsicOpTerms<'a, 'query, 'space, I, O, C> {
-    pub(crate) fn new(
-        root: &'a OpExpr<I, O, C>,
-        positions: &'query FactorPositions<'space, I>,
-    ) -> Self {
-        Self {
-            ordinary: OpTerms::new(root),
-            graded: (positions.space().effective_kind() == Some(crate::TensorKind::Graded))
-                .then(|| HomogeneousTerms::new(root)),
-            positions,
-        }
-    }
-}
-impl<'a, I: Ord, O, C> Iterator for IntrinsicOpTerms<'a, '_, '_, I, O, C>
-where
-    O: crate::HomogeneousParity + crate::Product<C, Term = O> + crate::Adjoint<C, Term = O>,
-    C: Clone
-        + Mul<Output = C>
-        + Conjugate<Output = C>
-        + num_traits::One
-        + core::ops::Neg<Output = C>,
-{
-    type Item = (Option<C>, OperatorFactors<'a, I, O, C>);
-    fn next(&mut self) -> Option<Self::Item> {
-        let Some(graded) = &mut self.graded else {
-            return self.ordinary.next();
-        };
-        let (mut coefficient, factors) = graded.next()?;
-        let mut sorted: Vec<SortedFactor<'a, I, O, C>> = Vec::new();
-        let mut negative = false;
-        for (factor, local, parity) in factors {
-            let position = self
-                .positions
-                .position(factor.factor_index().expect("placed factor"))
-                .expect("validated factor");
-            let odd = parity == crate::Parity::Odd;
-            for (p, _, _, previous_odd) in &sorted {
-                if *p > position && *previous_odd && odd {
-                    negative = !negative;
-                }
-            }
-            if let Some((_, _, previous, previous_odd)) =
-                sorted.iter_mut().find(|(p, _, _, _)| *p == position)
-            {
-                *previous = previous.clone() * &local;
-                *previous_odd ^= odd;
-            } else {
-                sorted.push((position, factor, local, odd));
-            }
-        }
-        sorted.sort_by_key(|(position, _, _, _)| *position);
-        if negative {
-            coefficient = Some(-coefficient.unwrap_or_else(C::one));
-        }
-        Some((
-            coefficient,
-            sorted
-                .into_iter()
-                .map(|(_, f, local, _)| (f, local))
-                .collect(),
-        ))
     }
 }
 

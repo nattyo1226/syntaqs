@@ -194,8 +194,9 @@ impl<I: Ord, O, C> Operator<I, O, C> {
     /// Expands on the existing binding; an unbound operator returns an error.
     pub fn expand<B>(&self, basis: &B) -> Result<Self, BasisError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C> + core::ops::Neg<Output = C>,
-        O: crate::HomogeneousParity
+        C: Clone + PartialEq + Zero + One + Conjugate<Output = C> + core::ops::Neg<Output = C>,
+        O: PartialEq
+            + crate::HomogeneousParity
             + Dimension
             + Identity
             + Product<C, Term = O>
@@ -212,8 +213,9 @@ impl<I: Ord, O, C> Operator<I, O, C> {
     /// lazily within this query. Zero retains the selected space.
     pub fn expand_in<B>(&self, basis: &B, ambient: &HilbertSpace<I>) -> Result<Self, BasisError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C> + core::ops::Neg<Output = C>,
-        O: crate::HomogeneousParity
+        C: Clone + PartialEq + Zero + One + Conjugate<Output = C> + core::ops::Neg<Output = C>,
+        O: PartialEq
+            + crate::HomogeneousParity
             + Dimension
             + Identity
             + Product<C, Term = O>
@@ -252,8 +254,9 @@ impl<I: Ord, O, C> Operator<I, O, C> {
         basis: &'b B,
     ) -> Result<Coordinates<'b, B, C, HilbertSpace<I>>, BasisError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C> + core::ops::Neg<Output = C>,
-        O: crate::HomogeneousParity
+        C: Clone + PartialEq + Zero + One + Conjugate<Output = C> + core::ops::Neg<Output = C>,
+        O: PartialEq
+            + crate::HomogeneousParity
             + Dimension
             + Identity
             + Product<C, Term = O>
@@ -265,15 +268,16 @@ impl<I: Ord, O, C> Operator<I, O, C> {
 
     /// Obtains operator-basis coordinates on an explicit space, overriding a binding.
     /// Shares the spectator identity expansion within this query and validates
-    /// all reached local expansions before discarding zero contributions.
+    /// local expansions for the terms that survive evaluation and collection.
     pub fn coordinates_in<'b, B>(
         &self,
         basis: &'b B,
         ambient: &HilbertSpace<I>,
     ) -> Result<Coordinates<'b, B, C, HilbertSpace<I>>, BasisError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C> + core::ops::Neg<Output = C>,
-        O: crate::HomogeneousParity
+        C: Clone + PartialEq + Zero + One + Conjugate<Output = C> + core::ops::Neg<Output = C>,
+        O: PartialEq
+            + crate::HomogeneousParity
             + Dimension
             + Identity
             + Product<C, Term = O>

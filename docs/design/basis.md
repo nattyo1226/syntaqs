@@ -171,7 +171,7 @@ Expanded syntax works without metadata: expand Sx into Sp+Sm, then back into Car
 | Local expressions / State / Operator | `coordinates(&basis)` | Independent aggregated sparse Coordinates. |
 | Operator | `coordinates_in(&basis, &ambient)` | Coordinates using the preferred explicit space. |
 
-All return `Result<_,BasisError>`, applying the same local basis to all factors and aggregating indices after evaluating local rules. States use their own space. Operators prefer explicit space, then binding. A local basis never implies an unbound operator's ambient space. Operator queries require `I: Ord` and share a factor position lookup across membership checks, graded ordering, and coordinate placement. They need no primitive comparison or cloning. Expand identity spectators too, even when identity is not itself a basis member. Zero retains its selected space as an empty sum. Zero-factor states and operators use unit and scalar identity syntax respectively.
+All return `Result<_,BasisError>`, applying the same local basis to all factors after evaluating local rules. States use their own space. Operators prefer explicit space, then binding. Composite operator queries require `I: Ord` and share a factor position lookup across membership checks, graded ordering, and coordinate placement. They use primitive `PartialEq` to collect terms and coefficient `PartialEq` to match common blocks. The selected basis applies to identity spectators too. Zero retains its selected space as an empty sum. Zero-factor states and operators use unit and scalar identity syntax respectively.
 
 State evaluation collects natural-state terms using PartialEq before basis
 expansion, without primitive Product. Local state queries require coefficient
@@ -182,12 +182,11 @@ coefficients use One. Shared processing needs neither Float nor division, though
 concrete rules and bases may. Ordinary action, inner product, and trace operate
 independently of a basis.
 
-Composite operator queries first validate the original expression, then apply
-[structural local grouping](composite-expression.md#113-structural-local-operator-grouping)
-before distributing composite sums or resolving intrinsic graded signs.
-Preparation uses the public query bounds and preserves basis-error checks and
-the coordinate format. Operator generation shares spectator identity expansion within the query and
-emits complete coordinate contributions directly, as described below.
+Composite operator queries first validate the original expression, then use
+[operator block evaluation](composite-expression.md#117-operator-block-evaluation)
+to resolve products, adjoints, graded signs, and exact cancellation. Operator
+generation shares spectator identity expansion and emits complete contributions
+for the surviving terms.
 
 ### 7.2. Coordinate interpretation and indices
 
@@ -209,21 +208,17 @@ expansions even when a numerical coefficient is zero. LinearCombination preserve
 
 #### Operator coordinate generation
 
-After original-space validation, structural grouping and intrinsic graded sign
-resolution, the generator attaches ambient positions to specified factors.
-Ordinary intrinsic terms retain encounter order, so this position ordering is
-performed explicitly without changing same-factor products or recomputing signs.
-Specified local expressions expand once per reached term; missing sites refer
-to one lazily expanded identity shared by that query. Fully specified terms,
-zero expressions with no reached terms, and zero-factor unit spaces do not
-request spectator identity expansion.
+The generator receives specified primitives in ambient position order with
+graded signs resolved. It expands the specified primitives for each surviving
+term and lazily expands identity once for all spectator positions. A local
+product evaluated to the natural identity uses the same spectator expansion.
 
 For a single-component identity `I = gamma B_q`, a reusable working key starts
 with digit q at every factor. Only specified positions are overwritten, then
 restored for the next term. Coefficient multiplication follows ambient order,
-including gamma at each spectator. Neither scalar division nor coefficient
-equality is required, and precomputed powers of gamma do not introduce additional
-overflow/underflow from regrouping. For a multi-component identity, all spectator
+including gamma at each spectator. Multiplying gamma in sequence avoids the
+additional overflow or underflow that can arise from computing powers first.
+For a multi-component identity, all spectator
 axes borrow the same choices and an iterative traversal enumerates required
 combinations. Single-choice products use a direct path; general enumeration uses
 an explicit work stack. No spectator tensor map or factor-by-factor coordinate
@@ -235,13 +230,9 @@ joins them only when a key first enters the accumulator, before reconstructing
 factor-ordered placements on the selected space. Full-length keys and genuinely
 large basis output retain their unavoidable storage and enumeration costs.
 
-Expand and validate all specified factors and the first required spectator
-identity of a reached term in ambient order before pruning numerical zero
-contributions. An empty expansion, zero coefficient, or underflowed prefix cannot
-hide an error in another reached factor. Cached identity validation is reused
-only within that query; explicit local products yielding identity are still
-expanded independently. Basis errors, metadata, coordinate format, and public
-operator-query bounds follow the contracts above.
+For each surviving term, validate the specified factors and the first needed
+spectator identity in ambient order. An empty basis conversion at one factor
+still leaves the other conversions subject to validation.
 
 Operator coordinates are operator-basis coefficients, distinct from action matrices. [Export](export.md) stores coordinates numerically and generates action-matrix columns by applying operators to state-basis inputs.
 
@@ -253,12 +244,7 @@ Generation needs Dimension/Basis, not index Eq/Clone, primitive Clone, local act
 
 ### 7.4. Errors and examples
 
-BasisError distinguishes non-basis outputs (NonBasisElement), out-of-range local indices (IndexOutOfBounds), inconsistent enumeration/counts (InvalidEnumeration), dimension overflow (Dimension), and incompatible/unbound spaces (Expression). Check available information without automatically proving full independence/completeness. Zero coefficients do not hide invalid space references. State queries evaluate
-and collect first: primitives removed by exact cancellation or zero tensor
-factors do not run basis rules and therefore cannot raise expansion errors.
-Retained primitives still undergo basis checks. Operator queries preserve
-expansion checks for reached intrinsic terms even under zero coefficients;
-enumeration checks are independent of numerical state collection.
+BasisError distinguishes non-basis outputs (NonBasisElement), out-of-range local indices (IndexOutOfBounds), inconsistent enumeration/counts (InvalidEnumeration), dimension overflow (Dimension), and incompatible/unbound spaces (Expression). Validate original placements before evaluating any term, including zero products. State and composite operator queries apply basis rules to terms that survive evaluation and collection. Enumeration checks apply independently of numerical collection.
 
 `Basis`, `BasisError`, and `Coordinates` are defined in `syntaqs_core::basis`; `Basis` is also available in the core prelude. See [basis_expansion.rs](../../examples/src/bin/basis_expansion.rs) and section 6 for verification.
 

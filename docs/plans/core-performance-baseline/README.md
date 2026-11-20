@@ -353,13 +353,15 @@ index across separate calls is deferred. Stage 2 is complete with ordered
 `Operands` storage and shared construction paths for sums and products.
 Stage 3 is complete with ordered factor keys, state-order graded traversal,
 and deferred state syntax construction. Stage 4 is complete with on-demand
-contraction blocks and conjugate symmetry for matching state sums. Stages 5–8
-are pending.
+contraction blocks and conjugate symmetry for matching state sums. Stage 5 is
+complete with support-aware operator evaluation and basis conversion after
+natural term collection. Stages 6–8 are pending.
 Completion requires the agreed changes, passing applicable correctness and
 workspace checks, and a full comparison with explanations for material
 regressions or missing measurements.
 [Stage 0 measurements](measurements/stage-0/README.md) · [Stage 1 measurements](measurements/stage-1/README.md) · [Stage 2 measurements](measurements/stage-2/README.md) · [Stage 3 measurements](measurements/stage-3/README.md)
 [Stage 4 measurements](measurements/stage-4/README.md)
+[Stage 5 measurements](measurements/stage-5/README.md)
 
 After the refactoring comparison, benchmark `Ord` and `PartialOrd` for state
 and operator primitives using the agreed workloads with few and many
@@ -579,7 +581,7 @@ local inner product and continue the other summands.
 
 Preserve the exchange sign from ordering odd operators on different factors.
 Determine how to apply that sign with the existing trace coefficient
-capabilities. `IntrinsicOpTerms` currently applies it using `C: Neg`.
+capabilities. Operator block evaluation currently applies it using `C: Neg`.
 Verify products of odd operators at the same factor, mixed-parity sums,
 and exchange signs against independent small ordinary matrices. In the
 64-site Hubbard trace, local parity can discard all 252 hopping terms

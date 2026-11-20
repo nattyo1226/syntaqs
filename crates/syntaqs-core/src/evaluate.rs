@@ -8,6 +8,7 @@ mod collect;
 mod composite;
 pub(crate) mod inner_product;
 mod local;
+pub(crate) mod operator;
 mod trace;
 
 mod state_terms;
