@@ -1,6 +1,6 @@
 # Composite expressions, placement, binding, and evaluation
 
-Last updated: 2026-11-17
+Last updated: 2026-11-21
 
 ## 1. Scope and responsibilities
 
@@ -432,11 +432,15 @@ parentheses, removes units, and pulls child outer coefficients to the tensor's
 outer coefficient. A zero factor makes the tensor zero while retaining the
 state's selected space. Factor order and delayed Act scope never change.
 
-For a graded odd placement, the evaluator visits the normalized input in
-tensor order. It applies parity before the target, applies the operator at
-the target, and shares the suffix. A sum starts each branch at the same
-position and carries the result of reaching the target into the next tensor
-child. The selected Act space supplies the effective tensor kind.
+The selected Act space supplies the target's factor position and effective
+tensor kind. A normalized shape records how many consecutive factors it
+covers. The evaluator uses these ranges to visit the child containing the
+target and, for a graded odd placement, the preceding children in tensor
+order. A retained sum starts every branch at the same factor position.
+The original shape IDs provide the unaffected children. If the action only
+changes coefficients, the tensor keeps its shape ID. A changed child shape
+contributes to one updated tensor key. If a sum collapses to a tensor, its
+children are promoted into that key as part of tensor normalization.
 
 Composite matching uses the resulting structure, primitive equality, and
 coefficient equality inside retained polynomials/sums. Ordered retained sums

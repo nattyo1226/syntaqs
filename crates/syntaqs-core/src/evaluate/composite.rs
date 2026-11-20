@@ -25,11 +25,22 @@ enum Task<'a, I, S, O, C> {
         HilbertSpace<I>,
         HilbertSpace<I>,
     ),
-    Local(Ready<C>, HilbertSpace<I>, LocalOperator<O, C>, bool),
-    VisitLocal(Ready<C>),
+    Local(
+        Ready<C>,
+        HilbertSpace<I>,
+        LocalOperator<O, C>,
+        bool,
+        HilbertSpace<I>,
+    ),
+    VisitLocal(Ready<C>, usize),
+    FinishLocalTensor {
+        shape: usize,
+        first: usize,
+        count: usize,
+    },
     FinishLocalSum {
         remaining: alloc::vec::IntoIter<Ready<C>>,
-        found: bool,
+        start: usize,
     },
     Placed(
         Ready<C>,
@@ -76,13 +87,11 @@ fn apply_placed_product<I, S, O, C>(
     tasks.push(Task::Placed(state, factor, operand, adjoint, scope));
 }
 
-// A placement only traverses action-free shapes. It owns the cursor until
-// that traversal returns to the operator evaluator.
-struct Placement<I, O, C> {
-    factor: HilbertSpace<I>,
+// A placement traverses action-free shapes at positions relative to its Act scope.
+struct Placement<O, C> {
+    target: usize,
     operator: LocalOperator<O, C>,
     odd: bool,
-    reached: bool,
 }
 fn schedule_sum<'a, I, S, O, C>(
     tasks: &mut Vec<Task<'a, I, S, O, C>>,
@@ -269,7 +278,7 @@ where
                         } else {
                             operator
                         };
-                        tasks.push(Task::Local(state, factor, operator, false));
+                        tasks.push(Task::Local(state, factor, operator, false, scope));
                         continue;
                     }
                     use crate::expression::local::OperatorNode;
@@ -326,81 +335,118 @@ where
                         }
                         OperatorNode::Primitive(p) => {
                             let odd = p.parity() == Parity::Odd;
-                            tasks.push(Task::Local(state, factor, operator, odd));
+                            tasks.push(Task::Local(state, factor, operator, odd, scope));
                         }
                     }
                 }
-                Task::Local(state, factor, operator, odd) => {
+                Task::Local(state, factor, operator, odd, scope) => {
+                    let target = scope
+                        .factor_position(factor.factor_index().expect("placed factor"))
+                        .expect("validated placement");
                     placement = Some(Placement {
-                        factor,
+                        target,
                         operator,
                         odd,
-                        reached: false,
                     });
-                    tasks.push(Task::VisitLocal(state));
+                    tasks.push(Task::VisitLocal(state, 0));
                 }
-                Task::VisitLocal(state) => {
-                    let placement = placement.as_mut().expect("local action");
-                    if placement.reached || state.shape == 0 {
+                Task::VisitLocal(state, start) => {
+                    let placement = placement.as_ref().expect("local action");
+                    if state.shape == 0 {
                         values.push(state);
                         continue;
                     }
-                    if let Some((target, local)) = terms.local_parts(state.shape) {
-                        let op = if target.factor_index() == placement.factor.factor_index() {
-                            placement.reached = true;
-                            Some(placement.operator.clone())
-                        } else if placement.odd {
-                            Some(LocalOperator::primitive(O::parity_operator()))
-                        } else {
-                            None
-                        };
-                        if let Some(op) = op {
+                    match terms.key(state.shape) {
+                        Key::Local(..) => {
+                            let (factor, local) = terms.local_parts(state.shape).unwrap();
+                            let op = if start == placement.target {
+                                placement.operator.clone()
+                            } else {
+                                debug_assert!(placement.odd && start < placement.target);
+                                LocalOperator::primitive(O::parity_operator())
+                            };
                             let local = locals.apply(local, op);
-                            let mut ready = terms.local(target, local);
+                            let mut ready = terms.local(factor, local);
                             if let Some(c) = state.coefficient {
                                 ready = terms.scaled(ready, c);
                             }
                             values.push(ready);
-                        } else {
-                            values.push(state);
                         }
-                    } else if matches!(terms.key(state.shape), Key::Unit) {
-                        values.push(state);
-                    } else {
-                        let children = terms.children(state.shape);
-                        if let Some(c) = state.coefficient {
-                            tasks.push(Task::Scale(c));
+                        Key::Unit => values.push(state),
+                        Key::Tensor(children) => {
+                            if let Some(c) = state.coefficient {
+                                tasks.push(Task::Scale(c));
+                            }
+                            let width = terms.factor_count(state.shape);
+                            // Normalized tensors have no unit children.
+                            let single_factors = width == children.len();
+                            let (end, mut position) = if placement.target >= start + width {
+                                debug_assert!(placement.odd);
+                                (children.len(), start + width)
+                            } else if single_factors {
+                                (placement.target - start + 1, placement.target + 1)
+                            } else {
+                                let mut position = start;
+                                let child = children
+                                    .iter()
+                                    .position(|&shape| {
+                                        position += terms.factor_count(shape);
+                                        placement.target < position
+                                    })
+                                    .expect("target covered by tensor");
+                                (child + 1, position)
+                            };
+                            let first = if placement.odd { 0 } else { end - 1 };
+                            tasks.push(Task::FinishLocalTensor {
+                                shape: state.shape,
+                                first,
+                                count: end - first,
+                            });
+                            for &shape in children[first..end].iter().rev() {
+                                position -= if single_factors {
+                                    1
+                                } else {
+                                    terms.factor_count(shape)
+                                };
+                                tasks.push(Task::VisitLocal(
+                                    Ready {
+                                        coefficient: None,
+                                        shape,
+                                    },
+                                    position,
+                                ));
+                            }
                         }
-                        if matches!(terms.key(state.shape), Key::Tensor(_)) {
-                            tasks.push(Task::Tensor(children.len()));
-                            tasks.extend(children.into_iter().rev().map(Task::VisitLocal));
-                        } else {
-                            let mut remaining = children.into_iter();
+                        Key::Sum(_) => {
+                            if let Some(c) = state.coefficient {
+                                tasks.push(Task::Scale(c));
+                            }
+                            let mut remaining = terms.sum_children(state.shape).into_iter();
                             let first = remaining.next().expect("nonempty sum");
                             sums.push(Sum::new());
-                            tasks.push(Task::FinishLocalSum {
-                                remaining,
-                                found: false,
-                            });
-                            tasks.push(Task::VisitLocal(first));
+                            tasks.push(Task::FinishLocalSum { remaining, start });
+                            tasks.push(Task::VisitLocal(first, start));
                         }
                     }
                 }
+                Task::FinishLocalTensor {
+                    shape,
+                    first,
+                    count,
+                } => {
+                    let updated =
+                        terms.update_tensor(shape, first, values.drain(values.len() - count..));
+                    values.push(updated);
+                }
                 Task::FinishLocalSum {
                     mut remaining,
-                    found,
+                    start,
                 } => {
-                    let placement = placement.as_mut().expect("local action");
-                    let found = found || placement.reached;
                     terms.add(sums.last_mut().unwrap(), values.pop().unwrap());
                     if let Some(next) = remaining.next() {
-                        // Each branch starts at the same position. An already
-                        // reached target would have skipped this whole sum.
-                        placement.reached = false;
-                        tasks.push(Task::FinishLocalSum { remaining, found });
-                        tasks.push(Task::VisitLocal(next));
+                        tasks.push(Task::FinishLocalSum { remaining, start });
+                        tasks.push(Task::VisitLocal(next, start));
                     } else {
-                        placement.reached = found;
                         values.push(terms.finish_sum(sums.pop().unwrap()));
                     }
                 }

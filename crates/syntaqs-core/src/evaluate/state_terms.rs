@@ -64,6 +64,8 @@ struct Entry<I: Ord, S, O, C> {
     key: Key<I>,
     expression: Option<StateExpr<I, S, O, C>>,
     payload: Payload<S, O, C>,
+    // Count the contiguous factors covered by this nonzero shape.
+    factor_count: usize,
     reflexive: bool,
 }
 enum Payload<S, O, C> {
@@ -102,8 +104,8 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
             primitives: Vec::new(),
             coefficients: Vec::new(),
         };
-        result.intern(Key::Sum(Vec::new()), Payload::Sum(Vec::new()), true);
-        result.intern(Key::Unit, Payload::Structure, true);
+        result.intern(Key::Sum(Vec::new()), Payload::Sum(Vec::new()), 0, true);
+        result.intern(Key::Unit, Payload::Structure, 0, true);
         result
     }
     pub fn zero(&self) -> Ready<C> {
@@ -120,6 +122,9 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
     }
     pub fn key(&self, id: usize) -> &Key<I> {
         &self.entries[id].key
+    }
+    pub fn factor_count(&self, id: usize) -> usize {
+        self.entries[id].factor_count
     }
     pub fn local_parts(&self, id: usize) -> Option<(HilbertSpace<I>, LocalReady<S, O, C>)> {
         let entry = &self.entries[id];
@@ -281,7 +286,13 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
             i
         }
     }
-    fn intern(&mut self, key: Key<I>, payload: Payload<S, O, C>, reflexive: bool) -> usize {
+    fn intern(
+        &mut self,
+        key: Key<I>,
+        payload: Payload<S, O, C>,
+        factor_count: usize,
+        reflexive: bool,
+    ) -> usize {
         if reflexive {
             if let Some(id) = self.index.get(&key) {
                 return *id;
@@ -295,6 +306,7 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
             key,
             expression: None,
             payload,
+            factor_count,
             reflexive,
         });
         id
@@ -337,19 +349,13 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
         let id = self.intern(
             Key::Local(Factor(factor), terms),
             Payload::Local(poly),
+            1,
             reflexive,
         );
         self.with_coefficient(id, outer)
     }
-    pub fn children(&self, id: usize) -> Vec<Ready<C>> {
+    pub fn sum_children(&self, id: usize) -> Vec<Ready<C>> {
         match self.key(id) {
-            Key::Tensor(parts) => parts
-                .iter()
-                .map(|id| Ready {
-                    shape: *id,
-                    coefficient: None,
-                })
-                .collect(),
             Key::Sum(parts) => parts
                 .iter()
                 .map(|(c, id)| Ready {
@@ -357,13 +363,14 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
                     coefficient: c.map(|i| self.coefficients[i].clone()),
                 })
                 .collect(),
-            _ => unreachable!("container shape"),
+            _ => unreachable!("sum shape"),
         }
     }
     pub fn tensor(&mut self, children: Vec<Ready<C>>) -> Ready<C> {
         let mut pending: Vec<_> = children.into_iter().rev().collect();
         let mut parts = Vec::new();
         let mut coefficient = None;
+        let mut factor_count = 0;
         while let Some(child) = pending.pop() {
             if child.shape == 0 {
                 return self.zero();
@@ -375,18 +382,75 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
                     shape: *id,
                     coefficient: None,
                 })),
-                _ => parts.push(child.shape),
+                _ => {
+                    factor_count += self.factor_count(child.shape);
+                    parts.push(child.shape);
+                }
             }
         }
-        let id = match parts.as_slice() {
+        let id = self.intern_tensor(parts, factor_count);
+        self.normalize_coefficient(id, coefficient)
+    }
+
+    fn intern_tensor(&mut self, parts: Vec<usize>, factor_count: usize) -> usize {
+        match parts.as_slice() {
             [] => 1,
             [id] => *id,
             _ => {
                 let reflexive = parts.iter().all(|id| self.entries[*id].reflexive);
-                self.intern(Key::Tensor(parts), Payload::Structure, reflexive)
+                self.intern(
+                    Key::Tensor(parts),
+                    Payload::Structure,
+                    factor_count,
+                    reflexive,
+                )
             }
+        }
+    }
+
+    // A local action preserves each nonzero child's factor range. Its result
+    // may have a different shape, including a tensor exposed by a collapsed sum.
+    pub fn update_tensor(
+        &mut self,
+        shape: usize,
+        first: usize,
+        updates: impl Iterator<Item = Ready<C>>,
+    ) -> Ready<C> {
+        let Key::Tensor(children) = self.key(shape) else {
+            unreachable!("tensor shape");
         };
-        self.normalize_coefficient(id, coefficient)
+        let mut coefficient = None;
+        let mut parts = None;
+        let mut next = first;
+        for update in updates {
+            if update.shape == 0 {
+                return self.zero();
+            }
+            debug_assert_eq!(
+                self.factor_count(update.shape),
+                self.factor_count(children[next])
+            );
+            coefficient = times(coefficient, update.coefficient);
+            if update.shape != children[next] && parts.is_none() {
+                let mut prefix = Vec::with_capacity(children.len());
+                prefix.extend_from_slice(&children[..next]);
+                parts = Some(prefix);
+            }
+            if let Some(parts) = &mut parts {
+                match self.key(update.shape) {
+                    Key::Tensor(nested) => parts.extend_from_slice(nested),
+                    _ => parts.push(update.shape),
+                }
+            }
+            next += 1;
+        }
+        let shape = if let Some(mut parts) = parts {
+            parts.extend_from_slice(&children[next..]);
+            self.intern_tensor(parts, self.factor_count(shape))
+        } else {
+            shape
+        };
+        self.normalize_coefficient(shape, coefficient)
     }
     pub fn add(&self, sum: &mut Sum<C>, part: Ready<C>) {
         let mut pending = alloc::vec![part];
@@ -395,7 +459,7 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
                 continue;
             }
             if matches!(self.key(part.shape), Key::Sum(_)) {
-                let mut children = self.children(part.shape);
+                let mut children = self.sum_children(part.shape);
                 for child in &mut children {
                     child.coefficient = times(part.coefficient.clone(), child.coefficient.take());
                 }
@@ -461,7 +525,9 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
             }
             key.push((c.map(|c| self.coefficient_id(c)), p.shape));
         }
-        let shape = self.intern(Key::Sum(key), Payload::Sum(parts), reflexive);
+        // All nonzero branches of a sum cover the same ordered factors.
+        let factor_count = self.factor_count(parts[0].shape);
+        let shape = self.intern(Key::Sum(key), Payload::Sum(parts), factor_count, reflexive);
         Ready {
             shape,
             coefficient: None,

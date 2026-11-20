@@ -446,16 +446,18 @@ construction APIs in separate checkpoints.
    persistent regressions with their measured cost.
    [Workspace verification](../../design/verification.md)
 
-Steps 1–5 are complete. At 1,024 factors, successive `tensor().flatten()`
+Steps 1–6 are complete. At 1,024 factors, successive `tensor().flatten()`
 with only the final root retained reduced heap retention from 8.54 MB to
 32.9 KB and raised construction and destruction time. Direct
 `tensor_flatten()` keeps the same retained memory and reduces allocation
 requests. Retaining every intermediate root keeps its index and child list
-with either API. Save each checkpoint's raw timing, allocation, and work-count
-results under `measurements/follow-up/` with its revision and run configuration.
+with either API. Selective state action reduced CPU time by about 35% for
+eight Heisenberg applications at ten sites in the recheck. Save each
+checkpoint's raw timing, allocation, and work-count results under
+`measurements/follow-up/` with its revision and run configuration.
 Compare consecutive checkpoints for individual effects and Stage 8 for the
 cumulative result.
-[Follow-up reference measurements](measurements/follow-up/README.md) · [Exact-zero stopping measurements](measurements/follow-up/zero-product/README.md) · [Factor index measurements](measurements/follow-up/factor-index/README.md) · [Flattening measurements](measurements/follow-up/flatten/README.md) · [Direct flattened construction measurements](measurements/follow-up/tensor-flatten/README.md)
+[Follow-up reference measurements](measurements/follow-up/README.md) · [Exact-zero stopping measurements](measurements/follow-up/zero-product/README.md) · [Factor index measurements](measurements/follow-up/factor-index/README.md) · [Flattening measurements](measurements/follow-up/flatten/README.md) · [Direct flattened construction measurements](measurements/follow-up/tensor-flatten/README.md) · [Selective state action measurements](measurements/follow-up/state-action/README.md)
 
 ### Reduce intermediate work in state action
 
@@ -471,14 +473,12 @@ nonzero sibling. Check the result and count continuations and sum branches
 scheduled after the zero is known.
 [Current action dispatch](../../../crates/syntaqs-core/src/evaluate/composite.rs)
 
-Traverse the stored tensor child list and schedule work only for children
-that need a local action or a parity action. Use each child's range in
-tensor order to identify those children, and apply the same traversal to
-each branch of a sum. Reuse the existing shape IDs of unaffected children
-and avoid the temporary arrays that collect all children before and after
-the action. If an action changes only the coefficient, update that
-coefficient and reuse the tensor's shape ID. Build and look up a new tensor
-key when a child shape changes.
+The evaluator schedules only the children that need a local or parity
+action, using the ordered factor ranges of the normalized shapes. Each
+branch of a sum starts with the same range. The tensor uses the existing
+shape IDs of unaffected children and reads affected results from the
+value stack. Coefficient-only changes keep the original shape ID. A child
+shape change triggers construction and lookup of an updated tensor key.
 
 Check a local action that changes only the coefficient and one that changes
 the child shape. Include tensors with sum blocks and a graded action that

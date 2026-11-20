@@ -8,7 +8,7 @@ use super::super::inner_product::contract;
 use crate::{
     Act, Adjoint, Conjugate, Divide, ExpressionError, HilbertSpace as H, HomogeneousParity,
     Identity, InnerProduct, LinearCombination as Lc, LocalOperator, LocalState, Operator, Parity,
-    ParityOperator, State, Trace,
+    ParityOperator, State, TensorKind, Trace,
 };
 
 #[derive(Default)]
@@ -360,6 +360,76 @@ fn state_products_stop_at_first_exact_zero_and_keep_nonzero_factors() {
     reset();
     assert!(nan.inner_product(&a).unwrap().is_nan());
     COUNTS.with(|c| assert_eq!(c.borrow().inner.len(), 4));
+}
+
+#[test]
+fn coefficient_only_local_action_keeps_the_tensor_shape() {
+    use crate::expression::composite::StateNode;
+
+    let factors = sites();
+    let space = H::tensor_all(factors.iter().cloned()).unwrap();
+    let input = product::<f64>(&space, &factors, &[0, 1, 0, 1]);
+    let scale = LocalOperator::primitive(Op {
+        matrix: [[2.0, 0.0], [0.0, 2.0]],
+        site: Some(1),
+    })
+    .at(&factors[1])
+    .unwrap();
+    let actual = input.scaled(3.0).act(&scale).unwrap().evaluate().unwrap();
+    let StateNode::Scale(scaled) = actual.expression.node() else {
+        panic!("scaled tensor");
+    };
+    assert_eq!(scaled.coefficient, 6.0);
+    assert!(scaled.operand.shares_node_with(&input.expression));
+}
+
+#[test]
+fn local_action_on_tensor_of_sums_preserves_prefix_sign_and_splices_collapsed_block() {
+    use crate::expression::composite::StateNode;
+
+    let f = sites();
+    for (kind, parity_sign) in [(TensorKind::Ordinary, 1.0), (TensorKind::Graded, -1.0)] {
+        let left = H::tensor_all_with(kind, f[..2].iter().cloned()).unwrap();
+        let right = H::tensor_all_with(kind, f[2..].iter().cloned()).unwrap();
+        let space = left.tensor_with(kind, &right).unwrap();
+        let prefix = State::sum(
+            &left,
+            [
+                product::<f64>(&left, &f[..2], &[1, 0]),
+                product(&left, &f[..2], &[0, 1]).scaled(2.0),
+            ],
+        )
+        .unwrap();
+        let block = State::sum(
+            &right,
+            [
+                product::<f64>(&right, &f[2..], &[0, 1]),
+                product(&right, &f[2..], &[1, 0]).scaled(3.0),
+            ],
+        )
+        .unwrap();
+        let state = State::tensor_in(&space, [prefix.clone(), block]).unwrap();
+        let op = LocalOperator::primitive(Op {
+            matrix: [[0.0, 1.0], [0.0, 0.0]],
+            site: Some(2),
+        })
+        .at(&f[2])
+        .unwrap();
+        let actual = state.act(&op).unwrap().evaluate().unwrap();
+        let expected = State::tensor_in(&space, [prefix, product(&right, &f[2..], &[0, 0])])
+            .unwrap()
+            .scaled(parity_sign * 3.0);
+        assert_eq!(actual.inner_product(&expected).unwrap(), 45.0);
+        assert_eq!(actual.norm_squared().unwrap(), 45.0);
+        let StateNode::Scale(scale) = actual.expression.node() else {
+            panic!("scaled product");
+        };
+        let StateNode::Tensor(children) = scale.operand.node() else {
+            panic!("tensor with promoted local factors");
+        };
+        assert_eq!(children.len(), 3);
+        assert!(matches!(children.as_slice()[0].node(), StateNode::Sum(_)));
+    }
 }
 
 #[test]
