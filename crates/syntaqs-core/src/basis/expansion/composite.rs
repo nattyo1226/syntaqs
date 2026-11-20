@@ -7,7 +7,7 @@ use crate::{
     LocalOperator, LocalState, Operator, Product, State,
     expression::{
         composite::{OpExpr, OpNode, StateExpr, StateNode},
-        parts::{ProductExpr, ScaleExpr, SumExpr},
+        parts::ScaleExpr,
     },
     space::FactorPositions,
 };
@@ -150,19 +150,14 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         let expressions = terms
             .into_values()
             .map(|(c, locals)| {
-                let nodes: SumExpr<_> = locals
+                let nodes = locals
                     .into_iter()
                     .zip(&factors)
                     .map(|(local, factor)| {
                         StateExpr::new(StateNode::Local((*factor).clone(), local))
                     })
                     .collect();
-                let term = match nodes {
-                    SumExpr::Empty => StateExpr::new(StateNode::Unit),
-                    SumExpr::One(node) => node,
-                    nodes => StateExpr::new(StateNode::Tensor(nodes)),
-                };
-                term.scaled(c)
+                StateExpr::tensor(nodes).scaled(c)
             })
             .collect();
         Ok(Self {
@@ -235,25 +230,19 @@ impl<I: Ord, O, C> Operator<I, O, C> {
         let expressions = terms
             .into_values()
             .map(|(c, locals)| {
-                let mut iter = locals
+                let operands = locals
                     .into_iter()
                     .zip(factors)
                     .map(|(local, factor)| OpExpr::new(OpNode::Local((*factor).clone(), local)));
-                let product = match iter.next() {
-                    None => OpExpr::new(OpNode::Identity),
-                    Some(first) => iter.fold(first, |lhs, rhs| {
-                        OpExpr::new(OpNode::Product(ProductExpr { lhs, rhs }))
-                    }),
-                };
                 OpExpr::new(OpNode::Scale(ScaleExpr {
-                    operand: product,
+                    operand: OpExpr::product(operands.collect()),
                     coefficient: c,
                 }))
             })
             .collect();
         Ok(Self {
             ambient: Some(ambient.clone()),
-            expression: OpExpr::new(OpNode::Sum(expressions)),
+            expression: OpExpr::sum(expressions),
         })
     }
 

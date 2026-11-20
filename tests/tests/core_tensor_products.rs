@@ -169,6 +169,36 @@ fn check_local_grouping<T: Real>() {
             &matrix_of(&expression.expand_in(&Units, &h).unwrap(), &h),
             &expected,
         );
+        let sequence = OperatorOf::<T>::product([
+            b.scaled(c(1., 0.)),
+            a.clone(),
+            placed::<T>(Op::P, &factors[1]),
+        ])
+        .unwrap();
+        values(&matrix_of(&sequence, &h), &adjoint(&expected));
+        let sequence = sequence.adjoint();
+        values(&matrix_of(&sequence, &h), &expected);
+        values(
+            &matrix_of(&sequence.expand_in(&Units, &h).unwrap(), &h),
+            &expected,
+        );
+
+        let local = LocalOperator::product([CREATE, A, Op::P].map(LocalOperator::primitive))
+            .at(&factors[1])
+            .unwrap();
+        let expected_local = product(
+            &product(
+                &embedding::<T>(CREATE, 1, 3, kind),
+                &embedding::<T>(A, 1, 3, kind),
+            ),
+            &embedding::<T>(Op::P, 1, 3, kind),
+        );
+        values(&matrix_of(&local, &h), &expected_local);
+        values(&matrix_of(&local.adjoint(), &h), &adjoint(&expected_local));
+        values(
+            &matrix_of(&local.expand_in(&Units, &h).unwrap(), &h),
+            &expected_local,
+        );
 
         let bad = (OperatorOf::<T>::zero() * placed(A, &H::factor(99))).unwrap();
         assert!(matches!(

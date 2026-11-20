@@ -4,6 +4,7 @@ use num_traits::{One, Zero};
 
 use super::{
     local::Evaluator as LocalEvaluator,
+    schedule_product_action,
     state_terms::{Key, Ready, Sum, Terms},
 };
 use crate::expression::composite::{OpExpr, OpNode, State, StateExpr, StateNode};
@@ -149,12 +150,9 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                         tasks.push(Task::SumStart);
                     }
                     OpNode::Product(p) => {
-                        let (first, second) = if adjoint {
-                            (&p.lhs, &p.rhs)
-                        } else {
-                            (&p.rhs, &p.lhs)
-                        };
-                        tasks.push(Task::ThenApply(second.clone(), adjoint, scope.clone()));
+                        let first = schedule_product_action(p, adjoint, &mut tasks, |operand| {
+                            Task::ThenApply(operand.clone(), adjoint, scope.clone())
+                        });
                         tasks.push(Task::Apply(state, first.clone(), adjoint, scope));
                     }
                     OpNode::Adjoint(a) => {
@@ -204,14 +202,12 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                             tasks.push(Task::SumStart);
                         }
                         OperatorNode::Product(p) => {
-                            let (first, second) = if adjoint {
-                                (&p.lhs, &p.rhs)
-                            } else {
-                                (&p.rhs, &p.lhs)
-                            };
-                            // Keep both actions in the original selected scope.
-                            let second = OpExpr::new(OpNode::Local(factor.clone(), second.clone()));
-                            tasks.push(Task::ThenApply(second, adjoint, scope.clone()));
+                            let first =
+                                schedule_product_action(p, adjoint, &mut tasks, |operand| {
+                                    let placed =
+                                        OpExpr::new(OpNode::Local(factor.clone(), operand.clone()));
+                                    Task::ThenApply(placed, adjoint, scope.clone())
+                                });
                             tasks.push(Task::Placed(state, factor, first.clone(), adjoint, scope));
                         }
                         OperatorNode::Adjoint(a) => tasks.push(Task::Placed(

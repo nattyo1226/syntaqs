@@ -368,16 +368,20 @@ Occupation-basis states allow signs to be computed from occupation numbers; gene
 
 ### 11.3. Structural local-operator grouping
 
-Operator construction groups immediate local sum operands on the same factor,
-and pairs of same-factor local product operands, after binding checks. It
-preserves operand order without arithmetic or primitive rules; constructors
-gain no capability bounds. A common ambient space alone is insufficient:
-the indexed leaf must match. Nested composite scales and adjoints are left
-for whole-expression grouping.
+After checking bindings, operator construction groups immediate local sum
+operands on one factor. It also groups the leading operands of a product
+when they are local to the same factor. Composite products store the remaining
+operands in the same ordered sequence type as sums and retain shared handles
+to nested products.
+The rightmost operand acts first, and adjoints reverse the order. Construction
+needs factor index equality and performs no primitive or coefficient arithmetic.
+Whole-expression grouping handles nested composite scales and adjoints.
 
 `Operator::group_local(&self) -> Self` requires `I: Eq`, `O: Identity`, and
 `C: Clone`. It groups any subtree whose references all belong to one factor,
 translating scales, ordered sums/products, and adjoints into local syntax.
+It also groups the leading single-factor prefix of an ordered product before
+the first distinct factor, using the product's left-associative grouping.
 Scalar children use local identity/zero syntax in that factor's context.
 Entirely scalar roots remain scalar. It preserves binding, supports unbound
 operators, leaves the input unchanged, and is structurally stable on reapplication.

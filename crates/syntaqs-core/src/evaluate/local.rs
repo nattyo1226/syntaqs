@@ -2,6 +2,7 @@ use alloc::{collections::BTreeMap, sync::Arc, vec, vec::Vec};
 use core::{ops::Mul, ptr};
 use num_traits::{One, Zero};
 
+use super::schedule_product_action;
 use crate::expression::local::{LocalOperator, LocalState, OperatorNode, StateNode};
 use crate::{
     Act, Adjoint, Conjugate, Product,
@@ -171,12 +172,9 @@ impl<
                         tasks.push(StateTask::SumStart);
                     }
                     OperatorNode::Product(p) => {
-                        let (first, second) = if adjoint {
-                            (&p.lhs, &p.rhs)
-                        } else {
-                            (&p.rhs, &p.lhs)
-                        };
-                        tasks.push(StateTask::ThenApply(second.clone(), adjoint));
+                        let first = schedule_product_action(p, adjoint, &mut tasks, |operand| {
+                            StateTask::ThenApply(operand.clone(), adjoint)
+                        });
                         tasks.push(StateTask::Apply(state, first.clone(), adjoint));
                     }
                     OperatorNode::Adjoint(a) => {
@@ -281,14 +279,23 @@ impl<O, C> LocalOperator<O, C> {
                         tasks.push(OperatorTask::Visit(a.operand.clone(), !adjoint))
                     }
                     OperatorNode::Product(p) => {
-                        let (lhs, rhs) = if adjoint {
-                            (&p.rhs, &p.lhs)
+                        if adjoint {
+                            // Reverse the operand order and the left-associated
+                            // grouping together, as in (AB)† = B†A†.
+                            tasks.extend((1..p.len()).map(|_| OperatorTask::Product));
+                            tasks.extend(
+                                p.iter()
+                                    .map(|child| OperatorTask::Visit(child.clone(), true)),
+                            );
                         } else {
-                            (&p.lhs, &p.rhs)
-                        };
-                        tasks.push(OperatorTask::Product);
-                        tasks.push(OperatorTask::Visit(rhs.clone(), adjoint));
-                        tasks.push(OperatorTask::Visit(lhs.clone(), adjoint));
+                            let (first, rest) =
+                                p.as_slice().split_first().expect("product operand");
+                            for child in rest.iter().rev() {
+                                tasks.push(OperatorTask::Product);
+                                tasks.push(OperatorTask::Visit(child.clone(), false));
+                            }
+                            tasks.push(OperatorTask::Visit(first.clone(), false));
+                        }
                     }
                 },
                 OperatorTask::Product => {

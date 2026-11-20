@@ -3,7 +3,7 @@
 use super::{
     composite::{OpExpr, OpNode},
     local::{LocalState, OperatorNode, StateNode},
-    parts::SumExpr,
+    parts::Operands,
 };
 use crate::{
     Conjugate, HilbertSpace, LocalOperator,
@@ -18,7 +18,7 @@ use core::ops::Mul;
 pub(crate) enum LinearView<'a, E, P, C> {
     Leaf(&'a P),
     Scale(&'a C, &'a E),
-    Sum(&'a SumExpr<E>),
+    Sum(&'a Operands<E>),
 }
 pub(crate) struct LinearTerms<'a, E, P, C> {
     pending: Vec<(&'a E, Option<C>)>,
@@ -156,13 +156,13 @@ where
                         continue 'branch;
                     }
                     OpNode::Product(p) => {
-                        let (lhs, rhs) = if adjoint {
-                            (&p.rhs, &p.lhs)
+                        if adjoint {
+                            branch.pending.extend(p.iter().map(|child| (child, true)));
                         } else {
-                            (&p.lhs, &p.rhs)
-                        };
-                        branch.pending.push((rhs, adjoint));
-                        branch.pending.push((lhs, adjoint));
+                            branch
+                                .pending
+                                .extend(p.iter().rev().map(|child| (child, false)));
+                        }
                     }
                     OpNode::Adjoint(a) => branch.pending.push((&a.operand, !adjoint)),
                 }

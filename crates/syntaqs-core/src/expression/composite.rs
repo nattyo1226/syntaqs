@@ -2,7 +2,7 @@
 
 use alloc::{sync::Arc, vec::Vec};
 
-use super::parts::{AdjointExpr, ProductExpr, ScaleExpr, SumExpr};
+use super::parts::{AdjointExpr, Operands, ScaleExpr};
 use crate::{
     ExpressionError, HilbertSpace, Identity, LocalOperator, LocalState, space::FactorPositions,
 };
@@ -95,8 +95,8 @@ pub(crate) enum StateNode<I, S, O, C> {
     Local(HilbertSpace<I>, LocalState<S, O, C>),
     Unit,
     Scale(ScaleExpr<StateExpr<I, S, O, C>, C>),
-    Sum(SumExpr<StateExpr<I, S, O, C>>),
-    Tensor(SumExpr<StateExpr<I, S, O, C>>),
+    Sum(Operands<StateExpr<I, S, O, C>>),
+    Tensor(Operands<StateExpr<I, S, O, C>>),
     Act(StateAction<I, S, O, C>),
 }
 #[derive(Debug)]
@@ -104,8 +104,8 @@ pub(crate) enum OpNode<I, O, C> {
     Local(HilbertSpace<I>, LocalOperator<O, C>),
     Identity,
     Scale(ScaleExpr<OpExpr<I, O, C>, C>),
-    Sum(SumExpr<OpExpr<I, O, C>>),
-    Product(ProductExpr<OpExpr<I, O, C>>),
+    Sum(Operands<OpExpr<I, O, C>>),
+    Product(Operands<OpExpr<I, O, C>>),
     Adjoint(AdjointExpr<OpExpr<I, O, C>>),
 }
 
@@ -164,11 +164,14 @@ impl<I, S, O, C> StateExpr<I, S, O, C> {
             coefficient,
         }))
     }
-    pub(crate) fn sum(children: SumExpr<Self>) -> Self {
-        match children {
-            SumExpr::One(child) => child,
-            children => Self::new(StateNode::Sum(children)),
-        }
+    pub(crate) fn sum(operands: Operands<Self>) -> Self {
+        operands.collapse_singleton(|operands| Self::new(StateNode::Sum(operands)))
+    }
+    pub(crate) fn tensor(operands: Operands<Self>) -> Self {
+        operands.collapse_singleton(|operands| match operands {
+            Operands::Empty => Self::new(StateNode::Unit),
+            operands => Self::new(StateNode::Tensor(operands)),
+        })
     }
     pub(crate) fn shares_node_with(&self, rhs: &Self) -> bool {
         Arc::ptr_eq(
@@ -186,6 +189,15 @@ impl<I, O, C> OpExpr<I, O, C> {
     }
     pub(crate) fn node(&self) -> &OpNode<I, O, C> {
         self.root.as_deref().expect("live operator syntax")
+    }
+    pub(crate) fn sum(operands: Operands<Self>) -> Self {
+        operands.collapse_singleton(|operands| Self::new(OpNode::Sum(operands)))
+    }
+    pub(crate) fn product(operands: Operands<Self>) -> Self {
+        operands.collapse_singleton(|operands| match operands {
+            Operands::Empty => Self::new(OpNode::Identity),
+            operands => Self::new(OpNode::Product(operands)),
+        })
     }
     fn scaled(self, coefficient: C) -> Self {
         Self::new(OpNode::Scale(ScaleExpr {
@@ -213,7 +225,7 @@ impl<I, S, O, C> State<I, S, O, C> {
     pub fn zero(space: &HilbertSpace<I>) -> Self {
         Self {
             space: space.clone(),
-            expression: StateExpr::sum(SumExpr::Empty),
+            expression: StateExpr::sum(Operands::Empty),
         }
     }
     /// Constructs the unit state on the empty tensor space, without generating 1.
@@ -262,7 +274,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                 }
                 Ok(state.expression)
             })
-            .collect::<Result<SumExpr<_>, _>>()?;
+            .collect::<Result<Operands<_>, _>>()?;
         Ok(Self {
             space: space.clone(),
             expression: StateExpr::sum(expressions),
@@ -277,7 +289,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Result<Self, ExpressionError>>,
     ) -> Result<Self, ExpressionError> {
-        let states: SumExpr<Self> = states.into_iter().collect::<Result<_, _>>()?;
+        let states: Operands<Self> = states.into_iter().collect::<Result<_, _>>()?;
         Self::sum(space, states)
     }
     pub(crate) fn into_add(self, rhs: Self) -> Result<Self, ExpressionError> {
@@ -303,7 +315,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
 
     fn tensor_collected(
         space: &HilbertSpace<I>,
-        states: SumExpr<Self>,
+        states: Operands<Self>,
     ) -> Result<Self, ExpressionError> {
         if states.iter().any(|s| {
             s.space
@@ -316,15 +328,9 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         {
             return Err(ExpressionError::IncompatibleSpaces);
         }
-        let parts: SumExpr<_> = states.into_iter().map(|s| s.expression).collect();
-        let expression = match parts {
-            SumExpr::Empty => StateExpr::new(StateNode::Unit),
-            SumExpr::One(node) => node,
-            parts => StateExpr::new(StateNode::Tensor(parts)),
-        };
         Ok(Self {
             space: space.clone(),
-            expression,
+            expression: StateExpr::tensor(states.map(|s| s.expression)),
         })
     }
 
@@ -334,7 +340,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Result<Self, ExpressionError>>,
     ) -> Result<Self, ExpressionError> {
-        let states: SumExpr<Self> = states.into_iter().collect::<Result<_, _>>()?;
+        let states: Operands<Self> = states.into_iter().collect::<Result<_, _>>()?;
         Self::tensor_collected(space, states)
     }
 }
@@ -404,7 +410,7 @@ impl<I, O, C> Operator<I, O, C> {
     pub fn zero() -> Self {
         Self {
             ambient: None,
-            expression: OpExpr::new(OpNode::Sum(SumExpr::Empty)),
+            expression: OpExpr::sum(Operands::Empty),
         }
     }
     /// Constructs an unbound symbolic identity (the empty product).
@@ -472,7 +478,10 @@ impl<I: Eq, O, C> Operator<I, O, C> {
     }
     /// Constructs an ordered sum. A single unbound operand makes the result unbound.
     pub fn sum(operators: impl IntoIterator<Item = Self>) -> Result<Self, ExpressionError> {
-        Self::sum_collected(operators.into_iter().collect())
+        Self::compose(
+            operators.into_iter().collect::<Operands<_>>(),
+            super::group::sum,
+        )
     }
     /// Collects fallible operators before validating the whole sum's binding.
     ///
@@ -482,23 +491,20 @@ impl<I: Eq, O, C> Operator<I, O, C> {
     pub fn try_sum(
         operators: impl IntoIterator<Item = Result<Self, ExpressionError>>,
     ) -> Result<Self, ExpressionError> {
-        Self::sum_collected(operators.into_iter().collect::<Result<_, _>>()?)
-    }
-    fn sum_collected(operators: SumExpr<Self>) -> Result<Self, ExpressionError> {
-        let ambient = Self::combined_space(operators.as_slice())?;
-        let parts: SumExpr<_> = operators.into_iter().map(|o| o.expression).collect();
-        let expression = super::group::sum(parts);
-        Ok(Self {
-            expression,
-            ambient,
-        })
+        Self::compose(
+            operators.into_iter().collect::<Result<Operands<_>, _>>()?,
+            super::group::sum,
+        )
     }
     pub(crate) fn into_add(self, rhs: Self) -> Result<Self, ExpressionError> {
-        Self::sum([self, rhs])
+        Self::compose([self, rhs], super::group::sum)
     }
     /// Constructs a product in input order; the empty product is unbound identity.
     pub fn product(operators: impl IntoIterator<Item = Self>) -> Result<Self, ExpressionError> {
-        Self::product_collected(operators.into_iter().collect())
+        Self::compose(
+            operators.into_iter().collect::<Operands<_>>(),
+            super::group::product,
+        )
     }
     /// Collects fallible operators before validating the whole product's binding.
     ///
@@ -508,22 +514,24 @@ impl<I: Eq, O, C> Operator<I, O, C> {
     pub fn try_product(
         operators: impl IntoIterator<Item = Result<Self, ExpressionError>>,
     ) -> Result<Self, ExpressionError> {
-        Self::product_collected(operators.into_iter().collect::<Result<_, _>>()?)
+        Self::compose(
+            operators.into_iter().collect::<Result<Operands<_>, _>>()?,
+            super::group::product,
+        )
     }
-    fn product_collected(operators: SumExpr<Self>) -> Result<Self, ExpressionError> {
-        let ambient = Self::combined_space(operators.as_slice())?;
-        let mut parts = operators.into_iter().map(|o| o.expression);
-        let expression = match parts.next() {
-            None => OpExpr::new(OpNode::Identity),
-            Some(first) => parts.fold(first, super::group::product),
-        };
+    fn compose(
+        operators: impl AsRef<[Self]> + IntoIterator<Item = Self>,
+        build: impl FnOnce(Operands<OpExpr<I, O, C>>) -> OpExpr<I, O, C>,
+    ) -> Result<Self, ExpressionError> {
+        let ambient = Self::combined_space(operators.as_ref())?;
+        let expression = build(operators.into_iter().map(|o| o.expression).collect());
         Ok(Self {
             expression,
             ambient,
         })
     }
     pub(crate) fn into_product(self, rhs: Self) -> Result<Self, ExpressionError> {
-        Self::product([self, rhs])
+        Self::compose([self, rhs], super::group::product)
     }
     /// Constructs the anticommutator without evaluating local rules.
     pub fn anticommutator(&self, rhs: &Self) -> Result<Self, ExpressionError> {
@@ -577,10 +585,8 @@ impl<I: Ord, O, C> Operator<I, O, C> {
                 }
                 OpNode::Identity => {}
                 OpNode::Scale(s) => pending.push(&s.operand),
-                OpNode::Sum(s) => pending.extend(s.iter()),
-                OpNode::Product(p) => {
-                    pending.push(&p.lhs);
-                    pending.push(&p.rhs);
+                OpNode::Sum(operands) | OpNode::Product(operands) => {
+                    pending.extend(operands.iter())
                 }
                 OpNode::Adjoint(a) => pending.push(&a.operand),
             }
@@ -629,29 +635,25 @@ impl<I, S, O, C> Drop for StateExpr<I, S, O, C> {
 }
 impl<I, O, C> Drop for OpExpr<I, O, C> {
     fn drop(&mut self) {
-        let mut first = self.root.take();
-        let mut pending = Vec::new();
-        while let Some(root) = first.take().or_else(|| pending.pop()) {
-            if let Some(node) = Arc::into_inner(root) {
-                let mut push = |mut child: Self| {
-                    if let Some(root) = child.root.take() {
-                        pending.push(root);
-                    }
-                };
-                match node {
-                    OpNode::Local(_, _) | OpNode::Identity => {}
-                    OpNode::Scale(s) => push(s.operand),
-                    OpNode::Sum(s) => {
-                        for child in s {
-                            push(child);
+        let mut next = self.root.take();
+        let mut pending = Vec::<Self>::new();
+        while let Some(root) = next.take().or_else(|| pending.pop()?.root.take()) {
+            match Arc::into_inner(root) {
+                Some(OpNode::Scale(mut scale)) => next = scale.operand.root.take(),
+                Some(OpNode::Adjoint(mut adjoint)) => next = adjoint.operand.root.take(),
+                Some(OpNode::Sum(children) | OpNode::Product(children)) => match children {
+                    Operands::Empty => {}
+                    Operands::One(mut child) => next = child.root.take(),
+                    Operands::Many(children) => {
+                        // A wide node already owns a work buffer we can reuse.
+                        if pending.is_empty() {
+                            pending = children;
+                        } else {
+                            pending.extend(children);
                         }
                     }
-                    OpNode::Product(p) => {
-                        push(p.lhs);
-                        push(p.rhs);
-                    }
-                    OpNode::Adjoint(a) => push(a.operand),
-                }
+                },
+                _ => {}
             }
         }
     }

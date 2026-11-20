@@ -482,6 +482,7 @@ fn expanded_payloads_share_identity_handles_and_join_only_for_new_keys() {
     let expanded = op.expand_in(&b, &h).unwrap();
     let mut pending = vec![&expanded.expression];
     let mut identities = Vec::new();
+    let mut products = 0;
     while let Some(op) = pending.pop() {
         match op.node() {
             OpNode::Local(_, local) => {
@@ -492,12 +493,18 @@ fn expanded_payloads_share_identity_handles_and_join_only_for_new_keys() {
             OpNode::Scale(s) => pending.push(&s.operand),
             OpNode::Sum(s) => pending.extend(s.iter()),
             OpNode::Product(p) => {
-                pending.push(&p.lhs);
-                pending.push(&p.rhs);
+                products += 1;
+                assert_eq!(p.len(), f.len());
+                assert!(
+                    p.iter()
+                        .all(|operand| matches!(operand.node(), OpNode::Local(..)))
+                );
+                pending.extend(p.iter());
             }
             _ => panic!("expanded syntax"),
         }
     }
+    assert_eq!(products, f.len());
     assert_eq!(identities.len(), 6);
     assert!(identities.iter().all(|p| core::ptr::eq(*p, identities[0])));
 }

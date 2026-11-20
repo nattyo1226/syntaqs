@@ -215,16 +215,16 @@ that differ from ID order.
 
 ### 2. Ordered operator products
 
-Replace binary composite product nodes with ordered operand sequences. Migrate
+Replace binary local and composite product nodes with ordered operand sequences. Migrate
 construction, grouping, action, term traversal, formatting, destruction, and
-basis product construction together. Store two operands inline for `*` and
-use a shared handle for a nested operand. Check right-first action, adjoint
+basis product construction together. Use the common operand sequence for sums
+and products, including `*`. Share nested operand handles. Check right-first action, adjoint
 reversal, graded signs, and binding and error precedence for product sequences.
 
 Measure binary `*`, sequence construction, and `expand()` of 64-site
 Heisenberg `H²`. Count product nodes and operand-array allocations before
 introducing placed-node sharing.
-[Ordered operator product design](#store-composite-operator-products-as-ordered-sequences)
+[Ordered operator product design](#store-operator-products-as-ordered-sequences)
 
 ### 3. State evaluation
 
@@ -349,11 +349,13 @@ and the stage 0 run on the same environment to report the cumulative result.
 Stage 0 is complete. The reference run covers the original cases and adds
 controls for first-use binding, explicit rebinding, and product construction.
 Stage 1 is complete with factor positions scoped to one query. Sharing the
-index across separate calls is deferred. Stages 2–8 are pending. Completion
-requires the agreed changes, passing applicable correctness and workspace
-checks, and a full comparison with explanations for material regressions or
-missing measurements.
-[Stage 0 measurements](measurements/stage-0/README.md) · [Stage 1 measurements](measurements/stage-1/README.md)
+index across separate calls is deferred. Stage 2 is complete with ordered
+`Operands` storage and shared construction paths for sums and products.
+Stages 3–8 are pending.
+Completion requires the agreed changes, passing applicable correctness and
+workspace checks, and a full comparison with explanations for material
+regressions or missing measurements.
+[Stage 0 measurements](measurements/stage-0/README.md) · [Stage 1 measurements](measurements/stage-1/README.md) · [Stage 2 measurements](measurements/stage-2/README.md)
 
 After the refactoring comparison, benchmark `Ord` and `PartialOrd` for state
 and operator primitives using the agreed workloads with few and many
@@ -382,7 +384,7 @@ investigation. [Primitive ordering experiment](#measure-the-effect-of-ordering-p
 | Operator basis expansion scans every factor to find spectator positions in each term. | [Enumerate operator coordinates from specified positions and gaps](#enumerate-operator-coordinates-from-specified-positions-and-gaps). | Heisenberg `H` and `H²` coordinates and expansion. |
 | State basis expansion builds a coordinate map for every prefix of a tensor product. | [Enumerate state basis coordinates by tensor block](#enumerate-state-basis-coordinates-by-tensor-block). | GHZ and plus states at a fixed site count, comparing `coordinates` and `expand`. |
 | State and operator expansion allocate a placed local node for every digit of every surviving coordinate. | [Share placed basis elements across expanded terms](#share-placed-basis-elements-across-expanded-terms). | `expand()` on 14-site plus and GHZ states and 64-site Heisenberg `H²`. |
-| Each expanded operator term allocates a chain of binary product nodes. | [Store composite operator products as ordered sequences](#store-composite-operator-products-as-ordered-sequences). | 64-site Heisenberg `H²` expansion. |
+| Each expanded operator term allocates a chain of binary product nodes. | [Store operator products as ordered sequences](#store-operator-products-as-ordered-sequences). | 64-site Heisenberg `H²` expansion. |
 
 The size ranges and basis choices were selected to expose different costs
 while keeping the materialized outputs tractable. The `—` cells denote
@@ -708,12 +710,12 @@ at most 256 placed nodes. Compare placed node counts, allocation requests,
 and timing for these workloads and the 14-site GHZ control, where reuse
 is low. [Current term construction](../../../crates/syntaqs-core/src/basis/expansion/composite.rs).
 
-### Store composite operator products as ordered sequences
+### Store operator products as ordered sequences
 
-Replace the composite binary `OpNode::Product` representation with one
-ordered sequence of operands. Construct the sequence directly in
-`Operator::product()`, `try_product()`, operator basis enumeration, and
-expansion. Store two operands inline for binary `*`. Use shared handles for
+Store local and composite operator products as ordered sequences. Construct
+the sequence directly in `LocalOperator::product()`, `Operator::product()`,
+`try_product()`, operator basis enumeration, and expansion. Sums and products
+use the same sequence representation, including binary `*`. Use shared handles for
 existing product operands so successive `*` calls avoid copying their child
 lists. Use identity for an empty product and the operand for a singleton.
 

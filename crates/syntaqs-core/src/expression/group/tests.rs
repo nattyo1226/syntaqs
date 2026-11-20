@@ -56,20 +56,28 @@ fn immediate_construction_keeps_opaque_capabilities_and_order() {
     let OperatorNode::Product(p) = local.node() else {
         panic!("product retained")
     };
-    assert!(matches!(
-        p.lhs.node(),
-        OperatorNode::Primitive(Primitive(1))
-    ));
-    assert!(matches!(
-        p.rhs.node(),
-        OperatorNode::Primitive(Primitive(2))
-    ));
+    let [lhs, rhs] = p.as_slice() else {
+        panic!("two operands")
+    };
+    assert!(matches!(lhs.node(), OperatorNode::Primitive(Primitive(1))));
+    assert!(matches!(rhs.node(), OperatorNode::Primitive(Primitive(2))));
     assert!(matches!(
         (bare(1, &a) + bare(2, &b)).unwrap().expression.node(),
         OpNode::Sum(_)
     ));
     let chain = Bare::product([bare(1, &a), bare(2, &b), bare(3, &a)]).unwrap();
-    assert!(matches!(chain.expression.node(), OpNode::Product(_)));
+    assert!(matches!(chain.expression.node(), OpNode::Product(parts) if parts.len() == 3));
+    let one_factor = Bare::product([bare(1, &a), bare(2, &same), bare(3, &a)]).unwrap();
+    let OpNode::Local(_, local_chain) = one_factor.expression.node() else {
+        panic!("grouped local product");
+    };
+    assert!(matches!(local_chain.node(), OperatorNode::Product(parts) if parts.len() == 3));
+    let nested = (&chain * bare(4, &b)).unwrap();
+    let OpNode::Product(parts) = nested.expression.node() else {
+        panic!("nested product");
+    };
+    assert_eq!(parts.len(), 2);
+    assert!(ptr::eq(parts.as_slice()[0].node(), chain.expression.node()));
 
     let ha = H::tensor_all([a.clone()]).unwrap();
     let hb = H::tensor_all([b.clone()]).unwrap();
@@ -139,6 +147,19 @@ fn explicit_grouping_preserves_scalars_binding_references_and_idempotence() {
     assert!(ptr::eq(
         multi.expression.node(),
         multi.group_local().expression.node()
+    ));
+    let sequence = Op::product([Op::scalar(Coefficient), op(1, &a), op(2, &b)]).unwrap();
+    let grouped = sequence.group_local();
+    let OpNode::Product(parts) = grouped.expression.node() else {
+        panic!("multifactor product");
+    };
+    assert_eq!(parts.len(), 2);
+    assert!(
+        matches!(parts.as_slice()[0].node(), OpNode::Local(_, local) if matches!(local.node(), OperatorNode::Product(_)))
+    );
+    assert!(ptr::eq(
+        grouped.expression.node(),
+        grouped.group_local().expression.node()
     ));
 }
 

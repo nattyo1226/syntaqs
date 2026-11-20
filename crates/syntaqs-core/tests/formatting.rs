@@ -13,25 +13,43 @@ type S = State<&'static str, &'static str, &'static str, &'static str>;
 
 #[test]
 fn local_operator_syntax_preserves_grouping_coefficients_and_order() {
-    let a = LO::primitive("A");
-    let b = LO::primitive("B");
-    let c = LO::primitive("C");
-    let sum = LO::sum([a.clone(), b.clone()]);
+    struct Label(&'static str);
+    impl syntaqs_core::algebra::Identity for Label {
+        fn identity() -> Self {
+            Self("I")
+        }
+    }
+    impl fmt::Display for Label {
+        fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str(self.0)
+        }
+    }
+    type Local = LocalOperator<Label, &'static str>;
+    let a = Local::primitive(Label("A"));
+    let b = Local::primitive(Label("B"));
+    let c = Local::primitive(Label("C"));
+    let sum = Local::sum([a.clone(), b.clone()]);
     let cases = [
-        (LO::zero(), "0"),
-        (LO::sum([]), "0"),
-        (LO::sum([a.clone()]), "A"),
-        (LO::sum([a.clone(), a.clone()]), "A + A"),
+        (Local::zero(), "0"),
+        (Local::sum([]), "0"),
+        (Local::sum([a.clone()]), "A"),
+        (Local::sum([a.clone(), a.clone()]), "A + A"),
         (a.scaled("0"), "(0) * A"),
         (a.scaled("1"), "(1) * A"),
         (a.scaled("2+3i"), "(2+3i) * A"),
-        (LO::sum([a.clone(), b.scaled("-1+0i")]), "A + (-1+0i) * B"),
+        (
+            Local::sum([a.clone(), b.scaled("-1+0i")]),
+            "A + (-1+0i) * B",
+        ),
         (&sum * &c, "(A + B) * C"),
         (&a * &sum, "A * (A + B)"),
-        ((&a * &b) * &c, "A * B * C"),
+        (
+            Local::product([a.clone(), b.clone(), c.clone()]),
+            "A * B * C",
+        ),
         (&a * (&b * &c), "A * (B * C)"),
-        (LO::sum([a.clone(), sum.clone()]), "A + (A + B)"),
-        (LO::sum([sum.clone(), c.clone()]), "(A + B) + C"),
+        (Local::sum([a.clone(), sum.clone()]), "A + (A + B)"),
+        (Local::sum([sum.clone(), c.clone()]), "(A + B) + C"),
         (sum.scaled("2+3i"), "(2+3i) * (A + B)"),
         (a.scaled("3").scaled("2"), "(2) * ((3) * A)"),
         ((&a * &b).scaled("2"), "(2) * (A * B)"),
@@ -518,7 +536,7 @@ fn deep_local_and_composite_syntax_formats_and_drops_on_a_small_stack() {
                 action = action.act(&op).unwrap();
                 scale = scale.scaled("1");
                 sum = S::sum(&h, [sum, S::zero(&h)]).unwrap();
-                product = (product * &op).unwrap();
+                product = O::product([product, op.clone(), op.clone()]).unwrap();
                 adjoint = adjoint.adjoint();
                 op_scale = op_scale.scaled("1");
                 op_sum = O::sum([op_sum, O::zero()]).unwrap();
@@ -534,7 +552,7 @@ fn deep_local_and_composite_syntax_formats_and_drops_on_a_small_stack() {
             assert_eq!(length(&action), 7 * DEPTH + 5);
             assert_eq!(length(&scale), 8 * DEPTH + 5);
             assert_eq!(length(&sum), 6 * DEPTH + 5);
-            assert_eq!(length(&product), 4 * DEPTH + 6);
+            assert_eq!(length(&product), 8 * DEPTH + 6);
             assert_eq!(length(&adjoint), 5 * DEPTH + 4);
             assert_eq!(length(&op_scale), 8 * DEPTH + 2);
             assert_eq!(length(&op_sum), 6 * DEPTH + 2);

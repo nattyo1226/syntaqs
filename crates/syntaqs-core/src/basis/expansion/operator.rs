@@ -7,7 +7,7 @@ use super::{Expansion, accumulate_with, local::local_operator};
 use crate::{
     Adjoint, Basis, BasisError, Conjugate, HomogeneousParity, Identity, LocalOperator, Operator,
     Product,
-    expression::{parts::SumExpr, traversal::IntrinsicOpTerms},
+    expression::{parts::Operands, traversal::IntrinsicOpTerms},
     space::FactorPositions,
 };
 
@@ -34,7 +34,7 @@ impl<E: Clone> OperatorValue for Vec<E> {
     }
 }
 type Choice<V, C> = (usize, C, V);
-type Choices<V, C> = SumExpr<Choice<V, C>>;
+type Choices<V, C> = Operands<Choice<V, C>>;
 struct Specified<V, C> {
     position: usize,
     choices: Choices<V, C>,
@@ -193,7 +193,7 @@ where
                     .into_iter()
                     .map(|(i, (c, v))| (i, c, v))
                     .collect();
-                    if let SumExpr::One((digit, _, _)) = &choices {
+                    if let Operands::One((digit, _, _)) = &choices {
                         key.fill(*digit);
                     }
                     identity = Some(choices);
@@ -210,7 +210,7 @@ where
             continue;
         }
         let single = identity.as_ref().and_then(|v| match v {
-            SumExpr::One(c) => Some(c),
+            Operands::One(c) => Some(c),
             _ => None,
         });
         let axes: Vec<_> = if spectators && single.is_none() {

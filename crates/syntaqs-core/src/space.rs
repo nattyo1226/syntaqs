@@ -3,7 +3,7 @@
 use alloc::{collections::BTreeSet, sync::Arc, vec, vec::Vec};
 use core::{cell::OnceCell, iter::FusedIterator, num::NonZeroUsize, slice};
 
-use crate::expression::parts::SumExpr;
+use crate::expression::parts::Operands;
 
 /// Dimension of the linear space spanned by all values of a primitive type.
 ///
@@ -43,7 +43,7 @@ pub enum SpaceError {
 #[derive(Debug)]
 enum Node<I> {
     Factor(I),
-    Tensor(TensorKind, SumExpr<HilbertSpace<I>>),
+    Tensor(TensorKind, Operands<HilbertSpace<I>>),
 }
 
 /// A shared factor or ordered, possibly nested tensor space.
@@ -111,7 +111,7 @@ impl<I> HilbertSpace<I> {
 
     /// Creates the empty tensor space, of dimension one.
     pub fn unit() -> Self {
-        Self::new(Node::Tensor(TensorKind::Ordinary, SumExpr::Empty))
+        Self::new(Node::Tensor(TensorKind::Ordinary, Operands::Empty))
     }
 
     /// Returns the index of a leaf, or `None` for a tensor (even a singleton).
@@ -206,7 +206,7 @@ impl<I: Ord> HilbertSpace<I> {
         kind: TensorKind,
         children: impl IntoIterator<Item = Self>,
     ) -> Result<Self, SpaceError> {
-        let children: SumExpr<Self> = children.into_iter().collect();
+        let children: Operands<Self> = children.into_iter().collect();
         if children
             .iter()
             .filter(|c| c.leaf_class != 0)
@@ -221,7 +221,7 @@ impl<I: Ord> HilbertSpace<I> {
         }
         // Every existing child is valid. A sole child cannot introduce duplicates,
         // and preserving this case avoids quadratic construction of deep grouping.
-        if let SumExpr::Many(parts) = &children {
+        if let Operands::Many(parts) = &children {
             let mut seen = BTreeSet::new();
             for index in parts.iter().flat_map(Self::indices) {
                 if !seen.insert(index) {

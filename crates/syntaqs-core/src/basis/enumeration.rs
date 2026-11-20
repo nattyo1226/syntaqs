@@ -4,7 +4,7 @@ use crate::{
     Basis, BasisError, Dimension, HilbertSpace, LocalOperator, LocalState, Operator, State,
     expression::{
         composite::{OpExpr, OpNode, StateExpr, StateNode},
-        parts::{ProductExpr, SumExpr},
+        parts::Operands,
     },
 };
 use alloc::{vec, vec::Vec};
@@ -105,15 +105,10 @@ impl<I> HilbertSpace<I> {
                         LocalState::primitive(primitive),
                     )))
                 })
-                .collect::<Result<SumExpr<_>, BasisError>>()?;
-            let expression = match nodes {
-                SumExpr::Empty => StateExpr::new(StateNode::Unit),
-                SumExpr::One(node) => node,
-                nodes => StateExpr::new(StateNode::Tensor(nodes)),
-            };
+                .collect::<Result<Operands<_>, BasisError>>()?;
             Ok(State {
                 space: self.clone(),
-                expression,
+                expression: StateExpr::tensor(nodes),
             })
         }))
     }
@@ -134,7 +129,7 @@ impl<I> HilbertSpace<I> {
         let factors = collect_leaves(self);
         let dimension = local_size::<O>(factors.len())?;
         Ok(basis_indices(factors.len(), dimension).map(move |digits| {
-            let mut nodes = Vec::new();
+            let mut nodes = Vec::with_capacity(factors.len());
             for (index, factor) in digits.into_iter().zip(&factors) {
                 let primitive = basis_element(basis, index, dimension.expect("basis factor"))?;
                 nodes.push(OpExpr::new(OpNode::Local(
@@ -142,16 +137,9 @@ impl<I> HilbertSpace<I> {
                     LocalOperator::primitive(primitive),
                 )));
             }
-            let mut nodes = nodes.into_iter();
-            let expression = match nodes.next() {
-                None => OpExpr::new(OpNode::Identity),
-                Some(first) => nodes.fold(first, |lhs, rhs| {
-                    OpExpr::new(OpNode::Product(ProductExpr { lhs, rhs }))
-                }),
-            };
             Ok(Operator {
                 ambient: Some(self.clone()),
-                expression,
+                expression: OpExpr::product(nodes.into()),
             })
         }))
     }
