@@ -741,6 +741,21 @@ differences from the changed addition order. In the 64-site Heisenberg
 self product, the diagonal and one triangle contain 17,955 of the 35,721
 candidate pairs. Compare pair counts, allocations, and timing. [Current Hilbert–Schmidt implementation](../../../crates/syntaqs-core/src/evaluate/trace.rs).
 
+#### Known limitation for extreme coefficients
+
+With `Complex<f64>`, place `1e308·Sp + 1e308·Sp − 1e308·Sp` and `Sp` on
+the same factor of a two-factor ordinary space. The normalized inner product
+is `5e307 + 0i`. In the review, Stage 0 (`49e9fc5`) and the local
+`hs_inner_product()` returned that value. Composite `hs_inner_product_in()`
+at `20ea94f` returned `NaN + NaN i` because the evaluator added the first
+two coefficients and overflowed before applying the normalized overlap of
+`0.5`. [Coefficient collection](../../../crates/syntaqs-core/src/evaluate/operator.rs)
+
+This is a low-priority numerical regression near the `f64` limit. Changing
+the shared collection step could affect the performance of ordinary
+Hilbert–Schmidt queries. Defer the fix until this failure is observed in a
+real workload.
+
 ### Use local parity in operator contractions
 
 Work with homogeneous terms and determine parity per factor after composing
