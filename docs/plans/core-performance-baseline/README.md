@@ -379,6 +379,99 @@ distinct primitives. Use those results to decide whether to change primitive
 bounds. Orthogonality-based pruning of contraction pairs remains a separate
 investigation. [Primitive ordering experiment](#measure-the-effect-of-ordering-primitive-values)
 
+## Additional refactoring
+
+The follow-up work covers the two items below. Use Stage 8 as the reference
+and record before-and-after times, allocation traffic, and work counts for
+each change. [Stage 8 results](measurements/stage-8/README.md)
+
+### Reduce intermediate work in state action
+
+Stop a product action as soon as an operand returns an exact-zero state.
+Return zero once for the whole product branch. Skip the remaining operands
+and their continuation tasks, including any distribution over sums inside
+those operands. Continue evaluating sibling branches of an enclosing sum
+and preserve the existing validation of operator placements.
+
+Check a product whose first applied operand annihilates the input and
+whose next operand is a sum. Include the product in an outer sum with a
+nonzero sibling. Check the result and count continuations and sum branches
+scheduled after the zero is known.
+[Current action dispatch](../../../crates/syntaqs-core/src/evaluate/composite.rs)
+
+Traverse the stored tensor child list and schedule work only for children
+that need a local action or a parity action. Use each child's range in
+tensor order to identify those children, and apply the same traversal to
+each branch of a sum. Reuse the existing shape IDs of unaffected children
+and avoid the temporary arrays that collect all children before and after
+the action. If an action changes only the coefficient, update that
+coefficient and reuse the tensor's shape ID. Build and look up a new tensor
+key when a child shape changes.
+
+Check a local action that changes only the coefficient and one that changes
+the child shape. Include tensors with sum blocks and a graded action that
+visits a parity prefix. Count scheduled child tasks, temporary child arrays,
+and tensor key lookups during repeated Heisenberg action.
+[Current tensor traversal](../../../crates/syntaqs-core/src/evaluate/composite.rs) · [Tensor keys](../../../crates/syntaqs-core/src/evaluate/state_terms.rs)
+
+Count how much work precedes a zero result in graded Hubbard action on the
+vacuum. Track the intermediate terms and state shapes rebuilt between
+Heisenberg applications. Preserve exact-zero handling, operator action
+order, and graded parity signs.
+
+The Stage 8 reference is 3.18 ms and 15.0 MB in cumulative requests for the
+64-site Hubbard vacuum, and 28.6 ms and 90.6 MB for eight Heisenberg actions
+at ten sites. Check the zero result and the 222 final coordinates respectively.
+Include the nonzero Hubbard input and the near and far hopping controls.
+[Evaluation measurements](measurements/stage-8/README.md#follow-up-investigations)
+
+### Reuse factor positions across calls on the same space
+
+`FactorPositions` keeps the tensor-ordered leaves and the index from a
+factor ID to its position for the duration of one call. Repeated `bind()`,
+operator basis queries, and contractions can rebuild that data on the same
+space. Build an immutable `by_index` at space construction and share it
+through the `HilbertSpace` root. Keep the existing tree and use it to
+enumerate leaves. Store entries with the existing factor handle and its
+tensor position, sorted by ID. Merge the children's sorted indices with
+position offsets and check for duplicate IDs during the merge. Use this
+index for membership validation across operators that share the space.
+
+Add two explicit ways to remove one level of grouping.
+
+- `flatten()` promotes the children of each immediate tensor child by one
+  level. Preserve leaf order and effective `TensorKind`. Reuse `by_index`
+  because every factor keeps its position.
+- `tensor_flatten()` produces the same space and errors as `tensor()`
+  followed by `flatten()`. Construct the flattened parent directly and
+  build its index once. Preserve the existing precedence of mixed tensor
+  kinds over duplicate IDs.
+
+Measure the eager index separately from the new APIs, using Stage 8 and a
+matched run for the new construction cases. Record CPU and elapsed time,
+allocation requests and bytes, factor-ID comparisons, and retained index size.
+
+- **Construction.** Compare one-shot `tensor_all()`, successive `tensor()`
+  calls, successive `tensor().flatten()` calls, and successive
+  `tensor_flatten()` calls. Include nested inputs and unsorted IDs. Measure
+  `flatten()` on a prebuilt space. Report how much index data stays live
+  when only the final space is retained and when callers retain intermediate
+  spaces.
+- **Validation.** Compare `bind()` and explicit `act_in()` with space
+  construction outside the timed call. Measure the first call on a fresh
+  root and repeated calls on one root. Cover single-reference validation and
+  independently built equivalent spaces. Keep operator `coordinates()` as
+  a control for position lookup during evaluation. The 1,024-site Stage 8
+  Heisenberg `bind()` takes about 130 µs per call on both fresh and reused roots.
+- **Combined cost.** Include construction and validation in the comparison
+  and report how many repeated validations offset any extra construction
+  cost for each measured construction path.
+
+Check factor order, missing references, duplicate IDs across children, and
+ordinary and graded spaces with units and singleton wrappers. Preserve
+`no_std` and thread sharing with existing dependencies.
+[Binding measurements](measurements/stage-8/README.md#results-by-workload) · [Current factor lookup](../../../crates/syntaqs-core/src/space.rs)
+
 ## Refactoring targets supported by this baseline
 
 | Cost exposed | Change to investigate | Baseline to compare |
@@ -448,8 +541,8 @@ Use the index for membership checks in `bind`, for axis positions in operator
 basis expansion, and for computing exchange signs when graded operator terms
 are put in factor order. Verify nested spaces, equal IDs on distinct leaf
 handles, missing IDs, and factor orders that differ from ID order. The
-within-query index takes no new production dependency. A single index shared
-across calls through the same space root remains deferred.
+within-query index uses existing dependencies. Sharing across calls through
+the same space root is part of the [additional refactoring](#reuse-factor-positions-across-calls-on-the-same-space).
 
 Compare first-use and repeated calls separately in the Heisenberg `bind`,
 `H²` coordinates, and graded hopping coordinate controls. Count index
