@@ -3,8 +3,8 @@ use core::{marker::PhantomData, ptr};
 use num_traits::{One, Zero};
 
 use super::{
+    ProductAction,
     local::Evaluator as LocalEvaluator,
-    schedule_product_action,
     state_terms::{Key, Ready, Sum, Terms},
 };
 use crate::expression::composite::{OpExpr, OpNode, State, StateExpr, StateNode};
@@ -18,7 +18,13 @@ enum Task<'a, I, S, O, C> {
     Evaluate(&'a StateExpr<I, S, O, C>),
     Remember(&'a StateExpr<I, S, O, C>),
     Apply(Ready<C>, OpExpr<I, O, C>, bool, HilbertSpace<I>),
-    ThenApply(OpExpr<I, O, C>, bool, HilbertSpace<I>),
+    ThenApply(OpExpr<I, O, C>, HilbertSpace<I>),
+    ContinueProduct(ProductAction<OpExpr<I, O, C>>, HilbertSpace<I>),
+    ContinuePlacedProduct(
+        ProductAction<LocalOperator<O, C>>,
+        HilbertSpace<I>,
+        HilbertSpace<I>,
+    ),
     Local(Ready<C>, HilbertSpace<I>, LocalOperator<O, C>, bool),
     VisitLocal(Ready<C>),
     FinishLocalSum {
@@ -37,6 +43,37 @@ enum Task<'a, I, S, O, C> {
     SumAdd,
     SumEnd,
     Tensor(usize),
+}
+
+fn apply_product<I, S, O, C>(
+    tasks: &mut Vec<Task<'_, I, S, O, C>>,
+    state: Ready<C>,
+    product: ProductAction<OpExpr<I, O, C>>,
+    scope: HilbertSpace<I>,
+) {
+    let (operand, adjoint, remaining) = product.advance();
+    if let Some(remaining) = remaining {
+        tasks.push(Task::ContinueProduct(remaining, scope.clone()));
+    }
+    tasks.push(Task::Apply(state, operand, adjoint, scope));
+}
+
+fn apply_placed_product<I, S, O, C>(
+    tasks: &mut Vec<Task<'_, I, S, O, C>>,
+    state: Ready<C>,
+    product: ProductAction<LocalOperator<O, C>>,
+    factor: HilbertSpace<I>,
+    scope: HilbertSpace<I>,
+) {
+    let (operand, adjoint, remaining) = product.advance();
+    if let Some(remaining) = remaining {
+        tasks.push(Task::ContinuePlacedProduct(
+            remaining,
+            factor.clone(),
+            scope.clone(),
+        ));
+    }
+    tasks.push(Task::Placed(state, factor, operand, adjoint, scope));
 }
 
 // A placement only traverses action-free shapes. It owns the cursor until
@@ -156,7 +193,7 @@ where
                             }
                         }
                         StateNode::Act(a) => {
-                            tasks.push(Task::ThenApply(a.operator.clone(), false, a.space.clone()));
+                            tasks.push(Task::ThenApply(a.operator.clone(), a.space.clone()));
                             tasks.push(Task::Evaluate(&a.state));
                         }
                     }
@@ -165,8 +202,26 @@ where
                     terms.reuse(values.last().unwrap(), source);
                     memo.insert(ptr::from_ref(source.node()), values.last().unwrap().clone());
                 }
-                Task::ThenApply(op, adjoint, scope) => {
-                    tasks.push(Task::Apply(values.pop().unwrap(), op, adjoint, scope))
+                Task::ThenApply(op, scope) => {
+                    if values.last().unwrap().shape != 0 {
+                        tasks.push(Task::Apply(values.pop().unwrap(), op, false, scope));
+                    }
+                }
+                Task::ContinueProduct(product, scope) => {
+                    if values.last().unwrap().shape != 0 {
+                        apply_product(&mut tasks, values.pop().unwrap(), product, scope);
+                    }
+                }
+                Task::ContinuePlacedProduct(product, factor, scope) => {
+                    if values.last().unwrap().shape != 0 {
+                        apply_placed_product(
+                            &mut tasks,
+                            values.pop().unwrap(),
+                            product,
+                            factor,
+                            scope,
+                        );
+                    }
                 }
                 Task::Apply(state, op, adjoint, scope) => match op.node() {
                     OpNode::Identity => values.push(state),
@@ -198,11 +253,8 @@ where
                         }
                         tasks.push(Task::SumStart);
                     }
-                    OpNode::Product(p) => {
-                        let first = schedule_product_action(p, adjoint, &mut tasks, |operand| {
-                            Task::ThenApply(operand.clone(), adjoint, scope.clone())
-                        });
-                        tasks.push(Task::Apply(state, first.clone(), adjoint, scope));
+                    OpNode::Product(_) => {
+                        apply_product(&mut tasks, state, ProductAction::new(op, adjoint), scope);
                     }
                     OpNode::Adjoint(a) => {
                         tasks.push(Task::Apply(state, a.operand.clone(), !adjoint, scope))
@@ -250,14 +302,14 @@ where
                             }
                             tasks.push(Task::SumStart);
                         }
-                        OperatorNode::Product(p) => {
-                            let first =
-                                schedule_product_action(p, adjoint, &mut tasks, |operand| {
-                                    let placed =
-                                        OpExpr::new(OpNode::Local(factor.clone(), operand.clone()));
-                                    Task::ThenApply(placed, adjoint, scope.clone())
-                                });
-                            tasks.push(Task::Placed(state, factor, first.clone(), adjoint, scope));
+                        OperatorNode::Product(_) => {
+                            apply_placed_product(
+                                &mut tasks,
+                                state,
+                                ProductAction::new(operator, adjoint),
+                                factor,
+                                scope,
+                            );
                         }
                         OperatorNode::Adjoint(a) => tasks.push(Task::Placed(
                             state,

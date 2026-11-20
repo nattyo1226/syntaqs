@@ -72,15 +72,16 @@ output coordinate is the original vacuum with coefficient 1.
 | Heisenberg 10, one action | 0 | 0 | 540 | 54 / 54 | 55 |
 | Heisenberg 10, eight actions | 0 | 0 | 438,480 | 43,848 / 43,848 | 43,849 |
 
-`zero_product_continuations` counts product continuations that receive an
-exact-zero state. `zero_operator_sum_branches` counts child tasks dispatched
-when an operator sum receives zero. The tensor child and array counters apply
-to tensors reached while placing a local operator. The input array comes
-from extracting the children and the result array comes from taking their
-evaluated results off the value stack. `tensor_key_lookups` includes all
-tensor keys probed in the shape table, including initial normalization, and
-counts both hits and misses. These are logical call counts. Allocator traffic
-is measured separately. [Work counters](before/work.csv)
+`zero_product_continuations` counts product continuations that dispatch the
+next operand on an exact-zero state. `zero_operator_sum_branches` counts
+child tasks dispatched when an operator sum receives zero. The tensor child
+and array counters apply to tensors reached while placing a local operator.
+The input array comes from extracting the children and the result array
+comes from taking their evaluated results off the value stack.
+`tensor_key_lookups` includes all tensor keys probed in the shape table,
+including initial normalization, and counts both hits and misses. These are
+logical call counts. Allocator traffic is measured separately.
+[Work counters](before/work.csv)
 
 ## Reproduction and verification
 

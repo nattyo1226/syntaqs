@@ -416,9 +416,11 @@ a same-factor sum may display `(A + B)[i]` rather than `A[i] + B[i]`.
 ### 11.4. Natural-state collection between actions
 
 `State::evaluate()` evaluates an operator product right to left and collects
-matching state terms before the next action. Operator sums contribute from the
-same normalized input to one incremental accumulator. The same boundaries apply
-inside local actions. Action-free inputs are normalized as well.
+matching state terms before the next action. An exact-zero intermediate state
+ends the current product. Operator sums contribute from the same normalized
+input to one incremental accumulator, and other sum branches continue after a
+product ends. The same rules apply inside local actions. Action-free inputs are
+normalized as well.
 
 Each normalized contribution has an outer coefficient and an action-free shape:
 unit, placed local polynomial, ordered tensor, or retained sum. Local polynomials

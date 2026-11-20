@@ -1,0 +1,184 @@
+--- a/crates/syntaqs-core/src/evaluate/composite.rs
++++ b/crates/syntaqs-core/src/evaluate/composite.rs
+@@ -1,6 +1,8 @@
+ use alloc::{collections::BTreeMap, vec, vec::Vec};
+ use core::{marker::PhantomData, ptr};
+ use num_traits::{One, Zero};
++
++use crate::probe_work::Counter;
+
+ use super::{
+     ProductAction,
+@@ -42,7 +44,7 @@
+     SumStart,
+     SumAdd,
+     SumEnd,
+-    Tensor(usize),
++    Tensor(usize, bool),
+ }
+
+ fn apply_product<I, S, O, C>(
+@@ -51,6 +53,9 @@
+     product: ProductAction<OpExpr<I, O, C>>,
+     scope: HilbertSpace<I>,
+ ) {
++    if state.shape == 0 {
++        Counter::ZeroProductContinuations.add(1);
++    }
+     let (operand, adjoint, remaining) = product.advance();
+     if let Some(remaining) = remaining {
+         tasks.push(Task::ContinueProduct(remaining, scope.clone()));
+@@ -65,6 +70,9 @@
+     factor: HilbertSpace<I>,
+     scope: HilbertSpace<I>,
+ ) {
++    if state.shape == 0 {
++        Counter::ZeroProductContinuations.add(1);
++    }
+     let (operand, adjoint, remaining) = product.advance();
+     if let Some(remaining) = remaining {
+         tasks.push(Task::ContinuePlacedProduct(
+@@ -184,7 +192,7 @@
+                         }
+                         StateNode::Sum(s) | StateNode::Tensor(s) => {
+                             if matches!(state.node(), StateNode::Tensor(_)) {
+-                                tasks.push(Task::Tensor(s.len()));
++                                tasks.push(Task::Tensor(s.len(), false));
+                                 for child in s.iter().rev() {
+                                     tasks.push(Task::Evaluate(child));
+                                 }
+@@ -210,6 +218,8 @@
+                 Task::ContinueProduct(product, scope) => {
+                     if values.last().unwrap().shape != 0 {
+                         apply_product(&mut tasks, values.pop().unwrap(), product, scope);
++                    } else {
++                        Counter::ZeroProductsStopped.add(1);
+                     }
+                 }
+                 Task::ContinuePlacedProduct(product, factor, scope) => {
+@@ -221,6 +231,8 @@
+                             factor,
+                             scope,
+                         );
++                    } else {
++                        Counter::ZeroProductsStopped.add(1);
+                     }
+                 }
+                 Task::Apply(state, op, adjoint, scope) => match op.node() {
+@@ -241,6 +253,9 @@
+                         tasks.push(Task::Apply(state, s.operand.clone(), adjoint, scope));
+                     }
+                     OpNode::Sum(s) => {
++                        if state.shape == 0 {
++                            Counter::ZeroOperatorSumBranches.add(s.len());
++                        }
+                         tasks.push(Task::SumEnd);
+                         for child in s.iter().rev() {
+                             tasks.push(Task::SumAdd);
+@@ -289,6 +304,9 @@
+                             ));
+                         }
+                         OperatorNode::Sum(s) => {
++                            if state.shape == 0 {
++                                Counter::ZeroOperatorSumBranches.add(s.len());
++                            }
+                             tasks.push(Task::SumEnd);
+                             for child in s.iter().rev() {
+                                 tasks.push(Task::SumAdd);
+@@ -372,7 +390,9 @@
+                             tasks.push(Task::Scale(c));
+                         }
+                         if matches!(terms.key(state.shape), Key::Tensor(_)) {
+-                            tasks.push(Task::Tensor(children.len()));
++                            Counter::TensorInputArrays.add(1);
++                            Counter::TensorChildTasks.add(children.len());
++                            tasks.push(Task::Tensor(children.len(), true));
+                             tasks.extend(children.into_iter().rev().map(Task::VisitLocal));
+                         } else {
+                             let mut remaining = children.into_iter();
+@@ -411,7 +431,10 @@
+                 Task::SumStart => sums.push(Sum::new()),
+                 Task::SumAdd => terms.add(sums.last_mut().unwrap(), values.pop().unwrap()),
+                 Task::SumEnd => values.push(terms.finish_sum(sums.pop().unwrap())),
+-                Task::Tensor(count) => {
++                Task::Tensor(count, is_placement) => {
++                    if is_placement {
++                        Counter::TensorResultArrays.add(1);
++                    }
+                     let children = values.split_off(values.len() - count);
+                     values.push(terms.tensor(children));
+                 }
+--- a/crates/syntaqs-core/src/evaluate/local.rs
++++ b/crates/syntaqs-core/src/evaluate/local.rs
+@@ -1,6 +1,8 @@
+ use alloc::{collections::BTreeMap, sync::Arc, vec, vec::Vec};
+ use core::{ops::Mul, ptr};
+ use num_traits::{One, Zero};
++
++use crate::probe_work::Counter;
+
+ use super::ProductAction;
+ use crate::expression::local::{LocalOperator, LocalState, OperatorNode, StateNode};
+@@ -92,6 +94,9 @@
+     state: Ready<S, O, C>,
+     product: ProductAction<LocalOperator<O, C>>,
+ ) {
++    if state.0.is_empty() {
++        Counter::ZeroProductContinuations.add(1);
++    }
+     let (operand, adjoint, remaining) = product.advance();
+     if let Some(remaining) = remaining {
+         tasks.push(StateTask::ContinueProduct(remaining));
+@@ -179,6 +184,8 @@
+                 StateTask::ContinueProduct(product) => {
+                     if !values.last().unwrap().0.is_empty() {
+                         apply_product(&mut tasks, values.pop().unwrap(), product);
++                    } else {
++                        Counter::ZeroProductsStopped.add(1);
+                     }
+                 }
+                 StateTask::Apply(state, op, adjoint) => match op.node() {
+@@ -188,6 +195,9 @@
+                         tasks.push(StateTask::Apply(state, s.operand.clone(), adjoint));
+                     }
+                     OperatorNode::Sum(s) => {
++                        if state.0.is_empty() {
++                            Counter::ZeroOperatorSumBranches.add(s.len());
++                        }
+                         tasks.push(StateTask::SumEnd);
+                         for child in s.iter().rev() {
+                             tasks.push(StateTask::SumAdd);
+--- a/crates/syntaqs-core/src/probe_work.rs
++++ b/crates/syntaqs-core/src/probe_work.rs
+@@ -5,6 +5,7 @@
+ #[derive(Clone, Copy)]
+ pub enum Counter {
+     ZeroProductContinuations,
++    ZeroProductsStopped,
+     ZeroOperatorSumBranches,
+     TensorChildTasks,
+     TensorInputArrays,
+@@ -15,6 +16,7 @@
+
+ pub const ACTION: &[Counter] = &[
+     Counter::ZeroProductContinuations,
++    Counter::ZeroProductsStopped,
+     Counter::ZeroOperatorSumBranches,
+     Counter::TensorChildTasks,
+     Counter::TensorInputArrays,
+@@ -24,13 +26,14 @@
+
+ pub const FACTOR_INDEX: &[Counter] = &[Counter::FactorIndexBuilds];
+
+-static COUNTS: [AtomicUsize; 7] = [const { AtomicUsize::new(0) }; 7];
++static COUNTS: [AtomicUsize; 8] = [const { AtomicUsize::new(0) }; 8];
+ pub static LIVE_INDEX_ENTRIES: AtomicUsize = AtomicUsize::new(0);
+
+ impl Counter {
+     pub fn name(self) -> &'static str {
+         match self {
+             Self::ZeroProductContinuations => "zero_product_continuations",
++            Self::ZeroProductsStopped => "zero_products_stopped",
+             Self::ZeroOperatorSumBranches => "zero_operator_sum_branches",
+             Self::TensorChildTasks => "tensor_child_tasks",
+             Self::TensorInputArrays => "tensor_input_arrays",

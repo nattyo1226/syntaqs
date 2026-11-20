@@ -15,6 +15,7 @@ use crate::{
 struct Counts {
     inner: Vec<usize>,
     traces: Vec<Option<usize>>,
+    adjoints: usize,
     add: usize,
     multiply: usize,
     conjugate: usize,
@@ -168,6 +169,7 @@ impl ParityOperator for Op {
 impl<C: From<f64>> Adjoint<C> for Op {
     type Term = Self;
     fn adjoint(&self) -> Lc<Self, C> {
+        COUNTS.with(|c| c.borrow_mut().adjoints += 1);
         Lc::term(
             C::from(1.0),
             Self {
@@ -235,6 +237,95 @@ fn operators<C>(space: &H<u8>, sites: &[H<u8>], zero: Option<usize>) -> Operator
     .unwrap()
     .bind(space)
     .unwrap()
+}
+
+#[test]
+fn action_products_skip_remaining_sums_and_preserve_outer_branches() {
+    let flip = LocalOperator::primitive(Op {
+        matrix: [[0.0, 1.0], [1.0, 0.0]],
+        site: Some(0),
+    });
+    let kill = LocalOperator::primitive(Op {
+        matrix: [[0.0, 0.0], [0.0, 1.0]],
+        site: Some(1),
+    });
+    let later = LocalOperator::sum([flip.adjoint(), flip.adjoint()]);
+    let local_product = LocalOperator::product([flip.adjoint(), later, kill.clone()]);
+    let local = LocalState::primitive(Ket { label: 0, site: 1 });
+    reset();
+    let actual = local
+        .act(&(&local_product + LocalOperator::<Op, f64>::identity()))
+        .evaluate();
+    assert_eq!(actual.inner_product(&local), 1.0);
+    assert_eq!(actual.norm_squared(), 1.0);
+    COUNTS.with(|c| assert_eq!(c.borrow().adjoints, 0));
+
+    let factors = [H::factor(9u8), H::factor(3u8)];
+    let spanning_sum =
+        Operator::sum(factors.iter().map(|f| flip.adjoint().at(f).unwrap())).unwrap();
+    let composite_product = Operator::product([
+        flip.adjoint().at(&factors[0]).unwrap(),
+        spanning_sum,
+        kill.at(&factors[1]).unwrap(),
+    ])
+    .unwrap();
+    let placed_product = local_product.at(&factors[1]).unwrap();
+    for space in [
+        H::tensor_all(factors.iter().cloned()).unwrap(),
+        H::tensor_all_g(factors.iter().cloned()).unwrap(),
+    ] {
+        let input = product::<f64>(&space, &factors, &[0, 0]);
+        for branch in [&placed_product, &composite_product] {
+            let operator = (branch + Operator::identity()).unwrap();
+            reset();
+            let actual = input.act(&operator).unwrap().evaluate().unwrap();
+            assert_eq!(actual.inner_product(&input).unwrap(), 1.0);
+            assert_eq!(actual.norm_squared().unwrap(), 1.0);
+            COUNTS.with(|c| assert_eq!(c.borrow().adjoints, 0));
+        }
+        let outside = flip.adjoint().at(&H::factor(99)).unwrap();
+        let invalid = (outside * kill.at(&factors[1]).unwrap()).unwrap();
+        assert!(matches!(
+            input.act(&invalid),
+            Err(ExpressionError::MissingIndex)
+        ));
+    }
+}
+
+#[test]
+fn action_products_apply_operands_in_order_with_and_without_adjoint() {
+    let op = |matrix| LocalOperator::<Op, f64>::primitive(Op { matrix, site: None });
+    // P1 X P0 takes |0> to |1>. Its adjoint takes |1> to |0>.
+    let local_product = LocalOperator::product([
+        op([[0.0, 0.0], [0.0, 1.0]]),
+        op([[0.0, 1.0], [1.0, 0.0]]),
+        op([[1.0, 0.0], [0.0, 0.0]]),
+    ]);
+    let factors = [H::factor(9u8), H::factor(3u8)];
+    let graded = H::tensor_all_g(factors.iter().cloned()).unwrap();
+    for (operator, input_label, output_label) in [
+        (local_product.clone(), 0, 1),
+        (local_product.adjoint(), 1, 0),
+    ] {
+        let input = LocalState::primitive(Ket {
+            label: input_label,
+            site: 1,
+        });
+        let expected = LocalState::primitive(Ket {
+            label: output_label,
+            site: 1,
+        });
+        let actual = input.act(&operator).evaluate();
+        assert_eq!(actual.inner_product(&expected), 1.0);
+        assert_eq!(actual.norm_squared(), 1.0);
+
+        // The occupied first mode adds a minus sign to the odd X on the second.
+        let input = product::<f64>(&graded, &factors, &[1, input_label]);
+        let expected = product::<f64>(&graded, &factors, &[1, output_label]);
+        let actual = input.act(&operator.at(&factors[1]).unwrap()).unwrap();
+        assert_eq!(actual.inner_product(&expected).unwrap(), -1.0);
+        assert_eq!(actual.norm_squared().unwrap(), 1.0);
+    }
 }
 
 #[test]

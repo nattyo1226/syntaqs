@@ -2,7 +2,7 @@ use alloc::{collections::BTreeMap, sync::Arc, vec, vec::Vec};
 use core::{ops::Mul, ptr};
 use num_traits::{One, Zero};
 
-use super::schedule_product_action;
+use super::ProductAction;
 use crate::expression::local::{LocalOperator, LocalState, OperatorNode, StateNode};
 use crate::{
     Act, Adjoint, Conjugate, Product,
@@ -79,11 +79,24 @@ enum StateTask<S, O, C> {
     Evaluate(LocalState<S, O, C>),
     Remember(LocalState<S, O, C>),
     Apply(Ready<S, O, C>, LocalOperator<O, C>, bool),
-    ThenApply(LocalOperator<O, C>, bool),
+    ThenApply(LocalOperator<O, C>),
+    ContinueProduct(ProductAction<LocalOperator<O, C>>),
     Scale(C),
     SumStart,
     SumAdd,
     SumEnd,
+}
+
+fn apply_product<S, O, C>(
+    tasks: &mut Vec<StateTask<S, O, C>>,
+    state: Ready<S, O, C>,
+    product: ProductAction<LocalOperator<O, C>>,
+) {
+    let (operand, adjoint, remaining) = product.advance();
+    if let Some(remaining) = remaining {
+        tasks.push(StateTask::ContinueProduct(remaining));
+    }
+    tasks.push(StateTask::Apply(state, operand, adjoint));
 }
 
 // Keeping the source handle in the memo prevents address reuse, even when this
@@ -111,7 +124,11 @@ impl<
         state: Ready<S, O, C>,
         op: LocalOperator<O, C>,
     ) -> Ready<S, O, C> {
-        self.run(StateTask::Apply(state, op, false))
+        if state.0.is_empty() {
+            state
+        } else {
+            self.run(StateTask::Apply(state, op, false))
+        }
     }
     fn run(&mut self, first: StateTask<S, O, C>) -> Ready<S, O, C> {
         let mut tasks = vec![first];
@@ -143,7 +160,7 @@ impl<
                             tasks.push(StateTask::SumStart);
                         }
                         StateNode::Act(a) => {
-                            tasks.push(StateTask::ThenApply(a.operator.clone(), false));
+                            tasks.push(StateTask::ThenApply(a.operator.clone()));
                             tasks.push(StateTask::Evaluate(a.state.clone()));
                         }
                     }
@@ -154,8 +171,15 @@ impl<
                         (source, values.last().unwrap().clone()),
                     );
                 }
-                StateTask::ThenApply(op, adjoint) => {
-                    tasks.push(StateTask::Apply(values.pop().unwrap(), op, adjoint));
+                StateTask::ThenApply(op) => {
+                    if !values.last().unwrap().0.is_empty() {
+                        tasks.push(StateTask::Apply(values.pop().unwrap(), op, false));
+                    }
+                }
+                StateTask::ContinueProduct(product) => {
+                    if !values.last().unwrap().0.is_empty() {
+                        apply_product(&mut tasks, values.pop().unwrap(), product);
+                    }
                 }
                 StateTask::Apply(state, op, adjoint) => match op.node() {
                     OperatorNode::Scale(s) => {
@@ -171,11 +195,8 @@ impl<
                         }
                         tasks.push(StateTask::SumStart);
                     }
-                    OperatorNode::Product(p) => {
-                        let first = schedule_product_action(p, adjoint, &mut tasks, |operand| {
-                            StateTask::ThenApply(operand.clone(), adjoint)
-                        });
-                        tasks.push(StateTask::Apply(state, first.clone(), adjoint));
+                    OperatorNode::Product(_) => {
+                        apply_product(&mut tasks, state, ProductAction::new(op, adjoint));
                     }
                     OperatorNode::Adjoint(a) => {
                         tasks.push(StateTask::Apply(state, a.operand.clone(), !adjoint))
