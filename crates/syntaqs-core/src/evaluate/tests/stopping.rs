@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 use core::ops::{Add, Mul};
+use num_complex::Complex64;
 use num_traits::{One, Zero};
 use std::cell::RefCell;
 
@@ -78,17 +79,21 @@ impl Divide for Scalar {
 }
 
 // Distinct natural primitives can describe overlapping states. No Clone or Eq.
-#[derive(PartialEq)]
 struct Ket {
     label: u8,
     site: usize,
+}
+impl PartialEq for Ket {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.label != 6 && self.label == rhs.label && self.site == rhs.site
+    }
 }
 impl Ket {
     fn amplitudes(&self) -> [f64; 2] {
         match self.label {
             0 => [1.0, 0.0],
             1 => [0.0, 1.0],
-            2 => [1.0, 1.0],
+            2 | 6 => [1.0, 1.0],
             3 => [1.0, -1.0],
             4 => [1e-100, 0.0],
             _ => [f64::NAN, 0.0],
@@ -292,6 +297,67 @@ fn sum_branches_continue_through_zero_terms_and_zero_partial_sums() {
     reset();
     assert_eq!(lhs.inner_product(&rhs).unwrap(), 1.0);
     COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 0, 1, 2]));
+}
+
+#[test]
+fn matching_nested_sums_use_symmetry_with_distinct_outer_scales() {
+    let f = sites();
+    let pair = f[0].tensor(&f[1]).unwrap();
+    let space = pair.tensor(&f[2]).unwrap();
+    let state = |c: Complex64, tail, scale| {
+        let block = State::sum(
+            &pair,
+            [
+                product::<Complex64>(&pair, &f[..2], &[0, 0]),
+                product::<Complex64>(&pair, &f[..2], &[2, 0]).scaled(c),
+            ],
+        )
+        .unwrap()
+        .scaled(scale);
+        let tail = LocalState::primitive(Ket {
+            label: tail,
+            site: 2,
+        })
+        .at(&f[2])
+        .unwrap();
+        State::tensor_in(&space, [block, tail]).unwrap()
+    };
+    let c = Complex64::new(0.5, 1.0);
+    let lhs = state(c, 0, Complex64::new(2.0, 1.0));
+    let rhs = state(c, 2, Complex64::new(-1.0, 2.0));
+
+    reset();
+    // The two-site block has amplitudes (1+c, c) on its nonzero coordinates.
+    // The tail overlap is 1 and the outer scalar contribution is 5i.
+    assert_eq!(lhs.inner_product(&rhs).unwrap(), Complex64::new(0.0, 22.5));
+    COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 1, 0, 1, 0, 1, 2]));
+
+    reset();
+    let rhs = state(c.conj(), 2, Complex64::new(-1.0, 2.0));
+    assert_eq!(lhs.inner_product(&rhs).unwrap(), Complex64::new(20.0, 2.5));
+    COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 1, 0, 1, 0, 1, 0, 1, 2]));
+}
+
+#[test]
+fn shared_nonreflexive_shapes_contract_all_pairs() {
+    let f = sites();
+    let space = f[0].tensor(&f[1]).unwrap();
+    let run = |label, coefficient| {
+        let sum = State::sum(
+            &space,
+            [
+                product::<f64>(&space, &f[..2], &[0, 0]),
+                product::<f64>(&space, &f[..2], &[label, 0]).scaled(coefficient),
+            ],
+        )
+        .unwrap();
+        reset();
+        let result = sum.inner_product(&sum).unwrap();
+        COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 1, 0, 1, 0, 1, 0, 1]));
+        result
+    };
+    assert_eq!(run(6, 1.0), 5.0);
+    assert!(run(2, f64::NAN).is_nan());
 }
 
 #[test]

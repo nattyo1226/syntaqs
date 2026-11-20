@@ -141,12 +141,13 @@ fn inner_product_contracts_independent_sums_without_global_expansion() {
         ] {
             counts.inner_products.set(0);
             assert_eq!(lhs.inner_product(rhs).unwrap(), expected);
-            assert_eq!(counts.inner_products.get(), 4 * usize::from(n));
+            assert_eq!(counts.inner_products.get(), 3 * usize::from(n));
         }
         let op = LocalOperator::primitive(Op).at(&factors[0]).unwrap();
         counts.inner_products.set(0);
         assert_eq!(after.expectation(&op).unwrap(), expected);
-        assert_eq!(counts.inner_products.get(), 4 * usize::from(n));
+        // The flip reverses the summand order at the target site only.
+        assert_eq!(counts.inner_products.get(), 3 * usize::from(n) + 1);
     }
 }
 

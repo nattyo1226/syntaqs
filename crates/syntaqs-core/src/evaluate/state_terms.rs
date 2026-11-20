@@ -130,7 +130,7 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
             _ => None,
         }
     }
-    pub fn into_expression(mut self, ready: Ready<C>) -> StateExpr<I, S, O, C> {
+    pub fn expression(&mut self, ready: Ready<C>) -> StateExpr<I, S, O, C> {
         let mut pending = Vec::new();
         if self.entries[ready.shape].expression.is_none() {
             pending.push((ready.shape, false));
@@ -182,14 +182,26 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
             };
             self.entries[id].expression = Some(expression);
         }
-        let expression = self.entries[ready.shape]
-            .expression
-            .take()
-            .expect("materialized root");
+        let expression = self.materialized(ready.shape).clone();
         match ready.coefficient {
             Some(c) => expression.scaled(c),
             None => expression,
         }
+    }
+
+    pub fn reflexive_sums(&self) -> impl Iterator<Item = &StateExpr<I, S, O, C>> {
+        self.entries.iter().filter_map(|entry| {
+            let is_sum = match &entry.key {
+                Key::Sum(parts) => parts.len() > 1,
+                Key::Local(_, terms) => terms.len() > 1,
+                _ => false,
+            };
+            if entry.reflexive && is_sum {
+                entry.expression.as_ref()
+            } else {
+                None
+            }
+        })
     }
 
     fn materialized(&self, shape: usize) -> &StateExpr<I, S, O, C> {
@@ -206,6 +218,9 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
             return;
         }
         let entry = &self.entries[ready.shape];
+        if entry.expression.is_some() {
+            return;
+        }
         let shares = |node: &StateExpr<I, S, O, C>, shape: usize| {
             self.entries[shape]
                 .expression

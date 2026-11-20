@@ -461,13 +461,21 @@ See [basis errors](basis.md#74-errors-and-examples).
 
 ### 11.5. Incremental scalar contractions
 
-State inner products validate compatible spaces, evaluate/collect both operands,
-and align independent tensor groups. Contraction distributes sums only where
-needed inside those groups. A product continuation retains its accumulated value
-and remaining groups, schedules one group, and proceeds only while the value is
-nonzero. An exact-zero local contraction or underflowed running product discards
-the remaining contractions and pending coefficient scaling for that product.
-A zero summand or zero partial sum never stops the enclosing sum.
+State inner products validate compatible spaces and normalize both operands in
+one evaluation context. Equal cumulative factor counts in the compatible
+factor order identify a shared tensor boundary. Contraction finds and reduces
+one block at a time, distributing sums inside a block when needed. An exact-zero
+local contraction or underflowed running product skips alignment and contraction
+of later blocks, along with pending coefficient scaling for that product.
+Every summand contributes independently of earlier zero terms or partial sums.
+
+After extracting a block's outer coefficients, contraction uses the diagonal
+and one triangle of the pair matrix when normalization identifies the same
+reflexive, ordered sum on both sides. Each evaluated off-diagonal overlap
+contributes both its value and its conjugate. This applies to composite and
+local sums inside matching blocks, and floating-point results can differ by
+rounding because the addition order changes. A nonreflexive primitive value
+or a nonreflexive internal coefficient keeps its sum on the full pair matrix.
 
 Local state contractions skip coefficient multiplication and left conjugation
 after a zero primitive overlap; explicit zero term coefficients can skip the
@@ -485,8 +493,7 @@ remains separate from the per-factor work. No total dimension, basis, state type
 orthogonality metadata, or result cache is introduced for operator HS.
 
 Space/reference validation precedes these shortcuts. Operand evaluation, graded
-lowering, and structural group discovery retain their existing responsibilities;
-a shortcut does not imply that all preparation of a later factor was avoided.
+lowering, and factor coverage metadata are prepared before numerical contraction.
 The test for zero is exactly `Zero::is_zero()`, with no threshold or finite-value
 rejection. Nonzero tiny values continue; NaN alone does not stop a product.
 Avoiding arithmetic after a proven zero follows mathematical zero propagation,
