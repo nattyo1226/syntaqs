@@ -372,6 +372,7 @@ regressions or missing measurements.
 [Stage 6 measurements](measurements/stage-6/README.md)
 [Stage 7 measurements](measurements/stage-7/README.md)
 [Stage 8 results](measurements/stage-8/README.md) · [Follow-up investigations](measurements/stage-8/README.md#follow-up-investigations)
+[Follow-up implementation sequence](#follow-up-implementation-sequence)
 
 After the refactoring comparison, benchmark `Ord` and `PartialOrd` for state
 and operator primitives using the agreed workloads with few and many
@@ -384,6 +385,71 @@ investigation. [Primitive ordering experiment](#measure-the-effect-of-ordering-p
 The follow-up work covers the two items below. Use Stage 8 as the reference
 and record before-and-after times, allocation traffic, and work counts for
 each change. [Stage 8 results](measurements/stage-8/README.md)
+
+### Follow-up implementation sequence
+
+The zero-state change can be verified independently. Build the space index
+before changing the tensor traversal so the evaluator can resolve the target
+position in the action scope once per local placement. Measure the two new
+construction APIs in separate checkpoints.
+
+1. **Capture matched reference measurements.** Keep Stage 8 case IDs and
+   add controls for successive `tensor()` construction, nested spaces with
+   unsorted IDs, and retention of intermediate spaces. Record the baseline
+   for work counters before changing evaluation, including product
+   continuations after exact zero and tensor child tasks, temporary arrays,
+   and key lookups. Use the existing timing and allocation modes for API
+   comparisons and separately instrument work counts. The existing
+   single-site action, Heisenberg, and Hubbard cases serve as controls.
+   [Probe commands](#reproduction) · [Measurement method](#measurement-method)
+2. **Stop product actions on exact zero.** Advance through the operands in
+   action order. When an operand returns a normalized zero, finish that
+   product before scheduling its next operand. Cover local and composite
+   product actions, including products inside placed graded operators.
+   Verify adjoint order and an outer sum with a nonzero sibling. Measure
+   the Hubbard vacuum and the nonzero Hubbard input, then count work skipped
+   when a remaining operand contains a sum.
+   [State action requirements](#reduce-intermediate-work-in-state-action)
+3. **Build the immutable factor index during space construction.** Merge
+   child indices and perform duplicate detection at the construction
+   boundary. Use the finished index for validation and operator factor
+   lookup. Preserve the available index capabilities, borrowed child
+   handles, and factor order. Compare construction alone with prebuilt-space
+   `bind()` and `act_in()` on fresh and reused roots, including one-reference
+   validation. Measure this checkpoint with the existing construction APIs.
+   [Space index requirements](#reuse-factor-positions-across-calls-on-the-same-space)
+4. **Add `flatten()`.** Promote the children of each immediate tensor
+   child by one level and reuse the existing index. Verify leaf order,
+   effective kind, and index sharing on nested spaces, including units and
+   single-child wrappers. Measure `flatten()` on a prebuilt space and record
+   construction and retained index size for repeated `tensor().flatten()`.
+5. **Add `tensor_flatten()`.** Construct the flattened parent directly.
+   Compare the result, validation errors, and effective kind with
+   `tensor().flatten()`. Measure both paths with matched inputs and compare
+   retained index data when callers release or retain intermediate spaces.
+6. **Schedule only affected tensor children during state action.** Use
+   the target position and the ranges of the stored tensor children to
+   select work for each branch. Propagate coefficient changes using the
+   original shape ID when child shapes agree. Build the final key once
+   when the child shapes change. Verify block sums, exact zero, and parity
+   prefixes with the existing ordinary and graded references. Measure the
+   1,024-site local action, one and eight Heisenberg applications at ten
+   sites, and near and far hopping on 128 modes. Compare the task, array,
+   and key counts with the checkpoint immediately before this change.
+   [State action requirements](#reduce-intermediate-work-in-state-action)
+7. **Run the end-to-end comparison.** Rerun the Stage 8 sweep and the new
+   controls. Compare construction alone, construction plus one validation,
+   and reuse across validations. Report the number of calls that offset
+   any added construction cost where the measured path breaks even. Report
+   retained index size separately from cumulative allocation traffic.
+   Run the applicable workspace and downstream checks and report any
+   persistent regressions with their measured cost.
+   [Workspace verification](../../design/verification.md)
+
+The follow-up starts with the reference measurements. Save each checkpoint's
+raw timing, allocation, and work-count results under `measurements/follow-up/`
+with its revision and run configuration. Compare consecutive checkpoints for
+individual effects and Stage 8 for the cumulative result.
 
 ### Reduce intermediate work in state action
 
