@@ -335,6 +335,60 @@ impl<I> HilbertSpace<I> {
         }
     }
 
+    /// Promotes each immediate tensor child's children by one level.
+    ///
+    /// Factors stay in order, and an empty tensor child contributes no children.
+    /// The effective tensor kind is preserved. If promotion makes the outer
+    /// kind effective, it adopts the original effective kind.
+    /// A factor or a tensor whose immediate children are all factors shares
+    /// its original node.
+    pub fn flatten(&self) -> Self {
+        let Node::Tensor { kind, children, .. } = self.node() else {
+            return self.clone();
+        };
+        if children
+            .iter()
+            .all(|child| matches!(child.node(), Node::Factor(_)))
+        {
+            return self.clone();
+        }
+
+        let groups = children.iter().map(Self::promoted_children);
+        let mut promoted = Vec::with_capacity(groups.clone().map(<[_]>::len).sum());
+        for group in groups {
+            promoted.extend_from_slice(group);
+        }
+        let kind = match self.effective_kind {
+            Some(effective)
+                if effective != *kind
+                    && promoted
+                        .iter()
+                        .filter(|child| child.factor_count() != 0)
+                        .nth(1)
+                        .is_some() =>
+            {
+                effective
+            }
+            _ => *kind,
+        };
+        // Promotion leaves every factor at its original position.
+        Self::new(
+            Node::Tensor {
+                kind,
+                children: promoted.into(),
+                by_index: FactorIndex::reuse(self),
+            },
+            self.effective_kind,
+        )
+    }
+
+    fn promoted_children(&self) -> &[Self] {
+        match self.node() {
+            Node::Factor(_) => slice::from_ref(self),
+            Node::Tensor { children, .. } => children.as_slice(),
+        }
+    }
+
     pub(crate) fn factor_count(&self) -> usize {
         match self.node() {
             Node::Factor(_) => 1,
@@ -593,5 +647,91 @@ mod tests {
         assert_eq!(wrapped.factor_position(&5), None);
         let repeated = wrapped.tensor(&HilbertSpace::factor(4));
         assert_eq!(repeated.unwrap_err(), SpaceError::DuplicateIndex);
+    }
+
+    #[test]
+    fn flatten_promotes_one_level_and_reuses_the_index() {
+        let a = HilbertSpace::factor(30);
+        let b = HilbertSpace::factor(10);
+        let c = HilbertSpace::factor(20);
+        let d = HilbertSpace::factor(40);
+        let ab = a.tensor(&b).unwrap();
+        let abc = ab.tensor(&c).unwrap();
+        let unit = HilbertSpace::unit();
+        let space = HilbertSpace::tensor_all([abc.clone(), unit.clone(), d.clone()]).unwrap();
+        let flattened = space.flatten();
+        let expected = [&ab, &c, &d];
+        assert_eq!(flattened.children().len(), expected.len());
+        for (child, original) in flattened.children().zip(expected) {
+            assert!(child.shares_node_with(original));
+        }
+        assert!(space.children().next().unwrap().shares_node_with(&abc));
+        assert!(flattened.is_compatible_with(&space));
+        for (position, index) in [30, 10, 20, 40].into_iter().enumerate() {
+            assert_eq!(flattened.factor_position(&index), Some(position));
+        }
+        let FactorIndex::Many(original) = FactorIndex::reuse(&space) else {
+            panic!("multi-factor index");
+        };
+        let FactorIndex::Many(reused) = FactorIndex::reuse(&flattened) else {
+            panic!("flattened index");
+        };
+        assert!(Arc::ptr_eq(&original, &reused));
+        assert_eq!(flattened.flatten().children().len(), 4);
+    }
+
+    #[test]
+    fn flatten_preserves_effective_kind_through_units_and_wrappers() {
+        let unit = HilbertSpace::unit();
+        let a = HilbertSpace::factor(3);
+        let b = HilbertSpace::factor(1);
+        for (inner, outer) in [
+            (TensorKind::Graded, TensorKind::Ordinary),
+            (TensorKind::Ordinary, TensorKind::Graded),
+        ] {
+            let pair = a.tensor_with(inner, &b).unwrap();
+            let wrapper =
+                HilbertSpace::tensor_all_with(outer, [unit.clone(), pair.clone()]).unwrap();
+            let nested = HilbertSpace::tensor_all_with(outer, [wrapper]).unwrap();
+            let flattened_once = nested.flatten();
+            assert_eq!(flattened_once.kind(), Some(outer));
+            assert_eq!(flattened_once.children().len(), 2);
+            assert!(
+                flattened_once
+                    .children()
+                    .next()
+                    .unwrap()
+                    .shares_node_with(&unit)
+            );
+
+            let flattened_pair = flattened_once.flatten();
+            assert_eq!(flattened_pair.kind(), Some(inner));
+            for space in [&flattened_once, &flattened_pair] {
+                assert_eq!(space.effective_kind(), Some(inner));
+                assert!(space.is_compatible_with(&pair));
+                let parent =
+                    HilbertSpace::tensor_all_with(inner, [space.clone(), HilbertSpace::factor(7)])
+                        .unwrap();
+                assert!(parent.indices().copied().eq([3, 1, 7]));
+            }
+            assert!(flattened_pair.flatten().shares_node_with(&flattened_pair));
+        }
+
+        let singleton = HilbertSpace::tensor_all_g([a.tensor(&unit).unwrap()])
+            .unwrap()
+            .flatten();
+        assert_eq!(singleton.kind(), Some(TensorKind::Graded));
+        assert_eq!(singleton.effective_kind(), None);
+        assert_eq!(singleton.factor_position(&3), Some(0));
+        assert!(singleton.children().next().unwrap().shares_node_with(&a));
+
+        let empty = HilbertSpace::tensor_all_g([unit]).unwrap().flatten();
+        assert_eq!(empty.kind(), Some(TensorKind::Graded));
+        assert_eq!(empty.effective_kind(), None);
+        assert_eq!(empty.children().len(), 0);
+
+        struct Unordered;
+        let leaf = HilbertSpace::factor(Unordered);
+        assert!(leaf.flatten().shares_node_with(&leaf));
     }
 }

@@ -446,15 +446,16 @@ construction APIs in separate checkpoints.
    persistent regressions with their measured cost.
    [Workspace verification](../../design/verification.md)
 
-Steps 1–3 are complete. The immutable factor index reduced CPU time for
-construction and validation in the measured cases. Successive `tensor()`
-retained 524,799 index entries at 1,024 factors even when callers released
-intermediate handles. Steps 4 and 5 measure the effect of flattening on this
-retained storage. Save each checkpoint's raw timing, allocation, and work-count
-results under `measurements/follow-up/` with its revision and run configuration.
+Steps 1–4 are complete. At 1,024 factors, successive `tensor().flatten()`
+with only the final root retained reduced heap retention from 8.54 MB to
+32.9 KB and raised construction and destruction time. Retaining every
+intermediate root also keeps the wider child lists. Step 5 measures direct
+construction of the flattened tensor. Save each checkpoint's raw timing,
+allocation, and work-count results under `measurements/follow-up/` with its
+revision and run configuration.
 Compare consecutive checkpoints for individual effects and Stage 8 for the
 cumulative result.
-[Follow-up reference measurements](measurements/follow-up/README.md) · [Exact-zero stopping measurements](measurements/follow-up/zero-product/README.md) · [Factor index measurements](measurements/follow-up/factor-index/README.md)
+[Follow-up reference measurements](measurements/follow-up/README.md) · [Exact-zero stopping measurements](measurements/follow-up/zero-product/README.md) · [Factor index measurements](measurements/follow-up/factor-index/README.md) · [Flattening measurements](measurements/follow-up/flatten/README.md)
 
 ### Reduce intermediate work in state action
 
@@ -505,7 +506,7 @@ are sorted by ID. Construction merges child indices with position offsets
 and checks for repeated IDs. Placement validation, operator basis queries,
 and contractions reuse the same index across calls on the space.
 
-Add two explicit ways to remove one level of grouping.
+The two checkpoints cover explicit promotion by one level.
 
 - `flatten()` promotes the children of each immediate tensor child by one
   level. Preserve leaf order and effective `TensorKind`. Reuse `by_index`

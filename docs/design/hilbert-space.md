@@ -1,6 +1,6 @@
 # Recursive Hilbert spaces
 
-Updated: 2026-11-17
+Updated: 2026-11-21
 
 ## 1. Scope and contract
 
@@ -13,9 +13,9 @@ Core owns generic identity comparison, Hilbert spaces, expressions, and evaluati
 
 A space is either a basic factor or an ordered tensor product of child spaces.
 Its grouping is the tree's parenthesization. Construction, enumeration,
-compatibility, and subsystem checks inspect this structure; factor-selection
-extraction and regrouping are outside the API. Factor/Tensor name private node
-concepts, while HilbertSpace is the public handle.
+compatibility, and subsystem checks inspect this structure. Explicit
+`flatten()` removes one level of grouping. Factor and Tensor name private
+node concepts, while HilbertSpace is the public handle.
 
 Spaces store no local algebra types. S/O/C on expressions enforce appropriate homogeneous composition; sharing space structure does not enable implicit mixing of primitive types.
 
@@ -66,7 +66,16 @@ Retain caller-selected grouping without mandatory flattening at construction. Tr
 
 Spaces are compatible when their basic indices, order, and effective tensor structures match under those rules. Expressions hold primitive types/rules; space comparison has no definition label. Grouping alone does not affect compatibility, and neither object identity nor dimension alone establishes it.
 
-Reject a single space whose ordinary/graded mixture remains after unit/singleton identification. Compatibility does not change kinds. There is no public regrouping or factor permutation/reordering.
+Reject a single space whose ordinary/graded mixture remains after unit/singleton identification. Compatibility does not change kinds.
+
+`flatten()` replaces each immediate tensor child with that child's ordered
+children. An immediate empty tensor contributes no children. The operation
+preserves the factor handles, their order, and the effective kind. When
+promotion makes a wrapper's kind effective, the wrapper adopts the original
+effective kind. For example, `T_o(T_g(a,b)).flatten()` gives `T_g(a,b)`.
+Deeper grouping remains until another call. Factors and tensors whose
+immediate children are all factors share their original node. A new tensor
+root shares the original factor-position index.
 
 These rules concern mathematical compatibility, not mandatory deletion of stored/displayed grouping. Numeric precision, scalars, and grading conditions are also checked separately under [numeric conventions](numerics.md).
 
@@ -171,6 +180,7 @@ H's direct children are `[T_o(a,b),c]` and indices `[Index(a),Index(b),Index(c)]
 | `tensor_with(kind, &rhs)`, `tensor(&rhs)`, `tensor_g(&rhs)` | Corresponding binary forms, left factors before right. |
 | `kind()`, `effective_kind()` | Stored tensor kind and effective `Option<TensorKind>` after unit/singleton identification. |
 | `factor_index()`, `children()`, `indices()` | Borrow a factor's `Option<&I>`, immediate children, or all leaf indices. |
+| `flatten()` | Promote the children of immediate tensors by one level and preserve leaf order and effective kind. Requires no index comparison or cloning. |
 | `is_compatible_with(&rhs)`, `is_subsystem_of(&ambient)` | Eq-based factor/relative order and effective-kind checks. |
 | `dim::<P>()` | Apply `P: Dimension` per factor; return `Result<usize, DimensionOverflow>`. |
 | `dim_with(dim_local)` | Supply `NonZeroUsize` explicitly; return the same Result. |

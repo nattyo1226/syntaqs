@@ -1,0 +1,22 @@
+--- a/docs/plans/core-performance-baseline/probe/src/space_construction.rs
++++ b/docs/plans/core-performance-baseline/probe/src/space_construction.rs
+@@ -112,6 +112,9 @@
+                 let parts = prepare(ids.iter().copied().map(CountedIndex), grouped);
+                 let prebuilt = HilbertSpace::tensor_all(parts.iter().cloned()).unwrap();
+                 r.diagnose_index_comparisons(&case, "flatten", || prebuilt.flatten());
++                r.diagnose_work(&case, "flatten", syntaqs_core::probe_work::FACTOR_INDEX, || {
++                    prebuilt.flatten()
++                });
+                 r.diagnose(&case, "flatten", "result_children", || {
+                     let flattened = prebuilt.flatten();
+                     assert!(flattened.is_compatible_with(&prebuilt));
+@@ -122,6 +125,9 @@
+                 for construction in CONSTRUCTIONS {
+                     let api = construction.api();
+                     r.diagnose_index_comparisons(&case, api, || construction.build(&parts));
++                    r.diagnose_work(&case, api, syntaqs_core::probe_work::FACTOR_INDEX, || {
++                        construction.build(&parts)
++                    });
+                     r.diagnose(&case, api, "retained_intermediates", || {
+                         let (space, retained) = construction.build(&parts);
+                         assert!(space.indices().map(|id| id.0).eq(ids.iter().copied()));
