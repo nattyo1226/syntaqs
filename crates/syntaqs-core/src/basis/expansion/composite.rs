@@ -56,7 +56,7 @@ enum StateTask<'a, I, S, O, C> {
     Tensor(usize),
 }
 
-fn state_expansion<I: Eq, S, O, C, B, V: TensorValue>(
+fn state_expansion<I: Ord, S, O, C, B, V: TensorValue>(
     state: &State<I, S, O, C>,
     basis: &B,
     dimension: Option<usize>,
@@ -131,7 +131,7 @@ where
     Ok(result)
 }
 
-impl<I: Eq, S, O, C> State<I, S, O, C> {
+impl<I: Ord, S, O, C> State<I, S, O, C> {
     /// Expands in one local basis applied uniformly in the space's factor order.
     ///
     /// Returns state syntax preserving the tensor kind on the original shared space. No global

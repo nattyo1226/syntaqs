@@ -19,12 +19,12 @@ enum Task<I, S, O, C> {
     Remember(StateExpr<I, S, O, C>),
     Apply(Ready<C>, OpExpr<I, O, C>, bool, HilbertSpace<I>),
     ThenApply(OpExpr<I, O, C>, bool, HilbertSpace<I>),
-    Local(
-        Ready<C>,
-        HilbertSpace<I>,
-        LocalOperator<O, C>,
-        Option<HilbertSpace<I>>,
-    ),
+    Local(Ready<C>, HilbertSpace<I>, LocalOperator<O, C>, bool),
+    VisitLocal(Ready<C>),
+    FinishLocalSum {
+        remaining: alloc::vec::IntoIter<Ready<C>>,
+        found: bool,
+    },
     Placed(
         Ready<C>,
         HilbertSpace<I>,
@@ -38,6 +38,15 @@ enum Task<I, S, O, C> {
     SumEnd,
     Tensor(usize),
 }
+
+// A placement only traverses action-free shapes. It owns the cursor until
+// that traversal returns to the operator evaluator.
+struct Placement<I, O, C> {
+    factor: HilbertSpace<I>,
+    operator: LocalOperator<O, C>,
+    odd: bool,
+    reached: bool,
+}
 fn schedule_sum<I, S, O, C>(
     tasks: &mut Vec<Task<I, S, O, C>>,
     children: impl DoubleEndedIterator<Item = Task<I, S, O, C>>,
@@ -49,7 +58,7 @@ fn schedule_sum<I, S, O, C>(
     }
     tasks.push(Task::SumStart);
 }
-impl<I: Eq, S, O, C> State<I, S, O, C> {
+impl<I: Ord, S, O, C> State<I, S, O, C> {
     /// Evaluates delayed actions and collects matching natural-state terms
     /// between actions. Action-free inputs are normalized too; tensor products
     /// of sums stay factored. No basis or primitive operator Product is required.
@@ -74,6 +83,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         let mut sums = Vec::new();
         let mut terms = Terms::new();
         let mut locals = LocalEvaluator::new();
+        let mut placement = None;
         while let Some(task) = tasks.pop() {
             match task {
                 Task::Evaluate(state) => {
@@ -168,7 +178,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                         } else {
                             operator
                         };
-                        tasks.push(Task::Local(state, factor, operator, None));
+                        tasks.push(Task::Local(state, factor, operator, false));
                         continue;
                     }
                     use crate::expression::local::OperatorNode;
@@ -224,31 +234,31 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                             tasks.push(Task::Placed(state, factor, local, false, scope));
                         }
                         OperatorNode::Primitive(p) => {
-                            let prefix = if scope.effective_kind() == Some(TensorKind::Graded)
-                                && p.parity() == Parity::Odd
-                            {
-                                Some(scope)
-                            } else {
-                                None
-                            };
-                            tasks.push(Task::Local(state, factor, operator, prefix));
+                            let odd = p.parity() == Parity::Odd;
+                            tasks.push(Task::Local(state, factor, operator, odd));
                         }
                     }
                 }
-                Task::Local(state, factor, operator, prefix) => {
-                    if state.shape == 0 {
+                Task::Local(state, factor, operator, odd) => {
+                    placement = Some(Placement {
+                        factor,
+                        operator,
+                        odd,
+                        reached: false,
+                    });
+                    tasks.push(Task::VisitLocal(state));
+                }
+                Task::VisitLocal(state) => {
+                    let placement = placement.as_mut().expect("local action");
+                    if placement.reached || state.shape == 0 {
                         values.push(state);
                         continue;
                     }
                     if let Some((target, local)) = terms.local_parts(state.shape) {
-                        let op = if target.factor_index() == factor.factor_index() {
-                            Some(operator)
-                        } else if prefix.as_ref().is_some_and(|space| {
-                            space
-                                .indices()
-                                .take_while(|i| Some(*i) != factor.factor_index())
-                                .any(|i| Some(i) == target.factor_index())
-                        }) {
+                        let op = if target.factor_index() == placement.factor.factor_index() {
+                            placement.reached = true;
+                            Some(placement.operator.clone())
+                        } else if placement.odd {
                             Some(LocalOperator::primitive(O::parity_operator()))
                         } else {
                             None
@@ -270,15 +280,37 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
                         if let Some(c) = state.coefficient {
                             tasks.push(Task::Scale(c));
                         }
-                        let branches = children.into_iter().map(|child| {
-                            Task::Local(child, factor.clone(), operator.clone(), prefix.clone())
-                        });
                         if matches!(terms.key(state.shape), Key::Tensor(_)) {
-                            tasks.push(Task::Tensor(branches.len()));
-                            tasks.extend(branches.rev());
+                            tasks.push(Task::Tensor(children.len()));
+                            tasks.extend(children.into_iter().rev().map(Task::VisitLocal));
                         } else {
-                            schedule_sum(&mut tasks, branches);
+                            let mut remaining = children.into_iter();
+                            let first = remaining.next().expect("nonempty sum");
+                            sums.push(Sum::new());
+                            tasks.push(Task::FinishLocalSum {
+                                remaining,
+                                found: false,
+                            });
+                            tasks.push(Task::VisitLocal(first));
                         }
+                    }
+                }
+                Task::FinishLocalSum {
+                    mut remaining,
+                    found,
+                } => {
+                    let placement = placement.as_mut().expect("local action");
+                    let found = found || placement.reached;
+                    terms.add(sums.last_mut().unwrap(), values.pop().unwrap());
+                    if let Some(next) = remaining.next() {
+                        // Each branch starts at the same position. An already
+                        // reached target would have skipped this whole sum.
+                        placement.reached = false;
+                        tasks.push(Task::FinishLocalSum { remaining, found });
+                        tasks.push(Task::VisitLocal(next));
+                    } else {
+                        placement.reached = found;
+                        values.push(terms.finish_sum(sums.pop().unwrap()));
                     }
                 }
                 Task::Scale(c) => {
@@ -296,7 +328,7 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
         }
         Ok(Self {
             space: self.space.clone(),
-            expression: terms.expression(&values.pop().unwrap()),
+            expression: terms.into_expression(values.pop().unwrap()),
         })
     }
 }

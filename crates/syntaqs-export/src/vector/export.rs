@@ -74,8 +74,8 @@ where
     }
 }
 
-impl<'b, I: Eq, S, O, C, B, D> Export<Exported<D, VectorMetadata<'b, B, HilbertSpace<I>, S>>, &'b B>
-    for &State<I, S, O, C>
+impl<'b, I: Ord, S, O, C, B, D>
+    Export<Exported<D, VectorMetadata<'b, B, HilbertSpace<I>, S>>, &'b B> for &State<I, S, O, C>
 where
     C: PartialEq + Clone + Zero + One + Conjugate<Output = C>,
     S: PartialEq + Dimension + Act<C, Operator = O, Term = S>,

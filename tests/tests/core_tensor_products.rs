@@ -339,6 +339,22 @@ fn check<T: Real>() {
                 &vector(&acted.expand(&States).unwrap().expand(&States).unwrap()),
                 &vector(&acted),
             );
+            if n == 3 && kind == TensorKind::Graded {
+                let block = (ket::<T>(2, &factors[..2], kind)
+                    + ket::<T>(3, &factors[..2], kind).scaled(c(0.5, 0.3)))
+                .unwrap();
+                let factored = State::tensor_in(&h, [block, ket(1, &factors[2..], kind)]).unwrap();
+                let input = vector(&factored);
+                // The first target is inside the block sum. For the second
+                // target each branch of that sum contributes to the parity prefix.
+                for target in [1, 2] {
+                    let acted = factored.act(&placed(A, &factors[target])).unwrap();
+                    values(
+                        &vector(&acted),
+                        &act(&embedding(A, target, n, kind), &input),
+                    );
+                }
+            }
             close(psi.inner_product(&psi).unwrap(), c(0.78, 0.));
             for i in 0..n {
                 for j in 0..n {

@@ -14,7 +14,8 @@ consistency. Basic supplies UUID `Id128` and string `Tag` types. Geometry borrow
 caller-owned spaces; Chain has neither an index type nor issuance helpers.
 
 Core uses stable index equality for factor identity. Tensor-space constructors,
-binding, and operator queries that resolve factor positions require `I: Ord`.
+binding, composite state evaluation, and operator queries that resolve factor
+positions require `I: Ord`.
 ID order serves lookup and duplicate detection. Tensor order follows the
 space's children. Space and expression handles share indices without requiring
 `Clone` on `I`.

@@ -46,9 +46,9 @@ borrowed as in Coordinates, composite spaces share HilbertSpace handles, and
 local expressions record factor count and local dimension.
 
 Results own their numerical data without borrowing the source expression. They
-need no Clone on bases or Clone/Hash on indices. Composite operator matrix
-exports require ordered indices for binding and action. Coefficient type C represents
-precision without a separate precision label.
+need no Clone on bases or Clone/Hash on indices. Composite state-vector and
+operator matrix exports require ordered indices for state evaluation.
+Coefficient type C represents precision without a separate precision label.
 
 Matrices use the same state basis for input and output and the same selected full ambient space as domain and codomain. State type `S` is associated at the type level with expression export and matrix metadata; storing it requires no S value, Clone, or numeric capabilities.
 
@@ -99,8 +99,8 @@ let direct: Exported<ndarray::Array1<_>, _> = (&psi).export(&basis)?;
 
 State-vector and action-matrix export inherit
 [state-evaluation capabilities](composite-expression.md#42-shared-apis-and-minimal-capabilities):
-primitive PartialEq and coefficient One, plus coefficient PartialEq for composite
-outputs. Exporting existing Coordinates adds no evaluation/equality requirements.
+primitive PartialEq and coefficient One, plus `I: Ord` and coefficient
+PartialEq for composite outputs. Exporting existing Coordinates adds no evaluation/equality requirements.
 State terms removed during evaluation do not run basis expansion; original
 space validation and matrix-basis enumeration checks remain in force.
 

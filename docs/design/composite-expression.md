@@ -120,7 +120,7 @@ coefficient capabilities:
 | State evaluation | Required capabilities |
 | --- | --- |
 | Local | `S: PartialEq + Act<C, Operator=O, Term=S>`; `O: Adjoint<C, Term=O>`; `C: Clone + Zero + One + Conjugate<Output=C>` |
-| Composite | Local bounds plus `I: Eq`, `C: PartialEq`, and `O: HomogeneousParity + ParityOperator` |
+| Composite | Local bounds plus `I: Ord`, `C: PartialEq`, and `O: HomogeneousParity + ParityOperator` |
 
 `Zero` and `One` supply addition and multiplication. No primitive/index Clone,
 primitive Eq/Ord/Hash, coefficient ordering, or primitive operator Product is
@@ -427,6 +427,12 @@ parentheses, removes units, and pulls child outer coefficients to the tensor's
 outer coefficient. A zero factor makes the tensor zero while retaining the
 state's selected space. Factor order and delayed Act scope never change.
 
+For a graded odd placement, the evaluator visits the normalized input in
+tensor order. It applies parity before the target, applies the operator at
+the target, and shares the suffix. A sum starts each branch at the same
+position and carries the result of reaching the target into the next tensor
+child. The selected Act space supplies the effective tensor kind.
+
 Composite matching uses the resulting structure, primitive equality, and
 coefficient equality inside retained polynomials/sums. Ordered retained sums
 are not permuted for matching. Products of sums stay factored: no distributive
@@ -434,15 +440,14 @@ search or common-factor extraction equates factored and distributed states.
 Distinct but linearly dependent primitives remain distinct until basis expansion.
 Only exact `Zero::is_zero()` removes numerical terms; tiny nonzero values remain.
 
-Evaluation uses iterative tasks, a per-call source-node memo, and internal
-normalized-result wrappers. Equality-only interning assigns scratch primitive,
-coefficient, and structural IDs for a query-local index, with output order stored
-separately. These IDs are not basis coordinates and add no user `Ord`/`Hash`
-requirement. Pointer memoization reuses normalization work, but never certifies
-term equality: nonreflexive primitives or retained coefficients cannot be merged
-merely because a source handle or ID is shared. No persistent collected marker
-is stored; action-presence flags do not certify normalization. Re-evaluation is
-structurally stable, with no O(1) guarantee for action-free inputs.
+Evaluation uses iterative tasks and a per-call source-node memo. Query-local
+shape keys compare factor IDs through `I: Ord` and use equality-based IDs for
+primitives and coefficients. Collected terms keep their first-occurrence
+order. Nonreflexive primitives and retained coefficients stay distinct when
+the evaluator reuses normalization work. Once evaluation finishes, an
+iterative pass constructs the reachable expression nodes from the final
+shapes and coefficients. It reuses source nodes whose normalized children
+already match. Action-presence flags describe pending actions.
 
 The full state-evaluation bounds are listed with the
 [public evaluation contracts](#42-shared-apis-and-minimal-capabilities).

@@ -1,5 +1,6 @@
 //! Query-local natural-state shapes. IDs describe syntax, never physical bases.
 use alloc::{collections::BTreeMap, vec::Vec};
+use core::cmp::Ordering;
 use num_traits::{One, Zero};
 
 use super::local::{Ready as LocalReady, times};
@@ -23,23 +24,59 @@ impl<C: Clone> Clone for Ready<C> {
         }
     }
 }
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(super) enum Key {
+pub(super) struct Factor<I>(HilbertSpace<I>);
+
+impl<I: Eq> PartialEq for Factor<I> {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.0.factor_index() == rhs.0.factor_index()
+    }
+}
+impl<I: Eq> Eq for Factor<I> {}
+impl<I: Ord> PartialOrd for Factor<I> {
+    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
+        Some(self.cmp(rhs))
+    }
+}
+impl<I: Ord> Ord for Factor<I> {
+    fn cmp(&self, rhs: &Self) -> Ordering {
+        self.0.factor_index().cmp(&rhs.0.factor_index())
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub(super) enum Key<I: Ord> {
     Unit,
-    Local(usize, Vec<(Option<usize>, usize)>),
+    Local(Factor<I>, Vec<(Option<usize>, usize)>),
     Tensor(Vec<usize>),
     Sum(Vec<(Option<usize>, usize)>),
 }
-struct Entry<I, S, O, C> {
-    key: Key,
-    expression: StateExpr<I, S, O, C>,
-    local: Option<(HilbertSpace<I>, LocalReady<S, O, C>)>,
+impl<I: Ord> Clone for Key<I> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Unit => Self::Unit,
+            Self::Local(factor, terms) => Self::Local(Factor(factor.0.clone()), terms.clone()),
+            Self::Tensor(children) => Self::Tensor(children.clone()),
+            Self::Sum(children) => Self::Sum(children.clone()),
+        }
+    }
+}
+struct Entry<I: Ord, S, O, C> {
+    key: Key<I>,
+    expression: Option<StateExpr<I, S, O, C>>,
+    payload: Payload<S, O, C>,
     reflexive: bool,
 }
-pub(super) struct Terms<I, S, O, C> {
+enum Payload<S, O, C> {
+    // A tensor or unit needs only the shape key.
+    Structure,
+    Local(LocalReady<S, O, C>),
+    // The key canonicalizes coefficients for matching. Keep the values from
+    // the first interned sum for materializing its coefficients.
+    Sum(Vec<Ready<C>>),
+}
+pub(super) struct Terms<I: Ord, S, O, C> {
     entries: Vec<Entry<I, S, O, C>>,
-    index: BTreeMap<Key, usize>,
-    factors: Vec<HilbertSpace<I>>,
+    index: BTreeMap<Key<I>, usize>,
     primitives: Vec<LocalState<S, O, C>>,
     coefficients: Vec<C>,
 }
@@ -57,22 +94,16 @@ impl<C> Sum<C> {
         }
     }
 }
-impl<I: Eq, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, C> {
+impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, C> {
     pub fn new() -> Self {
         let mut result = Self {
             entries: Vec::new(),
             index: BTreeMap::new(),
-            factors: Vec::new(),
             primitives: Vec::new(),
             coefficients: Vec::new(),
         };
-        result.intern(
-            Key::Sum(Vec::new()),
-            StateExpr::sum(Default::default()),
-            None,
-            true,
-        );
-        result.intern(Key::Unit, StateExpr::new(StateNode::Unit), None, true);
+        result.intern(Key::Sum(Vec::new()), Payload::Sum(Vec::new()), true);
+        result.intern(Key::Unit, Payload::Structure, true);
         result
     }
     pub fn zero(&self) -> Ready<C> {
@@ -87,42 +118,119 @@ impl<I: Eq, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, C
             shape: 1,
         }
     }
-    pub fn key(&self, id: usize) -> &Key {
+    pub fn key(&self, id: usize) -> &Key<I> {
         &self.entries[id].key
     }
     pub fn local_parts(&self, id: usize) -> Option<(HilbertSpace<I>, LocalReady<S, O, C>)> {
-        self.entries[id]
-            .local
-            .as_ref()
-            .map(|(f, p)| (f.clone(), p.clone()))
+        let entry = &self.entries[id];
+        match (&entry.key, &entry.payload) {
+            (Key::Local(factor, _), Payload::Local(local)) => {
+                Some((factor.0.clone(), local.clone()))
+            }
+            _ => None,
+        }
     }
-    pub fn expression(&self, ready: &Ready<C>) -> StateExpr<I, S, O, C> {
-        let expression = self.entries[ready.shape].expression.clone();
-        match &ready.coefficient {
-            Some(c) => expression.scaled(c.clone()),
+    pub fn into_expression(mut self, ready: Ready<C>) -> StateExpr<I, S, O, C> {
+        let mut pending = Vec::new();
+        if self.entries[ready.shape].expression.is_none() {
+            pending.push((ready.shape, false));
+        }
+        while let Some((id, children_ready)) = pending.pop() {
+            let entry = &self.entries[id];
+            if entry.expression.is_some() {
+                continue;
+            }
+            if !children_ready {
+                match (&entry.key, &entry.payload) {
+                    (Key::Tensor(parts), _) => {
+                        pending.push((id, true));
+                        pending.extend(parts.iter().rev().map(|&shape| (shape, false)));
+                        continue;
+                    }
+                    (_, Payload::Sum(parts)) if !parts.is_empty() => {
+                        pending.push((id, true));
+                        pending.extend(parts.iter().rev().map(|part| (part.shape, false)));
+                        continue;
+                    }
+                    _ => {}
+                }
+            }
+            let expression = match (&entry.key, &entry.payload) {
+                (Key::Unit, _) => StateExpr::new(StateNode::Unit),
+                (Key::Local(factor, _), Payload::Local(local)) => {
+                    StateExpr::new(StateNode::Local(factor.0.clone(), local.expression()))
+                }
+                (Key::Tensor(parts), _) => StateExpr::tensor(
+                    parts
+                        .iter()
+                        .map(|&part| self.materialized(part).clone())
+                        .collect(),
+                ),
+                (_, Payload::Sum(parts)) => StateExpr::sum(
+                    parts
+                        .iter()
+                        .map(|part| {
+                            let expression = self.materialized(part.shape).clone();
+                            match &part.coefficient {
+                                Some(c) => expression.scaled(c.clone()),
+                                None => expression,
+                            }
+                        })
+                        .collect(),
+                ),
+                _ => unreachable!("state shape and payload match"),
+            };
+            self.entries[id].expression = Some(expression);
+        }
+        let expression = self.entries[ready.shape]
+            .expression
+            .take()
+            .expect("materialized root");
+        match ready.coefficient {
+            Some(c) => expression.scaled(c),
             None => expression,
         }
     }
-    // Reuse an original node only when its children already are the normalized
-    // handles. This is sharing, not a shortcut for user-value equality.
+
+    fn materialized(&self, shape: usize) -> &StateExpr<I, S, O, C> {
+        self.entries[shape]
+            .expression
+            .as_ref()
+            .expect("materialized child")
+    }
+
+    // Save an original node if it represents the normalized shape. Compare
+    // shape data and child handles without creating new expression nodes.
     pub fn reuse(&mut self, ready: &Ready<C>, source: &StateExpr<I, S, O, C>) {
         if ready.coefficient.is_some() {
             return;
         }
-        let entry = &mut self.entries[ready.shape];
-        let unchanged = match (source.node(), entry.expression.node()) {
-            (StateNode::Unit, StateNode::Unit) => true,
-            (StateNode::Local(a, x), StateNode::Local(b, y)) => {
-                a.factor_index() == b.factor_index() && core::ptr::eq(x.node(), y.node())
+        let entry = &self.entries[ready.shape];
+        let shares = |node: &StateExpr<I, S, O, C>, shape: usize| {
+            self.entries[shape]
+                .expression
+                .as_ref()
+                .is_some_and(|expression| node.shares_node_with(expression))
+        };
+        let unchanged = match (source.node(), &entry.key, &entry.payload) {
+            (StateNode::Unit, Key::Unit, _) => true,
+            (StateNode::Local(a, x), Key::Local(b, _), Payload::Local(local)) => {
+                a.factor_index() == b.0.factor_index()
+                    && matches!(local.0.as_slice(), [(None, y)] if core::ptr::eq(x.node(), y.node()))
             }
-            (StateNode::Tensor(a), StateNode::Tensor(b))
-            | (StateNode::Sum(a), StateNode::Sum(b)) => {
-                a.len() == b.len() && a.iter().zip(b.iter()).all(|(a, b)| a.shares_node_with(b))
+            (StateNode::Tensor(a), Key::Tensor(b), _) => {
+                a.len() == b.len() && a.iter().zip(b).all(|(node, &shape)| shares(node, shape))
+            }
+            (StateNode::Sum(a), Key::Sum(_), Payload::Sum(b)) => {
+                a.len() == b.len()
+                    && a.iter()
+                        .zip(b)
+                        .all(|(node, part)| part.coefficient.is_none() && shares(node, part.shape))
             }
             _ => false,
         };
         if unchanged {
-            entry.expression = source.clone();
+            self.entries[ready.shape].expression = Some(source.clone());
         }
     }
     pub fn scaled(&mut self, ready: Ready<C>, c: C) -> Ready<C> {
@@ -158,13 +266,7 @@ impl<I: Eq, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, C
             i
         }
     }
-    fn intern(
-        &mut self,
-        key: Key,
-        expression: StateExpr<I, S, O, C>,
-        local: Option<(HilbertSpace<I>, LocalReady<S, O, C>)>,
-        reflexive: bool,
-    ) -> usize {
+    fn intern(&mut self, key: Key<I>, payload: Payload<S, O, C>, reflexive: bool) -> usize {
         if reflexive {
             if let Some(id) = self.index.get(&key) {
                 return *id;
@@ -176,8 +278,8 @@ impl<I: Eq, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, C
         }
         self.entries.push(Entry {
             key,
-            expression,
-            local,
+            expression: None,
+            payload,
             reflexive,
         });
         id
@@ -191,17 +293,6 @@ impl<I: Eq, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, C
             (c.clone(), LocalReady::collect([(None, p.clone())]))
         } else {
             (None, poly)
-        };
-        let factor_id = match self
-            .factors
-            .iter()
-            .position(|f| f.factor_index() == factor.factor_index())
-        {
-            Some(id) => id,
-            None => {
-                self.factors.push(factor.clone());
-                self.factors.len() - 1
-            }
         };
         let mut reflexive = true;
         let mut terms = Vec::new();
@@ -228,11 +319,9 @@ impl<I: Eq, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, C
             }
             terms.push((c.map(|c| self.coefficient_id(c)), primitive));
         }
-        let expression = StateExpr::new(StateNode::Local(factor.clone(), poly.expression()));
         let id = self.intern(
-            Key::Local(factor_id, terms),
-            expression,
-            Some((factor, poly)),
+            Key::Local(Factor(factor), terms),
+            Payload::Local(poly),
             reflexive,
         );
         self.with_coefficient(id, outer)
@@ -278,14 +367,8 @@ impl<I: Eq, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, C
             [] => 1,
             [id] => *id,
             _ => {
-                let expression = StateExpr::new(StateNode::Tensor(
-                    parts
-                        .iter()
-                        .map(|id| self.entries[*id].expression.clone())
-                        .collect(),
-                ));
                 let reflexive = parts.iter().all(|id| self.entries[*id].reflexive);
-                self.intern(Key::Tensor(parts), expression, None, reflexive)
+                self.intern(Key::Tensor(parts), Payload::Structure, reflexive)
             }
         };
         self.normalize_coefficient(id, coefficient)
@@ -336,10 +419,9 @@ impl<I: Eq, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, C
         // A placed local sum and a sum of placed locals share one polynomial.
         if let Some(first) = parts.first() {
             if let Key::Local(factor, _) = self.key(first.shape) {
-                let factor = *factor;
                 if parts
                     .iter()
-                    .all(|p| matches!(self.key(p.shape),Key::Local(f,_) if *f==factor))
+                    .all(|p| matches!(self.key(p.shape), Key::Local(f, _) if f == factor))
                 {
                     let mut terms = Vec::new();
                     for part in parts {
@@ -350,23 +432,21 @@ impl<I: Eq, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, C
                             }),
                         );
                     }
-                    return self.local(self.factors[factor].clone(), LocalReady::collect(terms));
+                    return self.local(factor.0.clone(), LocalReady::collect(terms));
                 }
             }
         }
-        let collected = parts;
-        let expression = StateExpr::sum(collected.iter().map(|p| self.expression(p)).collect());
         let mut reflexive = true;
-        let mut key = Vec::new();
-        for p in collected {
+        let mut key = Vec::with_capacity(parts.len());
+        for p in &parts {
             reflexive &= self.entries[p.shape].reflexive;
-            let c = p.coefficient.filter(|c| *c != C::one());
-            if let Some(c) = &c {
+            let c = p.coefficient.as_ref().filter(|c| **c != C::one());
+            if let Some(c) = c {
                 reflexive &= PartialEq::eq(c, c);
             }
-            key.push((c.as_ref().map(|c| self.coefficient_id(c)), p.shape));
+            key.push((c.map(|c| self.coefficient_id(c)), p.shape));
         }
-        let shape = self.intern(Key::Sum(key), expression, None, reflexive);
+        let shape = self.intern(Key::Sum(key), Payload::Sum(parts), reflexive);
         Ready {
             shape,
             coefficient: None,

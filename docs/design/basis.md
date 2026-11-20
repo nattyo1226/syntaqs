@@ -175,7 +175,12 @@ All return `Result<_,BasisError>`, applying the same local basis to all factors 
 
 State evaluation collects natural-state terms using PartialEq before basis
 expansion, without primitive Product. Local state queries require coefficient
-One; composite state queries additionally require coefficient PartialEq. Operator expansion requires Identity/Product/Adjoint. Coefficients need operation-specific Clone/Zero/multiplication/conjugation, and composite unit coefficients use One. Shared processing needs neither Float nor division, though concrete rules/bases may. Ordinary action/inner-product/trace paths gain no basis dependency.
+One. Composite state queries additionally require `I: Ord` and coefficient
+`PartialEq`. Operator expansion requires Identity/Product/Adjoint. Coefficients
+need operation-specific Clone/Zero/multiplication/conjugation, and composite unit
+coefficients use One. Shared processing needs neither Float nor division, though
+concrete rules and bases may. Ordinary action, inner product, and trace operate
+independently of a basis.
 
 Composite operator queries first validate the original expression, then apply
 [structural local grouping](composite-expression.md#113-structural-local-operator-grouping)

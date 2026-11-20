@@ -351,11 +351,12 @@ controls for first-use binding, explicit rebinding, and product construction.
 Stage 1 is complete with factor positions scoped to one query. Sharing the
 index across separate calls is deferred. Stage 2 is complete with ordered
 `Operands` storage and shared construction paths for sums and products.
-Stages 3–8 are pending.
+Stage 3 is complete with ordered factor keys, state-order graded traversal,
+and deferred state syntax construction. Stages 4–8 are pending.
 Completion requires the agreed changes, passing applicable correctness and
 workspace checks, and a full comparison with explanations for material
 regressions or missing measurements.
-[Stage 0 measurements](measurements/stage-0/README.md) · [Stage 1 measurements](measurements/stage-1/README.md) · [Stage 2 measurements](measurements/stage-2/README.md)
+[Stage 0 measurements](measurements/stage-0/README.md) · [Stage 1 measurements](measurements/stage-1/README.md) · [Stage 2 measurements](measurements/stage-2/README.md) · [Stage 3 measurements](measurements/stage-3/README.md)
 
 After the refactoring comparison, benchmark `Ord` and `PartialOrd` for state
 and operator primitives using the agreed workloads with few and many
