@@ -7,6 +7,9 @@ remaining closure cost is concentrated in repeated expression evaluation
 for the Gram solve. Dense adjoint constraint SVDs still dominate runtime
 and memory at larger Lie dimension.
 
+The [implementation plan](implementation.md) defines the refactoring stages
+and their verification criteria.
+
 ## Public API measurements
 
 The comparison uses the merge's first parent `3cadca3` and the merge
