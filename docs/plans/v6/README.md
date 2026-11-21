@@ -13,3 +13,15 @@ Tensor construction and composite evaluation require ordered factor IDs
 of grouping. Custom bases implement `Basis::expand_indices()` and
 `Basis::element()`. The convenience method `Basis::expand()` returns a
 `Result`.
+
+## Lie analysis performance
+
+Closure reuses evaluated Hilbert–Schmidt operands and skips disjoint commuting
+term pairs in eligible brackets. Center extraction reuses the Gram matrix.
+Exact-zero constraints skip residual matrix multiplication, and decomposition
+builds symmetric adjoint constraints directly to reduce peak memory.
+[Reference measurements](../../decisions/lie-analysis.md#evaluation-performance).
+
+Scale the input basis coefficients before checking closure or decomposing a
+family to limit roundoff from large intermediate products.
+[Basis scaling guidance](../../design/lie.md#3-projection-and-numerical-scales).

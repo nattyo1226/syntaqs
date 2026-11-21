@@ -51,6 +51,22 @@ unification. The separation follows the dependency-layout pattern reviewed in
 [tensory at revision abac6a1b491738e509139a21a74a8833134c4a4f](https://github.com/todo-group/tensory/tree/abac6a1b491738e509139a21a74a8833134c4a4f),
 without adopting its repository-specific dependency patches.
 
+## Evaluation performance
+
+Reuse prepared HS operands within closure and index term support for eligible
+placed commutators. The index reduced pair visits on long Heisenberg chains,
+and the measurements included an eager collection control to isolate that gain.
+Construct symmetric adjoint constraints directly to avoid the full-commutant
+matrix as an intermediate while preserving the SVD problem. Dense SVD remains
+the main cost for the larger commutant and decomposition cases.
+
+On 2026-11-21, the `f64` comparison against the v6 merge `c26ea49` used
+an Apple M4 and single-threaded OpenBLAS 0.3.33. The median closure speedup
+across 15 primary workloads was 4.42×. The 16-site Heisenberg closure fell
+from 64.00 ms to 2.94 ms, and `fermion-4` decomposition peak RSS fell from
+279.77 MiB to 147.89 MiB. The benchmark sources, reproduction instructions,
+and raw samples are retained in Git revision `76e6224c599bafc186fc5d51035b5882f629e993`.
+
 ## Consequences and references
 
 The [Lie design](../design/lie.md) owns current APIs, numerical defaults, and

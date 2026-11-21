@@ -76,6 +76,13 @@ Self-contractions also use their scalar magnitude as a minimum squared scale.
 Invalid or overflowing bounds error. Small positive values and reconstruction
 coefficients are not pruned.
 
+Before checking closure or decomposing a family, scale the input basis
+coefficients to keep intermediate bracket products at a moderate magnitude.
+Aim for HS norms near one. Multiplying each basis operator by a nonzero real
+scalar preserves the exact real span. When large product contributions cancel,
+roundoff can exceed the absolute tolerance for a near-zero bracket and cause
+its Hermiticity or span check to fail.
+
 Lie collects matching natural terms before local HS contraction. Composite
 HS contraction receives the expression and its context directly. The core
 evaluator collects matching terms within blocks and keeps independent blocks
