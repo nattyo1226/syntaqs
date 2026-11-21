@@ -47,10 +47,14 @@ State::try_sum/try_tensor_in and Operator::try_sum/try_product are the underlyin
 These entry points do not evaluate primitive rules, perform coefficient
 arithmetic, expand bases, normalize states, or reorder factors. They preserve
 duplicates and zero coefficients. After binding checks, operator sums whose
-immediate children are all local to the same factor become one local sum;
-products of two such operands become a local product. Named product constructors
-apply that rule while folding in input order. Factor matching uses index
-equality, not handle identity. This structural grouping adds no coefficient
+immediate children are all local to the same factor become one local sum.
+An operator product groups leading same-factor local operands into one local
+product. Each remaining composite product stores its operands in one ordered
+sequence. Both operations use `Operands` for storage and a common path for
+operand collection and binding checks, including `+`, `*`, and the named
+constructors. Existing product operands keep their shared subtrees. Factor
+matching uses index equality.
+This structural grouping adds no coefficient
 Clone/arithmetic or primitive Identity/evaluation bounds and does not inspect
 through composite scales, adjoints, or other previously built subtrees.
 See [local grouping](composite-expression.md#113-structural-local-operator-grouping)

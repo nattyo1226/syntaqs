@@ -80,7 +80,7 @@ enum View<'a, I, S, O, C> {
     Unit,
     Scale(&'a C, Expr<'a, I, S, O, C>),
     Sum(Children<'a, I, S, O, C>),
-    Product(Expr<'a, I, S, O, C>, Expr<'a, I, S, O, C>),
+    Product(Children<'a, I, S, O, C>),
     Action(Expr<'a, I, S, O, C>, Expr<'a, I, S, O, C>),
     Adjoint(Expr<'a, I, S, O, C>),
     PlacedOperator(&'a LocalOperator<O, C>, &'a I),
@@ -240,9 +240,7 @@ fn view<'a, I, S, O, C>(
                 }
                 OperatorNode::Sum(s) if s.is_empty() => View::Zero,
                 OperatorNode::Sum(s) => View::Sum(Children::LocalOperators(s.iter())),
-                OperatorNode::Product(p) => {
-                    View::Product(Expr::LocalOperator(&p.lhs), Expr::LocalOperator(&p.rhs))
-                }
+                OperatorNode::Product(p) => View::Product(Children::LocalOperators(p.iter())),
                 OperatorNode::Adjoint(a) => View::Adjoint(Expr::LocalOperator(&a.operand)),
             },
             Expr::PlacedOperator(op, index) => View::PlacedOperator(op, index),
@@ -269,7 +267,7 @@ fn view<'a, I, S, O, C>(
                 OpNode::Scale(s) => View::Scale(&s.coefficient, Expr::Operator(&s.operand)),
                 OpNode::Sum(s) if s.is_empty() => View::Zero,
                 OpNode::Sum(s) => View::Sum(Children::Operators(s.iter())),
-                OpNode::Product(p) => View::Product(Expr::Operator(&p.lhs), Expr::Operator(&p.rhs)),
+                OpNode::Product(p) => View::Product(Children::Operators(p.iter())),
                 OpNode::Adjoint(a) => View::Adjoint(Expr::Operator(&a.operand)),
             },
         };
@@ -326,6 +324,7 @@ enum Task<'a, I, S, O, C> {
     Index(&'a I),
     Line(usize),
     Sequence(Children<'a, I, S, O, C>, bool, bool, usize),
+    Product(Children<'a, I, S, O, C>, bool, usize),
     Ket(KetLeaves<'a, I, S, O, C>, bool, usize),
 }
 
@@ -398,6 +397,20 @@ fn display<I: fmt::Display, S: fmt::Display, O: fmt::Display, C: fmt::Display>(
                 "{index}"
             )?,
             Task::Line(indent) => line(f, indent)?,
+            Task::Product(mut children, first, indent) => {
+                if let Some(child) = children.next() {
+                    if !first {
+                        f.write_str(" * ")?;
+                    }
+                    pending.push(Task::Product(children, false, indent));
+                    let context = if first {
+                        Context::ProductLeft
+                    } else {
+                        Context::ProductRight
+                    };
+                    pending.push(Task::Expr(child, context, indent));
+                }
+            }
             Task::Sequence(mut children, first, tensor, indent) => {
                 if let Some(child) = children.next() {
                     pending.push(Task::Sequence(children, false, tensor, indent));
@@ -475,10 +488,8 @@ fn display<I: fmt::Display, S: fmt::Display, O: fmt::Display, C: fmt::Display>(
                     View::Sum(children) => {
                         pending.push(Task::Sequence(children, true, false, indent));
                     }
-                    View::Product(lhs, rhs) => {
-                        pending.push(Task::Expr(rhs, Context::ProductRight, indent));
-                        pending.push(Task::Text(" * "));
-                        pending.push(Task::Expr(lhs, Context::ProductLeft, indent));
+                    View::Product(children) => {
+                        pending.push(Task::Product(children, true, indent));
                     }
                     View::Action(operator, state) => {
                         pending.push(Task::Expr(state, Context::ActionState, indent));
@@ -543,7 +554,7 @@ impl<W: fmt::Write + ?Sized> fmt::Write for IndexPrefix<'_, W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{HilbertSpace, expression::parts::SumExpr};
+    use crate::{HilbertSpace, expression::parts::Operands};
     use alloc::string::String;
 
     #[test]
@@ -560,7 +571,7 @@ mod tests {
                 for _ in 0..20_000 {
                     // Public constructors elide unary tensors. Exercise the
                     // formatter on retained grouping without building 20k spaces.
-                    grouped = E::new(CompositeState::Tensor(SumExpr::One(grouped)));
+                    grouped = E::new(CompositeState::Tensor(Operands::One(grouped)));
                     // Classification must visit shared nodes once even when
                     // displaying every occurrence would have exponential size.
                     shared = E::new(CompositeState::Tensor(

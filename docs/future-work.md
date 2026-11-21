@@ -1,6 +1,6 @@
 # Future work
 
-Updated: 2026-11-17
+Updated: 2026-11-20
 
 The topics below are deferred investigations and unadopted proposals, not a
 release commitment. Use [architecture](architecture.md) and the
@@ -64,15 +64,17 @@ Do not create crates solely for prospective features before their independent re
 
 ## 3. Outstanding verification and performance
 
-Dedicated no_std target builds and performance across workloads and targets
-remain unverified. Targeted host measurements cover local grouping, repeated
-state actions, exact-zero contractions, and sparse operator coordinates; they
-do not establish general speed or memory guarantees. See
+Dedicated `no_std` target builds and performance across platforms remain
+unverified. Host measurements cover space construction, state action,
+contractions, and basis queries on spin and fermion chains. See
 [verification](design/verification.md) for current checks and limits.
 
 Deferred investigations are described in [evaluation improvements](future-work/evaluation-improvements.md):
 
 - [Lie residual accuracy](future-work/evaluation-improvements.md#1-lie-residual-accuracy): reduce cancellation while preserving small residuals and exact-zero rules.
-- [Inner-product acceleration](future-work/evaluation-improvements.md#2-inner-product-acceleration): investigate basis-aware contraction, lazy group preparation, and partial reuse.
+- [Inner-product acceleration](future-work/evaluation-improvements.md#2-inner-product-acceleration) covers basis-aware contraction, orthogonality-based filtering, and reuse of partial contractions.
 - [Natural-state collection overhead](future-work/evaluation-improvements.md#3-natural-state-collection-overhead): reduce query preparation and allocation without persistent collection assumptions.
 - [Expression management and reuse](future-work/evaluation-improvements.md#4-expression-management-and-reuse): assess caches, retained parity structure, sharing, and parallelism.
+- [Small operator basis queries](future-work/evaluation-improvements.md#6-setup-cost-in-small-operator-basis-queries) incur term preparation and support tracking overhead.
+- [Coordinates with dense support](future-work/evaluation-improvements.md#7-storage-for-coordinates-with-dense-support) can spend substantial time and storage on full-length keys.
+- [Extreme Hilbert–Schmidt coefficients](future-work/evaluation-improvements.md#8-extreme-coefficients-in-composite-hilbertschmidt-products) can overflow during term collection before contraction.

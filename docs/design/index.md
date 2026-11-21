@@ -13,7 +13,12 @@ Core accepts a generic index type I and validates identity, placement, and space
 consistency. Basic supplies UUID `Id128` and string `Tag` types. Geometry borrows
 caller-owned spaces; Chain has neither an index type nor issuance helpers.
 
-The core's semantic contract is stable identity comparison as an equivalence relation, requiring standard Eq where comparison occurs. UUID representation/generation, randomness, seeds, and ordering are outside core's contract. Hash, Ord, and issuance capabilities are not universal requirements. Space/expression handles share indices without requiring Clone on I itself.
+Core uses stable index equality for factor identity. Tensor-space constructors,
+binding, composite state evaluation, and operator queries that resolve factor
+positions require `I: Ord`.
+ID order serves lookup and duplicate detection. Tensor order follows the
+space's children. Space and expression handles share indices without requiring
+`Clone` on `I`.
 
 ## 2. Indices, local algebras, factors, and spaces
 
@@ -57,7 +62,9 @@ Placement is distinct from binding to an ambient Hilbert space including spectat
 
 Callers issue indices; Chain neither issues nor stores them. Id128::default() issues a fresh index, whereas Clone/Copy duplicates the same identity.
 
-Callers pass site-ordered spaces by borrow to geometry and model construction. Space sharing and leaf enumeration need no index Clone. Model/space construction checks all leaf duplicates with Eq; see [geometry](geometry.md).
+Callers pass site-ordered spaces by borrow to geometry and model construction.
+Space sharing and leaf enumeration need no index `Clone`. Model and tensor
+constructors check all leaf duplicates using `Ord`. [Geometry](geometry.md)
 
 ## 4. Uniqueness assumptions
 

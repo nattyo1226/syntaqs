@@ -360,7 +360,7 @@ fn every_model_validates_even_with_no_edges_and_zero_couplings() {
 
 #[test]
 fn construction_needs_rational_arithmetic_but_no_float_or_evaluation() {
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, PartialOrd, Ord)]
     struct Index(u8);
     struct Input(i32);
     #[derive(Clone)]

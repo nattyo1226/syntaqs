@@ -106,7 +106,7 @@ arbitrary-length placements/products. Relations need no per-arity constructor
 or geometry-specific evaluator, and enumeration/mapping require no evaluation
 capabilities.
 
-[pauli_strings.rs](../../examples/src/bin/pauli_strings.rs) demonstrates all supports up to K sites with one spin per site: ordinary iterators select each size-r support for `r=0..=min(K,N)` and assign `3^r` X/Y/Z combinations. The total is `Σ(r=0..min(K,N)) binomial(N,r) × 3^r`, giving 37 terms including identity on three sites up to two-site support. Empty support is one ambient identity, unlike Consecutive<0>. Sx/Sy/Sz are directly Pauli matrices, requiring no extra scale before binding. Construction needs only `I: Eq`, `Group: AsRef<[usize]>`, and iteration over the group collection.
+[pauli_strings.rs](../../examples/src/bin/pauli_strings.rs) demonstrates all supports up to K sites with one spin per site: ordinary iterators select each size-r support for `r=0..=min(K,N)` and assign `3^r` X/Y/Z combinations. The total is `Σ(r=0..min(K,N)) binomial(N,r) × 3^r`, giving 37 terms including identity on three sites up to two-site support. Empty support is one ambient identity, unlike Consecutive<0>. Sx/Sy/Sz are directly Pauli matrices, requiring no extra scale before binding. Construction needs only `I: Ord`, `Group: AsRef<[usize]>`, and iteration over the group collection.
 
 K counts sites, not acting leaves. A site containing m spins has `4^m−1` nonidentity Pauli strings. Exhaustive multi-leaf assignments use caller iterators/custom combiners rather than additional standard geometry APIs; this is not included in the current example.
 

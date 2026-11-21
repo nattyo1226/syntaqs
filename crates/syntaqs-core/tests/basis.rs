@@ -11,12 +11,12 @@ struct Scalar(u8);
 struct CustomBasis;
 
 impl Basis<Primitive, Scalar> for CustomBasis {
-    fn expand(&self, primitive: &Primitive) -> LinearCombination<Primitive, Scalar> {
+    fn expand_indices(&self, primitive: &Primitive) -> LinearCombination<usize, Scalar> {
         let term = |operand| LinearCombination::term(Scalar(1), operand);
         match primitive {
-            Primitive::First => term(Primitive::First),
-            Primitive::Second => term(Primitive::Second),
-            Primitive::Sum => term(Primitive::First) + term(Primitive::Second),
+            Primitive::First => term(0),
+            Primitive::Second => term(1),
+            Primitive::Sum => term(0) + term(1),
         }
     }
 
@@ -28,8 +28,12 @@ impl Basis<Primitive, Scalar> for CustomBasis {
         }
     }
 
-    fn elements(&self) -> impl Iterator<Item = Primitive> + '_ {
-        [Primitive::First, Primitive::Second].into_iter()
+    fn element(&self, index: usize) -> Option<Primitive> {
+        match index {
+            0 => Some(Primitive::First),
+            1 => Some(Primitive::Second),
+            _ => None,
+        }
     }
 }
 
@@ -41,7 +45,7 @@ fn one_basis_implementation_supports_all_methods_without_scalar_traits() {
     assert_eq!(basis.index(&elements[0]), Some(0));
     assert_eq!(basis.index(&elements[1]), Some(1));
     assert_eq!(basis.index(&Primitive::Sum), None);
-    let expansion = basis.expand(&Primitive::Sum);
+    let expansion = basis.expand(&Primitive::Sum).unwrap();
     assert_eq!(expansion.len(), 2);
     for (i, term) in expansion.into_iter().enumerate() {
         assert_eq!(basis.index(&term.operand), Some(i));

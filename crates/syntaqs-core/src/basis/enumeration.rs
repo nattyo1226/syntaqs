@@ -4,7 +4,7 @@ use crate::{
     Basis, BasisError, Dimension, HilbertSpace, LocalOperator, LocalState, Operator, State,
     expression::{
         composite::{OpExpr, OpNode, StateExpr, StateNode},
-        parts::{ProductExpr, SumExpr},
+        parts::Operands,
     },
 };
 use alloc::{vec, vec::Vec};
@@ -54,15 +54,12 @@ fn basis_indices(count: usize, dimension: Option<usize>) -> impl Iterator<Item =
     })
 }
 
-fn basis_element<P, C, B: Basis<P, C>>(
+pub(super) fn basis_element<P, C, B: Basis<P, C>>(
     basis: &B,
     index: usize,
     dimension: usize,
 ) -> Result<P, BasisError> {
-    let primitive = basis
-        .elements()
-        .nth(index)
-        .ok_or(BasisError::InvalidEnumeration)?;
+    let primitive = basis.element(index).ok_or(BasisError::InvalidEnumeration)?;
     let actual = basis.index(&primitive).ok_or(BasisError::NonBasisElement)?;
     if actual >= dimension {
         return Err(BasisError::IndexOutOfBounds {
@@ -70,7 +67,19 @@ fn basis_element<P, C, B: Basis<P, C>>(
             dimension,
         });
     }
-    if actual != index || (index == dimension - 1 && basis.elements().nth(dimension).is_some()) {
+    if actual != index {
+        return Err(BasisError::InvalidEnumeration);
+    }
+    Ok(primitive)
+}
+
+fn enumerated_element<P, C, B: Basis<P, C>>(
+    basis: &B,
+    index: usize,
+    dimension: usize,
+) -> Result<P, BasisError> {
+    let primitive = basis_element(basis, index, dimension)?;
+    if index == dimension - 1 && basis.element(dimension).is_some() {
         return Err(BasisError::InvalidEnumeration);
     }
     Ok(primitive)
@@ -99,21 +108,17 @@ impl<I> HilbertSpace<I> {
                 .into_iter()
                 .zip(&factors)
                 .map(|(index, factor)| {
-                    let primitive = basis_element(basis, index, dimension.expect("basis factor"))?;
+                    let primitive =
+                        enumerated_element(basis, index, dimension.expect("basis factor"))?;
                     Ok(StateExpr::new(StateNode::Local(
                         (*factor).clone(),
                         LocalState::primitive(primitive),
                     )))
                 })
-                .collect::<Result<SumExpr<_>, BasisError>>()?;
-            let expression = match nodes {
-                SumExpr::Empty => StateExpr::new(StateNode::Unit),
-                SumExpr::One(node) => node,
-                nodes => StateExpr::new(StateNode::Tensor(nodes)),
-            };
+                .collect::<Result<Operands<_>, BasisError>>()?;
             Ok(State {
                 space: self.clone(),
-                expression,
+                expression: StateExpr::tensor(nodes),
             })
         }))
     }
@@ -134,24 +139,17 @@ impl<I> HilbertSpace<I> {
         let factors = collect_leaves(self);
         let dimension = local_size::<O>(factors.len())?;
         Ok(basis_indices(factors.len(), dimension).map(move |digits| {
-            let mut nodes = Vec::new();
+            let mut nodes = Vec::with_capacity(factors.len());
             for (index, factor) in digits.into_iter().zip(&factors) {
-                let primitive = basis_element(basis, index, dimension.expect("basis factor"))?;
+                let primitive = enumerated_element(basis, index, dimension.expect("basis factor"))?;
                 nodes.push(OpExpr::new(OpNode::Local(
                     (*factor).clone(),
                     LocalOperator::primitive(primitive),
                 )));
             }
-            let mut nodes = nodes.into_iter();
-            let expression = match nodes.next() {
-                None => OpExpr::new(OpNode::Identity),
-                Some(first) => nodes.fold(first, |lhs, rhs| {
-                    OpExpr::new(OpNode::Product(ProductExpr { lhs, rhs }))
-                }),
-            };
             Ok(Operator {
                 ambient: Some(self.clone()),
-                expression,
+                expression: OpExpr::product(nodes.into()),
             })
         }))
     }

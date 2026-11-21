@@ -1,15 +1,12 @@
 //! Reusable syntax containers, independent of local structures and evaluation.
 //!
-//! Expression nodes are internal implementation details:
+//! Expression nodes and their operand sequences are internal implementation details:
 //!
 //! ```compile_fail
-//! use syntaqs_core::expression::parts::SumExpr;
+//! use syntaqs_core::expression::parts::Operands;
 //! ```
 //! ```compile_fail
 //! use syntaqs_core::expression::parts::ScaleExpr;
-//! ```
-//! ```compile_fail
-//! use syntaqs_core::expression::parts::ProductExpr;
 //! ```
 //! ```compile_fail
 //! use syntaqs_core::expression::parts::ActExpr;
@@ -22,10 +19,10 @@
 //! ```
 
 pub mod linear_combination;
+mod operands;
 mod operation;
 mod scale;
-mod sum;
 
-pub(crate) use operation::{ActExpr, AdjointExpr, ProductExpr};
+pub(crate) use operands::{IntoOperands, Operands};
+pub(crate) use operation::{ActExpr, AdjointExpr};
 pub(crate) use scale::ScaleExpr;
-pub(crate) use sum::{IntoOperands, SumExpr};

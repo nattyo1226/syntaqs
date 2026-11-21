@@ -1,6 +1,6 @@
 # Numerical accuracy and expression evaluation improvements
 
-Updated: 2026-11-17
+Updated: 2026-11-20
 
 The aim is to reduce expression-contraction cancellation and query overhead
 while preserving exact-zero rules, small nonzero values, and factored structure.
@@ -30,11 +30,11 @@ approaches include sparse-coordinate contraction with suitable basis information
 prefiltering term pairs using guaranteed orthogonality or conserved sectors, and
 reuse of partial contractions. Public APIs and algorithms are undecided.
 
-Incremental contraction still prepares structural group metadata eagerly and
-considers every pair of summands. Investigate generating later tensor groups
-only when a nonzero prefix needs them. Separate this preparation cost from
-operand collection and primitive contraction counts; preserve independent tensor
-boundaries, original validation, and continuation of other sum branches.
+State contraction prepares factor counts, aligns tensor blocks on demand, and
+uses conjugate symmetry for matching sums. Many of the remaining pairs in a
+W-state norm vanish at a local overlap. Measure pair rejection separately from
+factor coverage preparation and primitive contraction. Any additional pruning
+must preserve independent tensor boundaries and original validation.
 
 Distinct primitives are not necessarily orthogonal, and an arbitrary basis need
 not be orthonormal. Any coordinate-based method must account for the relevant
@@ -55,6 +55,14 @@ cross-query cache is not adopted; either would require an explicit validity and
 ownership design. Distinct terms and intrinsically large coordinate output remain
 separate costs.
 
+Product actions stop on exact zero, and local actions visit only affected tensor
+children. For graded Hubbard action on the vacuum, measure the work in each
+branch up to the point where it vanishes. For repeated Hamiltonian action on
+nonzero states, measure intermediate allocations and test whether adjacent
+applications can reuse state shapes. Preserve exact-zero semantics and the order
+of graded actions.
+[State evaluation](../../crates/syntaqs-core/src/evaluate/composite.rs)
+
 ## 4. Expression management and reuse
 
 Automatic sharing of independently constructed equal-shaped expressions, result
@@ -63,11 +71,14 @@ whether to add them. Caches need scope, reuse criteria, ownership, invalidation,
 and resource management; parallelism needs stored-type requirements and an
 execution model.
 
-Distributing sums inside operator products can increase term counts even when
-the result is sparse. Further investigations beyond same-factor local grouping
-include comparing general result caching with recomputation and retaining
-interval parity as unevaluated structure. Query-local reuse of an identity's
-basis expansion is separate from general result caching.
+Overlapping operator blocks can generate many intermediate terms even when
+the result is sparse. Compare caching evaluated blocks with recomputation
+and investigate retaining interval parity as unevaluated structure.
+
+Benchmark primitive interning with `PartialEq` scans, `Ord`, and `PartialOrd`.
+Include spin and fermion workloads and cases with many distinct primitives.
+Measure comparison counts and query time, and account for incomparable values
+before considering changes to primitive bounds.
 
 ## 5. Explicit component pruning
 
@@ -77,3 +88,45 @@ dimension-normalized HS orthonormal basis, discarded `δA=Σμ δaμ Bμ` has sq
 error `||δA||²=Σμ |δaμ|²`. This formula does not apply unchanged to
 non-orthonormal bases. Current evaluation, coordinates, and export must not
 silently prune components.
+
+## 6. Setup cost in small operator basis queries
+
+The operator evaluator builds primitive tables, term maps, and support vectors
+before basis conversion. Coordinate queries for first-order Heisenberg sums
+at 4–16 sites became slower when block evaluation was introduced. Small
+Cartesian BLBQ queries now request more bytes, most of them during block
+evaluation. Investigate lighter storage and fewer temporary collections when
+blocks contain few terms. Use the small sums, a large lattice, and a factored
+gate followed by its inverse as complementary controls. Measure requested
+bytes as well as time. Preserve block-local cancellation and graded factor
+order.
+[Operator evaluator](../../crates/syntaqs-core/src/evaluate/operator.rs)
+
+## 7. Storage for coordinates with dense support
+
+Independent tensor choices can produce exponentially many nonzero coordinates.
+An 18-site product of `|+⟩` factors produces 262,144 entries with 18 digits
+per key. Compare compact key storage or streaming with the sparse map, using
+a sparse GHZ input as a control. Measure both per-entry storage and the cost
+of aggregating overlapping contributions. Preserve factor order, block
+correlations, and access to sparse coordinates when the full dimension
+exceeds `usize`.
+[Coordinate contract](../design/basis.md#72-coordinate-interpretation-and-indices)
+
+## 8. Extreme coefficients in composite Hilbert–Schmidt products
+
+Let `Sp` be the spin-1/2 raising operator. With `Complex<f64>`, place
+`1e308·Sp + 1e308·Sp − 1e308·Sp` and `Sp` on the same factor of a
+two-factor ordinary space.
+The normalized inner product is `5e307 + 0i`. In the performance review,
+Stage 0 (`49e9fc5`) and the local `hs_inner_product()` returned that value.
+The composite `hs_inner_product_in()` at `20ea94f` returned `NaN + NaN i`.
+The shared evaluator overflowed while adding the first two coefficients
+before contraction applied the normalized overlap of `0.5`.
+[Coefficient collection](../../crates/syntaqs-core/src/evaluate/operator.rs)
+
+This regression has low priority because the reproduced case combines
+coefficients near the `f64` limit with cancellation. Changing when the
+shared evaluator combines coefficients could affect the performance of typical
+Hilbert–Schmidt queries. Revisit the fix if the failure occurs in a real
+workload.

@@ -189,3 +189,50 @@ workload definitions and reproduction instructions are in `stage-0-baseline.md`.
 The final rerun uses the same production/probe sources as the coordinate result.
 The completed plan, raw working logs, and generated probe artifacts are removed
 from the current tree rather than maintained as duplicate specifications.
+
+## Follow-up performance baseline
+
+The follow-up keeps reusable factor positions on each immutable space and
+reduces intermediate work in state action, scalar contractions, and basis
+conversion. Operator evaluation uses factor overlap and graded exchange signs
+to decide which blocks to combine. The current behavior is described in the
+[Hilbert space](../design/hilbert-space.md), [composite expression](../design/composite-expression.md),
+and [basis](../design/basis.md) designs.
+
+The Stage 0 and final release sweeps on macOS with Rust 1.99.1 share 322 timing
+and allocation cases. Median thread CPU time per case decreased in 309 cases
+and increased in 13, with a median per-case speedup of 2.04×. The sweeps
+include result destruction and use `Complex<f64>`.
+
+| Workload | Stage 0 CPU time | Final CPU time |
+| --- | ---: | ---: |
+| `tensor_all()` on 1,024 factors | 163.42 µs | 8.49 µs |
+| Bind the 1,024-site Heisenberg operator | 2.372 ms | 73.15 µs |
+| Evaluate eight Heisenberg actions at ten sites | 42.832 ms | 18.528 ms |
+| Evaluate the 64-site Hubbard vacuum | 10.641 ms | 2.878 ms |
+| Squared norm of the 64-site W state | 34.587 ms | 3.570 ms |
+| Cartesian operator coordinates of a 16-site XX echo | 178.998 ms | 19.73 µs |
+
+Small Heisenberg queries still pay preparation costs. The saved sweep for
+four-site Cartesian coordinates increased from 6.23 to 7.31 µs. Retaining only
+the final root of successive `tensor()` construction on 1,024 factors held
+8.54 MB of additional heap data. Successive flattening paths held 32.9 KB
+when intermediate roots were released. Retaining earlier roots also retains
+their position tables.
+
+The full sweeps compare production revisions `49e9fc5` and `d1d33cc`.
+A separate review check compared `20ea94f` and the common-block extraction
+change in `d18d199`. For a sum with 17 shared two-term factors, the five-run
+release medians decreased from 242 ms to 42.7 µs for `collect_terms_in()`
+and from 190 ms to 19.2 µs for `trace_in()`. Extracting those factors avoids
+enumerating both addends' Cartesian products before collection or trace.
+
+The completed plan, probe, and recorded sweeps are preserved in Git revision
+`63330701b472e5aff54236c0ec323506fcea7418`. The initial-to-final comparison
+contains the matched cases and the final follow-up report covers retained
+memory, rechecks, and local verification.
+
+```sh
+git show 63330701b472e5aff54236c0ec323506fcea7418:docs/plans/core-performance-baseline/measurements/initial-to-final/README.md
+git show 63330701b472e5aff54236c0ec323506fcea7418:docs/plans/core-performance-baseline/measurements/follow-up/final/README.md
+```

@@ -23,7 +23,7 @@ Public analysis types are defined under `family`, `representation`, `invariant`,
 `OperatorFamily<E>` uses the sealed `FamilyExpression` adapter for core's
 `LocalOperator<O,Complex<R>>` and `Operator<I,O,Complex<R>>`, with R=f32/f64.
 Primitives supply Product, Adjoint, Trace, Identity, and PartialEq; placed inputs
-also use core's parity traits and I: Eq. No Clone on primitives or indices,
+also use core's parity traits and `I: Ord`. No Clone on primitives or indices,
 Dimension, state type, state basis, or physical matrix export is required.
 The metric is fixed normalized HS, `Tr(A†B)/D`.
 

@@ -61,6 +61,7 @@ fn check_derived_state_operations<T: Real>() {
     );
     let imported = S::<Ket, Operator, Complex<T>>::from_terms(
         <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &Ket::Unit(Axis::B))
+            .unwrap()
             .map(S::primitive),
     );
     assert_complex(

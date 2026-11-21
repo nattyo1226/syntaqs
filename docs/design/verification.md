@@ -86,37 +86,42 @@ rebinding, and automatic basis/trace/HS preparation against independent ordinary
 matrices in both precisions and tensor kinds. Formatting tests follow the
 retained local structure after same-factor construction grouping.
 
-Core `evaluate::state_tests` checks per-action collection and call counts,
+Core `evaluate::tests::state` checks per-action collection and call counts,
 shared-input memoization, coefficient/tensor normalization, exact cancellation,
 first-occurrence order, nonreflexive PartialEq, retained factored sums, and
 space preservation. [core_state_collection.rs](../../tests/tests/core_state_collection.rs)
 checks 128 repeated rotations and eight six-site Heisenberg actions against
 analytic/bit-state references at f32/f64. Capability fixtures distinguish local
-coefficient equality from composite equality. Basis tests distinguish errors in
-retained state primitives from state terms removed before expansion; operator
-expansion and original-reference validation retain their checks.
+coefficient equality from composite equality. Basis tests cover errors in
+surviving terms and validate original operator placements before removing zero
+terms.
 
-Core `evaluate::stopping_tests` checks exact-zero contraction stopping at the
-first/middle/last factor, nonzero controls, underflow and tiny/NaN values,
-independent and overlapping tensor groups, zero summands/partial sums, skipped
-coefficient multiplication/conjugation/HS division, ordinary/graded trace factors,
-and original space/reference checks. An equality-free coefficient fixture and
-operator primitives without Clone/PartialEq/Dimension check unchanged bounds.
-A 20,000-level action-free contraction/destruction case runs on a small stack.
-Existing matrix/Gram references continue to check mathematical values at both
-precisions. These call-count assertions do not establish general asymptotic
-improvements for W-state norms or other inner products.
+Core `evaluate::tests::stopping` checks exact-zero stopping in product actions
+and at the first, middle, and last factors of contractions. It covers nonzero
+controls, underflow, tiny and NaN values, independent and overlapping tensor
+groups, zero summands and partial sums, skipped coefficient operations,
+ordinary and graded trace factors, and original space and reference checks.
+The fixture exercises low-level contractions with equality-free coefficients
+and composite operator contractions with non-Clone primitives. Call counts
+also cover common interior blocks in operator sums. A 20,000-level action-free
+contraction/destruction case runs on a small stack.
+[core_collect_terms.rs](../../tests/tests/core_collect_terms.rs) checks
+graded exchange signs when extracting common blocks against independent matrices.
 
 Core `basis::expansion::operator::tests` checks once-per-query identity expansion,
-queries with no spectators or no factors, ordinary encounter-order placement,
+queries with no spectators or no factors, placement in ambient factor order,
 nonzero identity digits and non-unit coefficients, multi-component identity and
-specified choices, working-key restoration, exact cancellation, original-reference
-and basis-error visibility after zero/empty factors, and unchanged minimal bounds.
+specified choices, working-key restoration, exact cancellation, original placement
+validation, and basis errors in surviving terms.
 Payload counters and node-sharing checks cover expanded syntax without primitive
 cloning. Extreme spectator coefficients check ambient-order multiplication,
 and a 20,000-axis enumeration case checks iterative traversal on a small stack.
 Existing independent ordinary/graded matrix and nonorthogonal-basis tests verify
 both precisions and reconstructed expression semantics.
+
+Core `space::tests` covers index lookup with interleaved IDs, preservation of factor
+order and effective tensor kind through flattening, and the agreement of
+`tensor_flatten()` with `tensor().flatten()`, including error precedence.
 
 [core_evaluation_pipeline.rs](../../tests/tests/core_evaluation_pipeline.rs)
 combines local potential grouping, repeated hopping-model actions and collection,

@@ -141,11 +141,11 @@ impl Identity for Operator {
 
 pub struct Canonical;
 impl<T: Real> Basis<Ket, Complex<T>> for Canonical {
-    fn expand(&self, primitive: &Ket) -> LinearCombination<Ket, Complex<T>> {
-        LinearCombination::from_terms(primitive.coordinates::<T>().into_iter().zip(AXES).map(
-            |(coefficient, axis)| Term {
+    fn expand_indices(&self, primitive: &Ket) -> LinearCombination<usize, Complex<T>> {
+        LinearCombination::from_terms(primitive.coordinates::<T>().into_iter().enumerate().map(
+            |(operand, coefficient)| Term {
                 coefficient,
-                operand: Ket::Unit(axis),
+                operand,
             },
         ))
     }
@@ -155,27 +155,27 @@ impl<T: Real> Basis<Ket, Complex<T>> for Canonical {
             _ => None,
         }
     }
-    fn elements(&self) -> impl Iterator<Item = Ket> + '_ {
-        AXES.into_iter().map(Ket::Unit)
+    fn element(&self, index: usize) -> Option<Ket> {
+        AXES.get(index).copied().map(Ket::Unit)
     }
 }
 
 pub struct NonOrthogonal;
 impl<T: Real> Basis<Ket, Complex<T>> for NonOrthogonal {
-    fn expand(&self, primitive: &Ket) -> LinearCombination<Ket, Complex<T>> {
+    fn expand_indices(&self, primitive: &Ket) -> LinearCombination<usize, Complex<T>> {
         let [a, b, d] = primitive.coordinates::<T>();
         LinearCombination::from_terms([
             Term {
                 coefficient: a - b,
-                operand: Ket::Unit(Axis::A),
+                operand: 0,
             },
             Term {
                 coefficient: b,
-                operand: Ket::Sum,
+                operand: 1,
             },
             Term {
                 coefficient: d,
-                operand: Ket::Unit(Axis::C),
+                operand: 2,
             },
         ])
     }
@@ -187,20 +187,24 @@ impl<T: Real> Basis<Ket, Complex<T>> for NonOrthogonal {
             _ => None,
         }
     }
-    fn elements(&self) -> impl Iterator<Item = Ket> + '_ {
-        [Ket::Unit(Axis::A), Ket::Sum, Ket::Unit(Axis::C)].into_iter()
+    fn element(&self, index: usize) -> Option<Ket> {
+        [Ket::Unit(Axis::A), Ket::Sum, Ket::Unit(Axis::C)]
+            .get(index)
+            .copied()
     }
 }
 
 pub struct MatrixUnits;
 impl<T: Real> Basis<Operator, Complex<T>> for MatrixUnits {
-    fn expand(&self, primitive: &Operator) -> LinearCombination<Operator, Complex<T>> {
+    fn expand_indices(&self, primitive: &Operator) -> LinearCombination<usize, Complex<T>> {
         match primitive {
             Operator::Identity => LinearCombination::from_terms(AXES.map(|i| Term {
                 coefficient: c(1.0, 0.0),
-                operand: Operator::Unit(i, i),
+                operand: i.index() * 4,
             })),
-            _ => LinearCombination::primitive(*primitive),
+            _ => LinearCombination::primitive(
+                Basis::<_, Complex<T>>::index(self, primitive).unwrap(),
+            ),
         }
     }
     fn index(&self, primitive: &Operator) -> Option<usize> {
@@ -209,9 +213,8 @@ impl<T: Real> Basis<Operator, Complex<T>> for MatrixUnits {
             _ => None,
         }
     }
-    fn elements(&self) -> impl Iterator<Item = Operator> + '_ {
-        AXES.into_iter()
-            .flat_map(|i| AXES.into_iter().map(move |j| Operator::Unit(i, j)))
+    fn element(&self, index: usize) -> Option<Operator> {
+        Some(Operator::Unit(*AXES.get(index / 3)?, AXES[index % 3]))
     }
 }
 

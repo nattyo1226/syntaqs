@@ -515,7 +515,7 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
 
     #[derive(PartialEq)]
     struct Primitive(u8);
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, PartialOrd, Ord)]
     struct Index(u8);
     type C = Complex<f64>;
     type Local = LocalOperator<Primitive, C>;

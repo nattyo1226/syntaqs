@@ -49,7 +49,7 @@ where
     }
 }
 
-impl<I: Eq, S, O, C> NormalizedExpectation<Operator<I, O, C>> for State<I, S, O, C>
+impl<I: Ord, S, O, C> NormalizedExpectation<Operator<I, O, C>> for State<I, S, O, C>
 where
     C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
     S: PartialEq + Act<C, Operator = O, Term = S> + InnerProduct<C>,
@@ -69,7 +69,7 @@ where
     }
 }
 
-impl<I: Eq, S, O, C> NormalizedExpectationIn<Operator<I, O, C>, HilbertSpace<I>>
+impl<I: Ord, S, O, C> NormalizedExpectationIn<Operator<I, O, C>, HilbertSpace<I>>
     for State<I, S, O, C>
 where
     C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,

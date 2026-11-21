@@ -27,7 +27,7 @@ pub enum ModelError {
 }
 
 // Validate independently of edges and coefficients, sharing the site trees.
-fn model_space<I: Eq>(
+fn model_space<I: Ord>(
     chain: &Chain,
     sites: &[HilbertSpace<I>],
 ) -> Result<HilbertSpace<I>, ModelError> {
@@ -54,7 +54,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
     /// Parameters must represent real values for a Hermitian Hamiltonian.
     /// Couplings retain their physical-spin meaning; rational rescaling is
     /// performed in C without evaluating local rules or requiring Float.
-    pub fn xyz<I: Eq, R>(
+    pub fn xyz<I: Ord, R>(
         chain: &Chain,
         sites: &[HilbertSpace<I>],
         jx: R,
@@ -94,7 +94,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
     ///
     /// This is [`Self::xyz`] with all three couplings equal; positive J is
     /// ferromagnetic. Validation, all-leaf pairing and space binding are the same.
-    pub fn heisenberg<I: Eq, R: Clone>(
+    pub fn heisenberg<I: Ord, R: Clone>(
         chain: &Chain,
         sites: &[HilbertSpace<I>],
         j: R,
@@ -132,7 +132,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
     /// assert!((psi.expectation(&h)?.re + 1.5).abs() < 1e-12);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    pub fn blbq<I: Eq, R>(
+    pub fn blbq<I: Ord, R>(
         chain: &Chain,
         sites: &[HilbertSpace<I>],
         j: R,
