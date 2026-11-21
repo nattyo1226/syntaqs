@@ -1,0 +1,18 @@
+--- a/crates/syntaqs-lie/src/family/projection.rs
++++ b/crates/syntaqs-lie/src/family/projection.rs
+@@ -145,6 +145,7 @@
+         &self,
+         options: &NumericalOptions<E::Real>,
+     ) -> Result<GramMatrix<'_, E>, LieError<E::Real>> {
++        let start = syntaqs_core::hotspot::Instant::now();
+         options.validate()?;
+         let n = self.len();
+         let mut values = Array2::zeros((n, n));
+@@ -161,6 +162,7 @@
+                 squared_norm(value, value.re.hypot(value.im), options).map(Float::sqrt)
+             })
+             .collect::<Result<Vec<_>, _>>()?;
++        syntaqs_core::hotspot::observe("gram_evaluation", start.elapsed(), 1, 0, 0);
+         Ok(GramMatrix {
+             family: self,
+             values,

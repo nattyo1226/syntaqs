@@ -1,0 +1,27 @@
+--- a/examples/src/bin/lie_analysis_bench.rs
++++ b/examples/src/bin/lie_analysis_bench.rs
+@@ -100,6 +100,12 @@
+     }
+     if matches!(run, Run::All) {
+         let split = timed("center", || Ok(adjoint.center()?))?;
++        println!("# invariant center diagnostics {:?}", split.diagnostics());
++        println!("# invariant center centrality {:?}", split.centrality());
++        println!("# invariant center coordinates {:?}",
++            split.center_coordinates().iter().copied().collect::<Vec<_>>());
++        println!("# invariant complement coordinates {:?}",
++            split.complement_coordinates().iter().copied().collect::<Vec<_>>());
+         assert_eq!(
+             split.center().map_or(0, OperatorFamily::len),
+             expected.center
+@@ -111,6 +117,11 @@
+     }
+     if matches!(run, Run::All | Run::Decompose) {
+         let split = timed("decompose", || Ok(adjoint.decompose(&sampling)?))?;
++        println!("# invariant decomposition diagnostics {:?}", split.diagnostics());
++        for part in split.center().into_iter().chain(split.simple_ideals()) {
++            println!("# invariant component coordinates {:?}",
++                part.coordinates().iter().copied().collect::<Vec<_>>());
++        }
+         assert!(split.diagnostics().validation.passed());
+         assert_eq!(
+             split.center().map_or(0, |part| part.family().len()),

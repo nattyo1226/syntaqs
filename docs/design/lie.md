@@ -181,9 +181,10 @@ This is distinct from a physical-operator centralizer and from the smaller
 symmetric commuting subspace. In particular an n-dimensional abelian algebra
 has a full n²-dimensional real commutant.
 
-Center extraction constructs internal normalized-HS orthonormal coordinates.
-With Gram matrix `G`, the retained forward transform `U` obeys `U^T G U=I`,
-and its inverse is `V=U^T G`. Generators and action coordinates both transform:
+Center extraction constructs internal normalized-HS orthonormal coordinates
+from one Gram evaluation. With that matrix `G`, the retained forward
+transform `U` obeys `U^T G U=I`, and its inverse is `V=U^T G`. Generators
+and action coordinates both transform:
 `ad'_j=V (sum_i U[i,j] ad_i) U`. The common-kernel SVD stacks these transformed
 adjoint matrices. Its nullspace columns `Z` span the full center; the remaining
 right singular vectors `S` span the Euclidean orthogonal complement. Both come

@@ -220,7 +220,7 @@ impl<'a, E: FamilyExpression> GramMatrix<'a, E>
 where
     NumericalOptions<E::Real>: Default,
 {
-    fn real_matrix(&self) -> Array2<E::Real> {
+    pub(crate) fn real_matrix(&self) -> Array2<E::Real> {
         self.values.mapv(|value| value.re)
     }
 

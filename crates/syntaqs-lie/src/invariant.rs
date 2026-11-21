@@ -223,10 +223,10 @@ where
     NumericalOptions<E::Real>: Default,
 {
     let family = adjoint.family();
-    let transform = family.orthonormalize(adjoint.options())?;
-    let forward = transform.matrix().clone();
-    let gram = family.gram(adjoint.options())?.values().mapv(|z| z.re);
-    let inverse = forward.t().dot(&gram);
+    let gram = family.gram(adjoint.options())?;
+    let forward = gram.orthogonal_transform_matrix(true)?;
+    finite(forward.iter().copied())?;
+    let inverse = forward.t().dot(&gram.real_matrix());
     let n = family.len();
     let mut adjoints = Vec::new();
     for j in 0..n {
@@ -239,7 +239,7 @@ where
         finite(matrix.iter().copied())?;
         adjoints.push(matrix);
     }
-    finite(forward.iter().copied().chain(inverse.iter().copied()))?;
+    finite(inverse.iter().copied())?;
     Ok(OrthonormalCoordinates {
         forward,
         inverse,
