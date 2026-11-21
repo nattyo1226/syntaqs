@@ -101,7 +101,6 @@ where
             .scaled(Complex::new(R::zero(), -R::one())))
     }
     fn hs_in(&self, rhs: &Self, context: &Self::Context) -> Result<Complex<R>, ExpressionError> {
-        self.collect_terms_in(context)?
-            .hs_inner_product_in(&rhs.collect_terms_in(context)?, context)
+        self.hs_inner_product_in(rhs, context)
     }
 }

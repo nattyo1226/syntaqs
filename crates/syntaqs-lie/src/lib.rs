@@ -108,7 +108,7 @@ mod private {
 ///
 /// This sealed trait fixes the normalized Hilbert–Schmidt contraction. Users
 /// supply primitive algebra rules through core traits, not a custom metric.
-/// Primitives also need `PartialEq` for exact term collection before contraction.
+/// Primitives also need `PartialEq` for exact term collection.
 /// Local context is `()`; placed context is `HilbertSpace<I>`.
 pub trait FamilyExpression: private::Sealed + Clone {
     /// Real precision of the expression's complex coefficients.

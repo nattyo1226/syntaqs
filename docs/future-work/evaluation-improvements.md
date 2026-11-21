@@ -13,8 +13,8 @@ in [verification](../design/verification.md).
 ## 1. Lie residual accuracy
 
 Investigate reducing cancellation in projection, closure, and Hermiticity
-residuals for nonorthonormal operator expressions. The current implementation
-uses explicit exact term collection; strict tolerances can still reject some
+residuals for nonorthonormal operator expressions. HS evaluation collects
+matching natural terms exactly. Strict tolerances can still reject some
 mathematically valid families. Any improvement must preserve small positive
 residuals, avoid tolerance-based coefficient pruning, and retain factored local
 sums without global Cartesian expansion. No additional accuracy guarantee or

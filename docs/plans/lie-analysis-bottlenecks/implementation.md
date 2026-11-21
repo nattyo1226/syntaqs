@@ -14,8 +14,9 @@ Hilbert–Schmidt (HS) contraction addresses both closure RHS construction
 and the orthonormality checks on reconstructed components. Closure RHS
 reuse is a follow-up to that change. The dense-constraint work uses direct
 construction of symmetric constraints with the same SVD problem.
-The post-merge benchmark, direct HS trial, and commutator work counts
-are available. Implementation and stage-by-stage measurements are pending.
+The paired runner and direct HS refactoring are complete.
+The [stage 1 results](results/stage-1/README.md) record verification,
+raw data, and reproduction. Stages 2–6 are pending.
 
 Preserve ordinary Lie brackets on ordinary and graded spaces, normalized
 HS inner products, and acceptance under the configured tolerances in

@@ -76,15 +76,12 @@ Self-contractions also use their scalar magnitude as a minimum squared scale.
 Invalid or overflowing bounds error. Small positive values and reconstruction
 coefficients are not pruned.
 
-Before contraction, Lie operations explicitly collect equal natural primitives
-using core's `collect_terms`/`collect_terms_in`. Local sums remain factored;
-compatible tensor terms merge without Cartesian expansion. This reduces
-cancellation before squaring without changing ordinary evaluation or imposing an approximate-zero
-policy. Collection uses primitive equality, not a complete independent operator
-basis; distinct natural primitives may still have linear relations. No general
-accuracy guarantee beyond the covered numerical cases is asserted. Candidate
-[residual-accuracy improvements](../future-work/evaluation-improvements.md#1-lie-residual-accuracy)
-remain future work.
+Lie collects matching natural terms before local HS contraction. Composite
+HS contraction receives the expression and its context directly. The core
+evaluator collects matching terms within blocks and keeps independent blocks
+factored. Collection combines coefficients using primitive equality and removes
+exact zeros. Distinct natural primitives may still have linear relations.
+[Residual accuracy proposals](../future-work/evaluation-improvements.md#1-lie-residual-accuracy).
 
 ### 3.1. Numerical settings and defaults
 

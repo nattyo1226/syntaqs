@@ -62,7 +62,7 @@ def timings(output):
     return dict(line.split(",") for line in output.splitlines() if not line.startswith("#"))
 
 
-def measure_suite(binaries, directory, suite):
+def measure_suite(binaries, directory, suite, revisions):
     cases, modes, trials = MEASUREMENTS[suite]
     profile = suite == "hotspots"
     with (directory / f"{suite}.csv").open("w", newline="") as data:
@@ -95,7 +95,7 @@ def measure_suite(binaries, directory, suite):
                             raise SystemExit(f"Unexpected instrumentation status for {binary}")
                         times = timings(output)
                         if profile:
-                            prefix = (REVISIONS[build], case, trial)
+                            prefix = (revisions[build], case, trial)
                             for line in output.splitlines():
                                 if line.startswith("# hotspot,"):
                                     writer.writerow((*prefix, *line.split(",")[1:]))
@@ -107,7 +107,7 @@ def measure_suite(binaries, directory, suite):
                                 output, re.S,
                             )
                             writer.writerow((
-                                REVISIONS[build], case, mode, trial, *dims,
+                                revisions[build], case, mode, trial, *dims,
                                 *(times.get(stage, "") for stage in STAGES),
                                 *(diagnostics.groups() if diagnostics else ("", "", "")), peak,
                             ))
@@ -147,7 +147,8 @@ def closure_snapshot(binary, case):
     return constants, checks
 
 
-def compare_closure(binaries, directory):
+def compare_closure(binaries, directory, comparisons, labels):
+    builds = tuple(dict.fromkeys(build for pair in comparisons for build in pair))
     with (directory / "diagnostics.csv").open("w", newline="") as data:
         writer = csv.writer(data, lineterminator="\n")
         writer.writerow((
@@ -157,9 +158,9 @@ def compare_closure(binaries, directory):
         for case in dict.fromkeys((*CASES, *SITE_CASES)):
             snapshots = {
                 build: closure_snapshot(binaries / f"{build}-diagnostics", case)
-                for build in ("pre", "post", "direct")
+                for build in builds
             }
-            for baseline, candidate in (("pre", "post"), ("post", "direct")):
+            for baseline, candidate in comparisons:
                 left, checks_left = snapshots[baseline]
                 right, checks_right = snapshots[candidate]
                 if len(left) != len(right) or len(checks_left) != len(checks_right):
@@ -172,7 +173,8 @@ def compare_closure(binaries, directory):
                     for i, (x, y) in enumerate(zip(a[2:], b[2:])):
                         check_deltas[i] = max(check_deltas[i], abs(x - y))
                 writer.writerow((
-                    f"{baseline}/{candidate}", case, len(left), len(checks_left),
+                    f"{labels.get(baseline, baseline)}/{labels.get(candidate, candidate)}",
+                    case, len(left), len(checks_left),
                     constant_delta, *check_deltas,
                 ))
     print("diagnostics: compared all distinct workloads", flush=True)
@@ -184,14 +186,32 @@ def main():
     parser.add_argument("binaries", type=Path, help="directory created by build.sh")
     parser.add_argument("directory", type=Path, help="new directory for CSV output")
     parser.add_argument("--suite", action="append", choices=suites, help="run one or more named suites")
+    parser.add_argument(
+        "--revisions", nargs=2, metavar=("BASELINE", "CANDIDATE"),
+        help="compare only pre and post, using these source labels",
+    )
     args = parser.parse_args()
     if sys.platform != "darwin" and not sys.platform.startswith("linux"):
         parser.error("peak RSS units are defined for macOS and Linux")
 
     binaries = args.binaries.resolve()
+    comparisons = (("pre", "post"),)
+    labels = {}
+    if args.revisions is None:
+        comparisons += (("post", "direct"),)
+    else:
+        labels = dict(zip(("pre", "post"), args.revisions))
+        if args.suite and "direct-hs" in args.suite:
+            parser.error("--revisions compares two builds and cannot run the historical direct-hs trial")
+        suites = tuple(suite for suite in suites if suite != "direct-hs")
     selected = args.suite or suites
-    if "direct-hs" in selected or "diagnostics" in selected:
-        names = ("pre", "post", "direct") if "diagnostics" in selected else ("post", "direct")
+
+    names = set()
+    if "diagnostics" in selected:
+        names.update(build for pair in comparisons for build in pair)
+    if "direct-hs" in selected:
+        names.update(("post", "direct"))
+    if names:
         digests = {sha256((binaries / f"{name}-diagnostics").read_bytes()).digest() for name in names}
         if len(digests) != len(names):
             parser.error("each diagnostics build must use a distinct executable")
@@ -201,9 +221,9 @@ def main():
         if suite == "direct-hs":
             measure_direct(binaries, args.directory)
         elif suite == "diagnostics":
-            compare_closure(binaries, args.directory)
+            compare_closure(binaries, args.directory, comparisons, labels)
         else:
-            measure_suite(binaries, args.directory, suite)
+            measure_suite(binaries, args.directory, suite, labels or REVISIONS)
 
 
 if __name__ == "__main__":
