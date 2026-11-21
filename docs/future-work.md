@@ -1,6 +1,6 @@
 # Future work
 
-Updated: 2026-11-20
+Updated: 2026-11-21
 
 The topics below are deferred investigations and unadopted proposals, not a
 release commitment. Use [architecture](architecture.md) and the
@@ -75,7 +75,7 @@ Deferred investigations are described in [evaluation improvements](future-work/e
 - [Inner-product acceleration](future-work/evaluation-improvements.md#2-inner-product-acceleration) covers basis-aware contraction, orthogonality-based filtering, and reuse of partial contractions.
 - [Natural-state collection overhead](future-work/evaluation-improvements.md#3-natural-state-collection-overhead): reduce query preparation and allocation without persistent collection assumptions.
 - [Expression management and reuse](future-work/evaluation-improvements.md#4-expression-management-and-reuse): assess caches, retained parity structure, sharing, and parallelism.
-- [Implicit identity factors](future-work/evaluation-improvements.md#6-implicit-identity-factors-in-operator-evaluation): elide redundant local identity placements during collection, reconstruction, and contraction.
+- [Ambient-space setup](future-work/evaluation-improvements.md#6-ambient-space-setup-in-operator-evaluation) covers factor lookup and alignment overhead for sparse operator support.
 - [Small operator basis queries](future-work/evaluation-improvements.md#7-setup-cost-in-small-operator-basis-queries) incur term preparation and support tracking overhead.
 - [Coordinates with dense support](future-work/evaluation-improvements.md#8-storage-for-coordinates-with-dense-support) can spend substantial time and storage on full-length keys.
 - [Extreme Hilbert–Schmidt coefficients](future-work/evaluation-improvements.md#9-extreme-coefficients-in-composite-hilbertschmidt-products) can overflow during term collection before contraction.

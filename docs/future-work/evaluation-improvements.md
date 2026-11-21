@@ -1,6 +1,6 @@
 # Numerical accuracy and expression evaluation improvements
 
-Updated: 2026-11-20
+Updated: 2026-11-21
 
 The aim is to reduce expression-contraction cancellation and query overhead
 while preserving exact-zero rules, small nonzero values, and factored structure.
@@ -89,34 +89,22 @@ error `||δA||²=Σμ |δaμ|²`. This formula does not apply unchanged to
 non-orthonormal bases. Current evaluation, coordinates, and export must not
 silently prune components.
 
-## 6. Implicit identity factors in operator evaluation
+## 6. Ambient-space setup in operator evaluation
 
-Investigate keeping identity factors implicit through operator collection,
-reconstruction, and contraction while retaining the full ambient space.
-`collect_terms_in` currently fills missing factors with local identities to
-compare tensor terms and places those identities again when rebuilding the
-expression. Lie decomposition uses this path when emitting the operators of
-each component. [Operator collection](../../crates/syntaqs-core/src/evaluate/collect.rs#L142),
-[Lie decomposition reconstruction](../../crates/syntaqs-lie/src/decomposition/spectral.rs#L5).
+Operator blocks keep spectator identities implicit through collection,
+reconstruction, and normalized HS contraction. Collection still gathers
+the ambient leaves to reconstruct explicit placements, and HS allocates
+its component table using the full ambient factor count.
+[Block evaluation](../design/composite-expression.md#117-operator-block-evaluation),
+[collection](../../crates/syntaqs-core/src/evaluate/collect.rs#L73),
+[HS alignment](../../crates/syntaqs-core/src/evaluate/operator/contraction.rs#L98).
 
-Begin by omitting placed factors that are exactly `1 · I` after local
-evaluation when rebuilding a bound operator. A product of identity factors
-becomes a scalar multiple of the identity on the full space. For internal
-collection, investigate storing only specified factors and treating a missing
-factor as an identity during comparison. Materialize the identity when it is
-a summand of a local expression such as `I + Z`. This preserves exact
-coefficients and factored local sums.
-
-Validate the original references in the selected space before eliding any
-placement. Maintain the ambient factor order for ordinary and graded evaluation,
-including parity strings introduced when lowering odd operators. Ordinary
-trace must account for the missing factor's `Tr(I)`, and normalized HS uses
-`Tr(I) / Tr(I)` for a spectator that is still identity after graded lowering.
-Basis coordinates also account for the chosen local basis's expansion of
-identity. Verify scalar results, mixed local sums, invalid references, and
-ordinary and graded action and contractions. Measure the output tree size and
-evaluation cost with many spectator factors. [Space binding and evaluation](../design/composite-expression.md),
-[operator-basis expansion](../design/basis.md#51-composite-tensor-product-bases).
+Measure the leaf gathering and factor alignment separately on a fixed
+two-site operator with a growing ambient space. If setup becomes material,
+investigate reconstructing placements by position and allocating alignment
+metadata for the reached support. Preserve validation of the original
+references, ambient order for graded signs, the full trace dimension
+factor, and the identity contribution to normalized HS.
 
 ## 7. Setup cost in small operator basis queries
 
