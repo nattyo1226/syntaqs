@@ -126,7 +126,7 @@ pub fn fock_matrix(mode: usize, modes: usize, create: bool) -> Matrix {
     result
 }
 
-pub fn exported_matrix<T: Real, I: Eq>(
+pub fn exported_matrix<T: Real, I: Ord>(
     op: &syntaqs_core::expression::composite::Operator<I, O, Complex<T>>,
 ) -> Matrix {
     use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};

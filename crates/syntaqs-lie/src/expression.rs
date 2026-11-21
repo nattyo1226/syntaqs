@@ -53,7 +53,7 @@ where
 
 impl<I, O, R> FamilyExpression for Operator<I, O, Complex<R>>
 where
-    I: Eq,
+    I: Ord,
     R: Float + Scalar<Real = R> + Lapack,
     O: PartialEq
         + Identity

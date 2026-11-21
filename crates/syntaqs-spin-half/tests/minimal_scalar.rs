@@ -97,7 +97,7 @@ fn inner_adjoint_trace_and_state_basis_only_need_zero_and_one() {
             <SzBasis as Basis<State, Natural>>::index(&SzBasis, &state),
             Some(i)
         );
-        let expanded = <SzBasis as Basis<State, Natural>>::expand(&SzBasis, &state);
+        let expanded = <SzBasis as Basis<State, Natural>>::expand(&SzBasis, &state).unwrap();
         let mut terms = expanded.into_terms();
         let term = terms.next().unwrap();
         assert_eq!(term.operand, state);
@@ -120,7 +120,8 @@ fn ladder_basis_needs_negation_but_not_division() {
         <LadderBasis as Basis<Op, Coefficient<Signed>>>::elements(&LadderBasis).collect();
     assert_eq!(elements, [I, Sp, Sm, Sz]);
     for (op, expected) in OPS.into_iter().zip(expected) {
-        let expanded = <LadderBasis as Basis<Op, Coefficient<Signed>>>::expand(&LadderBasis, &op);
+        let expanded =
+            <LadderBasis as Basis<Op, Coefficient<Signed>>>::expand(&LadderBasis, &op).unwrap();
         let actual: Vec<_> = expanded
             .into_terms()
             .map(|t| (t.coefficient.re.0, t.coefficient.im.0, t.operand))
@@ -284,23 +285,23 @@ fn local_metadata_identity_and_bases_accept_minimal_fractional_scalars() {
 
     for op in OPS {
         let cartesian =
-            <CartesianBasis as Basis<Op, Coefficient<Rational>>>::expand(&CartesianBasis, &op);
-        let ladder = <LadderBasis as Basis<Op, Coefficient<Rational>>>::expand(&LadderBasis, &op);
+            <CartesianBasis as Basis<Op, Coefficient<Rational>>>::expand(&CartesianBasis, &op)
+                .unwrap();
+        let ladder =
+            <LadderBasis as Basis<Op, Coefficient<Rational>>>::expand(&LadderBasis, &op).unwrap();
         assert!(!cartesian.is_empty());
         assert!(!ladder.is_empty());
     }
     assert_eq!(
-        terms(<LadderBasis as Basis<Op, Coefficient<Rational>>>::expand(
-            &LadderBasis,
-            &Sx
-        )),
+        terms(
+            <LadderBasis as Basis<Op, Coefficient<Rational>>>::expand(&LadderBasis, &Sx).unwrap()
+        ),
         [((1, 1), (0, 1), Sp), ((1, 1), (0, 1), Sm),]
     );
     assert_eq!(
-        terms(<LadderBasis as Basis<Op, Coefficient<Rational>>>::expand(
-            &LadderBasis,
-            &Sy
-        )),
+        terms(
+            <LadderBasis as Basis<Op, Coefficient<Rational>>>::expand(&LadderBasis, &Sy).unwrap()
+        ),
         [((0, 1), (-1, 1), Sp), ((0, 1), (1, 1), Sm),]
     );
     let elements: Vec<_> =

@@ -9,7 +9,7 @@ use syntaqs_spin_half::{SpinHalf, operator::SpinHalfOperator as Op, state::SpinH
 
 type Spin = SpinHalf<Complex<f64>>;
 
-fn product_state<C, I: Eq>(sites: &[H<I>], orientations: &[Ket]) -> StateOf<SpinHalf<C>, I> {
+fn product_state<C, I: Ord>(sites: &[H<I>], orientations: &[Ket]) -> StateOf<SpinHalf<C>, I> {
     assert_eq!(sites.len(), orientations.len());
     let space = H::tensor_all(sites.iter().cloned()).unwrap();
     let states = sites
@@ -301,7 +301,7 @@ fn model_construction_needs_only_operation_specific_coefficient_capabilities() {
 
 #[test]
 fn non_clone_indices_and_deep_site_grouping_are_supported_iteratively() {
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, PartialOrd, Ord)]
     struct Index(u8);
     std::thread::Builder::new()
         .stack_size(128 * 1024)

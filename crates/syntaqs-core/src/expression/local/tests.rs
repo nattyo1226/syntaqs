@@ -8,6 +8,43 @@ use crate::expression::parts::*;
 use crate::{Act, Adjoint, LinearCombination};
 use num_complex::Complex;
 
+#[test]
+fn named_product_preserves_association_under_adjoint() {
+    use crate::{Identity, Product, Trace};
+
+    struct Primitive;
+    impl Identity for Primitive {
+        fn identity() -> Self {
+            Self
+        }
+    }
+    impl Product<f64> for Primitive {
+        type Term = Self;
+        fn product(&self, _: &Self) -> LinearCombination<Self, f64> {
+            LinearCombination::primitive(Self)
+        }
+    }
+    impl Adjoint<f64> for Primitive {
+        type Term = Self;
+        fn adjoint(&self) -> LinearCombination<Self, f64> {
+            LinearCombination::primitive(Self)
+        }
+    }
+    impl Trace<f64> for Primitive {
+        fn trace(&self) -> f64 {
+            1.0
+        }
+    }
+    let large = LocalOperator::primitive(Primitive).scaled(1e200);
+    let small = LocalOperator::primitive(Primitive).scaled(1e-200);
+    let product = LocalOperator::product([large.clone(), large, small]);
+    assert!(matches!(product.node(), OperatorNode::Product(p) if p.len() == 3));
+    // Adjoint reverses the nesting as well as the operand order, so the two
+    // large coefficients still multiply together first.
+    assert_eq!(product.trace(), f64::INFINITY);
+    assert_eq!(product.adjoint().trace(), f64::INFINITY);
+}
+
 #[derive(Default)]
 struct Counts {
     actions: Cell<usize>,
@@ -73,7 +110,7 @@ fn coefficients(state: &S<'_>) -> Vec<(u8, Complex<f64>)> {
 #[test]
 fn construction_shares_without_numeric_or_clone_bounds() {
     struct Scalar;
-    let _: SumExpr<Scalar> = SumExpr::default();
+    let _: Operands<Scalar> = Operands::default();
     let counts = Counts::default();
     let state = S::<Scalar>::primitive(State(1, &counts));
     let op = O::<Scalar>::primitive(Operator(0, &counts));
@@ -103,9 +140,12 @@ fn construction_shares_without_numeric_or_clone_bounds() {
     let OperatorNode::Product(p) = product.node() else {
         panic!("product")
     };
+    let [lhs, rhs] = p.as_slice() else {
+        panic!("two operands")
+    };
     assert!(Arc::ptr_eq(
-        p.lhs.root.as_ref().unwrap(),
-        p.rhs.root.as_ref().unwrap()
+        lhs.root.as_ref().unwrap(),
+        rhs.root.as_ref().unwrap()
     ));
     let _ = S::<Scalar>::from_terms(LinearCombination::term(
         Complex::new(Scalar, Scalar),
@@ -184,7 +224,7 @@ fn constructor_cardinality_sharing_and_single_final_drop() {
     ));
     assert!(matches!(
         S::<f64>::zero().node(),
-        StateNode::Sum(SumExpr::Empty)
+        StateNode::Sum(Operands::Empty)
     ));
     struct Unit;
     impl crate::Identity for Unit {
@@ -203,6 +243,16 @@ fn constructor_cardinality_sharing_and_single_final_drop() {
         op.root.as_ref().unwrap(),
         single.root.as_ref().unwrap()
     ));
+    let many = UnitOperator::product([op.clone(), single.clone(), op.clone()]);
+    let OperatorNode::Product(parts) = many.node() else {
+        panic!("product sequence")
+    };
+    assert_eq!(parts.len(), 3);
+    assert!(
+        parts
+            .iter()
+            .all(|child| Arc::ptr_eq(child.root.as_ref().unwrap(), op.root.as_ref().unwrap()))
+    );
     let shared = &leaf + &leaf;
     drop(leaf);
     drop(ready);
@@ -219,22 +269,27 @@ fn action_order_no_product_and_immutable_reusable_results() {
     let state = S::primitive(State(1, &counts));
     let a = O::primitive(Operator(2, &counts));
     let b = O::primitive(Operator(1, &counts));
-    let chain = state.act(&b).act(&a);
+    let product = O::from_product([a.clone(), b.clone(), b.clone()].into_iter().collect()).unwrap();
+    let chain = state.act(&b).act(&b).act(&a);
     assert_eq!(counts.actions.get(), 0);
     let result = chain.evaluate();
-    assert_eq!(coefficients(&result), vec![(4, Complex::new(1.0, 0.0))]);
-    assert_eq!(counts.actions.get(), 2);
+    assert_eq!(coefficients(&result), vec![(6, Complex::new(1.0, 0.0))]);
+    assert_eq!(counts.actions.get(), 3);
     assert!(chain.has_action);
     assert!(!result.has_action);
     assert_eq!(
-        coefficients(&state.act(&(a.clone() * &b)).evaluate()),
+        coefficients(&state.act(&product).evaluate()),
         coefficients(&result)
+    );
+    assert_eq!(
+        coefficients(&state.act(&product.adjoint()).evaluate()),
+        vec![(4, Complex::new(1.0, 0.0))]
     );
     let again = result.evaluate();
     assert_eq!(coefficients(&result), coefficients(&again));
     assert_eq!(
         coefficients(&again.act(&b).evaluate()),
-        vec![(5, Complex::new(1.0, 0.0))]
+        vec![(7, Complex::new(1.0, 0.0))]
     );
     assert_eq!(coefficients(&state), vec![(1, Complex::new(1.0, 0.0))]);
 }
@@ -505,11 +560,11 @@ fn try_sums_preserve_duplicate_and_zero_nodes_without_evaluating() {
     assert!(matches!(parts.as_slice()[1].node(), OperatorNode::Scale(_)));
     assert!(matches!(
         S::<f64>::try_sum([]).unwrap().node(),
-        StateNode::Sum(SumExpr::Empty)
+        StateNode::Sum(Operands::Empty)
     ));
     assert!(matches!(
         O::<f64>::try_sum([]).unwrap().node(),
-        OperatorNode::Sum(SumExpr::Empty)
+        OperatorNode::Sum(Operands::Empty)
     ));
 }
 

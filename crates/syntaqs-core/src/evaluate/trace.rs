@@ -1,12 +1,13 @@
 //! Ordinary traces and Hilbert–Schmidt contractions.
 
+use super::operator::EvaluatedOperator;
 use crate::{
     Adjoint, Conjugate, Divide, ExpressionError, HilbertSpace, Identity, LocalOperator, Operator,
     Product, Trace,
     coefficient::{add, multiply, zero},
-    expression::traversal::{LinearTerms, OrdinaryOpTerms, operator_view},
+    expression::traversal::{LinearTerms, operator_view},
 };
-use core::ops::Mul;
+use core::ops::{Mul, Neg};
 use num_traits::{One, Zero};
 
 impl<O, C> LocalOperator<O, C> {
@@ -68,138 +69,94 @@ impl<O, C> LocalOperator<O, C> {
     }
 }
 
-fn one<C: One>() -> C {
-    C::one()
-}
-
-impl<I: Eq, O, C> Operator<I, O, C> {
+impl<I: Ord, O, C> Operator<I, O, C> {
     /// Computes the ordinary full trace using the existing binding.
-    /// An exact-zero local trace stops that tensor term, not the enclosing sum.
     pub fn trace(&self) -> Result<C, ExpressionError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C>,
-        O: Identity + crate::HomogeneousParity + crate::ParityOperator,
-        O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
+        C: Clone + PartialEq + Zero + One + Conjugate<Output = C> + Neg<Output = C>,
+        O: PartialEq
+            + Identity
+            + crate::HomogeneousParity
+            + Product<C, Term = O>
+            + Adjoint<C, Term = O>
+            + Trace<C>,
     {
-        let ambient = self.select_space(None, None)?;
-        self.trace_on(ambient)
+        self.trace_in(self.bound_space()?)
     }
 
     /// Computes full trace on an explicit space, overriding an old binding.
+    /// On a graded space, any odd local factor annihilates its tensor term.
     pub fn trace_in(&self, ambient: &HilbertSpace<I>) -> Result<C, ExpressionError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C>,
-        O: Identity + crate::HomogeneousParity + crate::ParityOperator,
-        O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
+        C: Clone + PartialEq + Zero + One + Conjugate<Output = C> + Neg<Output = C>,
+        O: PartialEq
+            + Identity
+            + crate::HomogeneousParity
+            + Product<C, Term = O>
+            + Adjoint<C, Term = O>
+            + Trace<C>,
     {
-        let ambient = self.select_space(Some(ambient), None)?;
-        self.trace_on(ambient)
-    }
-
-    fn trace_on(&self, ambient: &HilbertSpace<I>) -> Result<C, ExpressionError>
-    where
-        C: Clone + Zero + One + Conjugate<Output = C>,
-        O: Identity + crate::HomogeneousParity + crate::ParityOperator,
-        O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
-    {
-        self.trace_on_with(ambient, |local| local.trace())
-    }
-
-    // Both contractions use ordinary local traces after grading has been
-    // resolved. Only the HS caller supplies division; ordinary trace keeps its
-    // original coefficient bounds.
-    fn trace_on_with(
-        &self,
-        ambient: &HilbertSpace<I>,
-        local_trace: impl Fn(&LocalOperator<O, C>) -> C,
-    ) -> Result<C, ExpressionError>
-    where
-        C: Clone + Zero + One + Conjugate<Output = C>,
-        O: Identity + crate::HomogeneousParity + crate::ParityOperator,
-        O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
-    {
-        let expression = self.expression.group_local();
-        let mut result = zero();
-        for (coefficient, factors) in OrdinaryOpTerms::new(&expression, ambient) {
-            if coefficient.as_ref().is_some_and(Zero::is_zero) {
-                continue;
-            }
-            let mut value = one();
-            for index in ambient.indices() {
-                let local_trace_value = match factors
-                    .iter()
-                    .find(|(factor, _)| factor.factor_index() == Some(index))
-                {
-                    Some((_, local)) => local_trace(local),
-                    None => local_trace(&LocalOperator::<O, C>::identity()),
-                };
-                if local_trace_value.is_zero() {
-                    value = local_trace_value;
-                    break;
-                }
-                value = multiply(value, local_trace_value);
-                if value.is_zero() {
-                    break;
-                }
-            }
-            if value.is_zero() {
-                continue;
-            }
-            if let Some(c) = coefficient {
-                value = multiply(c, value);
-                if value.is_zero() {
-                    continue;
-                }
-            }
-            result = add(result, value);
-        }
-        Ok(result)
-    }
-
-    fn normalized_trace_on(&self, ambient: &HilbertSpace<I>) -> Result<C, ExpressionError>
-    where
-        C: Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
-        O: Identity + crate::HomogeneousParity + crate::ParityOperator,
-        O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
-    {
-        let dimension = O::identity().trace();
-        self.trace_on_with(ambient, |local| {
-            local.trace_with(|value| value.divide(dimension.clone()))
-        })
+        self.validate(ambient)?;
+        let operator = EvaluatedOperator::new(&self.expression, ambient);
+        Ok(operator.full_trace(ambient.factor_count()))
     }
 
     /// Computes the normalized Hilbert–Schmidt inner product `Tr(self† rhs)/D`.
     ///
-    /// Each ordinary local trace is divided by `Tr(I)` before contraction, so
-    /// no integer total dimension or large unnormalized trace is constructed.
-    /// Local dimensions must be nonzero and support mathematical division.
-    /// Exact-zero local contractions skip later factors and redundant scaling;
-    /// zero primitive traces need no normalization division.
+    /// Contracts independent blocks and divides each primitive local trace
+    /// by `Tr(I)` before scaling and summation. The local dimension must be
+    /// nonzero and support mathematical division.
     pub fn hs_inner_product(&self, rhs: &Self) -> Result<C, ExpressionError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
-        O: Identity + crate::HomogeneousParity + crate::ParityOperator,
-        O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
+        C: Clone
+            + PartialEq
+            + Zero
+            + One
+            + Conjugate<Output = C>
+            + Neg<Output = C>
+            + Divide<Output = C>,
+        O: PartialEq
+            + Identity
+            + crate::HomogeneousParity
+            + Product<C, Term = O>
+            + Adjoint<C, Term = O>
+            + Trace<C>,
     {
-        let product = (self.adjoint() * rhs)?;
-        let ambient = product.select_space(None, None)?;
-        product.normalized_trace_on(ambient)
+        let ambient = self.bound_space()?;
+        if !ambient.is_compatible_with(rhs.bound_space()?) {
+            return Err(ExpressionError::IncompatibleSpaces);
+        }
+        self.hs_inner_product_in(rhs, ambient)
     }
 
     /// Computes `Tr(self† rhs)/D` on an explicit ambient space.
-    ///
-    /// Uses local trace normalization, with the same coefficient requirements
-    /// as [`Self::hs_inner_product`]. The explicit space overrides old bindings.
+    /// The explicit space overrides old bindings.
     pub fn hs_inner_product_in(
         &self,
         rhs: &Self,
         ambient: &HilbertSpace<I>,
     ) -> Result<C, ExpressionError>
     where
-        C: Clone + Zero + One + Conjugate<Output = C> + Divide<Output = C>,
-        O: Identity + crate::HomogeneousParity + crate::ParityOperator,
-        O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
+        C: Clone
+            + PartialEq
+            + Zero
+            + One
+            + Conjugate<Output = C>
+            + Neg<Output = C>
+            + Divide<Output = C>,
+        O: PartialEq
+            + Identity
+            + crate::HomogeneousParity
+            + Product<C, Term = O>
+            + Adjoint<C, Term = O>
+            + Trace<C>,
     {
-        (self.bind(ambient)?.adjoint() * &rhs.bind(ambient)?)?.normalized_trace_on(ambient)
+        self.validate(ambient)?;
+        rhs.validate(ambient)?;
+        Ok(EvaluatedOperator::hs_inner_product(
+            &self.expression,
+            &rhs.expression,
+            ambient,
+        ))
     }
 }

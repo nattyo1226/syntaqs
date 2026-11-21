@@ -35,7 +35,7 @@ impl PartialEq for Ket {
         self.0 == other.0
     }
 }
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Op {
     I,
     P,
@@ -135,20 +135,20 @@ impl<T: Real> InnerProduct<Complex<T>> for Ket {
 }
 pub struct States;
 impl<T: Real> Basis<Ket, Complex<T>> for States {
-    fn elements(&self) -> impl Iterator<Item = Ket> + '_ {
-        [Ket(0), Ket(1)].into_iter()
+    fn element(&self, index: usize) -> Option<Ket> {
+        [Ket(0), Ket(1)].get(index).copied()
     }
     fn index(&self, p: &Ket) -> Option<usize> {
         Some(p.0 as usize)
     }
-    fn expand(&self, p: &Ket) -> LinearCombination<Ket, Complex<T>> {
-        LinearCombination::primitive(*p)
+    fn expand_indices(&self, p: &Ket) -> LinearCombination<usize, Complex<T>> {
+        LinearCombination::primitive(Basis::<_, Complex<T>>::index(self, p).unwrap())
     }
 }
 pub struct Units;
 impl<T: Real> Basis<Op, Complex<T>> for Units {
-    fn elements(&self) -> impl Iterator<Item = Op> + '_ {
-        [Op::U(0, 0), A, CREATE, Op::U(1, 1)].into_iter()
+    fn element(&self, index: usize) -> Option<Op> {
+        [Op::U(0, 0), A, CREATE, Op::U(1, 1)].get(index).copied()
     }
     fn index(&self, p: &Op) -> Option<usize> {
         if let Op::U(i, j) = *p {
@@ -157,24 +157,18 @@ impl<T: Real> Basis<Op, Complex<T>> for Units {
             None
         }
     }
-    fn expand(&self, p: &Op) -> LinearCombination<Op, Complex<T>> {
+    fn expand_indices(&self, p: &Op) -> LinearCombination<usize, Complex<T>> {
         match p {
-            Op::I => {
-                LinearCombination::primitive(Op::U(0, 0))
-                    + LinearCombination::primitive(Op::U(1, 1))
-            }
-            Op::P => {
-                LinearCombination::primitive(Op::U(0, 0))
-                    + LinearCombination::term(c(-1., 0.), Op::U(1, 1))
-            }
-            _ => LinearCombination::primitive(*p),
+            Op::I => LinearCombination::primitive(0) + LinearCombination::primitive(3),
+            Op::P => LinearCombination::primitive(0) + LinearCombination::term(c(-1., 0.), 3),
+            _ => LinearCombination::primitive(Basis::<_, Complex<T>>::index(self, p).unwrap()),
         }
     }
 }
 pub struct Parities;
 impl<T: Real> Basis<Op, Complex<T>> for Parities {
-    fn elements(&self) -> impl Iterator<Item = Op> + '_ {
-        [Op::I, Op::P, A, CREATE].into_iter()
+    fn element(&self, index: usize) -> Option<Op> {
+        [Op::I, Op::P, A, CREATE].get(index).copied()
     }
     fn index(&self, p: &Op) -> Option<usize> {
         match *p {
@@ -185,13 +179,13 @@ impl<T: Real> Basis<Op, Complex<T>> for Parities {
             _ => None,
         }
     }
-    fn expand(&self, p: &Op) -> LinearCombination<Op, Complex<T>> {
+    fn expand_indices(&self, p: &Op) -> LinearCombination<usize, Complex<T>> {
         match *p {
             Op::U(i, j) if i == j => {
-                LinearCombination::term(c(0.5, 0.), Op::I)
-                    + LinearCombination::term(c(if i == 0 { 0.5 } else { -0.5 }, 0.), Op::P)
+                LinearCombination::term(c(0.5, 0.), 0)
+                    + LinearCombination::term(c(if i == 0 { 0.5 } else { -0.5 }, 0.), 1)
             }
-            _ => LinearCombination::primitive(*p),
+            _ => LinearCombination::primitive(Basis::<_, Complex<T>>::index(self, p).unwrap()),
         }
     }
 }

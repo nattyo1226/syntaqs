@@ -101,7 +101,7 @@ fn check_state_basis<T: Real, B: Basis<Ket, Complex<T>>>(basis: &B) {
         assert_eq!(basis.index(p), Some(i));
     }
     for p in KETS {
-        let expanded = basis.expand(&p);
+        let expanded = basis.expand(&p).unwrap();
         assert_vector(state_value(&expanded), p.coordinates());
         for term in &expanded {
             assert!(basis.index(&term.operand).is_some());
@@ -121,7 +121,8 @@ fn check_bases<T: Real>() {
         None
     );
     let expanded =
-        <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &Ket::Unit(Axis::B));
+        <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &Ket::Unit(Axis::B))
+            .unwrap();
     assert_complex(inner(&expanded, &expanded), c(1.0, 0.0));
     // Squared coefficient magnitudes alone give 2, while the actual norm² is 1.
     let coefficient_squares = expanded
@@ -139,10 +140,9 @@ fn check_bases<T: Real>() {
             Some(i)
         );
         assert_matrix(
-            operator_value(&<MatrixUnits as Basis<Operator, Complex<T>>>::expand(
-                &MatrixUnits,
-                p,
-            )),
+            operator_value(
+                &<MatrixUnits as Basis<Operator, Complex<T>>>::expand(&MatrixUnits, p).unwrap(),
+            ),
             matrix(*p),
         );
     }
@@ -151,10 +151,13 @@ fn check_bases<T: Real>() {
         None
     );
     assert_matrix(
-        operator_value(&<MatrixUnits as Basis<Operator, Complex<T>>>::expand(
-            &MatrixUnits,
-            &Operator::Identity,
-        )),
+        operator_value(
+            &<MatrixUnits as Basis<Operator, Complex<T>>>::expand(
+                &MatrixUnits,
+                &Operator::Identity,
+            )
+            .unwrap(),
+        ),
         matrix(Operator::Identity),
     );
 }
@@ -285,7 +288,8 @@ fn check_three_level_expressions<T: Real>() {
     // The nonorthogonal basis uses a dependent primitive; importing its terms
     // must preserve overlaps, rather than interpreting coefficients as coordinates.
     for primitive in KETS {
-        let terms = <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &primitive);
+        let terms =
+            <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &primitive).unwrap();
         let imported = S::from_terms(terms.map(S::primitive));
         assert_vector(expression_coordinates(&imported), primitive.coordinates());
         assert_complex(
@@ -301,6 +305,7 @@ fn check_three_level_expressions<T: Real>() {
     assert_complex(O::<T>::identity().trace(), c(3.0, 0.0));
     let basis_operator = O::from_terms(
         <MatrixUnits as Basis<Operator, Complex<T>>>::expand(&MatrixUnits, &Operator::Identity)
+            .unwrap()
             .map(O::primitive),
     );
     assert_matrix(
@@ -402,6 +407,7 @@ fn check_three_level_composites<T: Real>() {
     // The reference uses literal ket coordinates, not basis expansion or Act.
     let local = S::<Ket, Operator, Complex<T>>::from_terms(
         <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &Ket::Phase)
+            .unwrap()
             .map(S::primitive),
     );
     let left = local.at(a).unwrap();
@@ -524,6 +530,7 @@ fn check_inner_products_and_squared_norms<T: Real>() {
     );
     let imported = S::<Ket, Operator, Complex<T>>::from_terms(
         <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &Ket::Unit(Axis::B))
+            .unwrap()
             .map(S::primitive),
     );
     assert_complex(

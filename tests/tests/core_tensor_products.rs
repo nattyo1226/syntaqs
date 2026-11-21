@@ -101,6 +101,94 @@ fn matrix_of<T: Real>(op: &OperatorOf<T>, space: &H<u8>) -> Vec<num_complex::Com
     result
 }
 
+fn overlapping_operator_blocks<T: Real>() {
+    let factors = [7, 1, 9].map(H::factor);
+    for kind in [TensorKind::Ordinary, TensorKind::Graded] {
+        let space = H::tensor_all_with(kind, factors.iter().cloned()).unwrap();
+        let op = |p, i: usize| placed::<T>(p, &factors[i]);
+        let dense = |p, i| embedding::<T>(p, i, 3, kind);
+        let add = |left: Vec<_>, right| {
+            left.into_iter()
+                .zip(right)
+                .map(|(a, b)| a + b)
+                .collect::<Vec<_>>()
+        };
+        let scale = |matrix: Vec<_>, coefficient| {
+            matrix
+                .into_iter()
+                .map(|entry| entry * coefficient)
+                .collect::<Vec<_>>()
+        };
+        let c1 = c::<T>(0.5, -0.25);
+        let c2 = c::<T>(-0.5, 0.75);
+        let first =
+            (OperatorOf::<T>::identity() + (op(A, 1) * op(CREATE, 0)).unwrap().scaled(c1)).unwrap();
+        let left = add(
+            dense(Op::I, 0),
+            scale(product(&dense(A, 1), &dense(CREATE, 0)), c1),
+        );
+        let single = op(A, 2);
+        let mixed = (&single + op(Op::P, 2).scaled(c2)).unwrap();
+        let dense_mixed = add(dense(A, 2), scale(dense(Op::P, 2), c2));
+        let tail = op(CREATE, 1);
+        let cross = (&tail * op(Op::P, 2)).unwrap();
+        for (middle, middle_matrix, last, last_matrix) in [
+            // For graded products the intervening odd block exchanges with a
+            // uniform sign in the first case, and a term-dependent sign in the second.
+            (single, dense(A, 2), tail.clone(), dense(CREATE, 1)),
+            (mixed.clone(), dense_mixed.clone(), tail, dense(CREATE, 1)),
+            // The last operand intersects both existing blocks here.
+            (
+                mixed,
+                dense_mixed,
+                cross,
+                product(&dense(CREATE, 1), &dense(Op::P, 2)),
+            ),
+        ] {
+            let expression = OperatorOf::<T>::product([first.clone(), middle, last]).unwrap();
+            let expected = product(&product(&left, &middle_matrix), &last_matrix);
+            for (candidate, expected) in [
+                (expression.clone(), expected.clone()),
+                (expression.adjoint(), adjoint(&expected)),
+            ] {
+                let collected = candidate.collect_terms_in(&space).unwrap();
+                values(&matrix_of(&collected, &space), &expected);
+                let expanded = candidate.expand_in(&Units, &space).unwrap();
+                values(&matrix_of(&expanded, &space), &expected);
+            }
+        }
+
+        // Factor a common prefix and suffix without reordering the two mixed
+        // graded end blocks across the changing middle factor.
+        let prefix = (op(A, 2) + op(Op::P, 2).scaled(c1)).unwrap();
+        let suffix = (op(CREATE, 0) + op(Op::P, 0).scaled(c2)).unwrap();
+        let terms = [Op::P, A]
+            .map(|p| OperatorOf::<T>::product([prefix.clone(), op(p, 1), suffix.clone()]).unwrap());
+        let sum = OperatorOf::<T>::sum(terms).unwrap();
+        let expected = product(
+            &product(
+                &add(dense(A, 2), scale(dense(Op::P, 2), c1)),
+                &add(dense(Op::P, 1), dense(A, 1)),
+            ),
+            &add(dense(CREATE, 0), scale(dense(Op::P, 0), c2)),
+        );
+        values(
+            &matrix_of(&sum.collect_terms_in(&space).unwrap(), &space),
+            &expected,
+        );
+        values(
+            &matrix_of(&sum.expand_in(&Units, &space).unwrap(), &space),
+            &expected,
+        );
+    }
+}
+
+#[test]
+fn overlapping_operator_blocks_keep_order_and_graded_signs() {
+    overlapping_operator_blocks::<f32>();
+    overlapping_operator_blocks::<f64>();
+}
+
 fn check_local_grouping<T: Real>() {
     for kind in [TensorKind::Ordinary, TensorKind::Graded] {
         let factors: Vec<_> = [9, 1, 4].into_iter().map(H::factor).collect();
@@ -168,6 +256,36 @@ fn check_local_grouping<T: Real>() {
         values(
             &matrix_of(&expression.expand_in(&Units, &h).unwrap(), &h),
             &expected,
+        );
+        let sequence = OperatorOf::<T>::product([
+            b.scaled(c(1., 0.)),
+            a.clone(),
+            placed::<T>(Op::P, &factors[1]),
+        ])
+        .unwrap();
+        values(&matrix_of(&sequence, &h), &adjoint(&expected));
+        let sequence = sequence.adjoint();
+        values(&matrix_of(&sequence, &h), &expected);
+        values(
+            &matrix_of(&sequence.expand_in(&Units, &h).unwrap(), &h),
+            &expected,
+        );
+
+        let local = LocalOperator::product([CREATE, A, Op::P].map(LocalOperator::primitive))
+            .at(&factors[1])
+            .unwrap();
+        let expected_local = product(
+            &product(
+                &embedding::<T>(CREATE, 1, 3, kind),
+                &embedding::<T>(A, 1, 3, kind),
+            ),
+            &embedding::<T>(Op::P, 1, 3, kind),
+        );
+        values(&matrix_of(&local, &h), &expected_local);
+        values(&matrix_of(&local.adjoint(), &h), &adjoint(&expected_local));
+        values(
+            &matrix_of(&local.expand_in(&Units, &h).unwrap(), &h),
+            &expected_local,
         );
 
         let bad = (OperatorOf::<T>::zero() * placed(A, &H::factor(99))).unwrap();
@@ -309,6 +427,22 @@ fn check<T: Real>() {
                 &vector(&acted.expand(&States).unwrap().expand(&States).unwrap()),
                 &vector(&acted),
             );
+            if n == 3 && kind == TensorKind::Graded {
+                let block = (ket::<T>(2, &factors[..2], kind)
+                    + ket::<T>(3, &factors[..2], kind).scaled(c(0.5, 0.3)))
+                .unwrap();
+                let factored = State::tensor_in(&h, [block, ket(1, &factors[2..], kind)]).unwrap();
+                let input = vector(&factored);
+                // The first target is inside the block sum. For the second
+                // target each branch of that sum contributes to the parity prefix.
+                for target in [1, 2] {
+                    let acted = factored.act(&placed(A, &factors[target])).unwrap();
+                    values(
+                        &vector(&acted),
+                        &act(&embedding(A, target, n, kind), &input),
+                    );
+                }
+            }
             close(psi.inner_product(&psi).unwrap(), c(0.78, 0.));
             for i in 0..n {
                 for j in 0..n {

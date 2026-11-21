@@ -60,12 +60,15 @@ impl CountingBasis {
     }
 }
 impl<C: From<i16>> Basis<Ket, C> for CountingBasis {
-    fn expand(&self, p: &Ket) -> LinearCombination<Ket, C> {
+    fn expand_indices(&self, p: &Ket) -> LinearCombination<usize, C> {
         self.expansions.set(self.expansions.get() + 1);
-        LinearCombination::term(1i16.into(), Ket(p.0))
+        LinearCombination::term(1i16.into(), usize::from(p.0))
     }
     fn index(&self, p: &Ket) -> Option<usize> {
         Some(usize::from(p.0))
+    }
+    fn element(&self, index: usize) -> Option<Ket> {
+        (index < 2).then_some(Ket(index == 1))
     }
     fn elements(&self) -> impl Iterator<Item = Ket> + '_ {
         self.enumerations.set(self.enumerations.get() + 1);
@@ -281,6 +284,37 @@ fn underflowed_tensor_coefficients_do_not_keep_expanding() {
 }
 
 #[test]
+fn tensor_basis_choices_preserve_correlated_block_digits() {
+    type Local = LocalState<Ket, Action, f64>;
+    let factors = [7u8, 1, 5].map(HilbertSpace::factor);
+    let ab = factors[0].tensor(&factors[1]).unwrap();
+    let abc = ab.tensor(&factors[2]).unwrap();
+    let ket = |value, factor| Local::primitive(Ket(value)).at(factor).unwrap();
+    let pair =
+        |value| State::tensor_in(&ab, [ket(value, &factors[0]), ket(value, &factors[1])]).unwrap();
+    let correlated = State::sum(&ab, [pair(false), pair(true).scaled(2.0)]).unwrap();
+    let last = State::sum(
+        &factors[2],
+        [ket(false, &factors[2]), ket(true, &factors[2]).scaled(3.0)],
+    )
+    .unwrap();
+    let state = State::tensor_in(&abc, [correlated, last]).unwrap();
+    let basis = CountingBasis::new();
+    let coordinates = state.coordinates(&basis).unwrap();
+    assert_eq!(basis.expansions.get(), 2);
+    let expected: [(&[usize], &f64); 4] = [
+        (&[0, 0, 0], &1.0),
+        (&[0, 0, 1], &3.0),
+        (&[1, 1, 0], &2.0),
+        (&[1, 1, 1], &6.0),
+    ];
+    assert!(coordinates.entries().eq(expected));
+    let expanded = state.expand(&basis).unwrap();
+    assert_eq!(basis.expansions.get(), 4);
+    assert!(expanded.coordinates(&basis).unwrap().entries().eq(expected));
+}
+
+#[test]
 fn composite_expansion_retains_tiny_and_nan_coefficients() {
     type S = LocalState<Ket, Action, f64>;
     let factor = HilbertSpace::factor(0u8);
@@ -350,8 +384,8 @@ fn basis_enumeration_needs_no_index_comparison() {
     );
 }
 
-#[derive(PartialEq, Eq)]
-struct Index(u8); // No Clone, Hash, Ord or Debug.
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+struct Index(u8); // No Clone, Hash or Debug.
 
 #[test]
 fn placed_expansion_shares_nonclone_indices_and_does_not_enumerate_all_basis_elements() {
@@ -404,14 +438,14 @@ impl Act<f64> for Large {
 #[derive(PartialEq)]
 struct LargeBasis;
 impl Basis<Large, f64> for LargeBasis {
-    fn expand(&self, _: &Large) -> LinearCombination<Large, f64> {
-        LinearCombination::term(1.0, Large)
+    fn expand_indices(&self, _: &Large) -> LinearCombination<usize, f64> {
+        LinearCombination::term(1.0, 0)
     }
     fn index(&self, _: &Large) -> Option<usize> {
         Some(0)
     }
-    fn elements(&self) -> impl Iterator<Item = Large> {
-        std::iter::once(Large)
+    fn element(&self, index: usize) -> Option<Large> {
+        (index == 0).then_some(Large)
     }
 }
 

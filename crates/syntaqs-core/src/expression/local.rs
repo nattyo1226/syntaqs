@@ -1,6 +1,6 @@
 use alloc::{sync::Arc, vec::Vec};
 
-use super::parts::{ActExpr, AdjointExpr, ProductExpr, ScaleExpr, SumExpr};
+use super::parts::{ActExpr, AdjointExpr, Operands, ScaleExpr};
 use crate::{ExpressionError, Identity, Term};
 
 /// A shared local state over state primitive S, operator primitive O and coefficient C.
@@ -62,7 +62,7 @@ pub struct LocalOperator<O, C> {
 pub(crate) enum StateNode<S, O, C> {
     Primitive(S),
     Scale(ScaleExpr<LocalState<S, O, C>, C>),
-    Sum(SumExpr<LocalState<S, O, C>>),
+    Sum(Operands<LocalState<S, O, C>>),
     Act(ActExpr<LocalState<S, O, C>, LocalOperator<O, C>>),
 }
 
@@ -70,8 +70,8 @@ pub(crate) enum StateNode<S, O, C> {
 pub(crate) enum OperatorNode<O, C> {
     Primitive(O),
     Scale(ScaleExpr<LocalOperator<O, C>, C>),
-    Sum(SumExpr<LocalOperator<O, C>>),
-    Product(ProductExpr<LocalOperator<O, C>>),
+    Sum(Operands<LocalOperator<O, C>>),
+    Product(Operands<LocalOperator<O, C>>),
     Adjoint(AdjointExpr<LocalOperator<O, C>>),
 }
 
@@ -117,17 +117,14 @@ impl<S, O, C> LocalState<S, O, C> {
     }
     /// Constructs the empty sum, without numeric bounds.
     pub fn zero() -> Self {
-        Self::new(StateNode::Sum(SumExpr::Empty))
+        Self::sum_collected(Operands::Empty)
     }
     /// Constructs an ordered sum; one operand is returned unchanged.
     pub fn sum(operands: impl IntoIterator<Item = Self>) -> Self {
         Self::sum_collected(operands.into_iter().collect())
     }
-    fn sum_collected(operands: SumExpr<Self>) -> Self {
-        match operands {
-            SumExpr::One(value) => value,
-            values => Self::new(StateNode::Sum(values)),
-        }
+    fn sum_collected(operands: Operands<Self>) -> Self {
+        operands.collapse_singleton(|operands| Self::new(StateNode::Sum(operands)))
     }
     /// Collects fallible operands in order, stopping at the first input error.
     /// No primitive rules are evaluated and errors are returned unchanged.
@@ -186,17 +183,14 @@ impl<O, C> LocalOperator<O, C> {
     }
     /// Constructs the empty sum, without numeric bounds.
     pub fn zero() -> Self {
-        Self::new(OperatorNode::Sum(SumExpr::Empty))
+        Self::sum_collected(Operands::Empty)
     }
     /// Constructs an ordered sum; one operand is returned unchanged.
     pub fn sum(operands: impl IntoIterator<Item = Self>) -> Self {
         Self::sum_collected(operands.into_iter().collect())
     }
-    fn sum_collected(operands: SumExpr<Self>) -> Self {
-        match operands {
-            SumExpr::One(value) => value,
-            values => Self::new(OperatorNode::Sum(values)),
-        }
+    pub(super) fn sum_collected(operands: Operands<Self>) -> Self {
+        operands.collapse_singleton(|operands| Self::new(OperatorNode::Sum(operands)))
     }
     /// Collects fallible operands in order, stopping at the first input error.
     /// No primitive rules are evaluated and errors are returned unchanged.
@@ -236,18 +230,19 @@ impl<O, C> LocalOperator<O, C> {
         <Self as Identity>::identity()
     }
     pub(crate) fn into_product(self, rhs: Self) -> Self {
-        Self::new(OperatorNode::Product(ProductExpr { lhs: self, rhs }))
+        Self::from_product([self, rhs].into_iter().collect()).expect("nonempty product")
     }
     /// Constructs a product in input order. The empty product is identity.
     pub fn product(operands: impl IntoIterator<Item = Self>) -> Self
     where
         O: Identity,
     {
-        let mut iter = operands.into_iter();
-        match iter.next() {
-            None => Self::identity(),
-            Some(first) => iter.fold(first, Self::into_product),
-        }
+        Self::from_product(operands.into_iter().collect()).unwrap_or_else(Self::identity)
+    }
+    pub(crate) fn from_product(operands: Operands<Self>) -> Option<Self> {
+        (!operands.is_empty()).then(|| {
+            operands.collapse_singleton(|operands| Self::new(OperatorNode::Product(operands)))
+        })
     }
     pub(crate) fn into_adjoint(self) -> Self {
         Self::new(OperatorNode::Adjoint(AdjointExpr { operand: self }))
@@ -319,14 +314,10 @@ fn release<S, O, C>(root: Pending<S, O, C>) {
                     match node {
                         OperatorNode::Primitive(_) => {}
                         OperatorNode::Scale(s) => operator_child(s.operand, &mut stack),
-                        OperatorNode::Sum(s) => {
+                        OperatorNode::Sum(s) | OperatorNode::Product(s) => {
                             for child in s {
                                 operator_child(child, &mut stack)
                             }
-                        }
-                        OperatorNode::Product(p) => {
-                            operator_child(p.lhs, &mut stack);
-                            operator_child(p.rhs, &mut stack);
                         }
                         OperatorNode::Adjoint(a) => operator_child(a.operand, &mut stack),
                     }

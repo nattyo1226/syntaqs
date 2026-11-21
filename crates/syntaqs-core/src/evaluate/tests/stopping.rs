@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
-use core::ops::{Add, Mul};
+use core::ops::{Add, Mul, Neg};
+use num_complex::Complex64;
 use num_traits::{One, Zero};
 use std::cell::RefCell;
 
@@ -7,13 +8,14 @@ use super::super::inner_product::contract;
 use crate::{
     Act, Adjoint, Conjugate, Divide, ExpressionError, HilbertSpace as H, HomogeneousParity,
     Identity, InnerProduct, LinearCombination as Lc, LocalOperator, LocalState, Operator, Parity,
-    ParityOperator, State, Trace,
+    ParityOperator, State, TensorKind, Trace,
 };
 
 #[derive(Default)]
 struct Counts {
     inner: Vec<usize>,
     traces: Vec<Option<usize>>,
+    adjoints: usize,
     add: usize,
     multiply: usize,
     conjugate: usize,
@@ -24,22 +26,33 @@ fn reset() {
     COUNTS.with(|c| *c.borrow_mut() = Counts::default());
 }
 
-// No PartialEq, ordering, Copy, Num, or Float; contraction needs only exact Zero.
+// The low-level contraction fixture also exercises equality-free coefficients.
 #[derive(Clone)]
-struct Scalar(f64);
-impl From<f64> for Scalar {
+struct Scalar<const COMPARABLE: bool = false>(f64);
+impl PartialEq for Scalar<true> {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.0 == rhs.0
+    }
+}
+impl Neg for Scalar<true> {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Self(-self.0)
+    }
+}
+impl<const COMPARABLE: bool> From<f64> for Scalar<COMPARABLE> {
     fn from(v: f64) -> Self {
         Self(v)
     }
 }
-impl Add for Scalar {
+impl<const COMPARABLE: bool> Add for Scalar<COMPARABLE> {
     type Output = Self;
     fn add(self, rhs: Self) -> Self {
         COUNTS.with(|c| c.borrow_mut().add += 1);
         Self(self.0 + rhs.0)
     }
 }
-impl Mul for Scalar {
+impl<const COMPARABLE: bool> Mul for Scalar<COMPARABLE> {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
         COUNTS.with(|c| {
@@ -49,7 +62,7 @@ impl Mul for Scalar {
         Self(self.0 * rhs.0)
     }
 }
-impl Zero for Scalar {
+impl<const COMPARABLE: bool> Zero for Scalar<COMPARABLE> {
     fn zero() -> Self {
         Self(0.0)
     }
@@ -57,19 +70,19 @@ impl Zero for Scalar {
         self.0 == 0.0
     }
 }
-impl One for Scalar {
+impl<const COMPARABLE: bool> One for Scalar<COMPARABLE> {
     fn one() -> Self {
         Self(1.0)
     }
 }
-impl Conjugate for Scalar {
+impl<const COMPARABLE: bool> Conjugate for Scalar<COMPARABLE> {
     type Output = Self;
     fn conjugate(&self) -> Self {
         COUNTS.with(|c| c.borrow_mut().conjugate += 1);
         self.clone()
     }
 }
-impl Divide for Scalar {
+impl<const COMPARABLE: bool> Divide for Scalar<COMPARABLE> {
     type Output = Self;
     fn divide(self, rhs: Self) -> Self {
         COUNTS.with(|c| c.borrow_mut().divide += 1);
@@ -78,17 +91,21 @@ impl Divide for Scalar {
 }
 
 // Distinct natural primitives can describe overlapping states. No Clone or Eq.
-#[derive(PartialEq)]
 struct Ket {
     label: u8,
     site: usize,
+}
+impl PartialEq for Ket {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.label != 6 && self.label == rhs.label && self.site == rhs.site
+    }
 }
 impl Ket {
     fn amplitudes(&self) -> [f64; 2] {
         match self.label {
             0 => [1.0, 0.0],
             1 => [0.0, 1.0],
-            2 => [1.0, 1.0],
+            2 | 6 => [1.0, 1.0],
             3 => [1.0, -1.0],
             4 => [1e-100, 0.0],
             _ => [f64::NAN, 0.0],
@@ -118,7 +135,8 @@ impl<C: From<f64>> Act<C> for Ket {
     }
 }
 
-// A homogeneous real 2x2 algebra; no Clone, PartialEq, state, or Dimension bound.
+// A homogeneous real 2x2 algebra without Clone or Dimension.
+#[derive(PartialEq)]
 struct Op {
     matrix: [[f64; 2]; 2],
     site: Option<usize>,
@@ -151,6 +169,7 @@ impl ParityOperator for Op {
 impl<C: From<f64>> Adjoint<C> for Op {
     type Term = Self;
     fn adjoint(&self) -> Lc<Self, C> {
+        COUNTS.with(|c| c.borrow_mut().adjoints += 1);
         Lc::term(
             C::from(1.0),
             Self {
@@ -221,6 +240,95 @@ fn operators<C>(space: &H<u8>, sites: &[H<u8>], zero: Option<usize>) -> Operator
 }
 
 #[test]
+fn action_products_skip_remaining_sums_and_preserve_outer_branches() {
+    let flip = LocalOperator::primitive(Op {
+        matrix: [[0.0, 1.0], [1.0, 0.0]],
+        site: Some(0),
+    });
+    let kill = LocalOperator::primitive(Op {
+        matrix: [[0.0, 0.0], [0.0, 1.0]],
+        site: Some(1),
+    });
+    let later = LocalOperator::sum([flip.adjoint(), flip.adjoint()]);
+    let local_product = LocalOperator::product([flip.adjoint(), later, kill.clone()]);
+    let local = LocalState::primitive(Ket { label: 0, site: 1 });
+    reset();
+    let actual = local
+        .act(&(&local_product + LocalOperator::<Op, f64>::identity()))
+        .evaluate();
+    assert_eq!(actual.inner_product(&local), 1.0);
+    assert_eq!(actual.norm_squared(), 1.0);
+    COUNTS.with(|c| assert_eq!(c.borrow().adjoints, 0));
+
+    let factors = [H::factor(9u8), H::factor(3u8)];
+    let spanning_sum =
+        Operator::sum(factors.iter().map(|f| flip.adjoint().at(f).unwrap())).unwrap();
+    let composite_product = Operator::product([
+        flip.adjoint().at(&factors[0]).unwrap(),
+        spanning_sum,
+        kill.at(&factors[1]).unwrap(),
+    ])
+    .unwrap();
+    let placed_product = local_product.at(&factors[1]).unwrap();
+    for space in [
+        H::tensor_all(factors.iter().cloned()).unwrap(),
+        H::tensor_all_g(factors.iter().cloned()).unwrap(),
+    ] {
+        let input = product::<f64>(&space, &factors, &[0, 0]);
+        for branch in [&placed_product, &composite_product] {
+            let operator = (branch + Operator::identity()).unwrap();
+            reset();
+            let actual = input.act(&operator).unwrap().evaluate().unwrap();
+            assert_eq!(actual.inner_product(&input).unwrap(), 1.0);
+            assert_eq!(actual.norm_squared().unwrap(), 1.0);
+            COUNTS.with(|c| assert_eq!(c.borrow().adjoints, 0));
+        }
+        let outside = flip.adjoint().at(&H::factor(99)).unwrap();
+        let invalid = (outside * kill.at(&factors[1]).unwrap()).unwrap();
+        assert!(matches!(
+            input.act(&invalid),
+            Err(ExpressionError::MissingIndex)
+        ));
+    }
+}
+
+#[test]
+fn action_products_apply_operands_in_order_with_and_without_adjoint() {
+    let op = |matrix| LocalOperator::<Op, f64>::primitive(Op { matrix, site: None });
+    // P1 X P0 takes |0> to |1>. Its adjoint takes |1> to |0>.
+    let local_product = LocalOperator::product([
+        op([[0.0, 0.0], [0.0, 1.0]]),
+        op([[0.0, 1.0], [1.0, 0.0]]),
+        op([[1.0, 0.0], [0.0, 0.0]]),
+    ]);
+    let factors = [H::factor(9u8), H::factor(3u8)];
+    let graded = H::tensor_all_g(factors.iter().cloned()).unwrap();
+    for (operator, input_label, output_label) in [
+        (local_product.clone(), 0, 1),
+        (local_product.adjoint(), 1, 0),
+    ] {
+        let input = LocalState::primitive(Ket {
+            label: input_label,
+            site: 1,
+        });
+        let expected = LocalState::primitive(Ket {
+            label: output_label,
+            site: 1,
+        });
+        let actual = input.act(&operator).evaluate();
+        assert_eq!(actual.inner_product(&expected), 1.0);
+        assert_eq!(actual.norm_squared(), 1.0);
+
+        // The occupied first mode adds a minus sign to the odd X on the second.
+        let input = product::<f64>(&graded, &factors, &[1, input_label]);
+        let expected = product::<f64>(&graded, &factors, &[1, output_label]);
+        let actual = input.act(&operator.at(&factors[1]).unwrap()).unwrap();
+        assert_eq!(actual.inner_product(&expected).unwrap(), -1.0);
+        assert_eq!(actual.norm_squared().unwrap(), 1.0);
+    }
+}
+
+#[test]
 fn state_products_stop_at_first_exact_zero_and_keep_nonzero_factors() {
     let factors = sites();
     let space = H::tensor_all(factors.iter().cloned()).unwrap();
@@ -252,6 +360,76 @@ fn state_products_stop_at_first_exact_zero_and_keep_nonzero_factors() {
     reset();
     assert!(nan.inner_product(&a).unwrap().is_nan());
     COUNTS.with(|c| assert_eq!(c.borrow().inner.len(), 4));
+}
+
+#[test]
+fn coefficient_only_local_action_keeps_the_tensor_shape() {
+    use crate::expression::composite::StateNode;
+
+    let factors = sites();
+    let space = H::tensor_all(factors.iter().cloned()).unwrap();
+    let input = product::<f64>(&space, &factors, &[0, 1, 0, 1]);
+    let scale = LocalOperator::primitive(Op {
+        matrix: [[2.0, 0.0], [0.0, 2.0]],
+        site: Some(1),
+    })
+    .at(&factors[1])
+    .unwrap();
+    let actual = input.scaled(3.0).act(&scale).unwrap().evaluate().unwrap();
+    let StateNode::Scale(scaled) = actual.expression.node() else {
+        panic!("scaled tensor");
+    };
+    assert_eq!(scaled.coefficient, 6.0);
+    assert!(scaled.operand.shares_node_with(&input.expression));
+}
+
+#[test]
+fn local_action_on_tensor_of_sums_preserves_prefix_sign_and_splices_collapsed_block() {
+    use crate::expression::composite::StateNode;
+
+    let f = sites();
+    for (kind, parity_sign) in [(TensorKind::Ordinary, 1.0), (TensorKind::Graded, -1.0)] {
+        let left = H::tensor_all_with(kind, f[..2].iter().cloned()).unwrap();
+        let right = H::tensor_all_with(kind, f[2..].iter().cloned()).unwrap();
+        let space = left.tensor_with(kind, &right).unwrap();
+        let prefix = State::sum(
+            &left,
+            [
+                product::<f64>(&left, &f[..2], &[1, 0]),
+                product(&left, &f[..2], &[0, 1]).scaled(2.0),
+            ],
+        )
+        .unwrap();
+        let block = State::sum(
+            &right,
+            [
+                product::<f64>(&right, &f[2..], &[0, 1]),
+                product(&right, &f[2..], &[1, 0]).scaled(3.0),
+            ],
+        )
+        .unwrap();
+        let state = State::tensor_in(&space, [prefix.clone(), block]).unwrap();
+        let op = LocalOperator::primitive(Op {
+            matrix: [[0.0, 1.0], [0.0, 0.0]],
+            site: Some(2),
+        })
+        .at(&f[2])
+        .unwrap();
+        let actual = state.act(&op).unwrap().evaluate().unwrap();
+        let expected = State::tensor_in(&space, [prefix, product(&right, &f[2..], &[0, 0])])
+            .unwrap()
+            .scaled(parity_sign * 3.0);
+        assert_eq!(actual.inner_product(&expected).unwrap(), 45.0);
+        assert_eq!(actual.norm_squared().unwrap(), 45.0);
+        let StateNode::Scale(scale) = actual.expression.node() else {
+            panic!("scaled product");
+        };
+        let StateNode::Tensor(children) = scale.operand.node() else {
+            panic!("tensor with promoted local factors");
+        };
+        assert_eq!(children.len(), 3);
+        assert!(matches!(children.as_slice()[0].node(), StateNode::Sum(_)));
+    }
 }
 
 #[test]
@@ -292,6 +470,67 @@ fn sum_branches_continue_through_zero_terms_and_zero_partial_sums() {
     reset();
     assert_eq!(lhs.inner_product(&rhs).unwrap(), 1.0);
     COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 0, 1, 2]));
+}
+
+#[test]
+fn matching_nested_sums_use_symmetry_with_distinct_outer_scales() {
+    let f = sites();
+    let pair = f[0].tensor(&f[1]).unwrap();
+    let space = pair.tensor(&f[2]).unwrap();
+    let state = |c: Complex64, tail, scale| {
+        let block = State::sum(
+            &pair,
+            [
+                product::<Complex64>(&pair, &f[..2], &[0, 0]),
+                product::<Complex64>(&pair, &f[..2], &[2, 0]).scaled(c),
+            ],
+        )
+        .unwrap()
+        .scaled(scale);
+        let tail = LocalState::primitive(Ket {
+            label: tail,
+            site: 2,
+        })
+        .at(&f[2])
+        .unwrap();
+        State::tensor_in(&space, [block, tail]).unwrap()
+    };
+    let c = Complex64::new(0.5, 1.0);
+    let lhs = state(c, 0, Complex64::new(2.0, 1.0));
+    let rhs = state(c, 2, Complex64::new(-1.0, 2.0));
+
+    reset();
+    // The two-site block has amplitudes (1+c, c) on its nonzero coordinates.
+    // The tail overlap is 1 and the outer scalar contribution is 5i.
+    assert_eq!(lhs.inner_product(&rhs).unwrap(), Complex64::new(0.0, 22.5));
+    COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 1, 0, 1, 0, 1, 2]));
+
+    reset();
+    let rhs = state(c.conj(), 2, Complex64::new(-1.0, 2.0));
+    assert_eq!(lhs.inner_product(&rhs).unwrap(), Complex64::new(20.0, 2.5));
+    COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 1, 0, 1, 0, 1, 0, 1, 2]));
+}
+
+#[test]
+fn shared_nonreflexive_shapes_contract_all_pairs() {
+    let f = sites();
+    let space = f[0].tensor(&f[1]).unwrap();
+    let run = |label, coefficient| {
+        let sum = State::sum(
+            &space,
+            [
+                product::<f64>(&space, &f[..2], &[0, 0]),
+                product::<f64>(&space, &f[..2], &[label, 0]).scaled(coefficient),
+            ],
+        )
+        .unwrap();
+        reset();
+        let result = sum.inner_product(&sum).unwrap();
+        COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 1, 0, 1, 0, 1, 0, 1]));
+        result
+    };
+    assert_eq!(run(6, 1.0), 5.0);
+    assert!(run(2, f64::NAN).is_nan());
 }
 
 #[test]
@@ -342,9 +581,9 @@ fn hs_stops_local_traces_and_does_not_divide_zero_traces() {
     let f = sites();
     for kind in [crate::TensorKind::Ordinary, crate::TensorKind::Graded] {
         let space = H::tensor_all_with(kind, f.iter().cloned()).unwrap();
-        let a = operators::<Scalar>(&space, &f, None);
+        let a = operators::<Scalar<true>>(&space, &f, None);
         for zero in [None, Some(0), Some(2), Some(3)] {
-            let b = operators::<Scalar>(&space, &f, zero);
+            let b = operators::<Scalar<true>>(&space, &f, zero);
             reset();
             let value = a.hs_inner_product(&b).unwrap();
             assert_eq!(value.0, if zero.is_some() { 0.0 } else { 1.0 });
@@ -356,6 +595,65 @@ fn hs_stops_local_traces_and_does_not_divide_zero_traces() {
                 );
                 assert_eq!(c.divide, zero.unwrap_or(4));
             });
+        }
+    }
+}
+
+#[test]
+fn graded_parity_rejects_before_calling_primitive_traces() {
+    let f = sites();
+    let space = H::tensor_all_g(f.iter().cloned()).unwrap();
+    let odd = LocalOperator::<Op, Scalar<true>>::primitive(Op {
+        matrix: [[0.0, 1.0], [1.0, 0.0]],
+        site: Some(1),
+    })
+    .at(&f[1])
+    .unwrap();
+    let even = LocalOperator::<Op, Scalar<true>>::primitive(Op {
+        matrix: [[1.0, 0.0], [0.0, 0.0]],
+        site: Some(1),
+    })
+    .at(&f[1])
+    .unwrap();
+    reset();
+    assert_eq!(odd.trace_in(&space).unwrap().0, 0.0);
+    COUNTS.with(|c| assert!(c.borrow().traces.is_empty()));
+    reset();
+    assert_eq!(odd.hs_inner_product_in(&even, &space).unwrap().0, 0.0);
+    COUNTS.with(|c| {
+        let c = c.borrow();
+        assert_eq!(c.traces, [None]); // Only Tr(I) for normalization.
+        assert_eq!(c.divide, 0);
+    });
+}
+
+#[test]
+fn sums_keep_shared_interior_operator_blocks_factored() {
+    let factors: Vec<_> = (0..12u8).rev().map(H::factor).collect();
+    let local = LocalOperator::<Op, Scalar<true>>::sum([
+        LocalOperator::primitive(Op {
+            matrix: [[1.0, 0.0], [0.0, 0.0]],
+            site: None,
+        }),
+        LocalOperator::primitive(Op {
+            matrix: [[0.0, 0.0], [0.0, 1.0]],
+            site: None,
+        }),
+    ]);
+    let common = Operator::try_product(factors[1..11].iter().map(|f| local.at(f))).unwrap();
+    let left = local.at(&factors[0]).unwrap();
+    let right = local.at(&factors[11]).unwrap();
+    let sum = ((left * &common).unwrap() + (common * right).unwrap()).unwrap();
+    for kind in [TensorKind::Ordinary, TensorKind::Graded] {
+        let space = H::tensor_all_with(kind, factors.iter().cloned()).unwrap();
+        reset();
+        let collected = sum.collect_terms_in(&space).unwrap();
+        // Expanding a single addend would multiply coefficients for 2^11 products.
+        COUNTS.with(|c| assert!(c.borrow().multiply < 256));
+        for operator in [&sum, &collected] {
+            reset();
+            assert_eq!(operator.trace_in(&space).unwrap().0, 8192.0);
+            COUNTS.with(|c| assert!(c.borrow().multiply < 256));
         }
     }
 }
@@ -375,7 +673,7 @@ fn trace_and_hs_sums_keep_other_branches_and_original_space_checks() {
     .unwrap();
     reset();
     assert_eq!(sum.trace().unwrap(), 16.0);
-    COUNTS.with(|c| assert_eq!(c.borrow().traces.len(), 1 + 3 * 4));
+    COUNTS.with(|c| assert_eq!(c.borrow().traces, [Some(0), None]));
     assert_eq!(identity.hs_inner_product(&sum).unwrap(), 1.0);
     let local = LocalOperator::<Op, Scalar>::sum([
         LocalOperator::primitive(Op {

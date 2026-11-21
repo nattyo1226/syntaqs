@@ -165,7 +165,7 @@ fn expand<T: Real, B: Basis<Op, Complex<T>>>(
 ) -> Lc<Op, Complex<T>> {
     Lc::from_terms(
         sum.terms()
-            .flat_map(|t| basis.expand(&t.operand).scaled(t.coefficient)),
+            .flat_map(|t| basis.expand(&t.operand).unwrap().scaled(t.coefficient)),
     )
 }
 fn coordinates<T: Real, B: Basis<Op, Complex<T>>>(
@@ -369,7 +369,7 @@ fn check_operator_basis<T: Real, B: Basis<Op, Complex<T>>>(basis: &B, expected: 
     assert_eq!(elements.len(), dim_op::<Op>().unwrap());
     for op in OPS {
         assert_eq!(basis.index(&op), expected.iter().position(|&p| p == op));
-        let expanded = basis.expand(&op);
+        let expanded = basis.expand(&op).unwrap();
         assert_eq!(
             expanded.len(),
             if basis.index(&op).is_some() { 1 } else { 2 }
@@ -394,7 +394,7 @@ fn check_bases<T: Real>() {
         assert_eq!(elements.len(), dim_state::<State>().unwrap());
         for (i, state) in STATES.into_iter().enumerate() {
             assert_eq!(basis.index(&state), Some(i));
-            assert_eq!(basis.expand(&state), Lc::primitive(state));
+            assert_eq!(basis.expand(&state).unwrap(), Lc::primitive(state));
         }
     }
     state_basis::<T, _>(&SzBasis);
@@ -577,20 +577,22 @@ fn check_local_expressions<T: Real>() {
     }
     for basis in [CartesianBasis] {
         for primitive in OPS {
-            let expanded = <CartesianBasis as Basis<Op, Complex<T>>>::expand(&basis, &primitive);
+            let expanded =
+                <CartesianBasis as Basis<Op, Complex<T>>>::expand(&basis, &primitive).unwrap();
             let expression = O::from_terms(expanded.map(O::primitive));
             assert_matrix::<T>(expression_matrix(&expression), matrix(primitive));
         }
     }
     for primitive in OPS {
-        let expanded = <LadderBasis as Basis<Op, Complex<T>>>::expand(&LadderBasis, &primitive);
+        let expanded =
+            <LadderBasis as Basis<Op, Complex<T>>>::expand(&LadderBasis, &primitive).unwrap();
         assert_matrix::<T>(
             expression_matrix(&O::from_terms(expanded.map(O::primitive))),
             matrix(primitive),
         );
     }
     for primitive in STATES {
-        let expanded = <SzBasis as Basis<State, Complex<T>>>::expand(&SzBasis, &primitive);
+        let expanded = <SzBasis as Basis<State, Complex<T>>>::expand(&SzBasis, &primitive).unwrap();
         assert_vector::<T>(
             expression_vector(&S::from_terms(expanded.map(S::primitive))),
             vector(primitive),

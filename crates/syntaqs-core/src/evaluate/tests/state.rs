@@ -60,7 +60,7 @@ impl<'a> Act<f64> for Ket<'a> {
         ])
     }
 }
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Index(u8);
 type St<'a> = State<Index, Ket<'a>, Gate, f64>;
 fn sum<'a>(parts: impl IntoIterator<Item = St<'a>>) -> Result<St<'a>, crate::ExpressionError> {
@@ -133,7 +133,9 @@ fn composite_collection_normalizes_tensor_grouping_scales_units_and_single_facto
         ],
     )
     .unwrap();
-    let right = St::tensor_in(&h, [St::unit(), x.clone(), y.clone(), z.clone()])
+    let equal_a = H::factor(Index(2));
+    let equal_x = primitive(0.0, &calls).at(&equal_a).unwrap();
+    let right = St::tensor_in(&h, [St::unit(), equal_x, y.clone(), z.clone()])
         .unwrap()
         .scaled(3.0);
     let result = sum([left, right]).unwrap().evaluate().unwrap();

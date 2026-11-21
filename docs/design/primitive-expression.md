@@ -103,7 +103,15 @@ natural primitives. Construction retains duplicate/zero syntax; state evaluation
 collects terms automatically. Operator collection remains explicit. Lie residual calculations use this explicit operation
 to reduce cancellation before normalized HS contraction.
 
-Internal ScaleExpr/SumExpr/ProductExpr/ActExpr/AdjointExpr store node contents. Zero is an empty sum. LinearCombination<P,C> stores `SumExpr<Term<P,C>>`. Owned map/common constructors move rule/basis outputs into expressions, preserving coefficients, order, duplicates, and zero coefficients without Clone on elements or coefficients for that conversion.
+`Operands` stores ordered children for sums and products, with inline empty
+and single-operand forms. The node variant determines the operation. Sum and
+product constructors reuse the sole child of a singleton. An empty sum
+represents zero, and an empty product constructs identity. Evaluation combines
+a product from the left. An adjoint reverses the operand order and grouping.
+State action starts at the rightmost operand. `LinearCombination<P,C>` stores
+`Operands<Term<P,C>>`, with zero as an empty sequence. Owned maps move terms
+while preserving coefficients, order, and duplicates without cloning elements
+or coefficients.
 
 The expression nodes and shared internals are private; the tree is common infrastructure, not an extension point for user-defined nodes. Users customize local algebra through primitive capability traits and construct trees through the public expression handles under `expression::local` and `expression::composite`. Common handles are also available in the core prelude. `LinearCombination`, `Term<P,C>`, and its owned iterator `IntoTerms` are public under `expression::parts::linear_combination`. `Term` is an independent coefficient/operand type; associated `Term` in operation traits instead denotes an element without its coefficient.
 
@@ -145,7 +153,12 @@ Then `||I||_D=1`, and identity spectators preserve inner products. For Hermitian
 
 Trace remains ordinary and unnormalized, with Tr(I)=D. Expectations, purity traces, state inner products/norms, and state normalization keep their meanings. Custom algebras/bases need not be orthonormal.
 
-LocalOperator::hs_inner_product divides by O::identity().trace(). Normalize each evaluated primitive trace before multiplying coefficients and summing. Composite hs_inner_product/hs_inner_product_in use the same [ordinary local-trace traversal](composite-expression.md#111-intrinsic-terms-and-ordinary-representations) before contraction. Scaling before or after placement avoids unnecessary unnormalized intermediates. Each local dimension must be a nonzero C supporting mathematical division through Divide; ordinary trace/trace_in gain no division requirement.
+`LocalOperator::hs_inner_product` divides each evaluated primitive trace by
+`O::identity().trace()` before multiplying coefficients and summing.
+Composite HS uses the same normalization while
+[contracting intrinsic operator blocks](composite-expression.md#115-incremental-scalar-contractions).
+HS requires a nonzero local dimension and mathematical division through
+`Divide`. Full trace uses unnormalized local traces.
 
 This needs no state type, Dimension, integer total dimension, or integer-to-C conversion. Empty spaces have D=1. It avoids usize overflow and growth from multiplying spectator dimensions, without guaranteeing freedom from arbitrary coefficient overflow/rounding. See [trace.rs](../../crates/syntaqs-core/src/evaluate/trace.rs) and [HS regression tests](../../tests/tests/core_hs_inner_product.rs).
 
@@ -163,7 +176,11 @@ preserving local-algebra and factor checks.
 
 Exact expansion/coordinates explicitly organize expressions and connect them to bases, preserving linear relations and aggregating members. Primitives do not fix a selected basis, and ordinary actions/inner products/traces need no expansion. Approximate comparison and action equivalence follow [numerics](numerics.md).
 
-A basis struct implements Basis<P,C> with primitive expansion, indices, and ordered enumeration. State/operator outputs are LinearCombination<S,C>/LinearCombination<O,C>, restricted to selected primitive members and mapped into ordinary syntax. Members form a primitive subset; size derives from local structure and target kind, and core extends expansion linearly. See [bases](basis.md).
+A basis implements `Basis<P,C>` with indexed primitive expansion and lookup
+in both directions. `Basis::expand()` resolves the indices into an owned
+primitive combination and reports a missing element as an error. The basis
+size derives from local structure and target kind. Core extends the indexed
+rules linearly to expressions. See [bases](basis.md).
 
 The basis is an input; the result is ordinary syntax without basis identity or special expanded status. Preserve inputs/local structure and permit ordinary operations and re-expansion without an independent tree basis-change mechanism.
 

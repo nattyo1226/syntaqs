@@ -2,7 +2,7 @@
 
 use crate::{
     coefficient::multiply,
-    expression::parts::{IntoOperands, SumExpr},
+    expression::parts::{IntoOperands, Operands},
 };
 use core::{
     iter::FusedIterator,
@@ -26,21 +26,21 @@ pub struct Term<P, C> {
 /// require no arithmetic, cloning, or comparison capabilities.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LinearCombination<P, C> {
-    terms: SumExpr<Term<P, C>>,
+    terms: Operands<Term<P, C>>,
 }
 
 impl<P, C> LinearCombination<P, C> {
     /// Constructs the empty sum.
     pub fn zero() -> Self {
         Self {
-            terms: SumExpr::Empty,
+            terms: Operands::Empty,
         }
     }
 
     /// Constructs one term, retaining even a zero coefficient.
     pub fn term(coefficient: C, operand: P) -> Self {
         Self {
-            terms: SumExpr::One(Term {
+            terms: Operands::One(Term {
                 coefficient,
                 operand,
             }),
@@ -84,6 +84,22 @@ impl<P, C> LinearCombination<P, C> {
                 operand: f(term.operand),
             }),
         }
+    }
+
+    pub(crate) fn try_map<Q, E>(
+        self,
+        mut f: impl FnMut(P) -> Result<Q, E>,
+    ) -> Result<LinearCombination<Q, C>, E> {
+        let terms = self
+            .into_iter()
+            .map(|term| {
+                Ok(Term {
+                    coefficient: term.coefficient,
+                    operand: f(term.operand)?,
+                })
+            })
+            .collect::<Result<_, E>>()?;
+        Ok(LinearCombination { terms })
     }
 
     /// Constructs one operand with coefficient one.

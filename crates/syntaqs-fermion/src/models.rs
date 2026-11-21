@@ -64,7 +64,7 @@ impl<C> FermionModels<Fermion<C>> {
     /// assert_eq!(h.trace()?, Complex::new(4., 0.));
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    pub fn hubbard<I: Eq, R>(
+    pub fn hubbard<I: Ord, R>(
         chain: &Chain,
         sites: &[HilbertSpace<I>],
         t: R,
@@ -85,7 +85,7 @@ impl<C> FermionModels<Fermion<C>> {
     /// Uses `(U/4) Mz_i↑ Mz_i↓`, since `Mz=I-2n`. The coefficient type must
     /// represent mathematical quarters. Validation, site order, boundaries,
     /// parameter conventions and errors are the same as [`Self::hubbard`].
-    pub fn symmetric_hubbard<I: Eq, R>(
+    pub fn symmetric_hubbard<I: Ord, R>(
         chain: &Chain,
         sites: &[HilbertSpace<I>],
         t: R,
@@ -97,7 +97,7 @@ impl<C> FermionModels<Fermion<C>> {
         Self::hubbard_with_interaction(chain, sites, C::from(t), C::from(u) * quarter::<C>(), O::Mz)
     }
 
-    fn hubbard_with_interaction<I: Eq>(
+    fn hubbard_with_interaction<I: Ord>(
         chain: &Chain,
         sites: &[HilbertSpace<I>],
         t: C,

@@ -8,7 +8,7 @@ struct Primitive;
 struct Coeff;
 type System = syntaqs_core::system::ExpressionFactory<Primitive, (), Coeff>;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Index(u8);
 
 fn leaf<I>(space: &H<I>) -> StateOf<System, I> {

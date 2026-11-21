@@ -3,8 +3,8 @@ use syntaqs_core::{
     space::Dimension, space::DimensionOverflow, space::HilbertSpace, space::SpaceError,
 };
 
-// No Clone, Hash, Ord, Debug or generation implementation.
-#[derive(PartialEq, Eq)]
+// No Clone, Hash, Debug or generation implementation.
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Index(u32);
 struct Structure<const D: usize>;
 impl<const D: usize> Dimension for Structure<D> {
@@ -53,6 +53,11 @@ fn duplicates_across_nested_and_shared_subspaces_are_rejected() {
     assert!(matches!(
         Space::tensor_all([a.clone(), Space::factor(Index(1))]),
         Err(SpaceError::DuplicateIndex)
+    ));
+    let graded = a.tensor_g(&b).unwrap();
+    assert!(matches!(
+        graded.tensor(&a),
+        Err(SpaceError::MixedTensorKinds)
     ));
 }
 

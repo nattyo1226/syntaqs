@@ -57,7 +57,7 @@ where
     }
 }
 
-impl<'b, I: Eq, S, O, C, B, A, D>
+impl<'b, I: Ord, S, O, C, B, A, D>
     Export<Exported<D, MatrixMetadata<'b, S, B, HilbertSpace<I>>>, MatrixArgs<'b, S, B, A>>
     for &Operator<I, O, C>
 where
