@@ -101,12 +101,13 @@ An empty site produces no rows without closing gaps. A zero-site group yields on
 
 Site order and an independently existing ambient factor order are distinct. Connections neither reorder spaces/states/matrices nor construct tensors. Callers select ambient spaces, axes, and normalization; core handles placement, multiplication, and binding. Selecting one leaf per site differs from enumerating all Pauli assignments across leaves.
 
-`ExpressionFactory::operator_product_at` and `try_operator_product` accept
-arbitrary-length placements/products. Relations need no per-arity constructor
+`ExpressionFactory::operator_product_from` accepts any number of
+`(primitive, &factor)` assignments, and `try_operator_product` accepts any number
+of fallible operands. Relations need no per-arity constructor
 or geometry-specific evaluator, and enumeration/mapping require no evaluation
 capabilities.
 
-[pauli_strings.rs](../../examples/src/bin/pauli_strings.rs) demonstrates all supports up to K sites with one spin per site: ordinary iterators select each size-r support for `r=0..=min(K,N)` and assign `3^r` X/Y/Z combinations. The total is `Σ(r=0..min(K,N)) binomial(N,r) × 3^r`, giving 37 terms including identity on three sites up to two-site support. Empty support is one ambient identity, unlike Consecutive<0>. Sx/Sy/Sz are directly Pauli matrices, requiring no extra scale before binding. Construction needs only `I: Eq`, `Group: AsRef<[usize]>`, and iteration over the group collection.
+[pauli_strings.rs](../../examples/src/bin/pauli_strings.rs) demonstrates all supports up to K sites with one spin per site: ordinary iterators select each size-r support for `r=0..=min(K,N)` and assign `3^r` X/Y/Z combinations. The total is `Σ(r=0..min(K,N)) binomial(N,r) × 3^r`, giving 37 terms including identity on three sites up to two-site support. Empty support is one ambient identity, unlike Consecutive<0>. Sx/Sy/Sz are directly Pauli matrices, requiring no extra scale before binding. Construction needs only `I: Ord`, `Group: AsRef<[usize]>`, and iteration over the group collection.
 
 K counts sites, not acting leaves. A site containing m spins has `4^m−1` nonidentity Pauli strings. Exhaustive multi-leaf assignments use caller iterators/custom combiners rather than additional standard geometry APIs; this is not included in the current example.
 

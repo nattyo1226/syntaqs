@@ -581,7 +581,7 @@ mod tests {
     #[test]
     fn mapped_spaces_feed_existing_expression_construction_without_evaluation_bounds() {
         use syntaqs_spin_half::{SpinHalf, operator::SpinHalfOperator as Op};
-        #[derive(PartialEq, Eq)]
+        #[derive(PartialEq, Eq, PartialOrd, Ord)]
         struct Index(usize);
         struct Scale;
         impl From<f64> for Scale {

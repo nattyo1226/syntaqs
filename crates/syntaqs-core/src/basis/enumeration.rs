@@ -1,10 +1,10 @@
 //! Local basis sizes and lazy tensor-product enumeration.
 
 use crate::{
-    Basis, BasisError, Dimension, HilbertSpace, LocalOperator, LocalState, Operator, State,
+    BasisElements, BasisError, Dimension, HilbertSpace, LocalOperator, LocalState, Operator, State,
     expression::{
         composite::{OpExpr, OpNode, StateExpr, StateNode},
-        parts::{ProductExpr, SumExpr},
+        parts::Operands,
     },
 };
 use alloc::{vec, vec::Vec};
@@ -54,15 +54,12 @@ fn basis_indices(count: usize, dimension: Option<usize>) -> impl Iterator<Item =
     })
 }
 
-fn basis_element<P, C, B: Basis<P, C>>(
+pub(super) fn basis_element<P, B: BasisElements<P>>(
     basis: &B,
     index: usize,
     dimension: usize,
 ) -> Result<P, BasisError> {
-    let primitive = basis
-        .elements()
-        .nth(index)
-        .ok_or(BasisError::InvalidEnumeration)?;
+    let primitive = basis.element(index).ok_or(BasisError::InvalidEnumeration)?;
     let actual = basis.index(&primitive).ok_or(BasisError::NonBasisElement)?;
     if actual >= dimension {
         return Err(BasisError::IndexOutOfBounds {
@@ -70,7 +67,19 @@ fn basis_element<P, C, B: Basis<P, C>>(
             dimension,
         });
     }
-    if actual != index || (index == dimension - 1 && basis.elements().nth(dimension).is_some()) {
+    if actual != index {
+        return Err(BasisError::InvalidEnumeration);
+    }
+    Ok(primitive)
+}
+
+fn enumerated_element<P, B: BasisElements<P>>(
+    basis: &B,
+    index: usize,
+    dimension: usize,
+) -> Result<P, BasisError> {
+    let primitive = basis_element(basis, index, dimension)?;
+    if index == dimension - 1 && basis.element(dimension).is_some() {
         return Err(BasisError::InvalidEnumeration);
     }
     Ok(primitive)
@@ -80,9 +89,9 @@ impl<I> HilbertSpace<I> {
     /// Lazily enumerates tensor-product basis states in mixed-radix order.
     ///
     /// The same local basis is used on every factor. Enumeration needs neither
-    /// index comparison, algebraic evaluation, nor cloning primitives/indices,
-    /// and does not require a representable global dimension. The unit space
-    /// yields one unit state.
+    /// coefficient expansion, index comparison, algebraic evaluation, nor
+    /// cloning primitives or indices. It works even when the global dimension
+    /// exceeds `usize`. The unit space yields one unit state.
     /// Invalid enumeration is reported when the corresponding element is read.
     pub fn basis_states<S, O, C, B>(
         &self,
@@ -90,7 +99,7 @@ impl<I> HilbertSpace<I> {
     ) -> Result<impl Iterator<Item = BasisElement<State<I, S, O, C>>>, BasisError>
     where
         S: Dimension,
-        B: Basis<S, C>,
+        B: BasisElements<S>,
     {
         let factors = collect_leaves(self);
         let dimension = local_size::<S>(factors.len())?;
@@ -99,59 +108,48 @@ impl<I> HilbertSpace<I> {
                 .into_iter()
                 .zip(&factors)
                 .map(|(index, factor)| {
-                    let primitive = basis_element(basis, index, dimension.expect("basis factor"))?;
+                    let primitive =
+                        enumerated_element(basis, index, dimension.expect("basis factor"))?;
                     Ok(StateExpr::new(StateNode::Local(
-                        (*factor).clone(),
                         LocalState::primitive(primitive),
+                        (*factor).clone(),
                     )))
                 })
-                .collect::<Result<SumExpr<_>, BasisError>>()?;
-            let expression = match nodes {
-                SumExpr::Empty => StateExpr::new(StateNode::Unit),
-                SumExpr::One(node) => node,
-                nodes => StateExpr::new(StateNode::Tensor(nodes)),
-            };
+                .collect::<Result<Operands<_>, BasisError>>()?;
             Ok(State {
                 space: self.clone(),
-                expression,
+                expression: StateExpr::tensor(nodes),
             })
         }))
     }
 
     /// Lazily enumerates operator-basis products, bound to this space.
     ///
-    /// These are basis operators, not columns of an action matrix. No index
-    /// comparison, product, adjoint, identity, coefficient arithmetic, or
-    /// primitive clone is needed.
+    /// Each result is a product of placed basis elements. Enumeration needs no
+    /// coefficient expansion, index comparison, primitive algebra rules,
+    /// coefficient arithmetic, or primitive cloning.
     pub fn basis_operators<O, C, B>(
         &self,
         basis: &B,
     ) -> Result<impl Iterator<Item = Result<Operator<I, O, C>, BasisError>>, BasisError>
     where
         O: Dimension,
-        B: Basis<O, C>,
+        B: BasisElements<O>,
     {
         let factors = collect_leaves(self);
         let dimension = local_size::<O>(factors.len())?;
         Ok(basis_indices(factors.len(), dimension).map(move |digits| {
-            let mut nodes = Vec::new();
+            let mut nodes = Vec::with_capacity(factors.len());
             for (index, factor) in digits.into_iter().zip(&factors) {
-                let primitive = basis_element(basis, index, dimension.expect("basis factor"))?;
+                let primitive = enumerated_element(basis, index, dimension.expect("basis factor"))?;
                 nodes.push(OpExpr::new(OpNode::Local(
-                    (*factor).clone(),
                     LocalOperator::primitive(primitive),
+                    (*factor).clone(),
                 )));
             }
-            let mut nodes = nodes.into_iter();
-            let expression = match nodes.next() {
-                None => OpExpr::new(OpNode::Identity),
-                Some(first) => nodes.fold(first, |lhs, rhs| {
-                    OpExpr::new(OpNode::Product(ProductExpr { lhs, rhs }))
-                }),
-            };
             Ok(Operator {
                 ambient: Some(self.clone()),
-                expression,
+                expression: OpExpr::product(nodes.into()),
             })
         }))
     }

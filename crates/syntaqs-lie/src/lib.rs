@@ -95,6 +95,8 @@ use num_complex::Complex;
 use num_traits::Float;
 use syntaqs_core::expression::error::ExpressionError;
 
+type HsOverlaps<R> = Result<Vec<Complex<R>>, ExpressionError>;
+
 mod private {
     pub trait Sealed {}
     impl<O, R> Sealed for syntaqs_core::expression::local::LocalOperator<O, num_complex::Complex<R>> {}
@@ -108,7 +110,7 @@ mod private {
 ///
 /// This sealed trait fixes the normalized Hilbert–Schmidt contraction. Users
 /// supply primitive algebra rules through core traits, not a custom metric.
-/// Primitives also need `PartialEq` for exact term collection before contraction.
+/// Primitives also need `PartialEq` for exact term collection.
 /// Local context is `()`; placed context is `HilbertSpace<I>`.
 pub trait FamilyExpression: private::Sealed + Clone {
     /// Real precision of the expression's complex coefficients.
@@ -131,11 +133,25 @@ pub trait FamilyExpression: private::Sealed + Clone {
     #[doc(hidden)]
     fn lie_bracket_expression(&self, rhs: &Self) -> Result<Self, ExpressionError>;
     #[doc(hidden)]
+    fn closure_bracket_in(
+        &self,
+        rhs: &Self,
+        context: &Self::Context,
+    ) -> Result<Self, ExpressionError> {
+        self.in_context(context)?
+            .lie_bracket_expression(&rhs.in_context(context)?)
+    }
+    #[doc(hidden)]
     fn hs_in(
         &self,
         rhs: &Self,
         context: &Self::Context,
     ) -> Result<Complex<Self::Real>, ExpressionError>;
+    #[doc(hidden)]
+    fn prepare_hs_against<'a>(
+        basis: &'a [Self],
+        context: &'a Self::Context,
+    ) -> Result<impl FnMut(&Self) -> HsOverlaps<Self::Real> + 'a, ExpressionError>;
 }
 
 /// Invalid family context or failed operator-analysis precondition.

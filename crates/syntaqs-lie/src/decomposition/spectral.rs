@@ -15,7 +15,7 @@ pub(super) fn component<'a, E: FamilyExpression>(
         .collect::<Result<Vec<_>, LieError<E::Real>>>()?;
     Ok(LieComponent {
         source,
-        family: OperatorFamily::new_in(source.context(), operators)?,
+        family: OperatorFamily::new_in(operators, source.context())?,
         coordinates,
         options: *options,
     })

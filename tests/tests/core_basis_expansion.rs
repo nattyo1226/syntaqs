@@ -2,8 +2,12 @@
 
 use num_complex::Complex;
 use syntaqs_core::{
-    basis::Basis, basis::BasisError, basis::Coordinates, expression::local::LocalOperator,
-    expression::local::LocalState, space::HilbertSpace,
+    basis::BasisError,
+    basis::Coordinates,
+    basis::{Basis, BasisElements},
+    expression::local::LocalOperator,
+    expression::local::LocalState,
+    space::HilbertSpace,
 };
 
 use fixture::*;
@@ -118,14 +122,14 @@ fn check_three_level<T: Real>(kind: syntaqs_core::space::TensorKind) {
     let a = Ls::<T>::primitive(Ket::Phase).at(&f).unwrap();
     let b = Ls::<T>::primitive(Ket::Sum).at(&g).unwrap();
     let other = syntaqs_core::expression::composite::State::tensor_in(
-        &space,
         [
             Ls::<T>::primitive(Ket::Unit(Axis::B)).at(&f).unwrap(),
             Ls::primitive(Ket::Unit(Axis::C)).at(&g).unwrap(),
         ],
+        &space,
     )
     .unwrap();
-    let state = (syntaqs_core::expression::composite::State::tensor_in(&space, [a, b])
+    let state = (syntaqs_core::expression::composite::State::tensor_in([a, b], &space)
         .unwrap()
         .scaled(c(0.3, -0.7))
         .clone()
@@ -226,16 +230,7 @@ fn independent_three_level_expansion_at_both_precisions() {
 }
 
 struct BrokenBasis(u8);
-impl Basis<Ket, Complex<f64>> for BrokenBasis {
-    fn expand(
-        &self,
-        _: &Ket,
-    ) -> syntaqs_core::expression::parts::linear_combination::LinearCombination<Ket, Complex<f64>>
-    {
-        syntaqs_core::expression::parts::linear_combination::LinearCombination::primitive(
-            Ket::Phase,
-        )
-    }
+impl BasisElements<Ket> for BrokenBasis {
     fn index(&self, _: &Ket) -> Option<usize> {
         match self.0 {
             0 => None,
@@ -243,8 +238,21 @@ impl Basis<Ket, Complex<f64>> for BrokenBasis {
             _ => Some(0),
         }
     }
-    fn elements(&self) -> impl Iterator<Item = Ket> {
-        [Ket::Phase].into_iter()
+
+    fn element(&self, index: usize) -> Option<Ket> {
+        (index == 0 && self.0 != 3).then_some(Ket::Phase)
+    }
+}
+
+impl Basis<Ket, Complex<f64>> for BrokenBasis {
+    fn expand_indices(
+        &self,
+        _: &Ket,
+    ) -> syntaqs_core::expression::parts::linear_combination::LinearCombination<usize, Complex<f64>>
+    {
+        syntaqs_core::expression::parts::linear_combination::LinearCombination::primitive(
+            if self.0 == 1 { 3 } else { 0 },
+        )
     }
 }
 
@@ -252,7 +260,7 @@ impl Basis<Ket, Complex<f64>> for BrokenBasis {
 fn malformed_expansion_of_retained_states_and_enumeration_are_errors() {
     let state = Ls::<f64>::primitive(Ket::Phase);
     assert!(matches!(
-        state.coordinates(&BrokenBasis(0)),
+        state.expand(&BrokenBasis(0)),
         Err(BasisError::NonBasisElement)
     ));
     assert!(matches!(
@@ -261,6 +269,15 @@ fn malformed_expansion_of_retained_states_and_enumeration_are_errors() {
             index: 3,
             dimension: 3
         })
+    ));
+    assert_eq!(state.coordinates(&BrokenBasis(3)).unwrap().len(), 1);
+    assert!(matches!(
+        state.expand(&BrokenBasis(3)),
+        Err(BasisError::InvalidEnumeration)
+    ));
+    assert!(matches!(
+        BrokenBasis(3).expand(&Ket::Phase),
+        Err(BasisError::InvalidEnumeration)
     ));
     let factor = HilbertSpace::factor(0u8);
     let mut elements = factor
@@ -278,11 +295,11 @@ fn zero_state_factor_is_removed_before_basis_expansion() {
     let a = HilbertSpace::factor(0u8);
     let b = HilbertSpace::factor(1u8);
     let state = syntaqs_core::expression::composite::State::tensor_in(
-        &a.tensor(&b).unwrap(),
         [
             syntaqs_core::expression::composite::State::<_, Ket, Operator, Complex<f64>>::zero(&a),
             Ls::<f64>::primitive(Ket::Phase).at(&b).unwrap(),
         ],
+        &a.tensor(&b).unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -311,39 +328,59 @@ fn zero_state_factor_is_removed_before_basis_expansion() {
 }
 
 struct BrokenOperatorBasis;
-impl Basis<Operator, Complex<f64>> for BrokenOperatorBasis {
-    fn expand(
-        &self,
-        p: &Operator,
-    ) -> syntaqs_core::expression::parts::linear_combination::LinearCombination<
-        Operator,
-        Complex<f64>,
-    > {
-        syntaqs_core::expression::parts::linear_combination::LinearCombination::primitive(*p)
-    }
+impl BasisElements<Operator> for BrokenOperatorBasis {
     fn index(&self, p: &Operator) -> Option<usize> {
         matches!(p, Operator::Identity).then_some(0)
     }
-    fn elements(&self) -> impl Iterator<Item = Operator> {
-        std::iter::once(Operator::Identity)
+
+    fn element(&self, index: usize) -> Option<Operator> {
+        (index == 0).then_some(Operator::Identity)
+    }
+}
+
+impl Basis<Operator, Complex<f64>> for BrokenOperatorBasis {
+    fn expand_indices(
+        &self,
+        p: &Operator,
+    ) -> syntaqs_core::expression::parts::linear_combination::LinearCombination<usize, Complex<f64>>
+    {
+        syntaqs_core::expression::parts::linear_combination::LinearCombination::primitive(
+            if matches!(p, Operator::Identity) {
+                0
+            } else {
+                9
+            },
+        )
     }
 }
 
 #[test]
-fn zero_operator_does_not_hide_invalid_basis_expansion_on_a_later_factor() {
+fn operator_zeros_are_removed_before_basis_expansion() {
     let a = HilbertSpace::factor(0u8);
     let b = HilbertSpace::factor(1u8);
     let space = a.tensor(&b).unwrap();
     let operator = Lo::<f64>::primitive(Operator::Unit(Axis::A, Axis::B))
         .at(&b)
-        .unwrap()
-        .scaled(c(0.0, 0.0));
+        .unwrap();
     assert!(matches!(
         operator.coordinates_in(&BrokenOperatorBasis, &space),
-        Err(BasisError::NonBasisElement)
+        Err(BasisError::IndexOutOfBounds {
+            index: 9,
+            dimension: 9
+        })
     ));
-    assert!(matches!(
-        operator.expand_in(&BrokenOperatorBasis, &space),
-        Err(BasisError::NonBasisElement)
-    ));
+    for zero in [
+        operator.scaled(c(0.0, 0.0)),
+        (&operator + operator.scaled(c(-1.0, 0.0))).unwrap(),
+    ] {
+        assert_eq!(
+            zero.coordinates_in(&BrokenOperatorBasis, &space)
+                .unwrap()
+                .len(),
+            0
+        );
+        let expanded = zero.expand_in(&BrokenOperatorBasis, &space).unwrap();
+        assert!(expanded.space().unwrap().is_compatible_with(&space));
+        assert_eq!(expanded.coordinates(&BrokenOperatorBasis).unwrap().len(), 0);
+    }
 }

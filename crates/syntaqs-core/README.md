@@ -30,7 +30,7 @@ Custom algebras reuse the same expression trees and evaluators.
 | Grading | `HomogeneousParity`, `ParityOperator`, `Parity`, `TensorKind` |
 | Expressions | `LinearCombination`, `LocalState`, `LocalOperator`, `State`, `Operator` |
 | Construction | `ExpressionFactory`, `QuantumSystem`, `StateOf`, `OperatorOf` |
-| Spaces and bases | `HilbertSpace`, `Basis`, `Coordinates`, `dim_state`, `dim_op` |
+| Spaces and bases | `HilbertSpace`, `BasisElements`, `Basis`, `Coordinates`, `dim_state`, `dim_op` |
 | Coefficients | `Conjugate`, `Divide`, `ImaginaryUnit`, `RealPart` |
 
 Each operation requests its own capabilities. Storage, sharing, and delayed

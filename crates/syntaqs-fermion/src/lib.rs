@@ -43,8 +43,8 @@
 //! let up = HilbertSpace::factor("up");
 //! let down = HilbertSpace::factor("down");
 //! let space = HilbertSpace::tensor_all_g([up.clone(), down.clone()])?;
-//! let double = F::product_state(&space, [S::Occupied, S::Occupied])?;
-//! let up_only = F::product_state(&space, [S::Occupied, S::Empty])?;
+//! let double = F::state_tensor_from([S::Occupied, S::Occupied], &space)?;
+//! let up_only = F::state_tensor_from([S::Occupied, S::Empty], &space)?;
 //! let removed = double.act(&F::operator(O::Annihilate).at(&down)?)?;
 //! assert_eq!(up_only.inner_product(&removed)?, Complex::new(-1., 0.));
 //! # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())

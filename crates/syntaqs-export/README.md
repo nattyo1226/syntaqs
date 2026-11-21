@@ -28,10 +28,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-`Exported` pairs the container with interpretation metadata. To export an
-operator matrix, pass `MatrixArgs::<StatePrimitive, _>::new(&basis)` from
-`matrix::args`; it identifies the state basis on which the operator acts.
-A composite operator also needs a binding or an explicit ambient space.
+`Exported` pairs the container with interpretation metadata. For an operator
+matrix, pass `MatrixArgs::new(&basis)` from `matrix::args` and annotate the
+result with the desired container. If the state type is ambiguous, choose it
+with `MatrixArgs::<S, _>::new(&basis)`. A composite operator also needs a
+binding or an explicit ambient space.
 
 ## Containers and features
 

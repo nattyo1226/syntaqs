@@ -3,9 +3,17 @@ mod common;
 use common::*;
 use num_complex::Complex;
 use syntaqs_core::{
-    algebra::Act, algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity,
-    algebra::InnerProduct, algebra::Parity, algebra::ParityOperator, algebra::Product,
-    algebra::Trace, basis::Basis, expression::parts::linear_combination::LinearCombination as Lc,
+    algebra::Act,
+    algebra::Adjoint,
+    algebra::HomogeneousParity,
+    algebra::Identity,
+    algebra::InnerProduct,
+    algebra::Parity,
+    algebra::ParityOperator,
+    algebra::Product,
+    algebra::Trace,
+    basis::{Basis, BasisElements},
+    expression::parts::linear_combination::LinearCombination as Lc,
     space::Dimension,
 };
 use syntaqs_spin_one::{
@@ -200,7 +208,7 @@ fn bases<T: Real>() {
         assert_eq!(elements, expected);
         for p in OPS {
             assert_eq!(basis.index(&p), expected.iter().position(|v| *v == p));
-            let expansion = basis.expand(&p);
+            let expansion = basis.expand(&p).unwrap();
             assert!(expansion.terms().all(|t| expected.contains(&t.operand)));
             values::<T>(&combination(expansion), &matrix(p));
             let expr = SpinOne::<Complex<T>>::operator(p);
@@ -238,15 +246,12 @@ fn bases<T: Real>() {
     }
     check::<T, _>(CartesianBasis, CART, [1.; 9]);
     check::<T, _>(LadderBasis, LADDER, [1., 2., 2., 1., 1., 2., 2., 2., 2.]);
-    let states: Vec<_> = <SzBasis as Basis<S, Complex<T>>>::elements(&SzBasis).collect();
+    let states: Vec<_> = SzBasis.elements().collect();
     assert_eq!(states, STATES);
     for (i, s) in STATES.into_iter().enumerate() {
+        assert_eq!(SzBasis.index(&s), Some(i));
         assert_eq!(
-            <SzBasis as Basis<S, Complex<T>>>::index(&SzBasis, &s),
-            Some(i)
-        );
-        assert_eq!(
-            <SzBasis as Basis<S, Complex<T>>>::expand(&SzBasis, &s),
+            <SzBasis as Basis<S, Complex<T>>>::expand(&SzBasis, &s).unwrap(),
             Lc::primitive(s)
         );
     }

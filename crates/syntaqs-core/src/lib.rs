@@ -119,7 +119,7 @@ pub mod system;
 pub(crate) use algebra::{
     Act, Adjoint, HomogeneousParity, Identity, InnerProduct, Parity, ParityOperator, Product, Trace,
 };
-pub(crate) use basis::{Basis, BasisError, Coordinates};
+pub(crate) use basis::{Basis, BasisElements, BasisError, Coordinates};
 pub(crate) use coefficient::{Conjugate, Divide, RealPart};
 pub(crate) use expression::parts::linear_combination::{LinearCombination, Term};
 pub(crate) use expression::{
@@ -132,7 +132,7 @@ pub(crate) use space::{Dimension, DimensionOverflow, HilbertSpace, TensorKind};
 /// Frequently used expression, algebra, basis and system types.
 pub mod prelude {
     pub use crate::algebra::{Act, Adjoint, Identity, InnerProduct, Product, Trace};
-    pub use crate::basis::Basis;
+    pub use crate::basis::{Basis, BasisElements};
     pub use crate::expression::composite::{Operator, State};
     pub use crate::expression::local::{LocalOperator, LocalState};
     pub use crate::expression::parts::linear_combination::LinearCombination;

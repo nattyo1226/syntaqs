@@ -4,9 +4,17 @@ use std::num::NonZeroUsize;
 
 use num_complex::Complex;
 use syntaqs_core::{
-    algebra::Act, algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Product,
-    algebra::Trace, basis::Basis, basis::dim_op, basis::dim_state,
-    expression::parts::linear_combination::LinearCombination, space::Dimension,
+    algebra::Act,
+    algebra::Adjoint,
+    algebra::Identity,
+    algebra::InnerProduct,
+    algebra::Product,
+    algebra::Trace,
+    basis::dim_op,
+    basis::dim_state,
+    basis::{Basis, BasisElements},
+    expression::parts::linear_combination::LinearCombination,
+    space::Dimension,
     space::DimensionOverflow,
 };
 
@@ -14,9 +22,7 @@ use fixture::*;
 use syntaqs_tests::three_level as fixture;
 
 fn check_rules<T: Real>() {
-    let operators: Vec<_> = <MatrixUnits as Basis<Operator, Complex<T>>>::elements(&MatrixUnits)
-        .chain([Operator::Identity])
-        .collect();
+    let operators: Vec<_> = MatrixUnits.elements().chain([Operator::Identity]).collect();
     let identity = LinearCombination::<_, Complex<T>>::primitive(Operator::identity());
     assert_eq!(identity.len(), 1);
     assert_matrix(operator_value(&identity), matrix(Operator::Identity));
@@ -101,7 +107,7 @@ fn check_state_basis<T: Real, B: Basis<Ket, Complex<T>>>(basis: &B) {
         assert_eq!(basis.index(p), Some(i));
     }
     for p in KETS {
-        let expanded = basis.expand(&p);
+        let expanded = basis.expand(&p).unwrap();
         assert_vector(state_value(&expanded), p.coordinates());
         for term in &expanded {
             assert!(basis.index(&term.operand).is_some());
@@ -112,16 +118,11 @@ fn check_state_basis<T: Real, B: Basis<Ket, Complex<T>>>(basis: &B) {
 fn check_bases<T: Real>() {
     check_state_basis::<T, _>(&Canonical);
     check_state_basis::<T, _>(&NonOrthogonal);
-    assert_eq!(
-        <Canonical as Basis<Ket, Complex<T>>>::index(&Canonical, &Ket::Sum),
-        None
-    );
-    assert_eq!(
-        <NonOrthogonal as Basis<Ket, Complex<T>>>::index(&NonOrthogonal, &Ket::Unit(Axis::B)),
-        None
-    );
+    assert_eq!(Canonical.index(&Ket::Sum), None);
+    assert_eq!(NonOrthogonal.index(&Ket::Unit(Axis::B)), None);
     let expanded =
-        <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &Ket::Unit(Axis::B));
+        <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &Ket::Unit(Axis::B))
+            .unwrap();
     assert_complex(inner(&expanded, &expanded), c(1.0, 0.0));
     // Squared coefficient magnitudes alone give 2, while the actual norm² is 1.
     let coefficient_squares = expanded
@@ -130,31 +131,26 @@ fn check_bases<T: Real>() {
     assert_complex(Complex::new(coefficient_squares, T::zero()), c(2.0, 0.0));
     fn require_operator_basis<T: Real, B: Basis<Operator, Complex<T>>>(_: &B) {}
     require_operator_basis::<T, _>(&MatrixUnits);
-    let elements: Vec<_> =
-        <MatrixUnits as Basis<Operator, Complex<T>>>::elements(&MatrixUnits).collect();
+    let elements: Vec<_> = MatrixUnits.elements().collect();
     assert_eq!(elements.len(), dim_op::<Operator>().unwrap());
     for (i, p) in elements.iter().enumerate() {
-        assert_eq!(
-            <MatrixUnits as Basis<Operator, Complex<T>>>::index(&MatrixUnits, p),
-            Some(i)
-        );
+        assert_eq!(MatrixUnits.index(p), Some(i));
         assert_matrix(
-            operator_value(&<MatrixUnits as Basis<Operator, Complex<T>>>::expand(
-                &MatrixUnits,
-                p,
-            )),
+            operator_value(
+                &<MatrixUnits as Basis<Operator, Complex<T>>>::expand(&MatrixUnits, p).unwrap(),
+            ),
             matrix(*p),
         );
     }
-    assert_eq!(
-        <MatrixUnits as Basis<Operator, Complex<T>>>::index(&MatrixUnits, &Operator::Identity),
-        None
-    );
+    assert_eq!(MatrixUnits.index(&Operator::Identity), None);
     assert_matrix(
-        operator_value(&<MatrixUnits as Basis<Operator, Complex<T>>>::expand(
-            &MatrixUnits,
-            &Operator::Identity,
-        )),
+        operator_value(
+            &<MatrixUnits as Basis<Operator, Complex<T>>>::expand(
+                &MatrixUnits,
+                &Operator::Identity,
+            )
+            .unwrap(),
+        ),
         matrix(Operator::Identity),
     );
 }
@@ -241,9 +237,7 @@ fn check_three_level_expressions<T: Real>() {
     );
     assert_vector(expression_coordinates(&state), reference);
     assert_complex(state.inner_product(&state), dot(reference, reference));
-    let operators: Vec<_> = <MatrixUnits as Basis<Operator, Complex<T>>>::elements(&MatrixUnits)
-        .chain([Operator::Identity])
-        .collect();
+    let operators: Vec<_> = MatrixUnits.elements().chain([Operator::Identity]).collect();
     for a in &operators {
         let a_expr = O::<T>::primitive(*a).scaled(c(0.3, 0.2)) + O::identity();
         let mut a_matrix = matrix::<T>(*a);
@@ -285,7 +279,8 @@ fn check_three_level_expressions<T: Real>() {
     // The nonorthogonal basis uses a dependent primitive; importing its terms
     // must preserve overlaps, rather than interpreting coefficients as coordinates.
     for primitive in KETS {
-        let terms = <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &primitive);
+        let terms =
+            <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &primitive).unwrap();
         let imported = S::from_terms(terms.map(S::primitive));
         assert_vector(expression_coordinates(&imported), primitive.coordinates());
         assert_complex(
@@ -301,6 +296,7 @@ fn check_three_level_expressions<T: Real>() {
     assert_complex(O::<T>::identity().trace(), c(3.0, 0.0));
     let basis_operator = O::from_terms(
         <MatrixUnits as Basis<Operator, Complex<T>>>::expand(&MatrixUnits, &Operator::Identity)
+            .unwrap()
             .map(O::primitive),
     );
     assert_matrix(
@@ -373,8 +369,8 @@ fn composite_coordinates<T: Real>(
             .at(&factors[1])
             .unwrap();
         syntaqs_core::expression::composite::State::tensor_in(
-            &CompositeSpace::tensor_all(factors.iter().cloned()).unwrap(),
             [left, right],
+            &CompositeSpace::tensor_all(factors.iter().cloned()).unwrap(),
         )
         .unwrap()
         .inner_product(&evaluated)
@@ -402,21 +398,22 @@ fn check_three_level_composites<T: Real>() {
     // The reference uses literal ket coordinates, not basis expansion or Act.
     let local = S::<Ket, Operator, Complex<T>>::from_terms(
         <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &Ket::Phase)
+            .unwrap()
             .map(S::primitive),
     );
     let left = local.at(a).unwrap();
     let right = S::primitive(Ket::Sum).at(b).unwrap();
     let first = syntaqs_core::expression::composite::State::tensor_in(
-        &CompositeSpace::tensor_all(factors.iter().cloned()).unwrap(),
         [left, right],
+        &CompositeSpace::tensor_all(factors.iter().cloned()).unwrap(),
     )
     .unwrap();
     let second = syntaqs_core::expression::composite::State::tensor_in(
-        &h,
         [
             S::primitive(Ket::Unit(Axis::C)).at(a).unwrap(),
             S::primitive(Ket::Phase).at(b).unwrap(),
         ],
+        &h,
     )
     .unwrap();
     let state = (first.clone() + &second.scaled(c(-0.2, 0.3))).unwrap();
@@ -524,6 +521,7 @@ fn check_inner_products_and_squared_norms<T: Real>() {
     );
     let imported = S::<Ket, Operator, Complex<T>>::from_terms(
         <NonOrthogonal as Basis<Ket, Complex<T>>>::expand(&NonOrthogonal, &Ket::Unit(Axis::B))
+            .unwrap()
             .map(S::primitive),
     );
     assert_complex(
@@ -556,13 +554,13 @@ fn check_inner_products_and_squared_norms<T: Real>() {
     let b = CompositeSpace::factor(7);
     let h = a.tensor(&b).unwrap();
     let first = syntaqs_core::expression::composite::State::tensor_in(
-        &h,
         [x.at(&a).unwrap(), y.at(&b).unwrap()],
+        &h,
     )
     .unwrap();
     let second = syntaqs_core::expression::composite::State::tensor_in(
-        &h,
         [y.at(&a).unwrap(), z.at(&b).unwrap()],
+        &h,
     )
     .unwrap();
     assert_complex(

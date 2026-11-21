@@ -1,6 +1,6 @@
 //! The two supported core expression contexts; the contraction cannot be customized.
 
-use crate::FamilyExpression;
+use crate::{FamilyExpression, HsOverlaps};
 
 use ndarray_linalg::{Lapack, Scalar};
 use num_complex::Complex;
@@ -33,7 +33,7 @@ where
         Ok(Self::sum(operators))
     }
     fn collected_in(&self, _: &()) -> Result<Self, ExpressionError> {
-        Ok(self.collect_terms())
+        Ok(self.collect_terms_compact())
     }
     fn scaled_real(&self, coefficient: R) -> Self {
         self.scaled(Complex::new(coefficient, R::zero()))
@@ -49,11 +49,24 @@ where
     fn hs_in(&self, rhs: &Self, _: &()) -> Result<Complex<R>, ExpressionError> {
         Ok(self.collect_terms().hs_inner_product(&rhs.collect_terms()))
     }
+    fn prepare_hs_against<'a>(
+        basis: &'a [Self],
+        _: &'a (),
+    ) -> Result<impl FnMut(&Self) -> HsOverlaps<R> + 'a, ExpressionError> {
+        let basis: Vec<_> = basis.iter().map(Self::collect_terms).collect();
+        Ok(move |target: &Self| {
+            let target = target.collect_terms();
+            Ok(basis
+                .iter()
+                .map(|op| op.hs_inner_product(&target))
+                .collect())
+        })
+    }
 }
 
 impl<I, O, R> FamilyExpression for Operator<I, O, Complex<R>>
 where
-    I: Eq,
+    I: Ord,
     R: Float + Scalar<Real = R> + Lapack,
     O: PartialEq
         + Identity
@@ -100,8 +113,24 @@ where
             .commutator(rhs)?
             .scaled(Complex::new(R::zero(), -R::one())))
     }
+    fn closure_bracket_in(
+        &self,
+        rhs: &Self,
+        context: &Self::Context,
+    ) -> Result<Self, ExpressionError> {
+        if let Some(commutator) = self.try_collect_commutator_in(rhs, context)? {
+            return Ok(commutator.scaled(Complex::new(R::zero(), -R::one())));
+        }
+        self.in_context(context)?
+            .lie_bracket_expression(&rhs.in_context(context)?)
+    }
     fn hs_in(&self, rhs: &Self, context: &Self::Context) -> Result<Complex<R>, ExpressionError> {
-        self.collect_terms_in(context)?
-            .hs_inner_product_in(&rhs.collect_terms_in(context)?, context)
+        self.hs_inner_product_in(rhs, context)
+    }
+    fn prepare_hs_against<'a>(
+        basis: &'a [Self],
+        context: &'a Self::Context,
+    ) -> Result<impl FnMut(&Self) -> HsOverlaps<R> + 'a, ExpressionError> {
+        Self::prepare_hs_against_in(basis, context)
     }
 }

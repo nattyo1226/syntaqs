@@ -65,11 +65,11 @@ fn normalized_kinds_grouping_subsystems_and_errors() {
     ));
     assert!(matches!(
         State::tensor_in(
-            &H::tensor_all([a.clone(), H::factor(1), H::factor(3)]).unwrap(),
             [
                 ket::<f64>(0, &[a.clone(), b], TensorKind::Graded),
                 ket(0, &[H::factor(3)], TensorKind::Ordinary)
-            ]
+            ],
+            &H::tensor_all([a.clone(), H::factor(1), H::factor(3)]).unwrap()
         ),
         Err(ExpressionError::IncompatibleSpaces)
     ));
@@ -99,6 +99,94 @@ fn matrix_of<T: Real>(op: &OperatorOf<T>, space: &H<u8>) -> Vec<num_complex::Com
         }
     }
     result
+}
+
+fn overlapping_operator_blocks<T: Real>() {
+    let factors = [7, 1, 9].map(H::factor);
+    for kind in [TensorKind::Ordinary, TensorKind::Graded] {
+        let space = H::tensor_all_with(kind, factors.iter().cloned()).unwrap();
+        let op = |p, i: usize| placed::<T>(p, &factors[i]);
+        let dense = |p, i| embedding::<T>(p, i, 3, kind);
+        let add = |left: Vec<_>, right| {
+            left.into_iter()
+                .zip(right)
+                .map(|(a, b)| a + b)
+                .collect::<Vec<_>>()
+        };
+        let scale = |matrix: Vec<_>, coefficient| {
+            matrix
+                .into_iter()
+                .map(|entry| entry * coefficient)
+                .collect::<Vec<_>>()
+        };
+        let c1 = c::<T>(0.5, -0.25);
+        let c2 = c::<T>(-0.5, 0.75);
+        let first =
+            (OperatorOf::<T>::identity() + (op(A, 1) * op(CREATE, 0)).unwrap().scaled(c1)).unwrap();
+        let left = add(
+            dense(Op::I, 0),
+            scale(product(&dense(A, 1), &dense(CREATE, 0)), c1),
+        );
+        let single = op(A, 2);
+        let mixed = (&single + op(Op::P, 2).scaled(c2)).unwrap();
+        let dense_mixed = add(dense(A, 2), scale(dense(Op::P, 2), c2));
+        let tail = op(CREATE, 1);
+        let cross = (&tail * op(Op::P, 2)).unwrap();
+        for (middle, middle_matrix, last, last_matrix) in [
+            // For graded products the intervening odd block exchanges with a
+            // uniform sign in the first case, and a term-dependent sign in the second.
+            (single, dense(A, 2), tail.clone(), dense(CREATE, 1)),
+            (mixed.clone(), dense_mixed.clone(), tail, dense(CREATE, 1)),
+            // The last operand intersects both existing blocks here.
+            (
+                mixed,
+                dense_mixed,
+                cross,
+                product(&dense(CREATE, 1), &dense(Op::P, 2)),
+            ),
+        ] {
+            let expression = OperatorOf::<T>::product([first.clone(), middle, last]).unwrap();
+            let expected = product(&product(&left, &middle_matrix), &last_matrix);
+            for (candidate, expected) in [
+                (expression.clone(), expected.clone()),
+                (expression.adjoint(), adjoint(&expected)),
+            ] {
+                let collected = candidate.collect_terms_in(&space).unwrap();
+                values(&matrix_of(&collected, &space), &expected);
+                let expanded = candidate.expand_in(&Units, &space).unwrap();
+                values(&matrix_of(&expanded, &space), &expected);
+            }
+        }
+
+        // Factor a common prefix and suffix without reordering the two mixed
+        // graded end blocks across the changing middle factor.
+        let prefix = (op(A, 2) + op(Op::P, 2).scaled(c1)).unwrap();
+        let suffix = (op(CREATE, 0) + op(Op::P, 0).scaled(c2)).unwrap();
+        let terms = [Op::P, A]
+            .map(|p| OperatorOf::<T>::product([prefix.clone(), op(p, 1), suffix.clone()]).unwrap());
+        let sum = OperatorOf::<T>::sum(terms).unwrap();
+        let expected = product(
+            &product(
+                &add(dense(A, 2), scale(dense(Op::P, 2), c1)),
+                &add(dense(Op::P, 1), dense(A, 1)),
+            ),
+            &add(dense(CREATE, 0), scale(dense(Op::P, 0), c2)),
+        );
+        values(
+            &matrix_of(&sum.collect_terms_in(&space).unwrap(), &space),
+            &expected,
+        );
+        values(
+            &matrix_of(&sum.expand_in(&Units, &space).unwrap(), &space),
+            &expected,
+        );
+    }
+}
+
+#[test]
+fn overlapping_operator_blocks_keep_order_and_graded_signs() {
+    overlapping_operator_blocks::<f32>();
+    overlapping_operator_blocks::<f64>();
 }
 
 fn check_local_grouping<T: Real>() {
@@ -168,6 +256,36 @@ fn check_local_grouping<T: Real>() {
         values(
             &matrix_of(&expression.expand_in(&Units, &h).unwrap(), &h),
             &expected,
+        );
+        let sequence = OperatorOf::<T>::product([
+            b.scaled(c(1., 0.)),
+            a.clone(),
+            placed::<T>(Op::P, &factors[1]),
+        ])
+        .unwrap();
+        values(&matrix_of(&sequence, &h), &adjoint(&expected));
+        let sequence = sequence.adjoint();
+        values(&matrix_of(&sequence, &h), &expected);
+        values(
+            &matrix_of(&sequence.expand_in(&Units, &h).unwrap(), &h),
+            &expected,
+        );
+
+        let local = LocalOperator::product([CREATE, A, Op::P].map(LocalOperator::primitive))
+            .at(&factors[1])
+            .unwrap();
+        let expected_local = product(
+            &product(
+                &embedding::<T>(CREATE, 1, 3, kind),
+                &embedding::<T>(A, 1, 3, kind),
+            ),
+            &embedding::<T>(Op::P, 1, 3, kind),
+        );
+        values(&matrix_of(&local, &h), &expected_local);
+        values(&matrix_of(&local.adjoint(), &h), &adjoint(&expected_local));
+        values(
+            &matrix_of(&local.expand_in(&Units, &h).unwrap(), &h),
+            &expected_local,
         );
 
         let bad = (OperatorOf::<T>::zero() * placed(A, &H::factor(99))).unwrap();
@@ -309,6 +427,22 @@ fn check<T: Real>() {
                 &vector(&acted.expand(&States).unwrap().expand(&States).unwrap()),
                 &vector(&acted),
             );
+            if n == 3 && kind == TensorKind::Graded {
+                let block = (ket::<T>(2, &factors[..2], kind)
+                    + ket::<T>(3, &factors[..2], kind).scaled(c(0.5, 0.3)))
+                .unwrap();
+                let factored = State::tensor_in([block, ket(1, &factors[2..], kind)], &h).unwrap();
+                let input = vector(&factored);
+                // The first target is inside the block sum. For the second
+                // target each branch of that sum contributes to the parity prefix.
+                for target in [1, 2] {
+                    let acted = factored.act(&placed(A, &factors[target])).unwrap();
+                    values(
+                        &vector(&acted),
+                        &act(&embedding(A, target, n, kind), &input),
+                    );
+                }
+            }
             close(psi.inner_product(&psi).unwrap(), c(0.78, 0.));
             for i in 0..n {
                 for j in 0..n {
@@ -353,13 +487,13 @@ fn scope_and_intrinsic_coordinates_are_preserved() {
     let op = placed::<f64>(A, &b);
     let left = ket(1, &[a], TensorKind::Graded);
     let right = ket(1, &[b], TensorKind::Graded);
-    let inner = State::tensor_in(&h, [left.clone(), right.act(&op).unwrap()]).unwrap();
+    let inner = State::tensor_in([left.clone(), right.act(&op).unwrap()], &h).unwrap();
     let inner_ready = State::tensor_in(
-        &h,
         [left.clone(), right.act(&op).unwrap().evaluate().unwrap()],
+        &h,
     )
     .unwrap();
-    let outer = State::tensor_in(&h, [left, right])
+    let outer = State::tensor_in([left, right], &h)
         .unwrap()
         .act(&op)
         .unwrap();
@@ -392,12 +526,12 @@ fn constructors_fallibility_and_deep_graded_trees() {
     type Q = syntaqs_core::system::ExpressionFactory<Ket, Op, num_complex::Complex<f64>>;
     let a = H::factor(0);
     let b = H::factor(1);
-    let g = Q::product_state(
-        &H::tensor_all_g([a.clone(), b.clone()]).unwrap(),
+    let g = Q::state_tensor_from(
         [Ket(1), Ket(1)],
+        &H::tensor_all_g([a.clone(), b.clone()]).unwrap(),
     )
     .unwrap();
-    let explicit = Q::product_state(g.space(), [Ket(1), Ket(1)]).unwrap();
+    let explicit = Q::state_tensor_from([Ket(1), Ket(1)], g.space()).unwrap();
     assert!(g.space().is_compatible_with(explicit.space()));
     values(&vector(&g), &vector(&explicit));
     for kind in [TensorKind::Ordinary, TensorKind::Graded] {
@@ -405,11 +539,11 @@ fn constructors_fallibility_and_deep_graded_trees() {
         let y = Q::state(Ket(1)).at(&b).unwrap();
         let target = H::tensor_all_with(kind, [a.clone(), b.clone()]).unwrap();
         let candidates = [
-            Q::tensor_in(&target, [x.clone(), y.clone()]).unwrap(),
-            Q::try_tensor_in(&target, [Ok(x.clone()), Ok(y.clone())]).unwrap(),
-            State::tensor_in(&target, [x.clone(), y.clone()]).unwrap(),
-            State::try_tensor_in(&target, [Ok(x), Ok(y)]).unwrap(),
-            Q::product_state(&target, [Ket(1), Ket(1)]).unwrap(),
+            Q::state_tensor([x.clone(), y.clone()], &target).unwrap(),
+            Q::try_state_tensor([Ok(x.clone()), Ok(y.clone())], &target).unwrap(),
+            State::tensor_in([x.clone(), y.clone()], &target).unwrap(),
+            State::try_tensor_in([Ok(x), Ok(y)], &target).unwrap(),
+            Q::state_tensor_from([Ket(1), Ket(1)], &target).unwrap(),
         ];
         for state in candidates {
             assert!(state.space().is_compatible_with(&target));
@@ -430,7 +564,7 @@ fn constructors_fallibility_and_deep_graded_trees() {
     .into_iter()
     .inspect(|_| count += 1);
     assert!(matches!(
-        Q::try_tensor_in(g.space(), inputs),
+        Q::try_state_tensor(inputs, g.space()),
         Err(ExpressionError::MissingIndex)
     ));
     assert_eq!(count, 3);
@@ -441,8 +575,8 @@ fn constructors_fallibility_and_deep_graded_trees() {
             let mut psi = ket::<f64>(3, &factors, TensorKind::Graded);
             for _ in 0..20_000 {
                 psi = State::tensor_in(
-                    &H::tensor_all_g(factors.clone()).unwrap(),
                     [State::unit(), psi],
+                    &H::tensor_all_g(factors.clone()).unwrap(),
                 )
                 .unwrap();
             }
@@ -549,10 +683,10 @@ fn graded_action_needs_no_product_clone_or_numeric_ordering() {
     let factors = [H::factor(0), H::factor(1), H::factor(2)];
     let space = H::tensor_all_g(factors.iter().cloned()).unwrap();
     let psi = State::tensor_in(
-        &space,
         factors
             .iter()
             .map(|f| LocalState::primitive(Borrowed(&count)).at(f).unwrap()),
+        &space,
     )
     .unwrap();
     let op = LocalOperator::primitive(Action::Flip)
@@ -567,12 +701,12 @@ fn graded_action_needs_no_product_clone_or_numeric_ordering() {
 fn large_separable_states_and_traces_do_not_need_global_dimensions_or_bases() {
     let factors: Vec<_> = (0..80).map(H::factor).collect();
     let psi = State::<_, Ket, Op, num_complex::Complex<f64>>::tensor_in(
-        &H::tensor_all_g(factors.iter().cloned()).unwrap(),
         factors.iter().map(|f| {
             (LocalState::primitive(Ket(0)) + LocalState::primitive(Ket(1)))
                 .at(f)
                 .unwrap()
         }),
+        &H::tensor_all_g(factors.iter().cloned()).unwrap(),
     )
     .unwrap();
     assert!(psi.space().dim::<Ket>().is_err());
@@ -633,7 +767,7 @@ fn local_expression_homomorphism_three_odd_factors_and_empty_bases() {
             close(*value, c(1., 0.));
         }
         let unit = H::<u8>::tensor_all_with(kind, []).unwrap();
-        let one = State::<u8, Ket, Op, num_complex::Complex<f64>>::tensor_in(&unit, []).unwrap();
+        let one = State::<u8, Ket, Op, num_complex::Complex<f64>>::tensor_in([], &unit).unwrap();
         assert_eq!(one.space().kind(), Some(kind));
         close(one.inner_product(&one).unwrap(), c(1., 0.));
         let state = unit

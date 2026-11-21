@@ -23,14 +23,14 @@ Public analysis types are defined under `family`, `representation`, `invariant`,
 `OperatorFamily<E>` uses the sealed `FamilyExpression` adapter for core's
 `LocalOperator<O,Complex<R>>` and `Operator<I,O,Complex<R>>`, with R=f32/f64.
 Primitives supply Product, Adjoint, Trace, Identity, and PartialEq; placed inputs
-also use core's parity traits and I: Eq. No Clone on primitives or indices,
+also use core's parity traits and `I: Ord`. No Clone on primitives or indices,
 Dimension, state type, state basis, or physical matrix export is required.
 The metric is fixed normalized HS, `Tr(A†B)/D`.
 
 `new(inputs)` rejects empty input and preserves order and original expression
 handles. Local context is `()`. For placed operators it selects the first
 available binding, requires all existing bindings to agree, and validates every
-referenced factor. Entirely unbound placed inputs require `new_in(&space, inputs)`.
+referenced factor. Entirely unbound placed inputs require `new_in(inputs, &space)`.
 The explicit family context also rejects conflicting old bindings. Rebind in
 core before construction if replacement is intended. Zero and zero coefficients
 do not bypass context checks. Targets obey the same checks.
@@ -76,15 +76,19 @@ Self-contractions also use their scalar magnitude as a minimum squared scale.
 Invalid or overflowing bounds error. Small positive values and reconstruction
 coefficients are not pruned.
 
-Before contraction, Lie operations explicitly collect equal natural primitives
-using core's `collect_terms`/`collect_terms_in`. Local sums remain factored;
-compatible tensor terms merge without Cartesian expansion. This reduces
-cancellation before squaring without changing ordinary evaluation or imposing an approximate-zero
-policy. Collection uses primitive equality, not a complete independent operator
-basis; distinct natural primitives may still have linear relations. No general
-accuracy guarantee beyond the covered numerical cases is asserted. Candidate
-[residual-accuracy improvements](../future-work/evaluation-improvements.md#1-lie-residual-accuracy)
-remain future work.
+Before checking closure or decomposing a family, scale the input basis
+coefficients to keep intermediate bracket products at a moderate magnitude.
+Aim for HS norms near one. Multiplying each basis operator by a nonzero real
+scalar preserves the exact real span. When large product contributions cancel,
+roundoff can exceed the absolute tolerance for a near-zero bracket and cause
+its Hermiticity or span check to fail.
+
+Lie collects matching natural terms before local HS contraction. Composite
+HS contraction receives the expression and its context directly. The core
+evaluator collects matching terms within blocks and keeps independent blocks
+factored. Collection combines coefficients using primitive equality and removes
+exact zeros. Distinct natural primitives may still have linear relations.
+[Residual accuracy proposals](../future-work/evaluation-improvements.md#1-lie-residual-accuracy).
 
 ### 3.1. Numerical settings and defaults
 
@@ -141,6 +145,19 @@ bracket's normalized HS norm as scale. Nonclosed candidates return failed checks
 dependent and non-Hermitian candidates must first be diagnosed with `validate`.
 No inputs are removed and no pseudoinverse is used.
 
+For placed closure targets with two overlapping sparse sums, core can collect
+the bracket once using an index of term support. It skips disjoint commuting
+pairs and keeps disjoint odd–odd pairs in a graded space. Other targets
+follow the symbolic evaluation path.
+
+Closure prepares the basis once for the Gram right-hand sides. For each
+ordered bracket it prepares the target once and contracts it against every
+prepared basis operand in family order. Local preparation collects matching
+terms. For placed operators, core retains the evaluated basis blocks within
+the family context and shares their primitive numbering with one target at
+a time. Lie checks the resulting coordinates and evaluates the full residual
+expression against the reconstructed projection.
+
 Only a passing closure report can become `StructureConstants`; otherwise
 `NonClosedPair` records the first failed pair and its effective check. Values
 obey `-i[B_i,B_j]=sum_k f[k,i,j] B_k`, with output index first. The constants
@@ -184,9 +201,10 @@ This is distinct from a physical-operator centralizer and from the smaller
 symmetric commuting subspace. In particular an n-dimensional abelian algebra
 has a full n²-dimensional real commutant.
 
-Center extraction constructs internal normalized-HS orthonormal coordinates.
-With Gram matrix `G`, the retained forward transform `U` obeys `U^T G U=I`,
-and its inverse is `V=U^T G`. Generators and action coordinates both transform:
+Center extraction constructs internal normalized-HS orthonormal coordinates
+from one Gram evaluation. With that matrix `G`, the retained forward
+transform `U` obeys `U^T G U=I`, and its inverse is `V=U^T G`. Generators
+and action coordinates both transform:
 `ad'_j=V (sum_i U[i,j] ad_i) U`. The common-kernel SVD stacks these transformed
 adjoint matrices. Its nullspace columns `Z` span the full center; the remaining
 right singular vectors `S` span the Euclidean orthogonal complement. Both come
@@ -216,16 +234,19 @@ map `L` and candidate vector `v`, the check measures `||L v||_2` at scale
 `||L||_F ||v||_2`, using the residual tolerance. Matrix unknowns use row-major
 vectorization, so their vector norm is Frobenius. Candidates exceeding this bound
 return `ConstraintResidual`, even if the rank cutoff classified them as null.
+When rank analysis verifies an exact-zero constraint matrix, it derives the
+per-column residual diagnostics directly with zero norms and scales.
 Center diagnostics refer to internal orthonormal coordinates; `centrality()`
 additionally checks the mapped columns against the original stacked adjoints.
 All dimensions and validity claims are relative to the recorded tolerances.
 
 The internal `SymmetricCommutant` solves constraints restricted to real symmetric
 matrices in HS-orthonormal coordinates, with Frobenius-orthonormal parameter basis
-`E_aa` and `(E_ab+E_ba)/sqrt(2)`. It is a distinct internal object for
-spectral ideal splitting and is not exposed as the public full commutant. Its
-kernel uses the same rank/residual diagnostics. For a three-dimensional abelian
-algebra its dimension is six, whereas the public full commutant has dimension nine.
+`E_aa` and `(E_ab+E_ba)/sqrt(2)`. It constructs those columns directly with
+one row for each entry of each adjoint commutator. It serves spectral ideal
+splitting and uses the same rank and residual diagnostics as the public full
+commutant. A three-dimensional abelian algebra has symmetric and full
+commutants of dimensions six and nine, respectively.
 
 ## 7. Complete center and simple-ideal decomposition
 
@@ -288,9 +309,13 @@ validation. No empty operator family is constructed.
 settings, and exposes the full center as `Option<LieComponent>` separately from
 its simple-ideal slice. Components own reconstructed families and retain their
 columns in the original source coordinates. They initially form HS-orthonormal
-families. Reconstruction explicitly collects exact natural terms before returning
-them, with no tolerance-based pruning or global tensor-sum expansion, and checks
-Hermiticity, independence, and orthonormality of the emitted expressions.
+families. Reconstruction collects exact natural terms into expressions that
+omit multiplicative identity factors and scales whose coefficient equals one.
+Scalar addends and other nonzero coefficients retain their computed values,
+including coefficients close to one. Disjoint product blocks stay factored.
+The collected expressions are checked for Hermiticity, independence, and
+orthonormality. Display renders their stored syntax.
+[Expression formatting](expression-formatting.md#1-scope-and-type-bounds).
 Component `orthogonalize`/`orthonormalize` methods compose the new transformation
 with the retained source coordinates.
 
@@ -345,7 +370,8 @@ center and ideal projectors with independent su(2) blocks at f32/f64, including
 one to three simple factors, purely abelian input, one- and multidimensional
 centers, real nonorthonormal changes, graded generators, coordinate reconstruction,
 component orthogonalization, seed reproducibility, invalid settings, and exhausted
-spectral grouping. Default-tolerance shears and cyclic changes with explicit
+spectral grouping. Local and placed identity centers and simple-ideal generators
+exercise unit scale omission. Default-tolerance shears and cyclic changes with explicit
 residual overrides are both covered. Internal tests inject an accidental spectral
 collision, verify retry/exhaustion behavior, and reject invariant unsplit direct
 sums and nonideal partitions. Capability tests also exercise decomposition

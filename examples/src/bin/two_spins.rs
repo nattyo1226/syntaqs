@@ -12,8 +12,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let b = HilbertSpace::factor("b");
     let space = a.tensor(&b)?;
 
-    let up_down = Spin::product_state(&space, [Ket::Up, Ket::Down])?;
-    let down_up = Spin::product_state(&space, [Ket::Down, Ket::Up])?;
+    let up_down = Spin::state_tensor_from([Ket::Up, Ket::Down], &space)?;
+    let down_up = Spin::state_tensor_from([Ket::Down, Ket::Up], &space)?;
     let amplitude = 1.0 / 2.0_f64.sqrt();
     // |singlet> = (|up,down> - |down,up>) / sqrt(2)
     // |triplet> = (|up,down> + |down,up>) / sqrt(2)
@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let h = Spin::try_operator_sum(
         [Op::Sx, Op::Sy, Op::Sz]
             .into_iter()
-            .map(|axis| Spin::operator_product_at([(&a, axis), (&b, axis)])),
+            .map(|axis| Spin::operator_product_from([(axis, &a), (axis, &b)])),
     )?
     .scaled(0.25)
     .bind(&space)?;

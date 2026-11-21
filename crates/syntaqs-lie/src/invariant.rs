@@ -165,6 +165,7 @@ where
     Ok(checks)
 }
 
+/// Builds diagnostics for the constraints supplied to the rank analysis.
 pub(crate) fn diagnostics<R>(
     constraints: &Array2<R>,
     analysis: &RankAnalysis<R>,
@@ -175,6 +176,12 @@ where
     R: Float + Scalar<Real = R> + Lapack,
     NumericalOptions<R>: Default,
 {
+    let residuals = if analysis.input_is_zero() {
+        let check = options.residual.check(R::zero(), R::zero())?;
+        vec![check; analysis.nullspace.ncols()]
+    } else {
+        constraint_checks(constraints, &analysis.nullspace, options, operation)?
+    };
     Ok(ConstraintDiagnostics {
         rows: constraints.nrows(),
         columns: constraints.ncols(),
@@ -182,7 +189,7 @@ where
         singular_values: analysis.singular_values.clone(),
         relative_cutoff: analysis.relative_cutoff,
         threshold: analysis.threshold,
-        residuals: constraint_checks(constraints, &analysis.nullspace, options, operation)?,
+        residuals,
     })
 }
 
@@ -223,10 +230,10 @@ where
     NumericalOptions<E::Real>: Default,
 {
     let family = adjoint.family();
-    let transform = family.orthonormalize(adjoint.options())?;
-    let forward = transform.matrix().clone();
-    let gram = family.gram(adjoint.options())?.values().mapv(|z| z.re);
-    let inverse = forward.t().dot(&gram);
+    let gram = family.gram(adjoint.options())?;
+    let forward = gram.orthogonal_transform_matrix(true)?;
+    finite(forward.iter().copied())?;
+    let inverse = forward.t().dot(&gram.real_matrix());
     let n = family.len();
     let mut adjoints = Vec::new();
     for j in 0..n {
@@ -239,7 +246,7 @@ where
         finite(matrix.iter().copied())?;
         adjoints.push(matrix);
     }
-    finite(forward.iter().copied().chain(inverse.iter().copied()))?;
+    finite(inverse.iter().copied())?;
     Ok(OrthonormalCoordinates {
         forward,
         inverse,
@@ -259,7 +266,7 @@ fn reconstruct_component<E: FamilyExpression>(
         .into_iter()
         .map(|v| family.reconstruct(v))
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(Some(OperatorFamily::new_in(family.context(), operators)?))
+    Ok(Some(OperatorFamily::new_in(operators, family.context())?))
 }
 
 impl<'a, E: FamilyExpression> AdjointRepresentation<'a, E>
@@ -361,6 +368,45 @@ pub(crate) struct SymmetricCommutant<R> {
     pub diagnostics: ConstraintDiagnostics<R>,
 }
 
+fn symmetric_commutant_constraints<R: Float>(
+    matrices: &[Array2<R>],
+    n: usize,
+    pairs: &[(usize, usize)],
+    weight: R,
+) -> Array2<R> {
+    let rows = matrices.len() * n * n;
+    let mut values = Vec::with_capacity(rows * pairs.len());
+    // Keep one row per (generator, k, l), as in the full constraints.
+    for matrix in matrices {
+        for k in 0..n {
+            for l in 0..n {
+                // Coefficient of C[a,b] in (CA-AC)[k,l]. Combine both
+                // contributions here before projecting onto the symmetric basis.
+                let coefficient = |a, b| {
+                    let mut value = R::zero();
+                    if k == a {
+                        value = value + matrix[(b, l)];
+                    }
+                    if l == b {
+                        value = value - matrix[(k, a)];
+                    }
+                    value
+                };
+                values.extend(pairs.iter().map(|&(a, b)| {
+                    let value = coefficient(a, b);
+                    if a == b {
+                        value
+                    } else {
+                        (value + coefficient(b, a)) * weight
+                    }
+                }));
+            }
+        }
+    }
+    Array2::from_shape_vec((rows, pairs.len()), values)
+        .expect("one coefficient per constraint row and symmetric basis element")
+}
+
 pub(crate) fn symmetric_commutant<R>(
     orthonormal_adjoints: &[Array2<R>],
     n: usize,
@@ -374,15 +420,7 @@ where
     // (E_ab+E_ba)/sqrt(2). It is meaningful only in HS-orthonormal coordinates.
     let pairs: Vec<_> = (0..n).flat_map(|a| (a..n).map(move |b| (a, b))).collect();
     let weight = R::one() / Float::sqrt(R::one() + R::one());
-    let full = commutant_constraints(orthonormal_adjoints, n);
-    let constraints = Array2::from_shape_fn((full.nrows(), pairs.len()), |(row, col)| {
-        let (a, b) = pairs[col];
-        if a == b {
-            full[(row, a * n + b)]
-        } else {
-            (full[(row, a * n + b)] + full[(row, b * n + a)]) * weight
-        }
-    });
+    let constraints = symmetric_commutant_constraints(orthonormal_adjoints, n, &pairs, weight);
     let analysis = rank_nullspace(&constraints, options)?;
     let diagnostics = diagnostics(
         &constraints,

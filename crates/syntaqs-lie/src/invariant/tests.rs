@@ -19,6 +19,75 @@ macro_rules! precision_tests {
                     );
                 }
             }
+
+            #[test]
+            fn zero_constraints_keep_per_column_residual_diagnostics() {
+                let mut options = NumericalOptions::<R>::default();
+                options.residual.absolute = 0.25;
+                options.residual.relative = 0.5;
+                let expected = options.residual.check(0., 0.).unwrap();
+                for (rows, columns) in [(2, 3), (0, 3), (3, 0), (0, 0)] {
+                    let constraints = Array2::<R>::zeros((rows, columns));
+                    let analysis = rank_nullspace(&constraints, &options).unwrap();
+                    let report =
+                        diagnostics(&constraints, &analysis, &options, "test constraints").unwrap();
+                    assert_eq!((report.rows, report.columns), (rows, columns));
+                    assert_eq!(report.rank, 0);
+                    assert_eq!(report.residuals, vec![expected; columns]);
+                }
+            }
+
+            #[test]
+            fn nonzero_constraints_with_rank_zero_still_check_residuals() {
+                let options = NumericalOptions::<R> {
+                    rank_relative: Some(1.),
+                    ..NumericalOptions::default()
+                };
+                let constraints = array![[2., 0.], [0., 0.]];
+                let analysis = rank_nullspace(&constraints, &options).unwrap();
+                assert_eq!(analysis.rank, 0);
+                assert!(matches!(
+                    diagnostics(&constraints, &analysis, &options, "test constraints"),
+                    Err(LieError::ConstraintResidual { check, .. }) if check.measured > 0.
+                ));
+            }
+
+            #[test]
+            fn direct_symmetric_constraints_match_full_projection() {
+                let large = 1. / R::EPSILON;
+                let weight = 1. / (2. as R).sqrt();
+                for (n, matrices) in [
+                    (0, Vec::new()),
+                    (1, vec![array![[3.]]]),
+                    (
+                        3,
+                        vec![
+                            array![
+                                [large, -0., 3.],
+                                [-5., -large, 0.5],
+                                [0., R::MIN_POSITIVE, large / 2.]
+                            ],
+                            array![[0., -0.125, 4.], [2., 3., 0.], [-1.5, 7., -2.]],
+                        ],
+                    ),
+                ] {
+                    let pairs: Vec<_> =
+                        (0..n).flat_map(|a| (a..n).map(move |b| (a, b))).collect();
+                    let full = commutant_constraints(&matrices, n);
+                    let expected = Array2::from_shape_fn((full.nrows(), pairs.len()), |(row, col)| {
+                        let (a, b) = pairs[col];
+                        let value = full[(row, a * n + b)];
+                        if a == b {
+                            value
+                        } else {
+                            (value + full[(row, b * n + a)]) * weight
+                        }
+                    });
+                    let actual = symmetric_commutant_constraints(&matrices, n, &pairs, weight);
+                    assert_eq!(actual.mapv(R::to_bits), expected.mapv(R::to_bits));
+                }
+            }
+
             #[test]
             fn orthonormal_adjoint_coordinates_match_independent_transformation() {
                 let original = OperatorFamily::new([

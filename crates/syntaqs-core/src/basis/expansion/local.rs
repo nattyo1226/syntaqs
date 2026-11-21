@@ -1,101 +1,81 @@
 //! Local basis expansion and sparse coordinate extraction.
 
-use super::accumulate;
+use super::{accumulate, basis_element};
 use crate::{
-    Act, Adjoint, Basis, BasisError, Conjugate, Coordinates, Dimension, Identity, LocalOperator,
-    LocalState, Product,
+    Act, Adjoint, Basis, BasisError, Conjugate, Coordinates, Dimension, Identity,
+    LinearCombination, LocalOperator, LocalState, Product,
     expression::traversal::{LinearTerms, operator_view, state_view},
 };
 use alloc::{collections::BTreeMap, vec};
 use core::ops::Mul;
 use num_traits::{One, Zero};
 
-type LocalExpansion<V, C> = BTreeMap<usize, (C, V)>;
-fn local_expansion<'a, P: 'a, C, B, V>(
-    terms: impl Iterator<Item = (Option<C>, &'a P)>,
+type LocalExpansion<C> = BTreeMap<usize, C>;
+
+pub(super) fn indexed_terms<P, C, B: Basis<P, C>>(
+    primitive: &P,
     basis: &B,
     dimension: usize,
-    make: impl Fn(P) -> V,
-) -> Result<LocalExpansion<V, C>, BasisError>
+) -> Result<LinearCombination<usize, C>, BasisError> {
+    let terms = basis.expand_indices(primitive);
+    for term in terms.terms() {
+        if term.operand >= dimension {
+            return Err(BasisError::IndexOutOfBounds {
+                index: term.operand,
+                dimension,
+            });
+        }
+    }
+    Ok(terms)
+}
+
+pub(super) fn local_expansion<'a, P: 'a, C>(
+    terms: impl Iterator<Item = (Option<C>, &'a P)>,
+    mut expand: impl FnMut(&'a P) -> Result<LinearCombination<usize, C>, BasisError>,
+) -> Result<LocalExpansion<C>, BasisError>
 where
-    B: Basis<P, C>,
     C: Clone + Zero + Mul<Output = C>,
 {
     let mut result = BTreeMap::new();
     for (coefficient, primitive) in terms {
-        for term in basis.expand(primitive) {
-            let index = basis
-                .index(&term.operand)
-                .ok_or(BasisError::NonBasisElement)?;
-            if index >= dimension {
-                return Err(BasisError::IndexOutOfBounds { index, dimension });
-            }
+        for term in expand(primitive)? {
             let c = match &coefficient {
                 None => term.coefficient,
                 Some(c) => c.clone() * term.coefficient,
             };
-            accumulate(&mut result, index, c, make(term.operand));
+            accumulate(&mut result, term.operand, c);
         }
     }
     Ok(result)
 }
 
-pub(super) fn local_state<S, O, C, B, V>(
-    state: &LocalState<S, O, C>,
-    basis: &B,
-    dimension: usize,
-    make: impl Fn(S) -> V,
-) -> Result<LocalExpansion<V, C>, BasisError>
-where
-    C: One + Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
-    S: PartialEq + Act<C, Operator = O, Term = S>,
-    O: Adjoint<C, Term = O>,
-    B: Basis<S, C>,
-{
-    let state = state.evaluate();
-    evaluated_local_state(&state, basis, dimension, make)
-}
-
-// Composite expansion already owns a normalized action-free local state.
-pub(super) fn evaluated_local_state<S, O, C, B, V>(
-    state: &LocalState<S, O, C>,
-    basis: &B,
-    dimension: usize,
-    make: impl Fn(S) -> V,
-) -> Result<LocalExpansion<V, C>, BasisError>
-where
-    C: Clone + Zero + Mul<Output = C>,
-    B: Basis<S, C>,
-{
-    local_expansion(LinearTerms::new(state, state_view), basis, dimension, make)
-}
-
-pub(super) fn local_operator<O, C, B, V>(
+pub(super) fn local_operator<O, C, B>(
     op: &LocalOperator<O, C>,
     basis: &B,
     dimension: usize,
-    make: impl Fn(O) -> V,
-) -> Result<LocalExpansion<V, C>, BasisError>
+) -> Result<LocalExpansion<C>, BasisError>
 where
     C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
     O: Identity + Product<C, Term = O> + Adjoint<C, Term = O>,
     B: Basis<O, C>,
 {
     let op = op.evaluate();
-    local_expansion(LinearTerms::new(&op, operator_view), basis, dimension, make)
+    local_expansion(LinearTerms::new(&op, operator_view), |p| {
+        indexed_terms(p, basis, dimension)
+    })
 }
 
 fn local_coordinates<B, C>(
     basis: &B,
     dimension: usize,
-    terms: LocalExpansion<(), C>,
+    terms: LocalExpansion<C>,
 ) -> Coordinates<'_, B, C> {
     Coordinates {
         basis,
         space: (),
         factor_count: 1,
         dim_local: Some(dimension),
-        entries: terms.into_iter().map(|(i, (c, ()))| (vec![i], c)).collect(),
+        entries: terms.into_iter().map(|(i, c)| (vec![i], c)).collect(),
     }
 }
 
@@ -112,10 +92,18 @@ impl<S, O, C> LocalState<S, O, C> {
         O: Adjoint<C, Term = O>,
         B: Basis<S, C>,
     {
-        let terms = local_state(self, basis, S::dim()?.get(), Self::primitive)?;
-        Ok(Self::sum(
-            terms.into_values().map(|(c, state)| state.into_scaled(c)),
-        ))
+        let dimension = S::dim()?.get();
+        let state = self.evaluate();
+        let terms = local_expansion(LinearTerms::new(&state, state_view), |p| {
+            indexed_terms(p, basis, dimension)
+        })?;
+        let terms = terms
+            .into_iter()
+            .map(|(index, c)| {
+                Ok(Self::primitive(basis_element(basis, index, dimension)?).into_scaled(c))
+            })
+            .collect::<Result<crate::expression::parts::Operands<_>, BasisError>>()?;
+        Ok(Self::sum(terms))
     }
 
     /// Obtains aggregated sparse basis coordinates, without building an expanded tree.
@@ -131,7 +119,9 @@ impl<S, O, C> LocalState<S, O, C> {
         Ok(local_coordinates(
             basis,
             dimension,
-            local_state(self, basis, dimension, |_| ())?,
+            local_expansion(LinearTerms::new(&self.evaluate(), state_view), |p| {
+                indexed_terms(p, basis, dimension)
+            })?,
         ))
     }
 }
@@ -147,10 +137,15 @@ impl<O, C> LocalOperator<O, C> {
         O: Dimension + Identity + Product<C, Term = O> + Adjoint<C, Term = O>,
         B: Basis<O, C>,
     {
-        let terms = local_operator(self, basis, O::dim()?.get(), Self::primitive)?;
-        Ok(Self::sum(
-            terms.into_values().map(|(c, op)| op.into_scaled(c)),
-        ))
+        let dimension = O::dim()?.get();
+        let terms = local_operator(self, basis, dimension)?;
+        let terms = terms
+            .into_iter()
+            .map(|(index, c)| {
+                Ok(Self::primitive(basis_element(basis, index, dimension)?).into_scaled(c))
+            })
+            .collect::<Result<crate::expression::parts::Operands<_>, BasisError>>()?;
+        Ok(Self::sum(terms))
     }
 
     /// Obtains coordinates in an operator basis, not a matrix acting on states.
@@ -164,7 +159,7 @@ impl<O, C> LocalOperator<O, C> {
         Ok(local_coordinates(
             basis,
             dimension,
-            local_operator(self, basis, dimension, |_| ())?,
+            local_operator(self, basis, dimension)?,
         ))
     }
 }

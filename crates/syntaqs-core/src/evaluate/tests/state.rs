@@ -60,13 +60,13 @@ impl<'a> Act<f64> for Ket<'a> {
         ])
     }
 }
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Index(u8);
 type St<'a> = State<Index, Ket<'a>, Gate, f64>;
 fn sum<'a>(parts: impl IntoIterator<Item = St<'a>>) -> Result<St<'a>, crate::ExpressionError> {
     let parts: Vec<_> = parts.into_iter().collect();
     let space = parts[0].space().clone();
-    State::sum(&space, parts)
+    State::sum(parts, &space)
 }
 fn primitive(value: f64, calls: &Cell<usize>) -> LocalState<Ket<'_>, Gate, f64> {
     LocalState::primitive(Ket { value, calls })
@@ -76,7 +76,7 @@ fn leaves(state: &StateExpr<Index, Ket<'_>, Gate, f64>) -> usize {
     let mut count = 0;
     while let Some(state) = pending.pop() {
         match state.node() {
-            StateNode::Local(_, s) => count += LinearTerms::new(s, state_view).count(),
+            StateNode::Local(s, _) => count += LinearTerms::new(s, state_view).count(),
             StateNode::Sum(s) | StateNode::Tensor(s) => pending.extend(s.iter()),
             StateNode::Scale(s) => pending.push(&s.operand),
             StateNode::Unit => {}
@@ -126,14 +126,16 @@ fn composite_collection_normalizes_tensor_grouping_scales_units_and_single_facto
     let y = primitive(1.0, &calls).at(&b).unwrap();
     let z = primitive(0.0, &calls).at(&c).unwrap();
     let left = St::tensor_in(
-        &h,
         [
-            St::tensor_in(&ab, [x.scaled(2.0), y.clone()]).unwrap(),
+            St::tensor_in([x.scaled(2.0), y.clone()], &ab).unwrap(),
             z.clone(),
         ],
+        &h,
     )
     .unwrap();
-    let right = St::tensor_in(&h, [St::unit(), x.clone(), y.clone(), z.clone()])
+    let equal_a = H::factor(Index(2));
+    let equal_x = primitive(0.0, &calls).at(&equal_a).unwrap();
+    let right = St::tensor_in([St::unit(), equal_x, y.clone(), z.clone()], &h)
         .unwrap()
         .scaled(3.0);
     let result = sum([left, right]).unwrap().evaluate().unwrap();
@@ -154,7 +156,7 @@ fn composite_collection_normalizes_tensor_grouping_scales_units_and_single_facto
     let inside = LocalState::sum([p.clone(), q.clone()]).at(&a).unwrap();
     let outside = sum([p.at(&a).unwrap(), q.at(&a).unwrap()]).unwrap();
     let result = sum([inside, outside]).unwrap().evaluate().unwrap();
-    let StateNode::Local(_, local) = result.expression.node() else {
+    let StateNode::Local(local, _) = result.expression.node() else {
         panic!("one local polynomial")
     };
     assert_eq!(
@@ -170,12 +172,12 @@ fn factored_sums_stay_factored_and_are_not_matched_by_distributive_search() {
     let factors: Vec<_> = (0..32).map(|i| H::factor(Index(i))).collect();
     let h = H::tensor_all(factors.iter().cloned()).unwrap();
     let state = St::tensor_in(
-        &h,
         factors.iter().map(|f| {
             LocalState::sum([primitive(0.0, &calls), primitive(1.0, &calls)])
                 .at(f)
                 .unwrap()
         }),
+        &h,
     )
     .unwrap();
     let result = state.evaluate().unwrap();
@@ -184,10 +186,10 @@ fn factored_sums_stay_factored_and_are_not_matched_by_distributive_search() {
     let a = primitive(0.0, &calls).at(&factors[0]).unwrap();
     let b = primitive(1.0, &calls).at(&factors[0]).unwrap();
     let z = primitive(0.0, &calls).at(&factors[1]).unwrap();
-    let factored = St::tensor_in(&pair, [sum([a.clone(), b.clone()]).unwrap(), z.clone()]).unwrap();
+    let factored = St::tensor_in([sum([a.clone(), b.clone()]).unwrap(), z.clone()], &pair).unwrap();
     let distributed = sum([
-        St::tensor_in(&pair, [a, z.clone()]).unwrap(),
-        St::tensor_in(&pair, [b, z]).unwrap(),
+        St::tensor_in([a, z.clone()], &pair).unwrap(),
+        St::tensor_in([b, z], &pair).unwrap(),
     ])
     .unwrap();
     let result = sum([factored, distributed]).unwrap().evaluate().unwrap();
@@ -204,7 +206,7 @@ fn exact_cancellation_tiny_terms_and_nonreflexive_values_follow_partial_eq() {
     let h = a.tensor(&b).unwrap();
     let p = primitive(0.0, &calls).at(&a).unwrap();
     let q = primitive(1.0, &calls).at(&b).unwrap();
-    let tensor = St::tensor_in(&h, [p, q]).unwrap();
+    let tensor = St::tensor_in([p, q], &h).unwrap();
     let result = sum([tensor.clone(), tensor.scaled(-1.0)])
         .unwrap()
         .evaluate()
@@ -218,7 +220,7 @@ fn exact_cancellation_tiny_terms_and_nonreflexive_values_follow_partial_eq() {
     );
     // Sharing an input is not evidence that its primitive compares equal to itself.
     let nan = primitive(f64::NAN, &calls).at(&a).unwrap();
-    let tensor = St::tensor_in(&h, [nan, primitive(0.0, &calls).at(&b).unwrap()]).unwrap();
+    let tensor = St::tensor_in([nan, primitive(0.0, &calls).at(&b).unwrap()], &h).unwrap();
     let result = sum([tensor.clone(), tensor]).unwrap().evaluate().unwrap();
     assert!(matches!(result.expression.node(),StateNode::Sum(s) if s.len()==2));
     // The same applies to a nonreflexive coefficient inside a retained polynomial.
@@ -228,7 +230,7 @@ fn exact_cancellation_tiny_terms_and_nonreflexive_values_follow_partial_eq() {
     ])
     .at(&a)
     .unwrap();
-    let tensor = St::tensor_in(&h, [polynomial, primitive(0.0, &calls).at(&b).unwrap()]).unwrap();
+    let tensor = St::tensor_in([polynomial, primitive(0.0, &calls).at(&b).unwrap()], &h).unwrap();
     let result = sum([tensor.clone(), tensor]).unwrap().evaluate().unwrap();
     assert!(matches!(result.expression.node(),StateNode::Sum(s) if s.len()==2));
 }
@@ -248,7 +250,7 @@ fn local_first_occurrence_order_survives_cancellation_and_zero_tensor_keeps_spac
     let b = H::factor(Index(1));
     let h = a.tensor(&b).unwrap();
     let zero = LocalState::sum([p.clone(), p.scaled(-1.0)]).at(&a).unwrap();
-    let state = St::tensor_in(&h, [zero, primitive(1.0, &calls).at(&b).unwrap()])
+    let state = St::tensor_in([zero, primitive(1.0, &calls).at(&b).unwrap()], &h)
         .unwrap()
         .evaluate()
         .unwrap();
@@ -277,15 +279,15 @@ fn shared_additive_dags_are_normalized_once_without_distributing_tensors() {
     let b = H::factor(Index(1));
     let h = a.tensor(&b).unwrap();
     let mut state = St::tensor_in(
-        &h,
         [
             primitive(0.0, &calls).at(&a).unwrap(),
             primitive(1.0, &calls).at(&b).unwrap(),
         ],
+        &h,
     )
     .unwrap();
     for _ in 0..64 {
-        state = State::sum(&h, [state.clone(), state]).unwrap();
+        state = State::sum([state.clone(), state], &h).unwrap();
     }
     let op = LocalOperator::primitive(Gate).at(&a).unwrap();
     let ready = state.act(&op).unwrap().evaluate().unwrap();

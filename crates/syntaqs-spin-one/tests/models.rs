@@ -182,19 +182,19 @@ fn total_spin<T: Real>() {
     // A = S_1 dot S_2 has eigenvalues -2, -1, 1 at total spin 0, 1, 2.
     for (a, terms) in [(-2.0, singlet), (-1.0, triplet), (1.0, quintet)] {
         let psi = Spin::<T>::state_sum(
-            &space,
             terms.into_iter().map(|(weight, left, right)| {
-                Spin::<T>::product_state(
+                Spin::<T>::state_tensor_from(
+                    [left, right],
                     &syntaqs_core::space::HilbertSpace::tensor_all([
                         (sites[0]).clone(),
                         (sites[1]).clone(),
                     ])
                     .unwrap(),
-                    [left, right],
                 )
                 .unwrap()
                 .scaled(c::<T>(weight, 0.0))
             }),
+            &space,
         )
         .unwrap();
         close::<T>(to64(psi.inner_product(&psi).unwrap()), 1.0.into());
@@ -360,7 +360,7 @@ fn every_model_validates_even_with_no_edges_and_zero_couplings() {
 
 #[test]
 fn construction_needs_rational_arithmetic_but_no_float_or_evaluation() {
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, PartialOrd, Ord)]
     struct Index(u8);
     struct Input(i32);
     #[derive(Clone)]

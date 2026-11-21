@@ -104,7 +104,7 @@ macro_rules! precision_tests {
                     _ => unreachable!(),
                 };
                 (
-                    OperatorFamily::new_in(&space, operators).unwrap(),
+                    OperatorFamily::new_in(operators, &space).unwrap(),
                     blocks,
                     center,
                     dimension,

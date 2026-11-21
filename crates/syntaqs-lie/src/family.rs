@@ -41,7 +41,7 @@ impl<E: FamilyExpression> OperatorFamily<E> {
             return Err(LieError::EmptyFamily);
         }
         let context = E::inferred_context(&operators)?;
-        Self::new_in(&context, operators)
+        Self::new_in(operators, &context)
     }
 
     /// Checks every input against an explicit context without evaluating it.
@@ -50,8 +50,8 @@ impl<E: FamilyExpression> OperatorFamily<E> {
     /// multiplied by zero. Rebind deliberately in core before passing an input
     /// if its old ambient space is to be replaced. Original handles are retained.
     pub fn new_in(
-        context: &E::Context,
         operators: impl IntoIterator<Item = E>,
+        context: &E::Context,
     ) -> Result<Self, LieError<E::Real>> {
         let operators: Vec<_> = operators.into_iter().collect();
         if operators.is_empty() {

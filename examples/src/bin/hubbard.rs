@@ -22,9 +22,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Result<_, _>>()?;
     let h = Models::hubbard(&chain, &sites, 1., 4.)?;
     let symmetric = Models::symmetric_hubbard(&chain, &sites, 1., 4.)?;
-    let psi = F::product_state(
-        h.space().expect("model is bound"),
+    let psi = F::state_tensor_from(
         [S::Occupied, S::Empty, S::Empty, S::Occupied],
+        h.space().expect("model is bound"),
     )?;
     assert!((psi.norm_squared()? - 1.).abs() < 1e-12);
     let energy = psi.expectation(&h)?;
@@ -49,9 +49,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
         use syntaqs_fermion::basis::OccupationBasis;
         let dense: Exported<Vec<Complex<f64>>, _> =
-            (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
+            (&h).export(MatrixArgs::new(&OccupationBasis))?;
         let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =
-            (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
+            (&h).export(MatrixArgs::new(&OccupationBasis))?;
         assert_eq!(dense.metadata().shape(), [16, 16]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {
             assert!((*left - *right).norm_sqr() < 1e-24);

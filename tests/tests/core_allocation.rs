@@ -125,7 +125,7 @@ fn singleton_fallible_collections_need_no_temporary_allocation() {
     without_allocation(|| {
         let _ = LocalState::try_sum([Ok(local_state)]).unwrap();
         let _ = LocalOperator::try_sum([Ok(local_op)]).unwrap();
-        let _ = State::try_sum(&space, [Ok(state)]).unwrap();
+        let _ = State::try_sum([Ok(state)], &space).unwrap();
         let _ = Operator::try_sum([Ok(op.clone())]).unwrap();
         let _ = Operator::try_product([Ok(op)]).unwrap();
     });
@@ -140,12 +140,12 @@ fn graded_contractions_and_trace_do_not_materialize_a_global_basis() {
     };
     let factors: Vec<_> = (0..32).map(HilbertSpace::factor).collect();
     let psi = State::<_, Ket, Op, Complex<f64>>::tensor_in(
-        &syntaqs_core::space::HilbertSpace::tensor_all_g(factors.iter().cloned()).unwrap(),
         factors.iter().map(|f| {
             (LocalState::primitive(Ket(0)) + LocalState::primitive(Ket(1)))
                 .at(f)
                 .unwrap()
         }),
+        &syntaqs_core::space::HilbertSpace::tensor_all_g(factors.iter().cloned()).unwrap(),
     )
     .unwrap();
     let op = placed(A, &factors[31]);

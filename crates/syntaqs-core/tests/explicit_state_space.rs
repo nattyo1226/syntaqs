@@ -8,7 +8,7 @@ struct Primitive;
 struct Coeff;
 type System = syntaqs_core::system::ExpressionFactory<Primitive, (), Coeff>;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Index(u8);
 
 fn leaf<I>(space: &H<I>) -> StateOf<System, I> {
@@ -30,11 +30,11 @@ fn all_five_entries_share_the_exact_target_and_accept_different_grouping() {
         )
         .unwrap();
         for state in [
-            State::tensor_in(&target, [leaf(&a), leaf(&b)]),
-            State::try_tensor_in(&target, [Ok(leaf(&a)), Ok(leaf(&b))]),
-            System::tensor_in(&target, [leaf(&a), leaf(&b)]),
-            System::try_tensor_in(&target, [Ok(leaf(&a)), Ok(leaf(&b))]),
-            System::product_state(&target, [Primitive, Primitive]),
+            State::tensor_in([leaf(&a), leaf(&b)], &target),
+            State::try_tensor_in([Ok(leaf(&a)), Ok(leaf(&b))], &target),
+            System::state_tensor([leaf(&a), leaf(&b)], &target),
+            System::try_state_tensor([Ok(leaf(&a)), Ok(leaf(&b))], &target),
+            System::state_tensor_from([Primitive, Primitive], &target),
         ] {
             let state = state.unwrap();
             assert!(state.space().shares_node_with(&target));
@@ -46,9 +46,9 @@ fn all_five_entries_share_the_exact_target_and_accept_different_grouping() {
         }
         // Equality of indices, not pointer equality, determines coverage.
         assert!(
-            System::tensor_in(
-                &target,
-                [leaf(&H::factor(Index(8))), leaf(&H::factor(Index(2)))]
+            System::state_tensor(
+                [leaf(&H::factor(Index(8))), leaf(&H::factor(Index(2)))],
+                &target
             )
             .is_ok()
         );
@@ -70,7 +70,7 @@ fn every_coverage_failure_uses_incompatible_spaces() {
         vec![leaf(&a), leaf(&b), leaf(&c)],
     ] {
         assert_eq!(
-            System::tensor_in(&target, states).err(),
+            System::state_tensor(states, &target).err(),
             Some(E::IncompatibleSpaces)
         );
     }
@@ -80,7 +80,7 @@ fn every_coverage_failure_uses_incompatible_spaces() {
         vec![Primitive, Primitive, Primitive],
     ] {
         assert_eq!(
-            System::product_state(&target, primitives).err(),
+            System::state_tensor_from(primitives, &target).err(),
             Some(E::IncompatibleSpaces)
         );
     }
@@ -91,29 +91,29 @@ fn unit_and_singleton_keep_the_given_handle_without_reinterpreting_kinds() {
     for kind in [TensorKind::Ordinary, TensorKind::Graded] {
         let unit = H::<u8>::tensor_all_with(kind, [H::unit()]).unwrap();
         for state in [
-            StateOf::<System, _>::tensor_in(&unit, []),
-            StateOf::<System, _>::try_tensor_in(&unit, []),
-            System::tensor_in(&unit, []),
-            System::try_tensor_in(&unit, []),
-            System::product_state(&unit, []),
+            StateOf::<System, _>::tensor_in([], &unit),
+            StateOf::<System, _>::try_tensor_in([], &unit),
+            System::state_tensor([], &unit),
+            System::try_state_tensor([], &unit),
+            System::state_tensor_from([], &unit),
         ] {
             assert!(state.unwrap().space().shares_node_with(&unit));
         }
         assert_eq!(
-            System::product_state(&unit, [Primitive]).err(),
+            System::state_tensor_from([Primitive], &unit).err(),
             Some(E::IncompatibleSpaces)
         );
         let a = H::factor(0);
         let wrapper = H::tensor_all_with(kind, [H::unit(), a.clone()]).unwrap();
-        let state = System::tensor_in(&wrapper, [leaf(&a)]).unwrap();
+        let state = System::state_tensor([leaf(&a)], &wrapper).unwrap();
         assert!(state.space().shares_node_with(&wrapper));
         assert_eq!(
-            System::tensor_in(&wrapper, []).err(),
+            System::state_tensor([], &wrapper).err(),
             Some(E::IncompatibleSpaces)
         );
         let zero = StateOf::<System, _>::zero(&wrapper);
         assert!(
-            System::tensor_in(&wrapper, [zero])
+            System::state_tensor([zero], &wrapper)
                 .unwrap()
                 .space()
                 .shares_node_with(&wrapper)
@@ -134,18 +134,18 @@ fn multi_factor_inputs_must_match_the_target_kind_even_when_zero() {
     let graded = H::tensor_all_g([a.clone(), b.clone()]).unwrap();
     for (target, other) in [(&ordinary, &graded), (&graded, &ordinary)] {
         for state in [
-            System::product_state(other, [Primitive, Primitive]).unwrap(),
+            System::state_tensor_from([Primitive, Primitive], other).unwrap(),
             StateOf::<System, _>::zero(other),
         ] {
             assert_eq!(
-                System::tensor_in(target, [state]).err(),
+                System::state_tensor([state], target).err(),
                 Some(E::IncompatibleSpaces)
             );
         }
-        let source = System::product_state(target, [Primitive, Primitive]).unwrap();
+        let source = System::state_tensor_from([Primitive, Primitive], target).unwrap();
         let wrapper = H::tensor_all([H::unit(), target.clone()]).unwrap();
         assert!(
-            System::tensor_in(&wrapper, [State::unit(), source])
+            System::state_tensor([State::unit(), source], &wrapper)
                 .unwrap()
                 .space()
                 .shares_node_with(&wrapper)
@@ -168,9 +168,9 @@ fn fallible_entries_short_circuit_before_any_space_validation() {
             }
         });
         let result = if via_system {
-            System::try_tensor_in(&target, input)
+            System::try_state_tensor(input, &target)
         } else {
-            State::try_tensor_in(&target, input)
+            State::try_tensor_in(input, &target)
         };
         assert_eq!(result.err(), Some(E::MissingIndex));
         assert_eq!(pulls, 3);
@@ -182,8 +182,8 @@ fn composite_input_can_be_reused_with_an_explicit_compatible_target() {
     let factors = [H::factor(0), H::factor(1), H::factor(2)];
     let ab = H::tensor_all_g(factors[..2].iter().cloned()).unwrap();
     let abc = H::tensor_all_g([ab.clone(), factors[2].clone()]).unwrap();
-    let block = System::product_state(&ab, [Primitive, Primitive]).unwrap();
-    let state = System::tensor_in(&abc, [block, leaf(&factors[2])]).unwrap();
+    let block = System::state_tensor_from([Primitive, Primitive], &ab).unwrap();
+    let state = System::state_tensor([block, leaf(&factors[2])], &abc).unwrap();
     assert!(state.space().shares_node_with(&abc));
 }
 
@@ -193,7 +193,7 @@ fn product_state_does_not_borrow_the_target_or_primitive_container() {
     let state = {
         let target = H::factor(name.as_str());
         let primitives = vec![Primitive];
-        System::product_state(&target, primitives).unwrap()
+        System::state_tensor_from(primitives, &target).unwrap()
     };
     assert_eq!(
         state.space().indices().copied().collect::<Vec<_>>(),

@@ -26,7 +26,7 @@
 //! let h = a.tensor(&b)?;
 //! let up = LocalState::<_, &str, i32>::primitive("up");
 //! let down = LocalState::<_, &str, i32>::primitive("down");
-//! let state = State::tensor_in(&h, [up.at(&a)?, down.at(&b)?])?;
+//! let state = State::tensor_in([up.at(&a)?, down.at(&b)?], &h)?;
 //! assert_eq!(state.to_string(), "|up[a],down[b]>");
 //! assert_eq!(format!("{state:#}"), "| up[a],\n  down[b] >");
 //! # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())

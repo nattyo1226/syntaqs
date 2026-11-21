@@ -10,20 +10,19 @@ syntaqs dependency. For example:
 
 ```toml
 [dependencies]
-syntaqs-core = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
-syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
+syntaqs-core = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.6.0" }
+syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.6.0" }
 
 num-complex = "0.4.6"
 ```
 
-Rust 1.85 or newer is required; the workspace uses edition 2024. The
-[two-spin Quick start](../README.md#quick-start) uses these dependencies.
+The workspace uses Rust edition 2024 and requires Rust 1.85 or newer.
 Publishing to crates.io is planned; current installation uses Git.
 
 ## Match documentation to the version
 
-For version 0.5.0, use the
-[documentation and examples at v0.5.0](https://github.com/nattyo1226/syntaqs/tree/v0.5.0).
+For version 0.6.0, use the
+[documentation and examples at v0.6.0](https://github.com/nattyo1226/syntaqs/tree/v0.6.0).
 Module paths can change between releases; keep dependencies, documentation, and
 examples on the same tag.
 
@@ -37,9 +36,9 @@ Normalization, numerical export, and Lie analysis are separate crates. Add the
 entries you need to the same dependency table:
 
 ```toml
-syntaqs-normalize = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
-syntaqs-export = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0", features = ["ndarray", "sprs"] }
-syntaqs-lie = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
+syntaqs-normalize = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.6.0" }
+syntaqs-export = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.6.0", features = ["ndarray", "sprs"] }
+syntaqs-lie = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.6.0" }
 ```
 
 - [Normalize](../crates/syntaqs-normalize/README.md) adds square-root norms,

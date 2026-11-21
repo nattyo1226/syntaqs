@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(Op::parity_operator(), Op::I);
     for kind in [TensorKind::Ordinary, TensorKind::Graded] {
         let space = HilbertSpace::tensor_all_with(kind, [a.clone(), b.clone()])?;
-        let psi = Spin::product_state(&space, [Ket::Up, Ket::Down])?;
+        let psi = Spin::state_tensor_from([Ket::Up, Ket::Down], &space)?;
         let op = Spin::operator(Op::Sp).at(&b)?.bind(&space)?;
         assert!((psi.act(&op)?.norm_squared()? - 1.0).abs() < 1e-12);
         assert!(((op.adjoint().clone() * &op)?.trace()?.re - 2.0).abs() < 1e-12);

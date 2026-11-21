@@ -66,9 +66,9 @@ cargo run -p examples --no-default-features --features export --bin heisenberg
 Select coefficient precision once, for example
 `type Spin = SpinHalf<Complex<f64>>`; use `Complex<f32>` for single precision.
 Type aliases `StateOf<Spin, I>`, `OperatorOf<Spin, I>`, and their local variants
-are available in `syntaqs_core::system`. Matrix export separately selects its
-state primitive with `MatrixArgs::<SpinHalfState, _>` and its container through
-the result type.
+are available in `syntaqs_core::system`. The Heisenberg example passes
+`MatrixArgs::new(&SzBasis)` for the state basis and selects the matrix container
+through the result type. [Matrix argument inference](../docs/design/export.md#32-operator-arguments-and-space-selection).
 
 Create spaces with `HilbertSpace`, then construct states on those spaces and
 place operators on factors. `scaled(impl Into<C>)` accepts matching real values

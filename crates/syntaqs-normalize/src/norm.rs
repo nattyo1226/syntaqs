@@ -54,7 +54,7 @@ where
     }
 }
 
-impl<I: Eq, S, O, C> Norm for State<I, S, O, C>
+impl<I: Ord, S, O, C> Norm for State<I, S, O, C>
 where
     C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + RealPart,
     C::Real: Float,
@@ -69,7 +69,7 @@ where
     }
 }
 
-impl<I: Eq, S, O, C> Normalize for State<I, S, O, C>
+impl<I: Ord, S, O, C> Normalize for State<I, S, O, C>
 where
     C: PartialEq + Clone + Zero + One + Conjugate<Output = C> + RealPart + From<C::Real>,
     C::Real: Float,

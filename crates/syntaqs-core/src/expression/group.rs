@@ -1,11 +1,11 @@
 //! Structural local grouping, without primitive evaluation or factor exchange.
 
 use alloc::{collections::BTreeMap, vec};
-use core::ptr;
+use core::{iter, ptr, slice};
 
 use super::{
     composite::{OpExpr, OpNode, Operator},
-    parts::{AdjointExpr, ProductExpr, ScaleExpr, SumExpr},
+    parts::{AdjointExpr, Operands, ScaleExpr},
 };
 use crate::{HilbertSpace, Identity, LocalOperator};
 
@@ -13,36 +13,56 @@ fn same_factor<I: Eq>(a: &HilbertSpace<I>, b: &HilbertSpace<I>) -> bool {
     a.factor_index() == b.factor_index()
 }
 
-// These two constructors are shared by cheap construction and full grouping.
-// They inspect only immediate children and add no bounds on O or C.
-pub(super) fn sum<I: Eq, O, C>(parts: SumExpr<OpExpr<I, O, C>>) -> OpExpr<I, O, C> {
-    if let SumExpr::One(op) = parts {
-        return op;
-    }
-    if let Some(OpNode::Local(factor, _)) = parts.iter().next().map(OpExpr::node) {
-        if parts
-            .iter()
-            .all(|op| matches!(op.node(), OpNode::Local(other, _) if same_factor(factor, other)))
-        {
-            let local = LocalOperator::sum(parts.iter().map(|op| {
-                let OpNode::Local(_, local) = op.node() else {
-                    unreachable!("checked local operands")
-                };
-                local.clone()
-            }));
-            return OpExpr::new(OpNode::Local(factor.clone(), local));
-        }
-    }
-    OpExpr::new(OpNode::Sum(parts))
+fn local_prefix<I: Eq, O, C>(operands: &[OpExpr<I, O, C>]) -> Option<(&HilbertSpace<I>, usize)> {
+    let (first, rest) = operands.split_first()?;
+    let OpNode::Local(_, factor) = first.node() else {
+        return None;
+    };
+    let count = 1 + rest
+        .iter()
+        .take_while(|op| matches!(op.node(), OpNode::Local(_, other) if same_factor(factor, other)))
+        .count();
+    (count > 1).then_some((factor, count))
 }
 
-pub(super) fn product<I: Eq, O, C>(lhs: OpExpr<I, O, C>, rhs: OpExpr<I, O, C>) -> OpExpr<I, O, C> {
-    if let (OpNode::Local(a, x), OpNode::Local(b, y)) = (lhs.node(), rhs.node()) {
-        if same_factor(a, b) {
-            return OpExpr::new(OpNode::Local(a.clone(), x * y));
+fn local_operand<I, O, C>(op: OpExpr<I, O, C>) -> LocalOperator<O, C> {
+    let OpNode::Local(local, _) = op.node() else {
+        unreachable!("checked local operand");
+    };
+    local.clone()
+}
+
+// Construction and full grouping use the same immediate-child rules.
+pub(super) fn sum<I: Eq, O, C>(operands: Operands<OpExpr<I, O, C>>) -> OpExpr<I, O, C> {
+    if let Some((factor, count)) = local_prefix(operands.as_slice()) {
+        if count == operands.len() {
+            let factor = factor.clone();
+            return OpExpr::new(OpNode::Local(
+                LocalOperator::sum_collected(operands.map(local_operand)),
+                factor,
+            ));
         }
     }
-    OpExpr::new(OpNode::Product(ProductExpr { lhs, rhs }))
+    OpExpr::sum(operands)
+}
+
+pub(super) fn product<I: Eq, O, C>(operands: Operands<OpExpr<I, O, C>>) -> OpExpr<I, O, C> {
+    let Some((factor, count)) = local_prefix(operands.as_slice()) else {
+        return OpExpr::product(operands);
+    };
+    // The leading same-factor operands are the local part of the implicit
+    // left fold. Later operands keep their order and their existing subtrees.
+    let factor = factor.clone();
+    let (locals, remaining) = if count == operands.len() {
+        (operands.map(local_operand), Operands::Empty.into_iter())
+    } else {
+        let mut operands = operands.into_iter();
+        let locals = operands.by_ref().take(count).map(local_operand).collect();
+        (locals, operands)
+    };
+    let local = LocalOperator::from_product(locals).expect("nonempty local operands");
+    let grouped = OpExpr::new(OpNode::Local(local, factor));
+    OpExpr::product(iter::once(grouped).chain(remaining).collect())
 }
 
 enum Support<I> {
@@ -52,19 +72,22 @@ enum Support<I> {
 }
 
 impl<I: Eq> Support<I> {
-    fn include_factor(&mut self, factor: &HilbertSpace<I>) {
+    fn include_factor(&mut self, factor: &HilbertSpace<I>) -> bool {
         match self {
-            Self::Scalar => *self = Self::One(factor.clone()),
-            Self::One(previous) if !same_factor(previous, factor) => *self = Self::Many,
-            _ => {}
+            Self::Scalar => {
+                *self = Self::One(factor.clone());
+                true
+            }
+            Self::One(previous) => same_factor(previous, factor),
+            Self::Many => false,
         }
     }
 
-    fn include(&mut self, other: &Self) {
+    fn include(&mut self, other: &Self) -> bool {
         match other {
-            Self::Scalar => {}
+            Self::Scalar => true,
             Self::One(factor) => self.include_factor(factor),
-            Self::Many => *self = Self::Many,
+            Self::Many => false,
         }
     }
 }
@@ -84,17 +107,13 @@ fn prepared<'a, I, O, C>(op: &'a OpExpr<I, O, C>, memo: &'a Memo<I, O, C>) -> &'
         .unwrap_or(op)
 }
 
-fn children<I, O, C>(
-    op: &OpExpr<I, O, C>,
-) -> impl DoubleEndedIterator<Item = &OpExpr<I, O, C>> + Clone {
-    let (first, second, rest) = match op.node() {
-        OpNode::Scale(s) => (Some(&s.operand), None, &[][..]),
-        OpNode::Sum(s) => (None, None, s.as_slice()),
-        OpNode::Product(p) => (Some(&p.lhs), Some(&p.rhs), &[][..]),
-        OpNode::Adjoint(a) => (Some(&a.operand), None, &[][..]),
-        OpNode::Identity | OpNode::Local(_, _) => (None, None, &[][..]),
-    };
-    first.into_iter().chain(second).chain(rest.iter())
+fn children<I, O, C>(op: &OpExpr<I, O, C>) -> &[OpExpr<I, O, C>] {
+    match op.node() {
+        OpNode::Scale(s) => slice::from_ref(&s.operand),
+        OpNode::Sum(s) | OpNode::Product(s) => s.as_slice(),
+        OpNode::Adjoint(a) => slice::from_ref(&a.operand),
+        OpNode::Identity | OpNode::Local(_, _) => &[],
+    }
 }
 
 // Avoid a full memo for small expressions that cannot contain a rewrite.
@@ -114,13 +133,12 @@ fn may_group<I: Eq, O, C>(root: &OpExpr<I, O, C>) -> bool {
             {
                 return true;
             }
-            OpNode::Product(p) => match (p.lhs.node(), p.rhs.node()) {
-                (OpNode::Identity, _) | (_, OpNode::Identity) => return true,
-                (OpNode::Local(a, _), OpNode::Local(b, _)) if same_factor(a, b) => {
-                    return true;
-                }
-                _ => {}
-            },
+            OpNode::Product(p)
+                if p.iter()
+                    .any(|child| matches!(child.node(), OpNode::Identity)) =>
+            {
+                return true;
+            }
             _ => {}
         }
         pending.extend(children(op));
@@ -143,7 +161,7 @@ fn scalar_local<I, O: Identity, C: Clone>(
         }
         if !visited {
             pending.push((op, true));
-            pending.extend(children(op).rev().map(|child| (child, false)));
+            pending.extend(children(op).iter().rev().map(|child| (child, false)));
             continue;
         }
         let get = |child: &OpExpr<I, O, C>| {
@@ -157,7 +175,7 @@ fn scalar_local<I, O: Identity, C: Clone>(
             OpNode::Identity => LocalOperator::identity(),
             OpNode::Scale(s) => get(&s.operand).scaled(s.coefficient.clone()),
             OpNode::Sum(s) => LocalOperator::sum(s.iter().map(get)),
-            OpNode::Product(p) => get(&p.lhs) * get(&p.rhs),
+            OpNode::Product(p) => LocalOperator::product(p.iter().map(get)),
             OpNode::Adjoint(a) => get(&a.operand).adjoint(),
             OpNode::Local(_, _) => unreachable!("scalar-only subtree"),
         };
@@ -174,6 +192,23 @@ fn scalar_local<I, O: Identity, C: Clone>(
         .as_ref()
         .expect("converted scalar")
         .clone()
+}
+
+fn prepared_on_factor<I, O: Identity, C: Clone>(
+    child: &OpExpr<I, O, C>,
+    factor: &HilbertSpace<I>,
+    memo: &mut Memo<I, O, C>,
+) -> OpExpr<I, O, C> {
+    let scalar = match child.node() {
+        OpNode::Identity => true,
+        OpNode::Local(_, _) => false,
+        _ => matches!(memo[&ptr::from_ref(child.node())].support, Support::Scalar),
+    };
+    if scalar {
+        OpExpr::new(OpNode::Local(scalar_local(child, memo), factor.clone()))
+    } else {
+        prepared(child, memo).clone()
+    }
 }
 
 impl<I: Eq, O: Identity, C: Clone> OpExpr<I, O, C> {
@@ -196,61 +231,64 @@ impl<I: Eq, O: Identity, C: Clone> OpExpr<I, O, C> {
                 continue;
             }
             let operands = children(op);
-            if !visited && operands.clone().next().is_some() {
+            if !visited && !operands.is_empty() {
                 pending.push((op, true));
-                pending.extend(operands.clone().rev().map(|child| (child, false)));
+                pending.extend(operands.iter().rev().map(|child| (child, false)));
                 continue;
             }
             let mut support = Support::Scalar;
-            for child in operands.clone() {
-                match child.node() {
-                    OpNode::Local(factor, _) => support.include_factor(factor),
-                    OpNode::Identity => {}
+            let prefix_len = operands
+                .iter()
+                .take_while(|child| match child.node() {
+                    OpNode::Local(_, factor) => support.include_factor(factor),
+                    OpNode::Identity => true,
                     _ => support.include(&memo[&ptr::from_ref(child.node())].support),
+                })
+                .count();
+            let mut prefix = None;
+            let mut remainder = operands;
+            if prefix_len != operands.len() {
+                // An ordered product uses an implicit left fold. Keep the local
+                // prefix that could be grouped before the first distinct factor.
+                if let (OpNode::Product(_), Support::One(factor)) = (op.node(), &support) {
+                    if prefix_len > 1 {
+                        let (leading, rest) = operands.split_at(prefix_len);
+                        prefix = Some(product(
+                            leading
+                                .iter()
+                                .map(|child| prepared_on_factor(child, factor, &mut memo))
+                                .collect(),
+                        ));
+                        remainder = rest;
+                    }
                 }
-                if matches!(support, Support::Many) {
-                    break;
-                }
+                support = Support::Many;
             }
             let replacement = match &support {
                 Support::Scalar => None,
                 Support::One(factor) => {
-                    let mut parts = operands.map(|child| {
-                        let child_key = ptr::from_ref(child.node());
-                        let scalar = match child.node() {
-                            OpNode::Identity => true,
-                            OpNode::Local(_, _) => false,
-                            _ => matches!(memo[&child_key].support, Support::Scalar),
-                        };
-                        if scalar {
-                            let local = scalar_local(child, &mut memo);
-                            OpExpr::new(OpNode::Local(factor.clone(), local))
-                        } else {
-                            prepared(child, &memo).clone()
-                        }
-                    });
+                    let mut parts = operands
+                        .iter()
+                        .map(|child| prepared_on_factor(child, factor, &mut memo));
                     Some(match op.node() {
                         OpNode::Sum(_) => sum(parts.collect()),
-                        OpNode::Product(_) => {
-                            let lhs = parts.next().expect("left operand");
-                            product(lhs, parts.next().expect("right operand"))
-                        }
+                        OpNode::Product(_) => product(parts.collect()),
                         OpNode::Scale(s) => {
                             let child = parts.next().expect("scale operand");
-                            let OpNode::Local(_, local) = child.node() else {
+                            let OpNode::Local(local, _) = child.node() else {
                                 unreachable!("single-factor child")
                             };
                             Self::new(OpNode::Local(
-                                factor.clone(),
                                 local.scaled(s.coefficient.clone()),
+                                factor.clone(),
                             ))
                         }
                         OpNode::Adjoint(_) => {
                             let child = parts.next().expect("adjoint operand");
-                            let OpNode::Local(_, local) = child.node() else {
+                            let OpNode::Local(local, _) = child.node() else {
                                 unreachable!("single-factor child")
                             };
-                            Self::new(OpNode::Local(factor.clone(), local.adjoint()))
+                            Self::new(OpNode::Local(local.adjoint(), factor.clone()))
                         }
                         OpNode::Identity | OpNode::Local(_, _) => {
                             unreachable!("container expected")
@@ -258,18 +296,19 @@ impl<I: Eq, O: Identity, C: Clone> OpExpr<I, O, C> {
                     })
                 }
                 Support::Many => {
-                    if operands
-                        .clone()
-                        .all(|before| ptr::eq(before.node(), prepared(before, &memo).node()))
+                    if prefix.is_none()
+                        && operands
+                            .iter()
+                            .all(|before| ptr::eq(before.node(), prepared(before, &memo).node()))
                     {
                         None
                     } else {
-                        let mut parts = operands.map(|child| prepared(child, &memo).clone());
+                        let mut parts = prefix
+                            .into_iter()
+                            .chain(remainder.iter().map(|child| prepared(child, &memo).clone()));
                         Some(match op.node() {
                             OpNode::Sum(_) => sum(parts.collect()),
-                            OpNode::Product(_) => {
-                                product(parts.next().unwrap(), parts.next().unwrap())
-                            }
+                            OpNode::Product(_) => product(parts.collect()),
                             OpNode::Scale(s) => Self::new(OpNode::Scale(ScaleExpr {
                                 coefficient: s.coefficient.clone(),
                                 operand: parts.next().unwrap(),

@@ -47,8 +47,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let a = HilbertSpace::factor("a");
     let b = HilbertSpace::factor("b");
     let space = a.tensor(&b)?;
-    let state = Spin::product_state(&space, [Ket::Plus, Ket::Minus])?;
-    let zz = Spin::operator_product_at([(&a, Op::Sz), (&b, Op::Sz)])?;
+    let state = Spin::state_tensor_from([Ket::Plus, Ket::Minus], &space)?;
+    let zz = Spin::operator_product_from([(Op::Sz, &a), (Op::Sz, &b)])?;
     assert_eq!(state.space().dim::<Ket>()?, 9);
     assert_close(state.expectation(&zz)?, Complex::new(-1.5, 0.0));
 
@@ -78,10 +78,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
         use syntaqs_spin_one::basis::SzBasis;
-        let dense: Exported<Vec<Complex<f64>>, _> =
-            (&h).export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
+        let dense: Exported<Vec<Complex<f64>>, _> = (&h).export(MatrixArgs::new(&SzBasis))?;
         let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =
-            (&h).export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
+            (&h).export(MatrixArgs::new(&SzBasis))?;
         assert_eq!(dense.metadata().shape(), [3, 3]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {
             assert_close(*left, *right);
@@ -91,10 +90,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             sparse.data().nnz()
         );
 
-        let dense: Exported<Vec<Complex<f64>>, _> =
-            blbq.export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
+        let dense: Exported<Vec<Complex<f64>>, _> = blbq.export(MatrixArgs::new(&SzBasis))?;
         let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =
-            blbq.export(MatrixArgs::<Ket, _>::new(&SzBasis))?;
+            blbq.export(MatrixArgs::new(&SzBasis))?;
         assert_eq!(dense.metadata().shape(), [9, 9]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {
             assert_close(*left, *right);

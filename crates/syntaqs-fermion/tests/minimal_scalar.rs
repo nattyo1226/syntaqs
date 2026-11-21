@@ -149,14 +149,11 @@ fn all_primitive_rules_and_bases_work_without_clone_copy_float_or_conjugation() 
             assert_eq!(v, [m[j], m[2 + j]]);
         }
         assert_eq!(
-            exact_matrix(<LadderBasis as Basis<O, Exact>>::expand(&LadderBasis, &a)),
+            exact_matrix(<LadderBasis as Basis<O, Exact>>::expand(&LadderBasis, &a).unwrap()),
             matrix(a)
         );
         assert_eq!(
-            exact_matrix(<MajoranaBasis as Basis<O, Exact>>::expand(
-                &MajoranaBasis,
-                &a
-            )),
+            exact_matrix(<MajoranaBasis as Basis<O, Exact>>::expand(&MajoranaBasis, &a).unwrap()),
             matrix(a)
         );
     }
@@ -197,7 +194,8 @@ fn independent_capabilities_do_not_inherit_majorana_bounds() {
         );
     }
     for s in STATES {
-        let expanded = <OccupationBasis as Basis<S, OneOnly>>::expand(&OccupationBasis, &s);
+        let expanded =
+            <OccupationBasis as Basis<S, OneOnly>>::expand(&OccupationBasis, &s).unwrap();
         assert_eq!(expanded.into_iter().next().unwrap().coefficient.0, 1);
         for t in STATES {
             assert_eq!(
@@ -212,8 +210,9 @@ fn independent_capabilities_do_not_inherit_majorana_bounds() {
     let _ = ket.act(&(op.clone() * &op.adjoint()));
     let a = HilbertSpace::factor(0);
     let b = HilbertSpace::factor(1);
-    let psi = Fermion::<Opaque>::product_state(&a.tensor_g(&b).unwrap(), [S::Empty, S::Occupied])
-        .unwrap();
+    let psi =
+        Fermion::<Opaque>::state_tensor_from([S::Empty, S::Occupied], &a.tensor_g(&b).unwrap())
+            .unwrap();
     let _ = psi.act(&op.at(&a).unwrap()).unwrap();
 }
 
@@ -257,7 +256,7 @@ impl Neg for ModelCoefficient {
         Self(-self.0)
     }
 }
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Index(u8);
 #[test]
 fn hubbard_construction_needs_neither_primitive_evaluation_nor_index_cloning() {

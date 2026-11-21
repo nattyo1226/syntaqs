@@ -23,7 +23,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let h = Models::heisenberg(&chain, &factors, 1.0)?;
     let space = HilbertSpace::tensor_all(factors.iter().cloned())?;
     let psi = State::try_tensor_in(
-        &space,
         factors.iter().enumerate().map(|(i, factor)| {
             Spin::state(if i % 2 == 0 {
                 SpinHalfState::Up
@@ -32,6 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             })
             .at(factor)
         }),
+        &space,
     )?;
     #[cfg(feature = "normalize")]
     let energy = psi.normalized_expectation(&h)?;
@@ -53,11 +53,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Vector shape: {:?}", raw.metadata().shape());
         let vector: Exported<Array1<_>, _> = raw.export(())?;
         // Direct ndarray export internally follows the public Vec output path.
-        let matrix: Exported<Array2<_>, _> =
-            (&h).export(MatrixArgs::<SpinHalfState, _>::new(&SzBasis))?;
+        let matrix: Exported<Array2<_>, _> = (&h).export(MatrixArgs::new(&SzBasis))?;
         let sparse_vector: Exported<CsVec<_>, _> = (&psi).export(&SzBasis)?;
-        let sparse_matrix: Exported<CsMat<_>, _> =
-            (&h).export(MatrixArgs::<SpinHalfState, _>::new(&SzBasis))?;
+        let sparse_matrix: Exported<CsMat<_>, _> = (&h).export(MatrixArgs::new(&SzBasis))?;
         let dense_action = matrix.data().dot(vector.data());
         let sparse_action = sparse_matrix.data() * sparse_vector.data();
         let dense_energy = vector.data().mapv(|z| z.conj()).dot(&dense_action);

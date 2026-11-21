@@ -4,7 +4,8 @@ use core::ops::{Add, Div, Neg};
 
 use num_traits::One;
 use syntaqs_core::{
-    basis::Basis, coefficient::ImaginaryUnit,
+    basis::{Basis, BasisElements},
+    coefficient::ImaginaryUnit,
     expression::parts::linear_combination::LinearCombination,
 };
 
@@ -14,6 +15,14 @@ use crate::{
 };
 
 /// The orthonormal `Sz` eigenbasis in the order `Up, Down`.
+///
+/// ```
+/// use syntaqs_core::prelude::BasisElements;
+/// use syntaqs_spin_half::{basis::SzBasis, state::SpinHalfState};
+///
+/// let first = SzBasis.element(0);
+/// assert_eq!(first, Some(SpinHalfState::Up));
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct SzBasis;
 
@@ -27,11 +36,7 @@ pub struct CartesianBasis;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct LadderBasis;
 
-impl<C: One> Basis<SpinHalfState, C> for SzBasis {
-    fn expand(&self, primitive: &SpinHalfState) -> LinearCombination<SpinHalfState, C> {
-        LinearCombination::primitive(*primitive)
-    }
-
+impl BasisElements<SpinHalfState> for SzBasis {
     fn index(&self, primitive: &SpinHalfState) -> Option<usize> {
         Some(match primitive {
             SpinHalfState::Up => 0,
@@ -39,28 +44,18 @@ impl<C: One> Basis<SpinHalfState, C> for SzBasis {
         })
     }
 
-    fn elements(&self) -> impl Iterator<Item = SpinHalfState> + '_ {
-        [SpinHalfState::Up, SpinHalfState::Down].into_iter()
+    fn element(&self, index: usize) -> Option<SpinHalfState> {
+        [SpinHalfState::Up, SpinHalfState::Down].get(index).copied()
     }
 }
 
-impl<C: One + Add<Output = C> + Div<Output = C> + Neg<Output = C> + ImaginaryUnit>
-    Basis<SpinHalfOperator, C> for CartesianBasis
-{
-    fn expand(&self, primitive: &SpinHalfOperator) -> LinearCombination<SpinHalfOperator, C> {
-        use SpinHalfOperator::*;
-        match primitive {
-            Sp => {
-                LinearCombination::term(half(), Sx) + LinearCombination::term(imaginary(half()), Sy)
-            }
-            Sm => {
-                LinearCombination::term(half(), Sx)
-                    + LinearCombination::term(imaginary(-half::<C>()), Sy)
-            }
-            _ => LinearCombination::primitive(*primitive),
-        }
+impl<C: One> Basis<SpinHalfState, C> for SzBasis {
+    fn expand_indices(&self, primitive: &SpinHalfState) -> LinearCombination<usize, C> {
+        LinearCombination::primitive(self.index(primitive).expect("basis primitive"))
     }
+}
 
+impl BasisElements<SpinHalfOperator> for CartesianBasis {
     fn index(&self, primitive: &SpinHalfOperator) -> Option<usize> {
         use SpinHalfOperator::*;
         match primitive {
@@ -72,28 +67,31 @@ impl<C: One + Add<Output = C> + Div<Output = C> + Neg<Output = C> + ImaginaryUni
         }
     }
 
-    fn elements(&self) -> impl Iterator<Item = SpinHalfOperator> + '_ {
+    fn element(&self, index: usize) -> Option<SpinHalfOperator> {
         use SpinHalfOperator::*;
-        [I, Sx, Sy, Sz].into_iter()
+        [I, Sx, Sy, Sz].get(index).copied()
     }
 }
 
-impl<C> Basis<SpinHalfOperator, C> for LadderBasis
-where
-    C: One + Neg<Output = C> + ImaginaryUnit,
+impl<C: One + Add<Output = C> + Div<Output = C> + Neg<Output = C> + ImaginaryUnit>
+    Basis<SpinHalfOperator, C> for CartesianBasis
 {
-    fn expand(&self, primitive: &SpinHalfOperator) -> LinearCombination<SpinHalfOperator, C> {
+    fn expand_indices(&self, primitive: &SpinHalfOperator) -> LinearCombination<usize, C> {
         use SpinHalfOperator::*;
         match primitive {
-            Sx => LinearCombination::primitive(Sp) + LinearCombination::primitive(Sm),
-            Sy => {
-                LinearCombination::term(imaginary(-C::one()), Sp)
-                    + LinearCombination::term(imaginary(C::one()), Sm)
+            Sp => {
+                LinearCombination::term(half(), 1) + LinearCombination::term(imaginary(half()), 2)
             }
-            _ => LinearCombination::primitive(*primitive),
+            Sm => {
+                LinearCombination::term(half(), 1)
+                    + LinearCombination::term(imaginary(-half::<C>()), 2)
+            }
+            _ => LinearCombination::primitive(self.index(primitive).expect("basis primitive")),
         }
     }
+}
 
+impl BasisElements<SpinHalfOperator> for LadderBasis {
     fn index(&self, primitive: &SpinHalfOperator) -> Option<usize> {
         use SpinHalfOperator::*;
         match primitive {
@@ -105,8 +103,25 @@ where
         }
     }
 
-    fn elements(&self) -> impl Iterator<Item = SpinHalfOperator> + '_ {
+    fn element(&self, index: usize) -> Option<SpinHalfOperator> {
         use SpinHalfOperator::*;
-        [I, Sp, Sm, Sz].into_iter()
+        [I, Sp, Sm, Sz].get(index).copied()
+    }
+}
+
+impl<C> Basis<SpinHalfOperator, C> for LadderBasis
+where
+    C: One + Neg<Output = C> + ImaginaryUnit,
+{
+    fn expand_indices(&self, primitive: &SpinHalfOperator) -> LinearCombination<usize, C> {
+        use SpinHalfOperator::*;
+        match primitive {
+            Sx => LinearCombination::primitive(1) + LinearCombination::primitive(2),
+            Sy => {
+                LinearCombination::term(imaginary(-C::one()), 1)
+                    + LinearCombination::term(imaginary(C::one()), 2)
+            }
+            _ => LinearCombination::primitive(self.index(primitive).expect("basis primitive")),
+        }
     }
 }

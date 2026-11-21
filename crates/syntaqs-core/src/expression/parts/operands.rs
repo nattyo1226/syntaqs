@@ -3,19 +3,19 @@ use core::{iter::FusedIterator, slice};
 
 /// An ordered sequence with inline storage for zero or one operand.
 ///
-/// All variants represent their stored sequence, including an empty `Many`.
+/// Constructors store sequences of length two or greater in `Many`.
 #[derive(Clone, Debug, PartialEq, Default)]
-pub enum SumExpr<E> {
+pub enum Operands<E> {
     /// The empty sequence.
     #[default]
     Empty,
     /// One operand, stored inline.
     One(E),
-    /// An owned sequence of operands.
+    /// An owned sequence of at least two operands.
     Many(Vec<E>),
 }
 
-impl<E> SumExpr<E> {
+impl<E> Operands<E> {
     /// Borrows operands in their stored order.
     pub fn iter(&self) -> slice::Iter<'_, E> {
         self.as_slice().iter()
@@ -40,9 +40,21 @@ impl<E> SumExpr<E> {
         self.len() == 0
     }
 
+    /// Reuses a single operand directly. The caller handles an empty or multi-operand sequence.
+    pub fn collapse_singleton(self, build: impl FnOnce(Self) -> E) -> E {
+        match self {
+            Self::One(operand) => operand,
+            operands => build(operands),
+        }
+    }
+
     /// Transforms each operand once, in order, without cloning.
-    pub fn map<F>(self, f: impl FnMut(E) -> F) -> SumExpr<F> {
-        self.into_iter().map(f).collect()
+    pub fn map<F>(self, mut f: impl FnMut(E) -> F) -> Operands<F> {
+        match self {
+            Self::Empty => Operands::Empty,
+            Self::One(operand) => Operands::One(f(operand)),
+            Self::Many(operands) => Operands::Many(operands.into_iter().map(f).collect()),
+        }
     }
 
     /// Concatenates sequences without arithmetic or cloning.
@@ -67,7 +79,7 @@ impl<E> SumExpr<E> {
     }
 }
 
-impl<E> FromIterator<E> for SumExpr<E> {
+impl<E> FromIterator<E> for Operands<E> {
     fn from_iter<I: IntoIterator<Item = E>>(iter: I) -> Self {
         let mut iter = iter.into_iter();
         let Some(first) = iter.next() else {
@@ -76,9 +88,26 @@ impl<E> FromIterator<E> for SumExpr<E> {
         let Some(second) = iter.next() else {
             return Self::One(first);
         };
-        let mut values = vec![first, second];
+        let mut values = Vec::with_capacity(2 + iter.size_hint().0);
+        values.extend([first, second]);
         values.extend(iter);
         Self::Many(values)
+    }
+}
+
+impl<E> From<Vec<E>> for Operands<E> {
+    fn from(mut operands: Vec<E>) -> Self {
+        match operands.len() {
+            0 => Self::Empty,
+            1 => Self::One(operands.pop().expect("one operand")),
+            _ => Self::Many(operands),
+        }
+    }
+}
+
+impl<E> AsRef<[E]> for Operands<E> {
+    fn as_ref(&self) -> &[E] {
+        self.as_slice()
     }
 }
 
@@ -90,7 +119,7 @@ pub enum IntoOperands<E> {
     Many(alloc::vec::IntoIter<E>),
 }
 
-impl<E> IntoIterator for SumExpr<E> {
+impl<E> IntoIterator for Operands<E> {
     type Item = E;
     type IntoIter = IntoOperands<E>;
 
@@ -103,7 +132,7 @@ impl<E> IntoIterator for SumExpr<E> {
     }
 }
 
-impl<'a, E> IntoIterator for &'a SumExpr<E> {
+impl<'a, E> IntoIterator for &'a Operands<E> {
     type Item = &'a E;
     type IntoIter = slice::Iter<'a, E>;
 
@@ -149,20 +178,20 @@ impl<E> FusedIterator for IntoOperands<E> {}
 
 #[cfg(test)]
 mod tests {
-    use super::SumExpr;
+    use super::Operands;
     use alloc::vec::Vec;
 
     #[test]
-    fn sum_parts_support_borrowed_and_owned_mixed_end_iteration() {
-        assert!(SumExpr::<u8>::default().is_empty());
+    fn operands_support_borrowed_and_owned_mixed_end_iteration() {
+        assert!(Operands::<u8>::default().is_empty());
         for n in 0..5 {
-            let sum: SumExpr<_> = (0..n).collect();
-            assert_eq!(sum.len(), n);
+            let operands: Operands<_> = (0..n).collect();
+            assert_eq!(operands.len(), n);
             assert_eq!(
-                sum.iter().copied().collect::<Vec<_>>(),
+                operands.iter().copied().collect::<Vec<_>>(),
                 (0..n).collect::<Vec<_>>()
             );
-            let mut iter = sum.into_iter();
+            let mut iter = operands.into_iter();
             if n > 0 {
                 assert_eq!(iter.next_back(), Some(n - 1));
             }
