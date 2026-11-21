@@ -201,7 +201,7 @@ where
             match task {
                 Task::Visit(op, adjoint) => match op.node() {
                     OpNode::Identity => values.push(Factored::scalar(C::one())),
-                    OpNode::Local(factor, local) => {
+                    OpNode::Local(local, factor) => {
                         let position = space
                             .factor_position(factor.factor_index().expect("placed factor"))
                             .expect("validated factor");
@@ -210,7 +210,7 @@ where
                         } else {
                             local.clone()
                         };
-                        values.push(self.evaluate_local(position, &local));
+                        values.push(self.evaluate_local(&local, position));
                     }
                     OpNode::Scale(s) => {
                         if s.coefficient.is_zero() {
@@ -287,7 +287,7 @@ where
         Some(id)
     }
 
-    fn evaluate_local(&mut self, position: usize, local: &LocalOperator<O, C>) -> Factored<C> {
+    fn evaluate_local(&mut self, local: &LocalOperator<O, C>, position: usize) -> Factored<C> {
         let local = local.evaluate();
         let mut sum = Sum::new();
         for (coefficient, local) in LinearTerms::new(&local, operator_handle_view) {
@@ -686,6 +686,14 @@ where
         if self.product.coefficient.is_zero() {
             return OpExpr::sum(Default::default());
         }
+        let one = C::one();
+        let scale = |expression: OpExpr<I, O, C>, coefficient: &C| {
+            if *coefficient == one {
+                expression
+            } else {
+                expression.scaled(coefficient.clone())
+            }
+        };
         let blocks = self.product.blocks.iter().map(|block| {
             if let &[position] = block.support.as_slice() {
                 let local = LocalOperator::sum(block.terms.iter().map(|term| {
@@ -694,9 +702,13 @@ where
                         &[(_, id)] => self.primitive(id),
                         _ => unreachable!("one-factor block"),
                     };
-                    primitive.scaled(term.coefficient.clone())
+                    if term.coefficient == one {
+                        primitive.clone()
+                    } else {
+                        primitive.scaled(term.coefficient.clone())
+                    }
                 }));
-                return OpExpr::new(OpNode::Local(factors[position].clone(), local));
+                return OpExpr::new(OpNode::Local(local, factors[position].clone()));
             }
             OpExpr::sum(
                 block
@@ -705,15 +717,15 @@ where
                     .map(|term| {
                         let operands = term.factors.iter().map(|&(position, id)| {
                             OpExpr::new(OpNode::Local(
-                                factors[position].clone(),
                                 self.primitive(id).clone(),
+                                factors[position].clone(),
                             ))
                         });
-                        OpExpr::product(operands.collect()).scaled(term.coefficient.clone())
+                        scale(OpExpr::product(operands.collect()), &term.coefficient)
                     })
                     .collect(),
             )
         });
-        OpExpr::product(blocks.collect()).scaled(self.product.coefficient.clone())
+        scale(OpExpr::product(blocks.collect()), &self.product.coefficient)
     }
 }

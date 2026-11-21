@@ -138,7 +138,7 @@ fn check_composite<T: Real>() {
         .map(Result::unwrap)
         .collect();
     let x = [c(0.3, -0.7), c(-0.2, 0.6), c(0.4, 0.2), c(-0.9, -0.3)];
-    let psi = State::sum(&space, inputs.iter().zip(x).map(|(s, c)| s.scaled(c))).unwrap();
+    let psi = State::sum(inputs.iter().zip(x).map(|(s, c)| s.scaled(c)), &space).unwrap();
     let a = (Lo::<T>::primitive(Op::Sx)
         .at(&f)
         .unwrap()

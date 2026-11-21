@@ -40,7 +40,11 @@ There is no `HilbertSpace::find_factor(&index)` equivalent. Leaves can currently
 
 ### 2.2. Inferring MatrixArgs from a state
 
-Matrix export still specifies a state primitive, such as `MatrixArgs::<SpinHalfState, _>`, independently of the coefficient type. A `MatrixArgs::for_state(&psi, &basis)` equivalent could remove that annotation.
+`MatrixArgs::new(&basis)` infers the state primitive when the export bounds
+determine a unique type. When several state types satisfy those bounds, callers
+select one with `MatrixArgs::<S, _>::new(&basis)`. If a caller already has a
+state, a helper such as `MatrixArgs::for_state(&psi, &basis)` could supply that
+type in ambiguous cases. [Matrix argument inference](../design/export.md#32-operator-arguments-and-space-selection).
 
 - Should the state supply only type inference, leaving ambient-space selection to existing bindings and explicit arguments?
 - If it also supplies the space, how should selection and lifetimes be explicit?

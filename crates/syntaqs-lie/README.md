@@ -16,8 +16,8 @@ and use documentation at the chosen tag. This README describes current-checkout 
 
 The usual workflow is:
 
-1. Construct an `OperatorFamily` from local or placed operators. Use `new_in`
-   with an ambient space when all placed inputs are unbound.
+1. Construct an `OperatorFamily` from local or placed operators. Use
+   `OperatorFamily::new_in(operators, &space)` when all placed inputs are unbound.
 2. Validate Hermiticity and independence. Reuse a Gram factorization when
    projecting multiple targets onto the same family.
 3. Check closure before obtaining Lie representations or a center/simple-ideal

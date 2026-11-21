@@ -98,13 +98,13 @@ fn check_derived_state_operations<T: Real>() {
     let b = CompositeSpace::factor(7);
     let h = a.tensor(&b).unwrap();
     let first = syntaqs_core::expression::composite::State::tensor_in(
-        &h,
         [x.at(&a).unwrap(), y.at(&b).unwrap()],
+        &h,
     )
     .unwrap();
     let second = syntaqs_core::expression::composite::State::tensor_in(
-        &h,
         [y.at(&a).unwrap(), z.at(&b).unwrap()],
+        &h,
     )
     .unwrap();
     let ci = CompositeOperator::identity().bind(&h).unwrap();

@@ -66,7 +66,7 @@ Core, geometry, spin-half, and fermion use `no_std + alloc`; basic, normalize, e
 | Local/composite expressions | Share immutable nodes and delay sums, products, actions, and adjoints. States have a definite space; operators have an optional ambient-space binding. |
 | `ExpressionFactory` / `QuantumSystem` | Separate construction from primitive/coefficient type information. `SpinHalf<C>` and related names are factory aliases. |
 | Evaluation | Uses the selected space and local rules. Ordinary and graded calculations share an API; core handles signs from order and parity. |
-| `Basis` / `Coordinates` | Select a basis per operation for ordinary-expression expansion, sparse coordinates, and lazy enumeration. Expression nodes do not retain basis metadata. |
+| `BasisElements` / `Basis` / `Coordinates` | Access ordered primitive members for lazy enumeration and apply expansion rules for ordinary-expression expansion and sparse coordinates. Expression nodes do not retain basis metadata. |
 | `Exported` | Associates numerical data with basis, space, shape, and layout. Action-matrix columns come from acting on state-basis elements. |
 | `OperatorFamily` | Ordered local/placed operator candidates, explicit validation, real HS projection, and real family transformations. |
 | Retained Lie results | Structure constants, adjoint matrices, Killing forms, and invariant subspaces in selected operator-family coordinates. |

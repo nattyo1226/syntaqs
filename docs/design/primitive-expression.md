@@ -135,6 +135,10 @@ during construction; state evaluation performs the collection described above. I
 
 Brakets use inner products. See [normalization](normalization.md) for norm/normalization/normalized-expectation APIs and errors. Local identity is `Primitive(O::identity())` on the ordinary evaluation/expansion path; composite syntax also has OpNode::Identity.
 
+`LocalOperator::trace()` evaluates the local expression with `Product` and
+`Adjoint`, then sums the primitive traces weighted by their coefficients.
+[Local trace implementation](../../crates/syntaqs-core/src/evaluate/trace.rs).
+
 ### 4.1. Dimension-normalized Hilbert–Schmidt inner products
 
 Use state-space dimension d locally and full ambient dimension D for composites, not operator-space d² or variant counts:
@@ -176,11 +180,11 @@ preserving local-algebra and factor checks.
 
 Exact expansion/coordinates explicitly organize expressions and connect them to bases, preserving linear relations and aggregating members. Primitives do not fix a selected basis, and ordinary actions/inner products/traces need no expansion. Approximate comparison and action equivalence follow [numerics](numerics.md).
 
-A basis implements `Basis<P,C>` with indexed primitive expansion and lookup
-in both directions. `Basis::expand()` resolves the indices into an owned
-primitive combination and reports a missing element as an error. The basis
-size derives from local structure and target kind. Core extends the indexed
-rules linearly to expressions. See [bases](basis.md).
+`BasisElements<P>` provides lookup in both directions. `Basis<P, C>` extends
+it with indexed primitive expansion. `Basis::expand()` resolves the indices
+into an owned primitive combination and reports a missing element as an error.
+The basis size derives from local structure and target kind. Core extends the
+indexed rules linearly to expressions. [Basis design](basis.md).
 
 The basis is an input; the result is ordinary syntax without basis identity or special expanded status. Preserve inputs/local structure and permit ordinary operations and re-expansion without an independent tree basis-change mechanism.
 

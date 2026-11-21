@@ -1,6 +1,7 @@
 use super::*;
 use crate::{
-    Dimension, DimensionOverflow, HilbertSpace, LinearCombination as Lc, LocalOperator, TensorKind,
+    BasisElements, Dimension, DimensionOverflow, HilbertSpace, LinearCombination as Lc,
+    LocalOperator, TensorKind,
 };
 use core::ops::{Add, Mul};
 use std::{cell::RefCell, num::NonZeroUsize};
@@ -112,6 +113,30 @@ impl B {
         }
     }
 }
+impl BasisElements<P> for B {
+    fn index(&self, p: &P) -> Option<usize> {
+        match (self.mode, p) {
+            (Mode::Cartesian, P::I) => Some(0),
+            (Mode::Cartesian, P::Z) => Some(3),
+            (Mode::Cartesian | Mode::Scaled, P::Unit(i @ 1..=2)) => Some(*i as usize),
+            (Mode::Scaled, P::HalfI) => Some(3),
+            (Mode::Scaled, P::Unit(0)) => Some(0),
+            (Mode::Units, P::Unit(i @ 0..=3)) => Some(*i as usize),
+            _ => None,
+        }
+    }
+
+    fn element(&self, index: usize) -> Option<P> {
+        match self.mode {
+            Mode::Cartesian => [P::I, P::Unit(1), P::Unit(2), P::Z].into_iter().nth(index),
+            Mode::Scaled => [P::Unit(0), P::Unit(1), P::Unit(2), P::HalfI]
+                .into_iter()
+                .nth(index),
+            Mode::Units => (index < 4).then_some(P::Unit(index as u8)),
+        }
+    }
+}
+
 impl<C: From<f64> + 'static> Basis<P, C> for B {
     fn expand_indices(&self, p: &P) -> Lc<usize, C> {
         let tag = match p {
@@ -153,26 +178,6 @@ impl<C: From<f64> + 'static> Basis<P, C> for B {
                     operand,
                 }),
         )
-    }
-    fn index(&self, p: &P) -> Option<usize> {
-        match (self.mode, p) {
-            (Mode::Cartesian, P::I) => Some(0),
-            (Mode::Cartesian, P::Z) => Some(3),
-            (Mode::Cartesian | Mode::Scaled, P::Unit(i @ 1..=2)) => Some(*i as usize),
-            (Mode::Scaled, P::HalfI) => Some(3),
-            (Mode::Scaled, P::Unit(0)) => Some(0),
-            (Mode::Units, P::Unit(i @ 0..=3)) => Some(*i as usize),
-            _ => None,
-        }
-    }
-    fn element(&self, index: usize) -> Option<P> {
-        match self.mode {
-            Mode::Cartesian => [P::I, P::Unit(1), P::Unit(2), P::Z].into_iter().nth(index),
-            Mode::Scaled => [P::Unit(0), P::Unit(1), P::Unit(2), P::HalfI]
-                .into_iter()
-                .nth(index),
-            Mode::Units => (index < 4).then_some(P::Unit(index as u8)),
-        }
     }
 }
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -488,7 +493,7 @@ fn expanded_terms_share_identity_handles_and_keep_aggregated_coefficients() {
     let mut products = 0;
     while let Some(op) = pending.pop() {
         match op.node() {
-            OpNode::Local(factor, local) => {
+            OpNode::Local(local, factor) => {
                 let digit = match local.node() {
                     OperatorNode::Primitive(P::I) => {
                         identities.push(local.node());

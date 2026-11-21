@@ -101,8 +101,9 @@ An empty site produces no rows without closing gaps. A zero-site group yields on
 
 Site order and an independently existing ambient factor order are distinct. Connections neither reorder spaces/states/matrices nor construct tensors. Callers select ambient spaces, axes, and normalization; core handles placement, multiplication, and binding. Selecting one leaf per site differs from enumerating all Pauli assignments across leaves.
 
-`ExpressionFactory::operator_product_at` and `try_operator_product` accept
-arbitrary-length placements/products. Relations need no per-arity constructor
+`ExpressionFactory::operator_product_from` accepts any number of
+`(primitive, &factor)` assignments, and `try_operator_product` accepts any number
+of fallible operands. Relations need no per-arity constructor
 or geometry-specific evaluator, and enumeration/mapping require no evaluation
 capabilities.
 

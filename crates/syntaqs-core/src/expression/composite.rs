@@ -18,7 +18,7 @@ use crate::{ExpressionError, HilbertSpace, Identity, LocalOperator, LocalState};
 /// let left = LocalState::<u8, (), ()>::primitive(0).at(&a).unwrap();
 /// let right = LocalState::<u16, (), ()>::primitive(0).at(&b).unwrap();
 /// let h = a.tensor(&b).unwrap();
-/// let _ = syntaqs_core::expression::composite::State::tensor_in(&h, [left, right]);
+/// let _ = syntaqs_core::expression::composite::State::tensor_in([left, right], &h);
 /// ```
 ///
 /// Composite action also requires matching operator primitives:
@@ -90,7 +90,7 @@ pub(crate) struct StateAction<I, S, O, C> {
 
 #[derive(Debug)]
 pub(crate) enum StateNode<I, S, O, C> {
-    Local(HilbertSpace<I>, LocalState<S, O, C>),
+    Local(LocalState<S, O, C>, HilbertSpace<I>),
     Unit,
     Scale(ScaleExpr<StateExpr<I, S, O, C>, C>),
     Sum(Operands<StateExpr<I, S, O, C>>),
@@ -99,7 +99,7 @@ pub(crate) enum StateNode<I, S, O, C> {
 }
 #[derive(Debug)]
 pub(crate) enum OpNode<I, O, C> {
-    Local(HilbertSpace<I>, LocalOperator<O, C>),
+    Local(LocalOperator<O, C>, HilbertSpace<I>),
     Identity,
     Scale(ScaleExpr<OpExpr<I, O, C>, C>),
     Sum(Operands<OpExpr<I, O, C>>),
@@ -142,7 +142,7 @@ impl<I, O, C> Clone for Operator<I, O, C> {
 impl<I, S, O, C> StateExpr<I, S, O, C> {
     pub(crate) fn new(node: StateNode<I, S, O, C>) -> Self {
         let pending_action = match &node {
-            StateNode::Local(_, local) => local.has_pending_action(),
+            StateNode::Local(local, _) => local.has_pending_action(),
             StateNode::Unit => false,
             StateNode::Scale(s) => s.operand.pending_action,
             StateNode::Sum(s) | StateNode::Tensor(s) => s.iter().any(|c| c.pending_action),
@@ -216,7 +216,7 @@ impl<I, S, O, C> State<I, S, O, C> {
         }
         Ok(Self {
             space: factor.clone(),
-            expression: StateExpr::new(StateNode::Local(factor.clone(), local.clone())),
+            expression: StateExpr::new(StateNode::Local(local.clone(), factor.clone())),
         })
     }
     /// Constructs a zero state with an explicit space, without numeric bounds.
@@ -261,8 +261,8 @@ impl<I, S, O, C> State<I, S, O, C> {
 impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// Constructs an ordered sum on an explicit space, including an empty sum.
     pub fn sum(
-        space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Self>,
+        space: &HilbertSpace<I>,
     ) -> Result<Self, ExpressionError> {
         let expressions = states
             .into_iter()
@@ -284,11 +284,11 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// errors in earlier successful operands. Empty input is zero on `space`.
     /// Errors do not roll back work already performed by the input producer.
     pub fn try_sum(
-        space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Result<Self, ExpressionError>>,
+        space: &HilbertSpace<I>,
     ) -> Result<Self, ExpressionError> {
         let states: Operands<Self> = states.into_iter().collect::<Result<_, _>>()?;
-        Self::sum(space, states)
+        Self::sum(states, space)
     }
     pub(crate) fn into_add(self, rhs: Self) -> Result<Self, ExpressionError> {
         if !self.space.is_compatible_with(&rhs.space) {
@@ -305,15 +305,15 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// must have a compatible tensor kind; grouping may differ. Empty input is
     /// accepted only on a unit space. No primitive evaluation is performed.
     pub fn tensor_in(
-        space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Self>,
+        space: &HilbertSpace<I>,
     ) -> Result<Self, ExpressionError> {
-        Self::tensor_collected(space, states.into_iter().collect())
+        Self::tensor_collected(states.into_iter().collect(), space)
     }
 
     fn tensor_collected(
-        space: &HilbertSpace<I>,
         states: Operands<Self>,
+        space: &HilbertSpace<I>,
     ) -> Result<Self, ExpressionError> {
         if states.iter().any(|s| {
             s.space
@@ -335,11 +335,11 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// Collects fallible inputs before validating coverage of the explicit space.
     /// The first input error stops consumption and precedes all space errors.
     pub fn try_tensor_in(
-        space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Result<Self, ExpressionError>>,
+        space: &HilbertSpace<I>,
     ) -> Result<Self, ExpressionError> {
         let states: Operands<Self> = states.into_iter().collect::<Result<_, _>>()?;
-        Self::tensor_collected(space, states)
+        Self::tensor_collected(states, space)
     }
 }
 
@@ -401,7 +401,7 @@ impl<I, O, C> Operator<I, O, C> {
         }
         Ok(Self {
             ambient: None,
-            expression: OpExpr::new(OpNode::Local(factor.clone(), local.clone())),
+            expression: OpExpr::new(OpNode::Local(local.clone(), factor.clone())),
         })
     }
     /// Constructs an unbound zero (the empty sum).
@@ -565,7 +565,7 @@ impl<I: Ord, O, C> Operator<I, O, C> {
         let mut pending = alloc::vec![&self.expression];
         while let Some(op) = pending.pop() {
             match op.node() {
-                OpNode::Local(factor, _) => {
+                OpNode::Local(_, factor) => {
                     let index = factor.factor_index().expect("placed factor");
                     if space.factor_position(index).is_none() {
                         return Err(ExpressionError::MissingIndex);

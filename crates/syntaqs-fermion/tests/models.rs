@@ -119,7 +119,7 @@ fn check<T: Real>() {
         T::from_f64(4.).unwrap(),
     )
     .unwrap();
-    let double = Fermion::<Complex<T>>::product_state(&sites[0], [S::Occupied, S::Occupied])
+    let double = Fermion::<Complex<T>>::state_tensor_from([S::Occupied, S::Occupied], &sites[0])
         .unwrap()
         .scaled(c::<T>(0., 2.));
     let normalized = double.normalized().unwrap();
@@ -232,17 +232,17 @@ fn graded<T: Real>() {
             values::<T>(&exported_matrix(&ad), &expected);
         }
     }
-    let double = Fermion::<Complex<T>>::product_state(
+    let double = Fermion::<Complex<T>>::state_tensor_from(
+        [S::Occupied, S::Occupied],
         &syntaqs_core::space::HilbertSpace::tensor_all_g([(modes[0]).clone(), (modes[1]).clone()])
             .unwrap(),
-        [S::Occupied, S::Occupied],
     )
     .unwrap();
     for (mode, labels, sign) in [
         (0, [S::Empty, S::Occupied], 1.),
         (1, [S::Occupied, S::Empty], -1.),
     ] {
-        let target = Fermion::<Complex<T>>::product_state(double.space(), labels).unwrap();
+        let target = Fermion::<Complex<T>>::state_tensor_from(labels, double.space()).unwrap();
         close::<T>(
             to64(
                 target
@@ -253,7 +253,7 @@ fn graded<T: Real>() {
         );
     }
     let parity =
-        Fermion::<Complex<T>>::operator_product_at([(&modes[0], O::Mz), (&modes[1], O::Mz)])
+        Fermion::<Complex<T>>::operator_product_from([(O::Mz, &modes[0]), (O::Mz, &modes[1])])
             .unwrap()
             .bind(&space)
             .unwrap();

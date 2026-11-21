@@ -135,6 +135,44 @@ fn moved_common_parts_and_dimension_capabilities_keep_their_public_paths() {
 }
 
 #[test]
+fn local_trace_accepts_an_operator_without_identity() {
+    use syntaqs_core::{
+        algebra::{Adjoint, Product, Trace},
+        expression::parts::linear_combination::LinearCombination as Lc,
+    };
+
+    struct MatrixUnit(u8, u8);
+
+    impl Product<f64> for MatrixUnit {
+        type Term = Self;
+        fn product(&self, rhs: &Self) -> Lc<Self, f64> {
+            if self.1 == rhs.0 {
+                Lc::primitive(Self(self.0, rhs.1))
+            } else {
+                Lc::zero()
+            }
+        }
+    }
+
+    impl Adjoint<f64> for MatrixUnit {
+        type Term = Self;
+        fn adjoint(&self) -> Lc<Self, f64> {
+            Lc::primitive(Self(self.1, self.0))
+        }
+    }
+
+    impl Trace<f64> for MatrixUnit {
+        fn trace(&self) -> f64 {
+            f64::from(self.0 == self.1)
+        }
+    }
+
+    let off_diagonal = LocalOperator::<_, f64>::primitive(MatrixUnit(0, 1));
+    let expression = (off_diagonal.adjoint() * &off_diagonal).scaled(3.0) + off_diagonal;
+    assert_eq!(expression.trace(), 3.0);
+}
+
+#[test]
 fn local_identity_uses_primitive_rules_without_dimension_queries() {
     use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
     use syntaqs_core::{

@@ -43,8 +43,7 @@ fn check_spin_placements<const K: usize>(boundary: Boundary, expected: &[[usize;
     assert_eq!(groups.len(), expected.len());
     let states: Vec<_> = (0..32)
         .map(|bits| {
-            SpinHalf::<C>::product_state(
-                &ambient,
+            SpinHalf::<C>::state_tensor_from(
                 (0..5).map(|i| {
                     if bits & (1 << (4 - i)) == 0 {
                         Spin::Up
@@ -52,6 +51,7 @@ fn check_spin_placements<const K: usize>(boundary: Boundary, expected: &[[usize;
                         Spin::Down
                     }
                 }),
+                &ambient,
             )
             .unwrap()
         })
@@ -60,19 +60,17 @@ fn check_spin_placements<const K: usize>(boundary: Boundary, expected: &[[usize;
         let axes = [S::Sx, S::Sy, S::Sz, S::Sx];
         let leaves = group.leaves_cartesian().next().unwrap();
         let mapped = SpinHalf::<C>::try_operator_product(
-            leaves
-                .iter()
-                .zip(axes)
-                .map(|(leaf, axis)| SpinHalf::<C>::operator(axis).at(leaf)),
+            axes.into_iter()
+                .zip(&leaves)
+                .map(|(axis, leaf)| SpinHalf::<C>::operator(axis).at(leaf)),
         )
         .unwrap()
         .bind(&ambient)
         .unwrap();
         let manual = SpinHalf::<C>::try_operator_product(
-            placement
-                .iter()
-                .zip(axes)
-                .map(|(&i, axis)| SpinHalf::<C>::operator(axis).at(&sites[i])),
+            axes.into_iter()
+                .zip(placement)
+                .map(|(axis, &i)| SpinHalf::<C>::operator(axis).at(&sites[i])),
         )
         .unwrap()
         .bind(&ambient)
@@ -134,8 +132,7 @@ fn mapper_constructs_all_37_pauli_strings_with_support_at_most_two_once() {
     }
     let states: Vec<_> = (0..8)
         .map(|bits| {
-            SpinHalf::<C>::product_state(
-                &ambient,
+            SpinHalf::<C>::state_tensor_from(
                 (0..3).map(|i| {
                     if bits & (1 << (2 - i)) == 0 {
                         Spin::Up
@@ -143,6 +140,7 @@ fn mapper_constructs_all_37_pauli_strings_with_support_at_most_two_once() {
                         Spin::Down
                     }
                 }),
+                &ambient,
             )
             .unwrap()
         })
@@ -188,8 +186,7 @@ fn graded_three_and_four_site_products_preserve_periodic_role_and_odd_order() {
     let ambient = H::tensor_all_g(sites.iter().cloned()).unwrap();
     let states: Vec<_> = (0..16)
         .map(|bits| {
-            Fermion::<C>::product_state(
-                &ambient,
+            Fermion::<C>::state_tensor_from(
                 (0..4).map(|i| {
                     if bits & (1 << (3 - i)) == 0 {
                         Occupation::Empty
@@ -197,6 +194,7 @@ fn graded_three_and_four_site_products_preserve_periodic_role_and_odd_order() {
                         Occupation::Occupied
                     }
                 }),
+                &ambient,
             )
             .unwrap()
         })
@@ -222,14 +220,14 @@ fn graded_three_and_four_site_products_preserve_periodic_role_and_odd_order() {
             assert_eq!(supports.len(), expected);
             for (start, support) in supports.iter().enumerate() {
                 let placement: Vec<_> = (0..k).map(|offset| (start + offset) % 4).collect();
-                let mapped = Fermion::<C>::operator_product_at(
-                    support.iter().map(|&leaf| (leaf, F::Create)),
+                let mapped = Fermion::<C>::operator_product_from(
+                    support.iter().map(|&leaf| (F::Create, leaf)),
                 )
                 .unwrap()
                 .bind(&ambient)
                 .unwrap();
-                let manual = Fermion::<C>::operator_product_at(
-                    placement.iter().map(|&i| (&sites[i], F::Create)),
+                let manual = Fermion::<C>::operator_product_from(
+                    placement.iter().map(|&i| (F::Create, &sites[i])),
                 )
                 .unwrap()
                 .bind(&ambient)

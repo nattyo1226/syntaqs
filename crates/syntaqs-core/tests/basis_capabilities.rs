@@ -7,10 +7,17 @@ use std::{
     ops::{Add, Mul},
 };
 use syntaqs_core::{
-    algebra::Act, algebra::Adjoint, basis::Basis, basis::BasisError, coefficient::Conjugate,
-    expression::composite::State, expression::local::LocalState,
-    expression::parts::linear_combination::LinearCombination, space::Dimension,
-    space::DimensionOverflow, space::HilbertSpace,
+    algebra::Act,
+    algebra::Adjoint,
+    basis::BasisError,
+    basis::{Basis, BasisElements},
+    coefficient::Conjugate,
+    expression::composite::State,
+    expression::local::LocalState,
+    expression::parts::linear_combination::LinearCombination,
+    space::Dimension,
+    space::DimensionOverflow,
+    space::HilbertSpace,
 };
 
 // No Clone, Eq, ordering or hashing on either primitive. In particular, the
@@ -59,20 +66,25 @@ impl CountingBasis {
         }
     }
 }
+impl BasisElements<Ket> for CountingBasis {
+    fn index(&self, p: &Ket) -> Option<usize> {
+        Some(usize::from(p.0))
+    }
+
+    fn element(&self, index: usize) -> Option<Ket> {
+        (index < 2).then_some(Ket(index == 1))
+    }
+
+    fn elements(&self) -> impl Iterator<Item = Ket> + '_ {
+        self.enumerations.set(self.enumerations.get() + 1);
+        [Ket(false), Ket(true)].into_iter()
+    }
+}
+
 impl<C: From<i16>> Basis<Ket, C> for CountingBasis {
     fn expand_indices(&self, p: &Ket) -> LinearCombination<usize, C> {
         self.expansions.set(self.expansions.get() + 1);
         LinearCombination::term(1i16.into(), usize::from(p.0))
-    }
-    fn index(&self, p: &Ket) -> Option<usize> {
-        Some(usize::from(p.0))
-    }
-    fn element(&self, index: usize) -> Option<Ket> {
-        (index < 2).then_some(Ket(index == 1))
-    }
-    fn elements(&self) -> impl Iterator<Item = Ket> + '_ {
-        self.enumerations.set(self.enumerations.get() + 1);
-        [Ket(false), Ket(true)].into_iter()
     }
 }
 
@@ -206,13 +218,13 @@ fn cancellations_stay_sparse_through_tensor_expansion() {
     let basis = CountingBasis::new();
     let space = HilbertSpace::tensor_all((0..FACTORS).map(HilbertSpace::factor)).unwrap();
     let state = State::tensor_in(
-        &space,
         (0..FACTORS).map(|index| {
             let factor = HilbertSpace::factor(index);
             let zero = S::primitive(Ket(false)).at(&factor).unwrap();
             let one = S::primitive(Ket(true)).at(&factor).unwrap();
-            State::sum(&factor, [zero.clone(), zero.scaled(Counted(-1.0)), one]).unwrap()
+            State::sum([zero.clone(), zero.scaled(Counted(-1.0)), one], &factor).unwrap()
         }),
+        &space,
     )
     .unwrap();
 
@@ -240,7 +252,7 @@ fn cancellations_stay_sparse_through_tensor_expansion() {
     let factor = HilbertSpace::factor(0usize);
     let zero = S::primitive(Ket(false)).at(&factor).unwrap();
     let one = S::primitive(Ket(true)).at(&factor).unwrap();
-    let mut scaled = State::sum(&factor, [zero, one])
+    let mut scaled = State::sum([zero, one], &factor)
         .unwrap()
         .scaled(Counted(0.0));
     for _ in 0..100 {
@@ -260,13 +272,13 @@ fn underflowed_tensor_coefficients_do_not_keep_expanding() {
     let basis = CountingBasis::new();
     let space = HilbertSpace::tensor_all((0..FACTORS).map(HilbertSpace::factor)).unwrap();
     let state = State::tensor_in(
-        &space,
         (0..FACTORS).map(|index| {
             let factor = HilbertSpace::factor(index);
             let small = S::primitive(Ket(false)).at(&factor).unwrap();
             let one = S::primitive(Ket(true)).at(&factor).unwrap();
-            State::sum(&factor, [small.scaled(Counted(1e-200)), one]).unwrap()
+            State::sum([small.scaled(Counted(1e-200)), one], &factor).unwrap()
         }),
+        &space,
     )
     .unwrap();
     reset_multiplications();
@@ -291,14 +303,14 @@ fn tensor_basis_choices_preserve_correlated_block_digits() {
     let abc = ab.tensor(&factors[2]).unwrap();
     let ket = |value, factor| Local::primitive(Ket(value)).at(factor).unwrap();
     let pair =
-        |value| State::tensor_in(&ab, [ket(value, &factors[0]), ket(value, &factors[1])]).unwrap();
-    let correlated = State::sum(&ab, [pair(false), pair(true).scaled(2.0)]).unwrap();
+        |value| State::tensor_in([ket(value, &factors[0]), ket(value, &factors[1])], &ab).unwrap();
+    let correlated = State::sum([pair(false), pair(true).scaled(2.0)], &ab).unwrap();
     let last = State::sum(
-        &factors[2],
         [ket(false, &factors[2]), ket(true, &factors[2]).scaled(3.0)],
+        &factors[2],
     )
     .unwrap();
-    let state = State::tensor_in(&abc, [correlated, last]).unwrap();
+    let state = State::tensor_in([correlated, last], &abc).unwrap();
     let basis = CountingBasis::new();
     let coordinates = state.coordinates(&basis).unwrap();
     assert_eq!(basis.expansions.get(), 2);
@@ -320,12 +332,12 @@ fn composite_expansion_retains_tiny_and_nan_coefficients() {
     let factor = HilbertSpace::factor(0u8);
     let zero = S::primitive(Ket(false)).at(&factor).unwrap();
     let one = S::primitive(Ket(true)).at(&factor).unwrap();
-    let zero_branch = State::sum(&factor, [zero.clone(), one.clone()])
+    let zero_branch = State::sum([zero.clone(), one.clone()], &factor)
         .unwrap()
         .scaled(0.0);
     let state = State::sum(
-        &factor,
         [zero_branch, zero.scaled(1e-300), one.scaled(f64::NAN)],
+        &factor,
     )
     .unwrap();
     let basis = CountingBasis::new();
@@ -341,11 +353,21 @@ fn composite_expansion_retains_tiny_and_nan_coefficients() {
 }
 
 #[test]
-fn basis_enumeration_needs_no_index_comparison() {
+fn basis_enumeration_uses_only_element_access_without_index_comparison() {
     struct NonComparableIndex;
-    let basis = CountingBasis::new();
+    struct Elements;
+    impl BasisElements<Ket> for Elements {
+        fn element(&self, index: usize) -> Option<Ket> {
+            (index < 2).then_some(Ket(index == 0))
+        }
+
+        fn index(&self, ket: &Ket) -> Option<usize> {
+            Some(usize::from(!ket.0))
+        }
+    }
+    let basis = Elements;
     let single = HilbertSpace::factor(NonComparableIndex);
-    let mut states = single.basis_states::<Ket, Action, f64, _>(&basis).unwrap();
+    let mut states = single.basis_states::<Ket, Action, (), _>(&basis).unwrap();
     for _ in 0..2 {
         assert!(
             states
@@ -357,7 +379,7 @@ fn basis_enumeration_needs_no_index_comparison() {
         );
     }
     assert!(states.next().is_none());
-    let mut operators = single.basis_operators::<Ket, f64, _>(&basis).unwrap();
+    let mut operators = single.basis_operators::<Ket, (), _>(&basis).unwrap();
     for _ in 0..2 {
         assert!(
             operators
@@ -373,13 +395,13 @@ fn basis_enumeration_needs_no_index_comparison() {
 
     let unit = HilbertSpace::<NonComparableIndex>::unit();
     assert_eq!(
-        unit.basis_states::<Ket, Action, f64, _>(&basis)
+        unit.basis_states::<Ket, Action, (), _>(&basis)
             .unwrap()
             .count(),
         1
     );
     assert_eq!(
-        unit.basis_operators::<Ket, f64, _>(&basis).unwrap().count(),
+        unit.basis_operators::<Ket, (), _>(&basis).unwrap().count(),
         1
     );
 }
@@ -394,11 +416,11 @@ fn placed_expansion_shares_nonclone_indices_and_does_not_enumerate_all_basis_ele
     let a = HilbertSpace::factor(Index(11));
     let b = HilbertSpace::factor(Index(7));
     let state = State::tensor_in(
-        &a.tensor(&b).unwrap(),
         [
             S::primitive(Ket(true)).at(&a).unwrap(),
             S::primitive(Ket(false)).at(&b).unwrap(),
         ],
+        &a.tensor(&b).unwrap(),
     )
     .unwrap();
     let op = syntaqs_core::expression::local::LocalOperator::primitive(Action)
@@ -437,15 +459,19 @@ impl Act<f64> for Large {
 }
 #[derive(PartialEq)]
 struct LargeBasis;
-impl Basis<Large, f64> for LargeBasis {
-    fn expand_indices(&self, _: &Large) -> LinearCombination<usize, f64> {
-        LinearCombination::term(1.0, 0)
-    }
+impl BasisElements<Large> for LargeBasis {
     fn index(&self, _: &Large) -> Option<usize> {
         Some(0)
     }
+
     fn element(&self, index: usize) -> Option<Large> {
         (index == 0).then_some(Large)
+    }
+}
+
+impl Basis<Large, f64> for LargeBasis {
+    fn expand_indices(&self, _: &Large) -> LinearCombination<usize, f64> {
+        LinearCombination::term(1.0, 0)
     }
 }
 

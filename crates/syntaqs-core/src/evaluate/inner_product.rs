@@ -78,7 +78,7 @@ impl<'a, I, S, O, C> Factors<'a, I, S, O, C> {
         }
     }
 
-    fn replace(&self, index: usize, state: &'a StateExpr<I, S, O, C>) -> Self {
+    fn replace(&self, state: &'a StateExpr<I, S, O, C>, index: usize) -> Self {
         if self.len() == 1 {
             return single(state);
         }
@@ -341,7 +341,7 @@ where
                     // identified by the common normalization context.
                     let matching = a.shares_node_with(b) && is_reflexive_sum(a);
                     match (a.node(), b.node()) {
-                        (StateNode::Local(_, a), StateNode::Local(_, b)) => {
+                        (StateNode::Local(a, _), StateNode::Local(b, _)) => {
                             values.push(if matching {
                                 a.matching_inner_product()
                             } else {
@@ -383,7 +383,7 @@ where
                 };
                 tasks.push(Task::Sum(children.len()));
                 for child in children.iter().rev() {
-                    let branch = side.replace(position, child);
+                    let branch = side.replace(child, position);
                     let pair = if conjugated {
                         (branch, rhs.range(0..rhs.len()))
                     } else {

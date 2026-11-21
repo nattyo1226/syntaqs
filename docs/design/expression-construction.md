@@ -22,14 +22,18 @@ Use `LocalStateOf<Q>`, `LocalOperatorOf<Q>`, `StateOf<Q,I>`, and `OperatorOf<Q,I
 | Entry point | Inputs and contract |
 | --- | --- |
 | state / operator | One state/operator primitive; returns an unplaced local expression without coefficient arithmetic or evaluation bounds. |
-| product_state | Explicit space and state primitives, placing exactly one per leaf in space order; counts must match. |
-| operator_product_at | Factor/primitive pairs multiplied in input order, allowing repeated indices; rightmost acts first; empty input is unbound identity. |
-| state_sum / try_state_sum | Explicit space and states; empty input is zero on that space. |
+| `state_tensor_from(primitives, &space)` | Places exactly one state primitive per leaf in space order. Counts must match. |
+| `operator_product_from(assignments)` | Primitive/factor pairs multiplied in input order, allowing repeated indices. The rightmost operator acts first. Empty input is unbound identity. |
+| `state_sum(states, &space)` / `try_state_sum(states, &space)` | Sums states on the explicit space. Empty input is zero on that space. |
 | operator_sum / try_operator_sum | Operators; empty input is unbound zero. |
-| tensor_in / try_tensor_in | Explicit space and placed states whose concatenated leaves exactly cover it in order, with compatible subsystem kinds. |
+| `state_tensor(states, &space)` / `try_state_tensor(states, &space)` | Tensors placed states whose concatenated leaves exactly cover the explicit space in order, with compatible subsystem kinds. |
 | operator_product / try_operator_product | Placed operators multiplied in input order; empty input is unbound identity. |
 
-The `_at` in operator_product_at means it also places primitives: inputs are an IntoIterator of `(&factor, primitive)`, not bare primitives. Placement requires leaves without automatic tensor expansion. The product stays unbound until explicitly bound; its placements do not determine an ambient space including spectators. Shared expressions/spaces can outlive input slices and placement variables.
+`state_tensor_from` and `operator_product_from` build expressions from
+primitives. Each item passed to `operator_product_from` has the form
+`(primitive, &factor)`. Placement requires a leaf. The result is unbound,
+and `bind` selects the full ambient space including spectator factors.
+Shared expressions and spaces can outlive input slices and placement variables.
 
 `try_` denotes Result inputs; ordinary composite constructors also return Result.
 Input errors use `ExpressionError`. Fallible collection follows this order:

@@ -59,6 +59,24 @@ impl<O, C> LocalOperator<O, C> {
     {
         Self::sum(local_terms(self).into_iter().map(|(c, op)| op.scaled(c)))
     }
+
+    /// Collects natural primitives and omits scales that are exactly one.
+    /// Used when materializing Lie decomposition generators.
+    #[doc(hidden)]
+    pub fn collect_terms_compact(&self) -> Self
+    where
+        C: Clone + PartialEq + Zero + One + Mul<Output = C> + Conjugate<Output = C>,
+        O: PartialEq + Product<C, Term = O> + Adjoint<C, Term = O>,
+    {
+        let one = C::one();
+        Self::sum(local_terms(self).into_iter().map(|(coefficient, op)| {
+            if coefficient == one {
+                op
+            } else {
+                op.into_scaled(coefficient)
+            }
+        }))
+    }
 }
 
 impl<I: Ord, O, C> Operator<I, O, C> {
@@ -67,7 +85,8 @@ impl<I: Ord, O, C> Operator<I, O, C> {
     /// Disjoint factor blocks remain factored. Within each block, coefficients
     /// of equal ordered primitive products are added and exact zeros are removed.
     /// Coefficient equality compares the internal weights of common blocks
-    /// before factoring them out of a sum.
+    /// before factoring them out of a sum. The collected expression omits
+    /// scales equal to one and neutral identity factors in products.
     /// Graded products use homogeneous primitive parities and the ambient order.
     /// The explicit space overrides any old binding and is validated before
     /// evaluation. The result is bound to that space, including for zero.

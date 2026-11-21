@@ -15,7 +15,6 @@ impl<O, C> LocalOperator<O, C> {
     pub fn trace(&self) -> C
     where
         C: Clone + Zero + Mul<Output = C> + Conjugate<Output = C>,
-        O: Identity,
         O: Product<C, Term = O> + Adjoint<C, Term = O> + Trace<C>,
     {
         self.trace_with(|value| value)

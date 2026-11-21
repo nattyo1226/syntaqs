@@ -16,8 +16,7 @@ syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5
 num-complex = "0.4.6"
 ```
 
-Rust 1.85 or newer is required; the workspace uses edition 2024. The
-[two-spin Quick start](../README.md#quick-start) uses these dependencies.
+The workspace uses Rust edition 2024 and requires Rust 1.85 or newer.
 Publishing to crates.io is planned; current installation uses Git.
 
 ## Match documentation to the version

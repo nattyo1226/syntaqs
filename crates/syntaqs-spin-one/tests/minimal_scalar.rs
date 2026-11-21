@@ -5,8 +5,13 @@ use core::ops::{Add, Div, Mul, Neg};
 use num_complex::Complex;
 use num_traits::One;
 use syntaqs_core::{
-    algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Trace, basis::Basis,
-    coefficient::ImaginaryUnit, expression::parts::linear_combination::LinearCombination as Lc,
+    algebra::Adjoint,
+    algebra::Identity,
+    algebra::InnerProduct,
+    algebra::Trace,
+    basis::{Basis, BasisElements},
+    coefficient::ImaginaryUnit,
+    expression::parts::linear_combination::LinearCombination as Lc,
     space::HilbertSpace,
 };
 use syntaqs_spin_one::{
@@ -135,14 +140,8 @@ fn basis_conversions_accept_nonclone_exact_coefficients() {
             &exact_value(<LadderBasis as Basis<O, Exact>>::expand(&LadderBasis, &a).unwrap()),
             &matrix(a),
         );
-        assert_eq!(
-            <CartesianBasis as Basis<O, Exact>>::elements(&CartesianBasis).count(),
-            9
-        );
-        assert_eq!(
-            <LadderBasis as Basis<O, Exact>>::elements(&LadderBasis).count(),
-            9
-        );
+        assert_eq!(CartesianBasis.elements().count(), 9);
+        assert_eq!(LadderBasis.elements().count(), 9);
     }
 }
 
@@ -234,15 +233,15 @@ fn storage_identity_placement_and_delayed_operations_need_no_numbers() {
     let _ = syntaqs_core::expression::local::LocalOperator::<O, Opaque>::identity();
     let a = HilbertSpace::factor("a");
     let b = HilbertSpace::factor("b");
-    let psi = Spin::product_state(
-        &syntaqs_core::space::HilbertSpace::tensor_all([(a).clone(), (b).clone()]).unwrap(),
+    let psi = Spin::state_tensor_from(
         [S::Plus, S::Minus],
+        &syntaqs_core::space::HilbertSpace::tensor_all([(a).clone(), (b).clone()]).unwrap(),
     )
     .unwrap();
     let _ = psi.act(&op.at(&a).unwrap()).unwrap();
-    let _ = Spin::product_state(
-        &syntaqs_core::space::HilbertSpace::tensor_all_g([(a).clone(), (b).clone()]).unwrap(),
+    let _ = Spin::state_tensor_from(
         [S::Zero, S::Minus],
+        &syntaqs_core::space::HilbertSpace::tensor_all_g([(a).clone(), (b).clone()]).unwrap(),
     )
     .unwrap();
 }

@@ -24,7 +24,7 @@ Storage, sharing, and delayed construction require neither evaluation capabiliti
 | Identity operator | O implements `Identity::identity() -> Self`, independently of the coefficient type |
 | Action type correspondence | Evaluation bounds such as `S: Act<C, Operator = O, Term = S>` and `O: Adjoint<C, Term = O>` |
 | Scalar consistency | C and the bounds of each operation; different precisions are not mixed implicitly |
-| Bases | `Basis<S, C>` and `Basis<O, C>`; enumeration size equals the dimension of the primitive span |
+| Bases | `BasisElements<S>` and `BasisElements<O>` enumerate members in basis order. The member count equals the dimension of the primitive span. `Basis<S, C>` and `Basis<O, C>` add coefficient expansion. |
 | Factor structure and geometry | `HilbertSpace<I>` retains factor order and grouping; Chain retains only site count and boundary conditions. An external sequence of local spaces specifies placement |
 
 Dimension provides `fn dim() -> Result<NonZeroUsize, DimensionOverflow>`. If the dimension cannot be represented as an integer, querying it returns an error. `dim_state<S>()` and `dim_op<O>()` return the respective dimensions directly; the operator dimension d² is not squared again. Only operations that use dimensions require this capability.

@@ -6,18 +6,26 @@ full matrices, and choose a basis when you need numerical output.
 
 ## Quick start
 
-Use Rust 1.85 or newer. Version-tagged Git dependencies are recommended; select
-the same tag for all syntaqs crates. Add these to `Cargo.toml`:
+Use Rust 1.85 or newer. Create a project beside the `syntaqs` checkout by
+running these commands from its parent directory.
+
+```sh
+cargo new --edition 2024 two-spins
+cd two-spins
+```
+
+Add these entries to the `[dependencies]` section of `Cargo.toml` to use the
+local checkout. For a released version, follow the
+[installation guide](docs/installation.md).
 
 ```toml
-[dependencies]
-syntaqs-core = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
-syntaqs-spin-half = { git = "https://github.com/nattyo1226/syntaqs", tag = "v0.5.0" }
+syntaqs-core = { path = "../syntaqs/crates/syntaqs-core" }
+syntaqs-spin-half = { path = "../syntaqs/crates/syntaqs-spin-half" }
 
 num-complex = "0.4.6"
 ```
 
-Put this two-spin calculation in `src/main.rs`:
+Save the two-spin calculation below as `src/main.rs`.
 
 ```rust
 use num_complex::Complex;
@@ -32,8 +40,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let a = HilbertSpace::factor("a");
     let b = HilbertSpace::factor("b");
     let space = a.tensor(&b)?;
-    let state = Spin::product_state(&space, [Ket::Up, Ket::Down])?;
-    let zz = Spin::operator_product_at([(&a, Op::Sz), (&b, Op::Sz)])?.bind(&space)?;
+    let state = Spin::state_tensor_from([Ket::Up, Ket::Down], &space)?;
+    let zz = Spin::operator_product_from([(Op::Sz, &a), (Op::Sz, &b)])?.bind(&space)?;
 
     println!("Expectation: {}", state.expectation(&zz)?.re);
     Ok(())

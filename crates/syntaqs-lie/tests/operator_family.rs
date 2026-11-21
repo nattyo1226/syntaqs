@@ -278,7 +278,7 @@ macro_rules! precision_tests {
                 assert!(family.context().is_compatible_with(&ab));
                 assert!(family.operators()[0].space().is_none());
                 assert!(family.clone().context().shares_node_with(&ab));
-                assert!(OperatorFamily::new_in(&ab, [placed]).is_ok());
+                assert!(OperatorFamily::new_in([placed], &ab).is_ok());
                 assert!(matches!(
                     OperatorFamily::new([
                         Placed::zero().bind(&a).unwrap(),
@@ -287,13 +287,13 @@ macro_rules! precision_tests {
                     Err(LieError::Expression(ExpressionError::IncompatibleSpaces))
                 ));
                 assert!(matches!(
-                    OperatorFamily::new_in(&ab, [Placed::zero().bind(&a).unwrap()]),
+                    OperatorFamily::new_in([Placed::zero().bind(&a).unwrap()], &ab),
                     Err(LieError::Expression(ExpressionError::IncompatibleSpaces))
                 ));
                 let missing = HilbertSpace::factor(2u8);
                 let zero = local(Pauli::Sx).at(&missing).unwrap().scaled(0.);
                 assert!(matches!(
-                    OperatorFamily::new_in(&ab, [zero]),
+                    OperatorFamily::new_in([zero], &ab),
                     Err(LieError::Expression(ExpressionError::MissingIndex))
                 ));
                 let graded =
@@ -327,7 +327,7 @@ macro_rules! precision_tests {
                     let b = HilbertSpace::factor(1u8);
                     let full = HilbertSpace::tensor_all_with(kind, [a.clone(), b.clone()]).unwrap();
                     let family =
-                        OperatorFamily::new_in(&full, [local(Pauli::Sx).at(&a).unwrap()]).unwrap();
+                        OperatorFamily::new_in([local(Pauli::Sx).at(&a).unwrap()], &full).unwrap();
                     complex_close(
                         family.gram(&options).unwrap().values()[(0, 0)],
                         C::new(1., 0.),
@@ -360,7 +360,7 @@ macro_rules! precision_tests {
                     assert!(projection.in_span());
                 }
                 let unit = HilbertSpace::unit();
-                let family = OperatorFamily::new_in(&unit, [Placed::identity()]).unwrap();
+                let family = OperatorFamily::new_in([Placed::identity()], &unit).unwrap();
                 let projection = family
                     .project(&Placed::scalar(C::new(3., 0.)), &options)
                     .unwrap();
@@ -462,7 +462,7 @@ macro_rules! precision_tests {
                 assert!(projection.in_span());
                 let a = HilbertSpace::factor(0u8);
                 let placed =
-                    OperatorFamily::new_in(&a, family.iter().map(|op| op.at(&a).unwrap())).unwrap();
+                    OperatorFamily::new_in(family.iter().map(|op| op.at(&a).unwrap()), &a).unwrap();
                 assert!(
                     placed
                         .project(&target.at(&a).unwrap(), &options)
@@ -480,7 +480,7 @@ macro_rules! precision_tests {
                 let operator =
                     Placed::try_product(factors.iter().map(|factor| polynomial.at(factor)))
                         .unwrap();
-                let family = OperatorFamily::new_in(&space, [operator.clone()]).unwrap();
+                let family = OperatorFamily::new_in([operator.clone()], &space).unwrap();
                 assert!(family.validate(&options).unwrap().passed());
                 let projection = family.project(&operator.scaled(0.3), &options).unwrap();
                 close(projection.coordinates().values()[0], 0.3);
@@ -594,7 +594,7 @@ fn primitives_and_indices_need_neither_clone_nor_dimension_or_state_capabilities
     );
     let space = HilbertSpace::factor(Index(0));
     let placed =
-        OperatorFamily::new_in(&space, local.iter().map(|op| op.at(&space).unwrap())).unwrap();
+        OperatorFamily::new_in(local.iter().map(|op| op.at(&space).unwrap()), &space).unwrap();
     assert!(placed.validate(&options).unwrap().passed());
     assert_eq!(placed.commutant(&options).unwrap().dimension(), 4);
     let center = placed.center(&options).unwrap();

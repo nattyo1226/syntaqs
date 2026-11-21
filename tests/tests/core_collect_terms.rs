@@ -3,10 +3,11 @@
 use num_complex::Complex;
 use syntaqs_core::{
     algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity, algebra::Parity,
-    algebra::ParityOperator, algebra::Product, algebra::Trace, expression::local::LocalOperator,
-    expression::parts::linear_combination::LinearCombination, space::HilbertSpace,
-    space::TensorKind,
+    algebra::ParityOperator, algebra::Product, algebra::Trace, expression::composite::Operator,
+    expression::local::LocalOperator, expression::parts::linear_combination::LinearCombination,
+    space::HilbertSpace, space::TensorKind,
 };
+use syntaqs_spin_half::operator::SpinHalfOperator as Pauli;
 use syntaqs_tests::graded::{self as reference, Op, Real, c, close};
 
 // No Clone, Dimension, Basis, or state action implementation.
@@ -126,6 +127,39 @@ fn exact_collection_f32() {
 #[test]
 fn exact_collection_f64() {
     collection::<f64>();
+}
+
+#[test]
+fn collection_omits_unit_scales_and_retains_scalar_terms() {
+    type Local = LocalOperator<Pauli, Complex<f64>>;
+    let a = HilbertSpace::factor("a");
+    let b = HilbertSpace::factor("b");
+    let space = a.tensor(&b).unwrap();
+    let x = Local::primitive(Pauli::Sx);
+    let identity = Local::identity();
+    let x_a = x.at(&a).unwrap();
+    let with_spectator = (&x_a * identity.at(&b).unwrap()).unwrap();
+    let compact = with_spectator.collect_terms_in(&space).unwrap();
+    assert_eq!(compact.to_string(), "Sx[a]");
+    assert!(compact.space().unwrap().shares_node_with(&space));
+
+    let local_sum = Local::sum([x.clone(), identity]).collect_terms_compact();
+    assert_eq!(local_sum.to_string(), "Sx + I");
+    let product = (&x_a * x.at(&b).unwrap()).unwrap();
+    let placed_sum = (product + Operator::identity())
+        .unwrap()
+        .collect_terms_in(&space)
+        .unwrap();
+    assert_eq!(placed_sum.to_string(), "Sx[a] * Sx[b] + I");
+    assert_eq!(placed_sum.trace().unwrap(), c(4., 0.));
+
+    let near_one = Complex::new(1.0 + f64::EPSILON, 0.0);
+    let local = x.scaled(near_one).collect_terms_compact();
+    assert_eq!(local.to_string(), format!("({near_one}) * Sx"));
+    assert_eq!(x.hs_inner_product(&local), near_one);
+    let placed = x_a.scaled(near_one).collect_terms_in(&space).unwrap();
+    assert_eq!(placed.to_string(), format!("(({near_one}) * Sx)[a]"));
+    assert_eq!(x_a.hs_inner_product_in(&placed, &space).unwrap(), near_one);
 }
 
 #[test]

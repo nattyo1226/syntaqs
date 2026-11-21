@@ -81,7 +81,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
                 let (left, right) = (pair[0], pair[1]);
                 for (axis, coupling) in &axes {
                     terms.push(
-                        SpinOne::<C>::operator_product_at([(left, *axis), (right, *axis)])?
+                        SpinOne::<C>::operator_product_from([(*axis, left), (*axis, right)])?
                             .scaled(coupling.clone()),
                     );
                 }
@@ -128,7 +128,7 @@ impl<C> SpinOneModels<SpinOne<C>> {
     /// type Spin = SpinOne<Complex<f64>>;
     /// let sites = [HilbertSpace::factor("a"), HilbertSpace::factor("b")];
     /// let h = syntaqs_spin_one::models::SpinOneModels::<Spin>::blbq(&Chain::new(2, Boundary::Open), &sites, 1.0, 0.5)?;
-    /// let psi = Spin::product_state(h.space().unwrap(), [Ket::Plus, Ket::Plus])?;
+    /// let psi = Spin::state_tensor_from([Ket::Plus, Ket::Plus], h.space().unwrap())?;
     /// assert!((psi.expectation(&h)?.re + 1.5).abs() < 1e-12);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -153,10 +153,9 @@ impl<C> SpinOneModels<SpinOne<C>> {
             let group = group?;
             for pair in group.leaves_cartesian() {
                 let (left, right) = (pair[0], pair[1]);
-                let bilinear =
-                    SpinOne::<C>::try_operator_sum([O::Sx, O::Sy, O::Sz].map(|axis| {
-                        SpinOne::<C>::operator_product_at([(left, axis), (right, axis)])
-                    }))?;
+                let bilinear = SpinOne::<C>::try_operator_sum([O::Sx, O::Sy, O::Sz].map(|axis| {
+                    SpinOne::<C>::operator_product_from([(axis, left), (axis, right)])
+                }))?;
                 terms.push(bilinear.scaled(minus_j.clone()));
                 terms.push((bilinear.clone() * &bilinear)?.scaled(minus_k.clone()));
             }

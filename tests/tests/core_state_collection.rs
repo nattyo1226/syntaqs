@@ -68,12 +68,12 @@ fn repeated_actions<T: Real>() {
     .bind(&space)
     .unwrap();
     let mut psi = State::tensor_in(
-        &space,
         sites.iter().enumerate().map(|(i, site)| {
             LocalState::<S, O, C<T>>::primitive(if i % 2 == 0 { S::Up } else { S::Down })
                 .at(site)
                 .unwrap()
         }),
+        &space,
     )
     .unwrap();
     let mut reference = vec![0.0; 1 << n];

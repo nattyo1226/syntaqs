@@ -4,38 +4,38 @@ Updated: 2026-11-20
 
 ## 1. Scope and contract
 
-`Basis<P,C>` expresses a primitive P as coefficients C in a selected complete
-basis. Core extends those rules to whole expressions and tensor spaces, returning
-either an expression in basis members or aggregated sparse coordinates.
+`BasisElements<P>` defines the ordered primitive members of a complete basis.
+`Basis<P, C>` extends it with the coefficients of a primitive in that order.
+Core uses the members to enumerate tensor-product bases and extends the
+expansion rules to whole expressions and sparse coordinates.
 
 Core owns basis capabilities, whole-expression expansion, composite bases, and coordinates. Concrete algebras implement local bases and primitive expansion rules; export stores the resulting coefficients in numerical containers.
 
-A struct such as `CartesianBasis` defines a basis through `Basis<P,C>`.
-It selects primitive members and defines the rule that returns their indices
-and coefficients for a given primitive.
+A basis value such as `CartesianBasis` has one member order for each primitive
+type it supports. Calls such as `SzBasis.element(0)` need only `BasisElements`
+in scope. Each expansion implementation supplies the numeric bounds it needs.
 
-One Basis implementation provides expansion, indexing, and enumeration. The trait has no numeric bounds; concrete implementations request their rule's capabilities, which consequently apply to index/elements too. Use a qualified call such as `<B as Basis<P,C>>::elements` when precision cannot be inferred.
-
-State/operator processing uses the same trait:
-
-| Processing | Bound |
-| --- | --- |
-| Local state bases | `B: Basis<S, C>` |
-| Local operator bases | `B: Basis<O, C>` |
+| Processing | State primitive `S` | Operator primitive `O` |
+| --- | --- | --- |
+| Lookup and enumeration | `B: BasisElements<S>` | `B: BasisElements<O>` |
+| Expansion and coordinates | `B: Basis<S, C>` | `B: Basis<O, C>` |
 
 Local basis elements are a linearly independent, complete subset of the corresponding primitives, not arbitrary expressions. Orthonormality is not required, and the full primitive set may be dependent.
 
-Users determine the [local algebra](local-structure.md), its definition parameters, and whether the target is a state/operator. Basis<S,C>/Basis<O,C> establishes that correspondence without a separate membership declaration. Basis selection does not define algebra or factor identity.
+Users determine the local algebra, its definition parameters, and whether the
+target is a state or operator. The primitive type parameter establishes which
+members the basis uses. [Local algebra](local-structure.md).
 
 Composite bases currently apply one local basis to all factors of the same S/O types, without per-factor basis/parameter choices. This is an API/storage scope decision rather than a mathematical consequence of homogeneous primitive types. A custom algebra's basis can be used in a separate homogeneous system.
 
-## 2. Three Basis capabilities
+## 2. Element access and expansion
 
-| Capability | Input | Result and contract |
+| Trait | Method | Result and contract |
 | --- | --- | --- |
-| `expand_indices(&self, primitive: &P)` | A primitive in the target space | `LinearCombination<usize, C>` with zero-based indices and coefficients. |
-| `element(&self, index: usize)` | A zero-based index | `Some(P)` for a basis element within range, `None` outside the basis. |
-| `index(&self, primitive: &P)` | A primitive | `Some(usize)` for a basis member, `None` for a nonmember. |
+| `BasisElements<P>` | `element(&self, index: usize)` | `Some(P)` for a basis element within range, `None` outside the basis. |
+| `BasisElements<P>` | `index(&self, primitive: &P)` | `Some(usize)` for a basis member, `None` for a nonmember. |
+| `BasisElements<P>` | `elements(&self)` | Lazily yields owned elements in index order. The default calls `element()`. |
+| `Basis<P, C>` | `expand_indices(&self, primitive: &P)` | `LinearCombination<usize, C>` with zero-based indices and coefficients. |
 
 For `B={b_0,…,b_(n−1)}` and every target primitive p:
 
@@ -47,10 +47,9 @@ Independence makes these coefficients unique. Expansion represents the whole obj
 
 `expand(&self, primitive: &P)` returns `Result<LinearCombination<P, C>, BasisError>`.
 It maps each index to an owned basis element and preserves the coefficients and
-term order. A missing element returns `InvalidEnumeration`. `elements()`
-lazily yields owned elements in index order by calling `element()` by default.
-Indices represent coordinates in the selected basis independently of factor
-identity and primitive ordering.
+term order. A missing element returns `InvalidEnumeration`. Indices represent
+coordinates in the selected basis independently of factor identity and
+primitive ordering.
 
 ## 3. Deriving basis sizes
 
@@ -255,7 +254,14 @@ state tensor or ordered operator product on the selected space.
 
 `HilbertSpace::basis_states::<S,O,C,B>(&basis)` and `basis_operators::<O,C,B>(&basis)` lazily enumerate ordinary states and bound operators from one local basis, returning `Result<impl Iterator<Item=Result<Expression,BasisError>>,BasisError>`. No separate composite basis object is needed.
 
-Generation needs Dimension/Basis, not index Eq/Clone, primitive Clone, local action/product/adjoint/identity rules, or coefficient arithmetic. Operations later comparing indices still need Eq. Increment digit sequences without an integer total count, allowing initial elements of huge spaces. Grouping does not change order; the unit space yields one unit element.
+Generation requires `Dimension` on the primitive and `BasisElements` on the
+basis. The caller selects `C` through the result type or generic arguments.
+Enumeration shares factor handles and reads owned elements directly from the
+basis. It requires no index comparison, primitive cloning, primitive algebra
+rules, or coefficient arithmetic. The iterator follows leaf order and increments
+digit sequences without computing a total count, allowing initial elements of
+huge spaces. The rightmost digit changes fastest, and the unit space yields one
+unit element.
 
 ### 7.4. Errors and examples
 
@@ -268,7 +274,11 @@ checks the local index bounds. Expression expansion and lazy composite
 enumeration also check the retrieved element against `index()` when they
 materialize it.
 
-`Basis`, `BasisError`, and `Coordinates` are defined in `syntaqs_core::basis`; `Basis` is also available in the core prelude. See [basis_expansion.rs](../../examples/src/bin/basis_expansion.rs) and section 6 for verification.
+`BasisElements`, `Basis`, `BasisError`, and `Coordinates` are defined in
+`syntaqs_core::basis`. The core prelude exports both traits.
+[Custom basis implementation](../../crates/syntaqs-core/tests/basis.rs),
+[basis expansion example](../../examples/src/bin/basis_expansion.rs),
+[verification](#6-cartesianbasis-example-and-verification).
 
 ## 8. Graded bases
 

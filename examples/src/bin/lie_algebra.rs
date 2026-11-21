@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     operators.push(Placed::identity());
-    let family = OperatorFamily::new_in(&space, operators)?;
+    let family = OperatorFamily::new_in(operators, &space)?;
 
     // Overrides are explicit. They do not change independent rank/Gram settings.
     let options = NumericalOptions {
@@ -103,6 +103,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         center.family().len(),
         dimensions
     );
+    println!("center generator = {}", center.family().operators()[0]);
+    for (index, ideal) in decomposition.simple_ideals().iter().enumerate() {
+        for operator in ideal.family().iter() {
+            println!("ideal {} generator = {operator}", index + 1);
+        }
+    }
     println!(
         "seed: {}, spectral attempts: {}",
         sampling.seed,

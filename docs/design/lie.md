@@ -30,7 +30,7 @@ The metric is fixed normalized HS, `Tr(A†B)/D`.
 `new(inputs)` rejects empty input and preserves order and original expression
 handles. Local context is `()`. For placed operators it selects the first
 available binding, requires all existing bindings to agree, and validates every
-referenced factor. Entirely unbound placed inputs require `new_in(&space, inputs)`.
+referenced factor. Entirely unbound placed inputs require `new_in(inputs, &space)`.
 The explicit family context also rejects conflicting old bindings. Rebind in
 core before construction if replacement is intended. Zero and zero coefficients
 do not bypass context checks. Targets obey the same checks.
@@ -309,9 +309,13 @@ validation. No empty operator family is constructed.
 settings, and exposes the full center as `Option<LieComponent>` separately from
 its simple-ideal slice. Components own reconstructed families and retain their
 columns in the original source coordinates. They initially form HS-orthonormal
-families. Reconstruction explicitly collects exact natural terms before returning
-them, with no tolerance-based pruning or global tensor-sum expansion, and checks
-Hermiticity, independence, and orthonormality of the emitted expressions.
+families. Reconstruction collects exact natural terms into expressions that
+omit multiplicative identity factors and scales whose coefficient equals one.
+Scalar addends and other nonzero coefficients retain their computed values,
+including coefficients close to one. Disjoint product blocks stay factored.
+The collected expressions are checked for Hermiticity, independence, and
+orthonormality. Display renders their stored syntax.
+[Expression formatting](expression-formatting.md#1-scope-and-type-bounds).
 Component `orthogonalize`/`orthonormalize` methods compose the new transformation
 with the retained source coordinates.
 
@@ -366,7 +370,8 @@ center and ideal projectors with independent su(2) blocks at f32/f64, including
 one to three simple factors, purely abelian input, one- and multidimensional
 centers, real nonorthonormal changes, graded generators, coordinate reconstruction,
 component orthogonalization, seed reproducibility, invalid settings, and exhausted
-spectral grouping. Default-tolerance shears and cyclic changes with explicit
+spectral grouping. Local and placed identity centers and simple-ideal generators
+exercise unit scale omission. Default-tolerance shears and cyclic changes with explicit
 residual overrides are both covered. Internal tests inject an accidental spectral
 collision, verify retry/exhaustion behavior, and reject invariant unsplit direct
 sums and nonideal partitions. Capability tests also exercise decomposition

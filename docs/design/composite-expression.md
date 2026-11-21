@@ -67,7 +67,7 @@ State exposes domain and codomain as `ℂ→H`; a bound Operator exposes `H→H`
 | Subject | Main APIs and contracts |
 | --- | --- |
 | Local-expression placement | `LocalState::at(&factor)` and `LocalOperator::at(&factor)` validate placement and share local expressions. States have a containing space; operators are unbound |
-| `State<I, S, O, C>` construction and spaces | `place`, `zero(&space)`, `unit()`, `sum`, `try_sum`, `tensor_in(&space, states)`, `try_tensor_in(&space, states)`, `scaled`, and `space`, `domain`, `codomain` |
+| `State<I, S, O, C>` construction and spaces | `place`, `zero(&space)`, `unit()`, `sum(states, &space)`, `try_sum(states, &space)`, `tensor_in(states, &space)`, `try_tensor_in(states, &space)`, `scaled`, `space`, `domain`, and `codomain` |
 | `State<I, S, O, C>` operations and evaluation | `act`, `act_in`, `evaluate`, `inner_product`, `norm_squared`, `expectation`, and `expectation_in`; action construction is delayed |
 | `Operator<I, O, C>` construction and spaces | `place`, `zero()`, `identity()`, `scalar`, `sum`, `try_sum`, `product`, `try_product`, `scaled`, `adjoint`, `bind`, and `space`, `domain`, `codomain`; space queries return `None` when unbound |
 | `Operator<I, O, C>` operations and evaluation | `group_local`, `commutator`, `anticommutator`, `trace`, `trace_in`, `hs_inner_product`, and `hs_inner_product_in`; grouping is structural and commutator construction is delayed |
@@ -89,11 +89,11 @@ this sign processing.
 
 | Subject | Shared ordinary / graded entry point |
 | --- | --- |
-| State | `tensor_in(&space, states)` |
-| Fallible State | `try_tensor_in(&space, states)` |
-| ExpressionFactory | `tensor_in(&space, states)` |
-| Fallible ExpressionFactory | `try_tensor_in(&space, states)` |
-| Primitive placement and composition | `product_state(&space, primitives)` |
+| State | `tensor_in(states, &space)` |
+| Fallible State | `try_tensor_in(states, &space)` |
+| ExpressionFactory | `state_tensor(states, &space)` |
+| Fallible ExpressionFactory | `try_state_tensor(states, &space)` |
+| Primitive placement and composition | `state_tensor_from(primitives, &space)` |
 
 Construct the containing space first and share it when constructing a state. State Tensor nodes retain only child sequences, without duplicating kind information. Kind is specified at space construction; both kinds share state-construction entry points.
 
@@ -134,8 +134,8 @@ Composite Act retains the HilbertSpace selected during construction. Operator sy
 For odd B and odd state `s_a`, distinguish:
 
 ```text
-tensor_in(&H_ab, [s_a, s_b.act(B_b)])      // B action was constructed within H_b
-tensor_in(&H_ab, [s_a, s_b]).act(B_b)      // B acts on H_a ⊗g H_b
+tensor_in([s_a, s_b.act(B_b)], &H_ab)      // B action was constructed within H_b
+tensor_in([s_a, s_b], &H_ab).act(B_b)      // B acts on H_a ⊗g H_b
 ```
 
 Only the latter has the negative sign from `s_a`'s parity. Evaluation tasks switch to each Act's scope. Inserting an action previously constructed on a single factor into an outer tensor does not enlarge its scope. Evaluating before tensor composition and composing while delayed agree; expansion and reconstruction preserve meaning.
@@ -177,8 +177,9 @@ collects equal natural terms on the validated space. The result retains the
 selected space, including for zero. Disjoint product blocks stay factored.
 Within a block, equal ordered primitive products share a coefficient and exact
 zeros are removed. Primitive equality matches natural terms. Coefficient
-equality compares internal block weights when extracting common factors. See
-[operator block evaluation](#117-operator-block-evaluation).
+equality compares internal block weights when extracting common factors. The
+result omits neutral identity factors and exact unit scales. A scalar addend
+retains its identity and coefficient. [Operator block evaluation](#117-operator-block-evaluation).
 
 ## 6. Relations preserved by placement and embedding
 

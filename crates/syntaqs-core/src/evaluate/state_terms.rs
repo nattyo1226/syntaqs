@@ -46,6 +46,7 @@ impl<I: Ord> Ord for Factor<I> {
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum Key<I: Ord> {
     Unit,
+    // Compare factor identities before the contents of their local terms.
     Local(Factor<I>, Vec<(Option<usize>, usize)>),
     Tensor(Vec<usize>),
     Sum(Vec<(Option<usize>, usize)>),
@@ -126,11 +127,11 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
     pub fn factor_count(&self, id: usize) -> usize {
         self.entries[id].factor_count
     }
-    pub fn local_parts(&self, id: usize) -> Option<(HilbertSpace<I>, LocalReady<S, O, C>)> {
+    pub fn local_parts(&self, id: usize) -> Option<(LocalReady<S, O, C>, HilbertSpace<I>)> {
         let entry = &self.entries[id];
         match (&entry.key, &entry.payload) {
             (Key::Local(factor, _), Payload::Local(local)) => {
-                Some((factor.0.clone(), local.clone()))
+                Some((local.clone(), factor.0.clone()))
             }
             _ => None,
         }
@@ -163,7 +164,7 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
             let expression = match (&entry.key, &entry.payload) {
                 (Key::Unit, _) => StateExpr::new(StateNode::Unit),
                 (Key::Local(factor, _), Payload::Local(local)) => {
-                    StateExpr::new(StateNode::Local(factor.0.clone(), local.expression()))
+                    StateExpr::new(StateNode::Local(local.expression(), factor.0.clone()))
                 }
                 (Key::Tensor(parts), _) => StateExpr::tensor(
                     parts
@@ -234,7 +235,7 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
         };
         let unchanged = match (source.node(), &entry.key, &entry.payload) {
             (StateNode::Unit, Key::Unit, _) => true,
-            (StateNode::Local(a, x), Key::Local(b, _), Payload::Local(local)) => {
+            (StateNode::Local(x, a), Key::Local(b, _), Payload::Local(local)) => {
                 a.factor_index() == b.0.factor_index()
                     && matches!(local.0.as_slice(), [(None, y)] if core::ptr::eq(x.node(), y.node()))
             }
@@ -258,9 +259,9 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
     }
     fn normalize_coefficient(&mut self, shape: usize, c: Option<C>) -> Ready<C> {
         if let Some(c) = c {
-            if let Some((factor, poly)) = self.local_parts(shape) {
+            if let Some((poly, factor)) = self.local_parts(shape) {
                 if poly.0.len() > 1 {
-                    return self.local(factor, poly.scaled(c));
+                    return self.local(poly.scaled(c), factor);
                 }
             }
             self.with_coefficient(shape, Some(c))
@@ -311,7 +312,7 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
         });
         id
     }
-    pub fn local(&mut self, factor: HilbertSpace<I>, poly: LocalReady<S, O, C>) -> Ready<C> {
+    pub fn local(&mut self, poly: LocalReady<S, O, C>, factor: HilbertSpace<I>) -> Ready<C> {
         if poly.0.is_empty() {
             return self.zero();
         }
@@ -504,14 +505,14 @@ impl<I: Ord, S: PartialEq, O, C: Clone + PartialEq + Zero + One> Terms<I, S, O, 
                 {
                     let mut terms = Vec::new();
                     for part in parts {
-                        let (_, poly) = self.local_parts(part.shape).unwrap();
+                        let (poly, _) = self.local_parts(part.shape).unwrap();
                         terms.extend(
                             poly.0.iter().map(|(c, p)| {
                                 (times(part.coefficient.clone(), c.clone()), p.clone())
                             }),
                         );
                     }
-                    return self.local(factor.0.clone(), LocalReady::collect(terms));
+                    return self.local(LocalReady::collect(terms), factor.0.clone());
                 }
             }
         }

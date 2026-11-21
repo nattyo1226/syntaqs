@@ -17,11 +17,11 @@ macro_rules! precision_tests {
                 let b = HilbertSpace::factor(1u8);
                 let space = HilbertSpace::tensor_all([a.clone(), b.clone()]).unwrap();
                 OperatorFamily::new_in(
-                    &space,
                     [a, b].iter().flat_map(|factor| {
                         [Pauli::Sx, Pauli::Sy, Pauli::Sz]
                             .map(|p| LocalOperator::primitive(p).at(factor).unwrap())
                     }),
+                    &space,
                 )
                 .unwrap()
             }

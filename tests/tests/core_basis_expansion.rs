@@ -2,8 +2,12 @@
 
 use num_complex::Complex;
 use syntaqs_core::{
-    basis::Basis, basis::BasisError, basis::Coordinates, expression::local::LocalOperator,
-    expression::local::LocalState, space::HilbertSpace,
+    basis::BasisError,
+    basis::Coordinates,
+    basis::{Basis, BasisElements},
+    expression::local::LocalOperator,
+    expression::local::LocalState,
+    space::HilbertSpace,
 };
 
 use fixture::*;
@@ -118,14 +122,14 @@ fn check_three_level<T: Real>(kind: syntaqs_core::space::TensorKind) {
     let a = Ls::<T>::primitive(Ket::Phase).at(&f).unwrap();
     let b = Ls::<T>::primitive(Ket::Sum).at(&g).unwrap();
     let other = syntaqs_core::expression::composite::State::tensor_in(
-        &space,
         [
             Ls::<T>::primitive(Ket::Unit(Axis::B)).at(&f).unwrap(),
             Ls::primitive(Ket::Unit(Axis::C)).at(&g).unwrap(),
         ],
+        &space,
     )
     .unwrap();
-    let state = (syntaqs_core::expression::composite::State::tensor_in(&space, [a, b])
+    let state = (syntaqs_core::expression::composite::State::tensor_in([a, b], &space)
         .unwrap()
         .scaled(c(0.3, -0.7))
         .clone()
@@ -226,6 +230,20 @@ fn independent_three_level_expansion_at_both_precisions() {
 }
 
 struct BrokenBasis(u8);
+impl BasisElements<Ket> for BrokenBasis {
+    fn index(&self, _: &Ket) -> Option<usize> {
+        match self.0 {
+            0 => None,
+            1 => Some(3),
+            _ => Some(0),
+        }
+    }
+
+    fn element(&self, index: usize) -> Option<Ket> {
+        (index == 0 && self.0 != 3).then_some(Ket::Phase)
+    }
+}
+
 impl Basis<Ket, Complex<f64>> for BrokenBasis {
     fn expand_indices(
         &self,
@@ -235,16 +253,6 @@ impl Basis<Ket, Complex<f64>> for BrokenBasis {
         syntaqs_core::expression::parts::linear_combination::LinearCombination::primitive(
             if self.0 == 1 { 3 } else { 0 },
         )
-    }
-    fn index(&self, _: &Ket) -> Option<usize> {
-        match self.0 {
-            0 => None,
-            1 => Some(3),
-            _ => Some(0),
-        }
-    }
-    fn element(&self, index: usize) -> Option<Ket> {
-        (index == 0 && self.0 != 3).then_some(Ket::Phase)
     }
 }
 
@@ -287,11 +295,11 @@ fn zero_state_factor_is_removed_before_basis_expansion() {
     let a = HilbertSpace::factor(0u8);
     let b = HilbertSpace::factor(1u8);
     let state = syntaqs_core::expression::composite::State::tensor_in(
-        &a.tensor(&b).unwrap(),
         [
             syntaqs_core::expression::composite::State::<_, Ket, Operator, Complex<f64>>::zero(&a),
             Ls::<f64>::primitive(Ket::Phase).at(&b).unwrap(),
         ],
+        &a.tensor(&b).unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -320,6 +328,16 @@ fn zero_state_factor_is_removed_before_basis_expansion() {
 }
 
 struct BrokenOperatorBasis;
+impl BasisElements<Operator> for BrokenOperatorBasis {
+    fn index(&self, p: &Operator) -> Option<usize> {
+        matches!(p, Operator::Identity).then_some(0)
+    }
+
+    fn element(&self, index: usize) -> Option<Operator> {
+        (index == 0).then_some(Operator::Identity)
+    }
+}
+
 impl Basis<Operator, Complex<f64>> for BrokenOperatorBasis {
     fn expand_indices(
         &self,
@@ -333,12 +351,6 @@ impl Basis<Operator, Complex<f64>> for BrokenOperatorBasis {
                 9
             },
         )
-    }
-    fn index(&self, p: &Operator) -> Option<usize> {
-        matches!(p, Operator::Identity).then_some(0)
-    }
-    fn element(&self, index: usize) -> Option<Operator> {
-        (index == 0).then_some(Operator::Identity)
     }
 }
 

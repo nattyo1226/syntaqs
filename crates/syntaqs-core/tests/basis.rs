@@ -1,6 +1,9 @@
-//! The unified basis trait does not prescribe numeric capabilities.
+//! A custom basis with coefficient-independent lookup and a minimal scalar.
 
-use syntaqs_core::{basis::Basis, expression::parts::linear_combination::LinearCombination};
+use syntaqs_core::{
+    basis::{Basis, BasisElements},
+    expression::parts::linear_combination::LinearCombination,
+};
 
 enum Primitive {
     First,
@@ -10,16 +13,7 @@ enum Primitive {
 struct Scalar(u8);
 struct CustomBasis;
 
-impl Basis<Primitive, Scalar> for CustomBasis {
-    fn expand_indices(&self, primitive: &Primitive) -> LinearCombination<usize, Scalar> {
-        let term = |operand| LinearCombination::term(Scalar(1), operand);
-        match primitive {
-            Primitive::First => term(0),
-            Primitive::Second => term(1),
-            Primitive::Sum => term(0) + term(1),
-        }
-    }
-
+impl BasisElements<Primitive> for CustomBasis {
     fn index(&self, primitive: &Primitive) -> Option<usize> {
         match primitive {
             Primitive::First => Some(0),
@@ -37,8 +31,19 @@ impl Basis<Primitive, Scalar> for CustomBasis {
     }
 }
 
+impl Basis<Primitive, Scalar> for CustomBasis {
+    fn expand_indices(&self, primitive: &Primitive) -> LinearCombination<usize, Scalar> {
+        let term = |operand| LinearCombination::term(Scalar(1), operand);
+        match primitive {
+            Primitive::First => term(0),
+            Primitive::Second => term(1),
+            Primitive::Sum => term(0) + term(1),
+        }
+    }
+}
+
 #[test]
-fn one_basis_implementation_supports_all_methods_without_scalar_traits() {
+fn basis_expansion_resolves_elements_without_scalar_traits() {
     let basis = CustomBasis;
     let elements: Vec<_> = basis.elements().collect();
     assert_eq!(elements.len(), 2);

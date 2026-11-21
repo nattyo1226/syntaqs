@@ -423,7 +423,7 @@ macro_rules! precision_tests {
                 let z = lie_bracket(&x, &y).unwrap().scaled(0.5);
                 let target = (&x + &y).unwrap();
                 let family =
-                    OperatorFamily::new_in(&space, [x, y, z, Operator::identity()]).unwrap();
+                    OperatorFamily::new_in([x, y, z, Operator::identity()], &space).unwrap();
                 workflow(&family, &target, 1.);
                 let embed = |at| {
                     graded::embedding::<R>(
@@ -461,7 +461,7 @@ macro_rules! precision_tests {
                 let z = Local::primitive(P::Sz).at(&factors[0]).unwrap();
                 let target = (&x + &y).unwrap();
                 let family =
-                    OperatorFamily::new_in(&space, [x, y, z, Operator::identity()]).unwrap();
+                    OperatorFamily::new_in([x, y, z, Operator::identity()], &space).unwrap();
                 workflow(&family, &target, 1.);
             }
         }

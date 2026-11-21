@@ -2,11 +2,19 @@ use std::num::NonZeroUsize;
 #[cfg(feature = "sprs")]
 use syntaqs_core::basis::Coordinates;
 use syntaqs_core::{
-    algebra::Act, algebra::Adjoint, basis::Basis, basis::BasisError,
-    expression::composite::Operator, expression::composite::State,
-    expression::error::ExpressionError, expression::local::LocalOperator,
-    expression::local::LocalState, expression::parts::linear_combination::LinearCombination,
-    space::Dimension, space::DimensionOverflow, space::HilbertSpace,
+    algebra::Act,
+    algebra::Adjoint,
+    basis::BasisError,
+    basis::{Basis, BasisElements},
+    expression::composite::Operator,
+    expression::composite::State,
+    expression::error::ExpressionError,
+    expression::local::LocalOperator,
+    expression::local::LocalState,
+    expression::parts::linear_combination::LinearCombination,
+    space::Dimension,
+    space::DimensionOverflow,
+    space::HilbertSpace,
 };
 use syntaqs_export::{
     Export, ExportError, Exported, matrix::args::MatrixArgs, matrix::metadata::MatrixMetadata,
@@ -58,15 +66,19 @@ impl Adjoint<f64> for Op {
         })
     }
 }
-impl Basis<Ket, f64> for Ordered {
-    fn expand_indices(&self, p: &Ket) -> LinearCombination<usize, f64> {
-        LinearCombination::primitive(usize::from(p.0))
-    }
+impl BasisElements<Ket> for Ordered {
     fn index(&self, p: &Ket) -> Option<usize> {
         Some(usize::from(p.0))
     }
+
     fn element(&self, index: usize) -> Option<Ket> {
         (index < 2).then_some(Ket(index as u8))
+    }
+}
+
+impl Basis<Ket, f64> for Ordered {
+    fn expand_indices(&self, p: &Ket) -> LinearCombination<usize, f64> {
+        LinearCombination::primitive(usize::from(p.0))
     }
 }
 
@@ -91,13 +103,13 @@ fn exports_need_neither_primitive_cloning_nor_operator_products_or_index_cloning
     assert_eq!(matrix.data()[7], 1.);
     assert_eq!(matrix.data().iter().sum::<f64>(), 4.);
     let state = syntaqs_core::expression::composite::State::tensor_in(
-        &space,
         [
             LocalState::<Ket, Op, f64>::primitive(Ket(1))
                 .at(&a)
                 .unwrap(),
             LocalState::primitive(Ket(0)).at(&b).unwrap(),
         ],
+        &space,
     )
     .unwrap();
     let v: Exported<Vec<_>, VectorMetadata<'_, _, _, Ket>> = (&state).export(&Ordered).unwrap();
@@ -112,10 +124,7 @@ fn exports_need_neither_primitive_cloning_nor_operator_products_or_index_cloning
 }
 
 struct Broken(u8);
-impl Basis<Ket, f64> for Broken {
-    fn expand_indices(&self, _: &Ket) -> LinearCombination<usize, f64> {
-        LinearCombination::primitive(if self.0 == 3 { 3 } else { 0 })
-    }
+impl BasisElements<Ket> for Broken {
     fn index(&self, p: &Ket) -> Option<usize> {
         if self.0 == 4 {
             None
@@ -123,6 +132,7 @@ impl Basis<Ket, f64> for Broken {
             Some(usize::from(p.0))
         }
     }
+
     fn element(&self, index: usize) -> Option<Ket> {
         let elements: &[u8] = match self.0 {
             0 => &[1, 0],
@@ -131,6 +141,12 @@ impl Basis<Ket, f64> for Broken {
             _ => &[0, 1],
         };
         elements.get(index).copied().map(Ket)
+    }
+}
+
+impl Basis<Ket, f64> for Broken {
+    fn expand_indices(&self, _: &Ket) -> LinearCombination<usize, f64> {
+        LinearCombination::primitive(if self.0 == 3 { 3 } else { 0 })
     }
 }
 

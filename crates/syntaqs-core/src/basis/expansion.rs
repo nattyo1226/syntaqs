@@ -4,7 +4,7 @@ use alloc::{collections::BTreeMap, collections::btree_map::Entry, vec::Vec};
 use num_traits::Zero;
 
 use super::enumeration::basis_element;
-use crate::{Basis, BasisError, expression::parts::Operands};
+use crate::{BasisElements, BasisError, expression::parts::Operands};
 
 mod composite;
 mod local;
@@ -30,12 +30,12 @@ fn accumulate<K: Ord, C: Zero>(map: &mut BTreeMap<K, C>, key: K, coefficient: C)
     }
 }
 
-fn reconstruct<P, C, B: Basis<P, C>, L, E: Clone>(
+fn reconstruct<P, C, B: BasisElements<P>, L, E: Clone>(
     terms: Expansion<C>,
     basis: &B,
     dimension: Option<usize>,
     make_local: impl Fn(P) -> L,
-    place: impl Fn(usize, &L) -> E,
+    place: impl Fn(&L, usize) -> E,
     make_term: impl Fn(Operands<E>, C) -> E,
 ) -> Result<Operands<E>, BasisError> {
     let mut locals = BTreeMap::new();
@@ -62,7 +62,7 @@ fn reconstruct<P, C, B: Basis<P, C>, L, E: Clone>(
                             dimension.expect("local factor"),
                         )?)),
                     };
-                    Ok(slot.insert(place(position, local)).clone())
+                    Ok(slot.insert(place(local, position)).clone())
                 })
                 .collect::<Result<Operands<_>, BasisError>>()?;
             Ok(make_term(factors, coefficient))

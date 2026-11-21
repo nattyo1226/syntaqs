@@ -204,14 +204,13 @@ impl<C: From<f64>> Trace<C> for Op {
 fn sites() -> Vec<H<u8>> {
     [9, 3, 7, 1].into_iter().map(H::factor).collect()
 }
-fn product<C>(space: &H<u8>, sites: &[H<u8>], labels: &[u8]) -> State<u8, Ket, Op, C> {
+fn product<C>(labels: &[u8], sites: &[H<u8>], space: &H<u8>) -> State<u8, Ket, Op, C> {
     State::tensor_in(
-        space,
-        sites
+        labels
             .iter()
-            .zip(labels)
+            .zip(sites)
             .enumerate()
-            .map(|(site, (factor, label))| {
+            .map(|(site, (label, factor))| {
                 LocalState::primitive(Ket {
                     label: *label,
                     site,
@@ -219,10 +218,11 @@ fn product<C>(space: &H<u8>, sites: &[H<u8>], labels: &[u8]) -> State<u8, Ket, O
                 .at(factor)
                 .unwrap()
             }),
+        space,
     )
     .unwrap()
 }
-fn operators<C>(space: &H<u8>, sites: &[H<u8>], zero: Option<usize>) -> Operator<u8, Op, C> {
+fn operators<C>(zero: Option<usize>, sites: &[H<u8>], space: &H<u8>) -> Operator<u8, Op, C> {
     Operator::try_product(sites.iter().enumerate().map(|(i, f)| {
         LocalOperator::primitive(Op {
             matrix: if zero == Some(i) {
@@ -274,7 +274,7 @@ fn action_products_skip_remaining_sums_and_preserve_outer_branches() {
         H::tensor_all(factors.iter().cloned()).unwrap(),
         H::tensor_all_g(factors.iter().cloned()).unwrap(),
     ] {
-        let input = product::<f64>(&space, &factors, &[0, 0]);
+        let input = product::<f64>(&[0, 0], &factors, &space);
         for branch in [&placed_product, &composite_product] {
             let operator = (branch + Operator::identity()).unwrap();
             reset();
@@ -320,8 +320,8 @@ fn action_products_apply_operands_in_order_with_and_without_adjoint() {
         assert_eq!(actual.norm_squared(), 1.0);
 
         // The occupied first mode adds a minus sign to the odd X on the second.
-        let input = product::<f64>(&graded, &factors, &[1, input_label]);
-        let expected = product::<f64>(&graded, &factors, &[1, output_label]);
+        let input = product::<f64>(&[1, input_label], &factors, &graded);
+        let expected = product::<f64>(&[1, output_label], &factors, &graded);
         let actual = input.act(&operator.at(&factors[1]).unwrap()).unwrap();
         assert_eq!(actual.inner_product(&expected).unwrap(), -1.0);
         assert_eq!(actual.norm_squared().unwrap(), 1.0);
@@ -332,10 +332,10 @@ fn action_products_apply_operands_in_order_with_and_without_adjoint() {
 fn state_products_stop_at_first_exact_zero_and_keep_nonzero_factors() {
     let factors = sites();
     let space = H::tensor_all(factors.iter().cloned()).unwrap();
-    let a = product::<f64>(&space, &factors, &[0, 0, 0, 0]);
+    let a = product::<f64>(&[0, 0, 0, 0], &factors, &space);
     for zero in [None, Some(0), Some(2), Some(3)] {
         let labels: Vec<_> = (0..4).map(|i| u8::from(zero == Some(i))).collect();
-        let b = product::<f64>(&space, &factors, &labels);
+        let b = product::<f64>(&labels, &factors, &space);
         reset();
         assert_eq!(
             a.inner_product(&b).unwrap(),
@@ -350,13 +350,13 @@ fn state_products_stop_at_first_exact_zero_and_keep_nonzero_factors() {
     }
     // An underflowed running product stops too; a tiny nonzero one does not.
     for (labels, expected, calls) in [([4, 4, 0, 0], 0.0, 2), ([4, 0, 0, 0], 1e-200, 4)] {
-        let b = product::<f64>(&space, &factors, &labels);
+        let b = product::<f64>(&labels, &factors, &space);
         reset();
         let value = b.inner_product(&b).unwrap();
         assert_eq!(value, expected);
         COUNTS.with(|c| assert_eq!(c.borrow().inner.len(), calls));
     }
-    let nan = product::<f64>(&space, &factors, &[5, 0, 0, 0]);
+    let nan = product::<f64>(&[5, 0, 0, 0], &factors, &space);
     reset();
     assert!(nan.inner_product(&a).unwrap().is_nan());
     COUNTS.with(|c| assert_eq!(c.borrow().inner.len(), 4));
@@ -368,7 +368,7 @@ fn coefficient_only_local_action_keeps_the_tensor_shape() {
 
     let factors = sites();
     let space = H::tensor_all(factors.iter().cloned()).unwrap();
-    let input = product::<f64>(&space, &factors, &[0, 1, 0, 1]);
+    let input = product::<f64>(&[0, 1, 0, 1], &factors, &space);
     let scale = LocalOperator::primitive(Op {
         matrix: [[2.0, 0.0], [0.0, 2.0]],
         site: Some(1),
@@ -393,22 +393,22 @@ fn local_action_on_tensor_of_sums_preserves_prefix_sign_and_splices_collapsed_bl
         let right = H::tensor_all_with(kind, f[2..].iter().cloned()).unwrap();
         let space = left.tensor_with(kind, &right).unwrap();
         let prefix = State::sum(
-            &left,
             [
-                product::<f64>(&left, &f[..2], &[1, 0]),
-                product(&left, &f[..2], &[0, 1]).scaled(2.0),
+                product::<f64>(&[1, 0], &f[..2], &left),
+                product(&[0, 1], &f[..2], &left).scaled(2.0),
             ],
+            &left,
         )
         .unwrap();
         let block = State::sum(
-            &right,
             [
-                product::<f64>(&right, &f[2..], &[0, 1]),
-                product(&right, &f[2..], &[1, 0]).scaled(3.0),
+                product::<f64>(&[0, 1], &f[2..], &right),
+                product(&[1, 0], &f[2..], &right).scaled(3.0),
             ],
+            &right,
         )
         .unwrap();
-        let state = State::tensor_in(&space, [prefix.clone(), block]).unwrap();
+        let state = State::tensor_in([prefix.clone(), block], &space).unwrap();
         let op = LocalOperator::primitive(Op {
             matrix: [[0.0, 1.0], [0.0, 0.0]],
             site: Some(2),
@@ -416,7 +416,7 @@ fn local_action_on_tensor_of_sums_preserves_prefix_sign_and_splices_collapsed_bl
         .at(&f[2])
         .unwrap();
         let actual = state.act(&op).unwrap().evaluate().unwrap();
-        let expected = State::tensor_in(&space, [prefix, product(&right, &f[2..], &[0, 0])])
+        let expected = State::tensor_in([prefix, product(&[0, 0], &f[2..], &right)], &space)
             .unwrap()
             .scaled(parity_sign * 3.0);
         assert_eq!(actual.inner_product(&expected).unwrap(), 45.0);
@@ -437,34 +437,34 @@ fn sum_branches_continue_through_zero_terms_and_zero_partial_sums() {
     let f = sites();
     let pair = f[0].tensor(&f[1]).unwrap();
     let space = pair.tensor(&f[2]).unwrap();
-    let rhs = product::<f64>(&space, &f[..3], &[0, 0, 0]);
+    let rhs = product::<f64>(&[0, 0, 0], &f[..3], &space);
     let tail = LocalState::<Ket, Op, f64>::primitive(Ket { label: 0, site: 2 })
         .at(&f[2])
         .unwrap();
     // Overlaps with |00> are 1,-1,1. All shapes survive state collection.
     let parts = [(2, 1.0), (0, -1.0), (3, 1.0)]
-        .map(|(label, c)| product::<f64>(&pair, &f[..2], &[label, 0]).scaled(c));
-    let sum = State::sum(&pair, parts).unwrap();
-    let lhs = State::tensor_in(&space, [sum, tail.clone()]).unwrap();
+        .map(|(label, c)| product::<f64>(&[label, 0], &f[..2], &pair).scaled(c));
+    let sum = State::sum(parts, &pair).unwrap();
+    let lhs = State::tensor_in([sum, tail.clone()], &space).unwrap();
     reset();
     assert_eq!(lhs.inner_product(&rhs).unwrap(), 1.0);
     COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 1, 0, 1, 0, 1, 2]));
     let sum = State::sum(
-        &pair,
         [
-            product::<f64>(&pair, &f[..2], &[2, 0]),
-            product::<f64>(&pair, &f[..2], &[0, 0]).scaled(-1.0),
+            product::<f64>(&[2, 0], &f[..2], &pair),
+            product::<f64>(&[0, 0], &f[..2], &pair).scaled(-1.0),
         ],
+        &pair,
     )
     .unwrap();
-    let lhs = State::tensor_in(&space, [sum, tail.clone()]).unwrap();
+    let lhs = State::tensor_in([sum, tail.clone()], &space).unwrap();
     reset();
     assert_eq!(lhs.inner_product(&rhs).unwrap(), 0.0);
     COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 1, 0, 1]));
     // The first pair vanishes at its first local factor, but the next pair runs.
     let lhs = State::sum(
+        [product::<f64>(&[1, 0, 0], &f[..3], &space), rhs.clone()],
         &space,
-        [product::<f64>(&space, &f[..3], &[1, 0, 0]), rhs.clone()],
     )
     .unwrap();
     reset();
@@ -479,11 +479,11 @@ fn matching_nested_sums_use_symmetry_with_distinct_outer_scales() {
     let space = pair.tensor(&f[2]).unwrap();
     let state = |c: Complex64, tail, scale| {
         let block = State::sum(
-            &pair,
             [
-                product::<Complex64>(&pair, &f[..2], &[0, 0]),
-                product::<Complex64>(&pair, &f[..2], &[2, 0]).scaled(c),
+                product::<Complex64>(&[0, 0], &f[..2], &pair),
+                product::<Complex64>(&[2, 0], &f[..2], &pair).scaled(c),
             ],
+            &pair,
         )
         .unwrap()
         .scaled(scale);
@@ -493,7 +493,7 @@ fn matching_nested_sums_use_symmetry_with_distinct_outer_scales() {
         })
         .at(&f[2])
         .unwrap();
-        State::tensor_in(&space, [block, tail]).unwrap()
+        State::tensor_in([block, tail], &space).unwrap()
     };
     let c = Complex64::new(0.5, 1.0);
     let lhs = state(c, 0, Complex64::new(2.0, 1.0));
@@ -517,11 +517,11 @@ fn shared_nonreflexive_shapes_contract_all_pairs() {
     let space = f[0].tensor(&f[1]).unwrap();
     let run = |label, coefficient| {
         let sum = State::sum(
-            &space,
             [
-                product::<f64>(&space, &f[..2], &[0, 0]),
-                product::<f64>(&space, &f[..2], &[label, 0]).scaled(coefficient),
+                product::<f64>(&[0, 0], &f[..2], &space),
+                product::<f64>(&[label, 0], &f[..2], &space).scaled(coefficient),
             ],
+            &space,
         )
         .unwrap();
         reset();
@@ -537,8 +537,8 @@ fn shared_nonreflexive_shapes_contract_all_pairs() {
 fn zero_contractions_skip_remaining_arithmetic_without_coefficient_equality() {
     let f = sites();
     let space = H::tensor_all(f.iter().cloned()).unwrap();
-    let a = product::<Scalar>(&space, &f, &[0, 0, 0, 0]).scaled(Scalar(42.0));
-    let b = product::<Scalar>(&space, &f, &[1, 0, 0, 0]);
+    let a = product::<Scalar>(&[0, 0, 0, 0], &f, &space).scaled(Scalar(42.0));
+    let b = product::<Scalar>(&[1, 0, 0, 0], &f, &space);
     reset();
     assert_eq!(contract(&a.expression, &b.expression).0, 0.0);
     COUNTS.with(|c| {
@@ -560,9 +560,9 @@ fn zero_contractions_skip_remaining_arithmetic_without_coefficient_equality() {
     reset();
     assert_eq!(a.evaluated_inner_product(&b).0, 0.0);
     COUNTS.with(|c| assert_eq!(c.borrow().conjugate, 0));
-    let a = product::<Scalar>(&f[0], &f[..1], &[0]);
-    let sum = State::sum(&f[0], [a.clone(), a]).unwrap();
-    let b = product::<Scalar>(&f[0], &f[..1], &[1]);
+    let a = product::<Scalar>(&[0], &f[..1], &f[0]);
+    let sum = State::sum([a.clone(), a], &f[0]).unwrap();
+    let b = product::<Scalar>(&[1], &f[..1], &f[0]);
     reset();
     assert_eq!(contract(&sum.expression, &b.expression).0, 0.0);
     COUNTS.with(|c| {
@@ -570,7 +570,7 @@ fn zero_contractions_skip_remaining_arithmetic_without_coefficient_equality() {
         assert_eq!(c.inner, [0, 0]);
         assert_eq!(c.add, 0);
     });
-    let a = product::<Scalar>(&space, &f, &[0, 0, 0, 0]).scaled(Scalar(0.0));
+    let a = product::<Scalar>(&[0, 0, 0, 0], &f, &space).scaled(Scalar(0.0));
     reset();
     assert_eq!(contract(&a.expression, &a.expression).0, 0.0);
     COUNTS.with(|c| assert!(c.borrow().inner.is_empty()));
@@ -581,9 +581,9 @@ fn hs_stops_local_traces_and_does_not_divide_zero_traces() {
     let f = sites();
     for kind in [crate::TensorKind::Ordinary, crate::TensorKind::Graded] {
         let space = H::tensor_all_with(kind, f.iter().cloned()).unwrap();
-        let a = operators::<Scalar<true>>(&space, &f, None);
+        let a = operators::<Scalar<true>>(None, &f, &space);
         for zero in [None, Some(0), Some(2), Some(3)] {
-            let b = operators::<Scalar<true>>(&space, &f, zero);
+            let b = operators::<Scalar<true>>(zero, &f, &space);
             reset();
             let value = a.hs_inner_product(&b).unwrap();
             assert_eq!(value.0, if zero.is_some() { 0.0 } else { 1.0 });
@@ -662,7 +662,7 @@ fn sums_keep_shared_interior_operator_blocks_factored() {
 fn trace_and_hs_sums_keep_other_branches_and_original_space_checks() {
     let f = sites();
     let space = H::tensor_all(f.iter().cloned()).unwrap();
-    let zero = operators::<f64>(&space, &f, None); // Each X has zero trace.
+    let zero = operators::<f64>(None, &f, &space); // Each X has zero trace.
     let identity = Operator::<u8, Op, f64>::identity().bind(&space).unwrap();
     let sum = Operator::sum([
         zero,
@@ -695,7 +695,7 @@ fn trace_and_hs_sums_keep_other_branches_and_original_space_checks() {
     ));
     assert!(identity.hs_inner_product_in(&invalid, &space).is_err());
     COUNTS.with(|c| assert!(c.borrow().traces.is_empty()));
-    let state = product::<f64>(&space, &f, &[0, 0, 0, 0]);
+    let state = product::<f64>(&[0, 0, 0, 0], &f, &space);
     let other = State::<u8, Ket, Op, f64>::zero(&outside);
     assert!(state.inner_product(&other).is_err());
 }

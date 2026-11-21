@@ -12,15 +12,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let a = HilbertSpace::factor("a");
     let b = HilbertSpace::factor("b");
     let space = a.tensor(&b)?;
-    let up_down = Spin::product_state(&space, [Ket::Up, Ket::Down])?;
-    let down_up = Spin::product_state(&space, [Ket::Down, Ket::Up])?;
+    let up_down = Spin::state_tensor_from([Ket::Up, Ket::Down], &space)?;
+    let down_up = Spin::state_tensor_from([Ket::Down, Ket::Up], &space)?;
     let state = Spin::state_sum(
-        &space,
         [
             up_down.scaled(2.0),
             up_down.scaled(3.0),
             down_up.scaled(-1.0),
         ],
+        &space,
     )?;
 
     // The result remains an ordinary State with the original space.
