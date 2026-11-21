@@ -49,9 +49,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         use syntaqs_export::{Export, Exported, matrix::args::MatrixArgs};
         use syntaqs_fermion::basis::OccupationBasis;
         let dense: Exported<Vec<Complex<f64>>, _> =
-            (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
+            (&h).export(MatrixArgs::new(&OccupationBasis))?;
         let sparse: Exported<sprs::CsMat<Complex<f64>>, _> =
-            (&h).export(MatrixArgs::<S, _>::new(&OccupationBasis))?;
+            (&h).export(MatrixArgs::new(&OccupationBasis))?;
         assert_eq!(dense.metadata().shape(), [16, 16]);
         for (left, right) in dense.data().iter().zip(sparse.data().to_dense().iter()) {
             assert!((*left - *right).norm_sqr() < 1e-24);

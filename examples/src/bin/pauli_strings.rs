@@ -131,9 +131,7 @@ mod tests {
 
     #[cfg(feature = "export")]
     fn matrix(word: &PauliString<usize, Complex64>) -> Vec<Complex64> {
-        let result: Exported<Vec<Complex64>, _> = word
-            .export(MatrixArgs::<SpinHalfState, _>::new(&SzBasis))
-            .unwrap();
+        let result: Exported<Vec<Complex64>, _> = word.export(MatrixArgs::new(&SzBasis)).unwrap();
         result.into_data()
     }
 

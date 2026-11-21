@@ -53,11 +53,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Vector shape: {:?}", raw.metadata().shape());
         let vector: Exported<Array1<_>, _> = raw.export(())?;
         // Direct ndarray export internally follows the public Vec output path.
-        let matrix: Exported<Array2<_>, _> =
-            (&h).export(MatrixArgs::<SpinHalfState, _>::new(&SzBasis))?;
+        let matrix: Exported<Array2<_>, _> = (&h).export(MatrixArgs::new(&SzBasis))?;
         let sparse_vector: Exported<CsVec<_>, _> = (&psi).export(&SzBasis)?;
-        let sparse_matrix: Exported<CsMat<_>, _> =
-            (&h).export(MatrixArgs::<SpinHalfState, _>::new(&SzBasis))?;
+        let sparse_matrix: Exported<CsMat<_>, _> = (&h).export(MatrixArgs::new(&SzBasis))?;
         let dense_action = matrix.data().dot(vector.data());
         let sparse_action = sparse_matrix.data() * sparse_vector.data();
         let dense_energy = vector.data().mapv(|z| z.conj()).dot(&dense_action);

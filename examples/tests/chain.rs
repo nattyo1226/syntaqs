@@ -241,17 +241,12 @@ fn check_exports<T: Real + num_traits::NumAssign + Default + Send + Sync + 'stat
                 assert_eq!(pointer, vector.data().as_ptr());
                 let direct: Exported<Array1<_>, _> = (&psi).export(&SzBasis).unwrap();
                 assert_eq!(vector.data(), direct.data());
-                let dense: Exported<Array2<_>, _> = (&h)
-                    .export(MatrixArgs::<SpinHalfState, _>::new(&SzBasis))
-                    .unwrap();
-                let raw: Exported<Vec<Complex<T>>, _> = (&h)
-                    .export(MatrixArgs::<SpinHalfState, _>::new(&SzBasis))
-                    .unwrap();
+                let dense: Exported<Array2<_>, _> = (&h).export(MatrixArgs::new(&SzBasis)).unwrap();
+                let raw: Exported<Vec<Complex<T>>, _> =
+                    (&h).export(MatrixArgs::new(&SzBasis)).unwrap();
                 assert_eq!(raw.data().as_slice(), dense.data().as_slice().unwrap());
                 assert_eq!(raw.metadata().shape(), [1 << n; 2]);
-                let sparse: Exported<CsMat<_>, _> = (&h)
-                    .export(MatrixArgs::<SpinHalfState, _>::new(&SzBasis))
-                    .unwrap();
+                let sparse: Exported<CsMat<_>, _> = (&h).export(MatrixArgs::new(&SzBasis)).unwrap();
                 let sparse_vector: Exported<CsVec<_>, _> = (&psi).export(&SzBasis).unwrap();
                 assert!(sparse.data().is_csc());
                 assert!(dense.metadata().space().is_compatible_with(&space));

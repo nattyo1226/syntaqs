@@ -106,7 +106,11 @@ space validation and matrix-basis enumeration checks remain in force.
 
 ### 3.2. Operator arguments and space selection
 
-`MatrixArgs::<S, _>::new(&basis)` specifies state type S, which `Operator<I, O, C>` itself does not carry. Add `.in_space(&ambient)` when an explicit space is needed.
+Use `MatrixArgs::new(&basis)` when the export bounds determine the state type
+from the basis and operator. For example, `SzBasis` for spin-1/2 selects
+`SpinHalfState`. If multiple state types satisfy the bounds, select `S` with
+`MatrixArgs::<S, _>::new(&basis)`. Add `.in_space(&ambient)` to select an
+explicit space for a composite operator.
 
 The configuration type `MatrixArgs<'b, S, B, A = ()>` holds `&'b B`, space argument A, and `PhantomData<fn() -> S>`. `.in_space` returns arguments with `A = &'h HilbertSpace<I>`. Without a space, A is `()`, avoiding unnecessary Index specification or inference. Local-operator implementations accept `A = ()`.
 
@@ -207,7 +211,7 @@ Numerical, type, and memory contracts have the following verification targets:
 
 `VectorMetadata` is defined in `vector::metadata`, and `MatrixMetadata` in `matrix::metadata`. Alongside basis, space, and shape, `VectorMetadata<'b, B, H = (), P = ()>` records the state primitive type in P for state export, and uses P = `()` for direct Coordinates export. `MatrixMetadata<'b, S, B, H = ()>` records state type S and the selected space. H is `()` for local expressions and `HilbertSpace<I>` for composite expressions.
 
-Specify destinations as `Exported<Vec<C>, M>`, `Exported<ndarray::Array1<C>, M>`, `Exported<ndarray::Array2<C>, M>`, `Exported<sprs::CsVec<C>, M>`, or `Exported<sprs::CsMat<C>, M>`. There are no aliases for particular combinations. Local variables can infer metadata with `_`. Matrix state type is specified through `MatrixArgs::<S, _>::new(&basis)`. Rust API documentation provides complete type parameters and methods.
+Specify destinations as `Exported<Vec<C>, M>`, `Exported<ndarray::Array1<C>, M>`, `Exported<ndarray::Array2<C>, M>`, `Exported<sprs::CsVec<C>, M>`, or `Exported<sprs::CsMat<C>, M>`. There are no aliases for particular combinations. Local variables can infer metadata with `_`. Rust API documentation provides complete type parameters and methods. [Matrix state and space selection](#32-operator-arguments-and-space-selection).
 
 Public `vector` and `matrix` modules expose metadata, with operator arguments
 under `matrix::args`. `Export`, `Exported`, and `ExportError` are defined at the

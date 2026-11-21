@@ -51,9 +51,7 @@ fn all_enabled_preludes_can_be_used_together() {
     #[cfg(feature = "export")]
     {
         let matrix: Exported<Vec<Complex<f64>>, _> = (&x)
-            .export(MatrixArgs::<SpinHalfState, _>::new(
-                &syntaqs_spin_half::basis::SzBasis,
-            ))
+            .export(MatrixArgs::new(&syntaqs_spin_half::basis::SzBasis))
             .unwrap();
         assert_eq!(matrix.metadata().shape(), [2, 2]);
     }

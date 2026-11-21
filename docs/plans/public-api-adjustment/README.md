@@ -22,7 +22,7 @@ and calls `State::expectation`. [Two-spin example](../../../examples/src/bin/two
 | Imports and type selection | Each library provides a `prelude`, and semantic modules expose the defining paths. `ExpressionFactory<S, O, C>` supplies constructors, and `QuantumSystem` exposes the associated primitive and coefficient types. `SpinHalf<C>`, `SpinOne<C>`, and `Fermion<C>` are factory aliases. [Module conventions](../../architecture.md#5-module-structure), [factory implementation](../../../crates/syntaqs-core/src/system.rs). |
 | Factors and expressions | `HilbertSpace` holds factor identity, order, grouping, and tensor kind. Local expressions are placed through `at`. `State` always has a space, and `Operator::bind` selects a full ambient space for an operator. `act` constructs a delayed state expression, while queries such as `expectation` use the evaluator internally. [Space API](../../design/hilbert-space.md#9-public-apis), [expression API](../../design/composite-expression.md#3-current-public-api). |
 | Geometry and models | `SiteMapper` borrows a geometry and caller-supplied data in site order. Concrete `models` modules build operators using caller-supplied site spaces. [Geometry](../../design/geometry.md#3-spaces-and-local-factors), [model construction](../../design/models.md). |
-| Bases and numerical output | `BasisElements` defines the ordered primitives. `Basis` expands primitives into coefficients in that order. `Export::export` selects the container through its result type. Operator matrix export uses `MatrixArgs` to select a state primitive and basis, with `in_space` available for an explicit ambient space. Norms and normalized expectations have separate extension traits. [Basis](../../design/basis.md), [export](../../design/export.md#3-public-api-and-ownership), [normalization](../../design/normalization.md). |
+| Bases and numerical output | `BasisElements` defines the ordered primitives. `Basis` expands primitives into coefficients in that order. `Export::export` selects the container through its result type. `MatrixArgs` supplies the state basis and can select the state primitive explicitly. Its `in_space` method selects an explicit ambient space. Norms and normalized expectations have separate extension traits. [Basis](../../design/basis.md), [export](../../design/export.md#3-public-api-and-ownership), [normalization](../../design/normalization.md). |
 | Lie analysis | `OperatorFamily::new` and `new_in` establish a common expression context. Validation, projection, closure, and decomposition are explicit operations on the family and intermediate results. [Family implementation](../../../crates/syntaqs-lie/src/family.rs), [Lie analysis](../../design/lie.md). |
 
 Compared with `v0.5.0`, the `v6` baseline requires `I: Ord` for tensor-space
@@ -44,7 +44,8 @@ returns a `Result`, and `elements` has a default implementation.
   including caller migration and the [v0.6.0 migration table](../v6/README.md#expression-and-family-construction).
 - [x] Implement and verify [unit 2](implementation.md#2-internal-expression-and-space-order).
 - [x] Implement and verify [unit 3](implementation.md#3-basis-element-access-and-expansion).
-- [ ] Implement units 4–5 and run the final [verification matrix](../../design/verification.md#2-common-checks).
+- [x] Implement and verify [unit 4](implementation.md#4-local-trace-and-matrix-export-examples).
+- [ ] Implement unit 5 and run the final [verification matrix](../../design/verification.md#2-common-checks).
 
 For unit 1, workspace all-target checks with all and no default features passed,
 as did all-feature tests and doctests, Clippy, rustdoc, and formatting. An
@@ -75,6 +76,16 @@ disabled. Workspace all-feature tests and doctests passed, as did Clippy,
 rustdoc, and formatting. The `basis_expansion` example produced state
 coordinates 5 and −1 and one ladder-basis operator coordinate.
 [Basis migration](../v6/README.md#local-basis-traits).
+
+For unit 4, an operator expressed in matrix units without `Identity` gave
+the expected local trace of `3.0`. The primitive and normalized HS contracts
+passed. Matrix export with inferred state types passed the chain, prelude,
+and Pauli-string tests. The Heisenberg, Hubbard, and spin-one examples agreed
+across their dense and sparse outputs with `export` enabled. Heisenberg also
+passed with default features disabled. Workspace all-feature tests and
+doctests passed, as did all-target checks with all features and with default
+features disabled, Clippy, rustdoc, and formatting.
+[Matrix argument inference](../../design/export.md#32-operator-arguments-and-space-selection).
 
 On `db16c4d`, 23 tests passed across the `syntaqs-core` integration targets
 `public_api`, `systems`, `spaces`, `fallible_construction`, and

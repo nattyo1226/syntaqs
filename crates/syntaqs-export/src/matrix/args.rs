@@ -10,6 +10,9 @@ pub struct MatrixArgs<'b, S, B, A = ()> {
 
 impl<'b, S, B> MatrixArgs<'b, S, B> {
     /// Uses a local basis and, for placed operators, an existing binding.
+    ///
+    /// Export infers the state type when the basis and operator determine it.
+    /// Use `MatrixArgs::<S, _>::new(basis)` to select `S` explicitly.
     pub fn new(basis: &'b B) -> Self {
         Self {
             basis,

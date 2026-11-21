@@ -37,6 +37,12 @@ returning basis indices with their coefficients from `expand_indices`. Use
 primitive combination. [Basis design](../../design/basis.md),
 [custom basis implementation](../../../crates/syntaqs-core/tests/basis.rs).
 
+## Local operator trace
+
+`LocalOperator::trace()` accepts operator primitives with `Product`, `Adjoint`,
+and `Trace`. Normalized Hilbert–Schmidt inner products use `Identity` to obtain
+the normalization factor `Tr(I)`. [Trace and normalization](../../design/primitive-expression.md#41-dimension-normalized-hilbertschmidt-inner-products).
+
 ## Core expression performance
 
 Space binding reuses factor positions stored on each Hilbert space. State

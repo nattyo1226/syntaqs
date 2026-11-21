@@ -135,6 +135,10 @@ during construction; state evaluation performs the collection described above. I
 
 Brakets use inner products. See [normalization](normalization.md) for norm/normalization/normalized-expectation APIs and errors. Local identity is `Primitive(O::identity())` on the ordinary evaluation/expansion path; composite syntax also has OpNode::Identity.
 
+`LocalOperator::trace()` evaluates the local expression with `Product` and
+`Adjoint`, then sums the primitive traces weighted by their coefficients.
+[Local trace implementation](../../crates/syntaqs-core/src/evaluate/trace.rs).
+
 ### 4.1. Dimension-normalized Hilbert–Schmidt inner products
 
 Use state-space dimension d locally and full ambient dimension D for composites, not operator-space d² or variant counts:
