@@ -288,6 +288,81 @@ macro_rules! precision_tests {
                 dense_reference(&family, 2, &matrices(2));
             }
             #[test]
+            fn indexed_commutator_preserves_overlap_and_grading_signs() {
+                use syntaqs_fermion::operator::FermionOperator as F;
+                type Op = LocalOperator<F, C>;
+                let sites = [0, 1, 2, 3].map(HilbertSpace::factor);
+                let at = |op, site: usize| Op::primitive(op).at(&sites[site]).unwrap();
+                let left = Operator::sum([
+                    (&at(F::Mz, 0) * &at(F::Mz, 1)).unwrap(),
+                    at(F::Mx, 0),
+                    at(F::Mz, 2),
+                ])
+                .unwrap();
+                let right = Operator::sum([
+                    (&at(F::Mx, 0) * &at(F::Mz, 1)).unwrap(),
+                    at(F::My, 1),
+                    at(F::Mx, 2),
+                    at(F::Mx, 3),
+                ])
+                .unwrap()
+                .scaled(C::new(0.5, 0.0));
+                for (space, graded) in [
+                    (HilbertSpace::tensor_all(sites.clone()).unwrap(), false),
+                    (HilbertSpace::tensor_all_g(sites.clone()).unwrap(), true),
+                ] {
+                    let actual = left
+                        .try_collect_commutator_in(&right, &space)
+                        .unwrap()
+                        .expect("overlapping sparse blocks");
+                    let expected = left
+                        .commutator(&right)
+                        .unwrap()
+                        .collect_terms_in(&space)
+                        .unwrap();
+                    let delta = (&actual - &expected).unwrap();
+                    assert_eq!(
+                        delta.hs_inner_product_in(&delta, &space).unwrap(),
+                        C::new(0.0, 0.0)
+                    );
+
+                    // A pair with two shared sites contributes once. The two
+                    // disjoint odd factors contribute only on the graded space.
+                    let double_overlap = at(F::My, 0);
+                    let disjoint_odd = (&at(F::Mx, 0) * &at(F::Mx, 3)).unwrap();
+                    assert_eq!(
+                        double_overlap.hs_inner_product_in(&actual, &space).unwrap(),
+                        C::new(0.0, 1.0)
+                    );
+                    assert_eq!(
+                        disjoint_odd.hs_inner_product_in(&actual, &space).unwrap(),
+                        C::new(if graded { 1.0 } else { 0.0 }, 0.0)
+                    );
+                }
+            }
+            #[test]
+            fn indexed_commutator_falls_back_for_unsafe_disjoint_products() {
+                use syntaqs_fermion::operator::FermionOperator as F;
+                type Op = LocalOperator<F, C>;
+                let sites = [0, 1, 2].map(HilbertSpace::factor);
+                let space = HilbertSpace::tensor_all(sites.clone()).unwrap();
+                let at = |op, site: usize| Op::primitive(op).at(&sites[site]).unwrap();
+                let left = (at(F::Mz, 0) + at(F::Mz, 1).scaled(C::new(R::MAX, 0.0))).unwrap();
+                for scale in [2.0, R::INFINITY, R::NAN] {
+                    let right = (at(F::Mx, 0) + at(F::Mz, 2).scaled(C::new(scale, 0.0))).unwrap();
+                    assert!(
+                        left.try_collect_commutator_in(&right, &space)
+                            .unwrap()
+                            .is_none()
+                    );
+                }
+                let missing = Op::primitive(F::Mz).at(&HilbertSpace::factor(3)).unwrap();
+                assert!(matches!(
+                    left.try_collect_commutator_in(&missing, &space),
+                    Err(syntaqs_core::expression::error::ExpressionError::MissingIndex)
+                ));
+            }
+            #[test]
             fn custom_three_level_workflow_needs_no_state_basis_or_primitive_clone() {
                 use three_level::{
                     Axis::{A, B},

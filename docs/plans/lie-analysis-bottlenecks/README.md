@@ -146,12 +146,10 @@ to `[a, b]`, with the existing grading signs when ordering the product.
 Handle mixed parity component by component.
 [Ordinary and graded composition laws](../../design/composite-expression.md#7-ordinary-and-graded-composition-laws).
 
-Measure the cost of building the support index, the number of visited
-pairs and constructed product terms, and the full closure time. Compare
-structure constants and pairwise closure diagnostics on ordinary and
-graded inputs, including overlapping pairs and disjoint odd pairs. The
-probe established the current work counts. The indexed approach still
-needs a performance measurement.
+Stage 5 adopted indexed term selection for overlapping single-block sums
+in closure. The measurements include an eager collection control and
+work counts for the indexed and Cartesian products on eligible operands.
+[Stage 5 results](results/stage-5/README.md).
 
 ## Dense adjoint constraints
 

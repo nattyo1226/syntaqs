@@ -15,11 +15,12 @@ and the orthonormality checks on reconstructed components. Closure RHS
 reuse is a follow-up to that change. The dense-constraint work uses direct
 construction of symmetric constraints with the same SVD problem.
 The paired runner, direct HS refactoring, Gram reuse in center extraction,
-exact-zero residual diagnostics, and direct symmetric constraint
-construction are complete. The results record verification, raw data,
-and reproduction for [stage 1](results/stage-1/README.md),
+exact-zero residual diagnostics, direct symmetric constraint construction,
+and indexed commutator filtering are complete. The results record verification,
+raw data, and reproduction for [stage 1](results/stage-1/README.md),
 [stage 2](results/stage-2/README.md), [stage 3](results/stage-3/README.md),
-and [stage 4](results/stage-4/README.md). Stages 5 and 6 are pending.
+[stage 4](results/stage-4/README.md), and [stage 5](results/stage-5/README.md).
+Stage 6 is pending.
 
 Preserve ordinary Lie brackets on ordinary and graded spaces, normalized
 HS inner products, and acceptance under the configured tolerances in
@@ -155,8 +156,8 @@ Compare the bracket to the current evaluator on ordinary and graded
 overlaps, disjoint even and odd pairs, and mixed parity. Measure index
 setup, pairs visited, terms built, and total closure time. Use
 `heisenberg-16` as the main workload and the smaller and spectator
-Heisenberg cases plus the graded cases as controls. Adopt the path when
-the work reduction translates into a repeatable closure benefit.
+Heisenberg cases plus the graded cases as controls. The production path
+uses the index for eligible closure brackets. [Stage 5 results](results/stage-5/README.md).
 
 ### 6. Evaluate reuse within closure RHS construction
 

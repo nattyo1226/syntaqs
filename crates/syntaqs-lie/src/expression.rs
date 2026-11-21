@@ -100,6 +100,17 @@ where
             .commutator(rhs)?
             .scaled(Complex::new(R::zero(), -R::one())))
     }
+    fn closure_bracket_in(
+        &self,
+        rhs: &Self,
+        context: &Self::Context,
+    ) -> Result<Self, ExpressionError> {
+        if let Some(commutator) = self.try_collect_commutator_in(rhs, context)? {
+            return Ok(commutator.scaled(Complex::new(R::zero(), -R::one())));
+        }
+        self.in_context(context)?
+            .lie_bracket_expression(&rhs.in_context(context)?)
+    }
     fn hs_in(&self, rhs: &Self, context: &Self::Context) -> Result<Complex<R>, ExpressionError> {
         self.hs_inner_product_in(rhs, context)
     }

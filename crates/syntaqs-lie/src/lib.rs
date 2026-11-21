@@ -131,6 +131,15 @@ pub trait FamilyExpression: private::Sealed + Clone {
     #[doc(hidden)]
     fn lie_bracket_expression(&self, rhs: &Self) -> Result<Self, ExpressionError>;
     #[doc(hidden)]
+    fn closure_bracket_in(
+        &self,
+        rhs: &Self,
+        context: &Self::Context,
+    ) -> Result<Self, ExpressionError> {
+        self.in_context(context)?
+            .lie_bracket_expression(&rhs.in_context(context)?)
+    }
+    #[doc(hidden)]
     fn hs_in(
         &self,
         rhs: &Self,

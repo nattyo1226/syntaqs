@@ -2,7 +2,8 @@
 
 use alloc::vec::Vec;
 use core::ops::{Mul, Neg};
-use num_traits::{One, Zero};
+use num_complex::Complex;
+use num_traits::{Num, NumCast, One, Zero};
 
 use crate::{
     Adjoint, Conjugate, ExpressionError, HilbertSpace, HomogeneousParity, Identity, LocalOperator,
@@ -82,5 +83,42 @@ impl<I: Ord, O, C> Operator<I, O, C> {
             expression: evaluated.expression(&factors),
             ambient: Some(ambient.clone()),
         })
+    }
+}
+
+impl<I, O, R> Operator<I, O, Complex<R>>
+where
+    I: Ord,
+    R: Copy + Num + NumCast + Neg<Output = R>,
+    O: PartialEq
+        + Identity
+        + HomogeneousParity
+        + Product<Complex<R>, Term = O>
+        + Adjoint<Complex<R>, Term = O>,
+{
+    /// Collects the ordinary commutator when both operands evaluate to single
+    /// overlapping sparse blocks. Uses the validated explicit ambient space.
+    /// Returns `None` when the caller should evaluate its symbolic commutator.
+    /// Disjoint commuting term pairs cancel before coefficient accumulation.
+    #[doc(hidden)]
+    pub fn try_collect_commutator_in(
+        &self,
+        rhs: &Self,
+        ambient: &HilbertSpace<I>,
+    ) -> Result<Option<Self>, ExpressionError> {
+        self.validate(ambient)?;
+        rhs.validate(ambient)?;
+        Ok(super::operator::EvaluatedOperator::commutator(
+            &self.expression,
+            &rhs.expression,
+            ambient,
+        )
+        .map(|evaluated| {
+            let factors: Vec<_> = ambient.leaves().collect();
+            Self {
+                expression: evaluated.expression(&factors),
+                ambient: Some(ambient.clone()),
+            }
+        }))
     }
 }

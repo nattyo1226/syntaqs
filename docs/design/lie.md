@@ -138,6 +138,12 @@ bracket's normalized HS norm as scale. Nonclosed candidates return failed checks
 dependent and non-Hermitian candidates must first be diagnosed with `validate`.
 No inputs are removed and no pseudoinverse is used.
 
+For placed closure targets with two overlapping sparse sums, core can collect
+the bracket once using an index of term support. It skips disjoint commuting
+pairs and keeps disjoint odd–odd pairs in a graded space. Other targets
+follow the symbolic evaluation path. The projection still evaluates the
+full difference between the bracket and its reconstruction.
+
 Only a passing closure report can become `StructureConstants`; otherwise
 `NonClosedPair` records the first failed pair and its effective check. Values
 obey `-i[B_i,B_j]=sum_k f[k,i,j] B_k`, with output index first. The constants
