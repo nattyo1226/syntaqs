@@ -1,2 +1,0 @@
-system,workload,sites,factors,order,api,iterations,median_wall_ns,median_cpu_ns,wall_1_ns,wall_2_ns,wall_3_ns,wall_4_ns,wall_5_ns,wall_6_ns,wall_7_ns,cpu_1_ns,cpu_2_ns,cpu_3_ns,cpu_4_ns,cpu_5_ns,cpu_6_ns,cpu_7_ns
-spin_half,heisenberg_construction,512,512,1,build_model,32,390278.656,390282.562,396096.375,390212.219,387170.594,390733.062,385712.250,390278.656,391610.656,396100.281,390216.125,387174.500,390736.969,385718.750,390282.562,391614.562

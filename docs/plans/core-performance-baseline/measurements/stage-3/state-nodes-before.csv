@@ -1,9 +1,0 @@
-system,workload,sites,factors,order,api,metric,value
-spin_half,heisenberg_repeated_neel,6,6,1,evaluate,state_expr_nodes,76
-spin_half,heisenberg_repeated_neel,6,6,2,evaluate,state_expr_nodes,659
-spin_half,heisenberg_repeated_neel,6,6,4,evaluate,state_expr_nodes,3260
-spin_half,heisenberg_repeated_neel,6,6,8,evaluate,state_expr_nodes,10393
-spin_half,heisenberg_repeated_neel,10,10,1,evaluate,state_expr_nodes,132
-spin_half,heisenberg_repeated_neel,10,10,2,evaluate,state_expr_nodes,1845
-spin_half,heisenberg_repeated_neel,10,10,4,evaluate,state_expr_nodes,21276
-spin_half,heisenberg_repeated_neel,10,10,8,evaluate,state_expr_nodes,132922

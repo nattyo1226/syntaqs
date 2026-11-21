@@ -72,8 +72,9 @@ contractions, and basis queries on spin and fermion chains. See
 Deferred investigations are described in [evaluation improvements](future-work/evaluation-improvements.md):
 
 - [Lie residual accuracy](future-work/evaluation-improvements.md#1-lie-residual-accuracy): reduce cancellation while preserving small residuals and exact-zero rules.
-- [Inner-product acceleration](future-work/evaluation-improvements.md#2-inner-product-acceleration): investigate basis-aware contraction, lazy group preparation, and partial reuse.
+- [Inner-product acceleration](future-work/evaluation-improvements.md#2-inner-product-acceleration) covers basis-aware contraction, orthogonality-based filtering, and reuse of partial contractions.
 - [Natural-state collection overhead](future-work/evaluation-improvements.md#3-natural-state-collection-overhead): reduce query preparation and allocation without persistent collection assumptions.
 - [Expression management and reuse](future-work/evaluation-improvements.md#4-expression-management-and-reuse): assess caches, retained parity structure, sharing, and parallelism.
 - [Small operator basis queries](future-work/evaluation-improvements.md#6-setup-cost-in-small-operator-basis-queries) incur term preparation and support tracking overhead.
 - [Coordinates with dense support](future-work/evaluation-improvements.md#7-storage-for-coordinates-with-dense-support) can spend substantial time and storage on full-length keys.
+- [Extreme Hilbert–Schmidt coefficients](future-work/evaluation-improvements.md#8-extreme-coefficients-in-composite-hilbertschmidt-products) can overflow during term collection before contraction.

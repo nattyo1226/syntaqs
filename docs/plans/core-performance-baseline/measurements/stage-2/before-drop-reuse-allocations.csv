@@ -1,4 +1,0 @@
-system,workload,sites,factors,order,api,requests,requested_bytes
-spin_half,operator_product_construction,8,8,2,binary_mul,3,96
-spin_half,operator_product_construction,64,64,2,binary_mul,3,96
-spin_half,operator_product_construction,1024,1024,2,binary_mul,3,96

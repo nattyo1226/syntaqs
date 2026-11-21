@@ -55,11 +55,12 @@ cross-query cache is not adopted; either would require an explicit validity and
 ownership design. Distinct terms and intrinsically large coordinate output remain
 separate costs.
 
-Graded Hubbard action on the vacuum still prepares and evaluates branches even
-when the state result is zero. Repeated Hamiltonian action on a nonzero state
-also allocates intermediate terms at each step. Measure work before a branch
-vanishes and test whether adjacent applications can reuse state shapes.
-Preserve exact-zero semantics and the order of graded actions.
+Product actions stop on exact zero, and local actions visit only affected tensor
+children. For graded Hubbard action on the vacuum, measure the work in each
+branch up to the point where it vanishes. For repeated Hamiltonian action on
+nonzero states, measure intermediate allocations and test whether adjacent
+applications can reuse state shapes. Preserve exact-zero semantics and the order
+of graded actions.
 [State evaluation](../../crates/syntaqs-core/src/evaluate/composite.rs)
 
 ## 4. Expression management and reuse
@@ -70,18 +71,14 @@ whether to add them. Caches need scope, reuse criteria, ownership, invalidation,
 and resource management; parallelism needs stored-type requirements and an
 execution model.
 
-Distributing sums inside operator products can increase term counts even when
-the result is sparse. Further investigations beyond same-factor local grouping
-include comparing general result caching with recomputation and retaining
-interval parity as unevaluated structure. Query-local reuse of an identity's
-basis expansion belongs to the basis query.
+Overlapping operator blocks can generate many intermediate terms even when
+the result is sparse. Compare caching evaluated blocks with recomputation
+and investigate retaining interval parity as unevaluated structure.
 
-Factor-position lookup is shared within a query. Rebinding to a space or
-validating an action on an explicit equivalent space builds the lookup again
-when enough references require it. Measure potential reuse across queries
-alongside retained memory and thread sharing. Keep the single-reference scan
-as a control and preserve `no_std` support with existing dependencies.
-[Factor lookup](../../crates/syntaqs-core/src/space.rs)
+Benchmark primitive interning with `PartialEq` scans, `Ord`, and `PartialOrd`.
+Include spin and fermion workloads and cases with many distinct primitives.
+Measure comparison counts and query time, and account for incomparable values
+before considering changes to primitive bounds.
 
 ## 5. Explicit component pruning
 
@@ -115,3 +112,21 @@ of aggregating overlapping contributions. Preserve factor order, block
 correlations, and access to sparse coordinates when the full dimension
 exceeds `usize`.
 [Coordinate contract](../design/basis.md#72-coordinate-interpretation-and-indices)
+
+## 8. Extreme coefficients in composite Hilbert–Schmidt products
+
+Let `Sp` be the spin-1/2 raising operator. With `Complex<f64>`, place
+`1e308·Sp + 1e308·Sp − 1e308·Sp` and `Sp` on the same factor of a
+two-factor ordinary space.
+The normalized inner product is `5e307 + 0i`. In the performance review,
+Stage 0 (`49e9fc5`) and the local `hs_inner_product()` returned that value.
+The composite `hs_inner_product_in()` at `20ea94f` returned `NaN + NaN i`.
+The shared evaluator overflowed while adding the first two coefficients
+before contraction applied the normalized overlap of `0.5`.
+[Coefficient collection](../../crates/syntaqs-core/src/evaluate/operator.rs)
+
+This regression has low priority because the reproduced case combines
+coefficients near the `f64` limit with cancellation. Changing when the
+shared evaluator combines coefficients could affect the performance of typical
+Hilbert–Schmidt queries. Revisit the fix if the failure occurs in a real
+workload.

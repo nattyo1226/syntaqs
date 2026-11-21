@@ -465,9 +465,9 @@ State coordinates evaluate the state, apply the indexed basis rules, and
 collect complete coordinate tuples. A tensor child spanning several factors
 contributes a tuple as one choice.
 Validation of spaces/references precedes removal of zero states. Basis expansion
-checks primitives retained by evaluation; removed terms no longer run basis rules,
-including a tensor annihilated by a zero state factor. This boundary differs from
-operator coordinates, which still validate expansions of reached intrinsic terms.
+checks primitives retained by evaluation. A tensor annihilated by a zero state
+factor produces empty coordinates. Operator basis queries validate the original
+placements before evaluating and applying basis rules to surviving terms.
 See [basis errors](basis.md#74-errors-and-examples).
 
 ### 11.5. Incremental scalar contractions
