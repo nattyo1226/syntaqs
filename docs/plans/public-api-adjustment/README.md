@@ -45,7 +45,8 @@ returns a `Result`, and `elements` has a default implementation.
 - [x] Implement and verify [unit 2](implementation.md#2-internal-expression-and-space-order).
 - [x] Implement and verify [unit 3](implementation.md#3-basis-element-access-and-expansion).
 - [x] Implement and verify [unit 4](implementation.md#4-local-trace-and-matrix-export-examples).
-- [ ] Implement unit 5 and run the final [verification matrix](../../design/verification.md#2-common-checks).
+- [x] Implement and verify [unit 5](implementation.md#5-lie-generator-expressions).
+- [x] Run the final [verification matrix](../../design/verification.md#2-common-checks) on the available stable toolchain.
 
 For unit 1, workspace all-target checks with all and no default features passed,
 as did all-feature tests and doctests, Clippy, rustdoc, and formatting. An
@@ -86,6 +87,23 @@ passed with default features disabled. Workspace all-feature tests and
 doctests passed, as did all-target checks with all features and with default
 features disabled, Clippy, rustdoc, and formatting.
 [Matrix argument inference](../../design/export.md#32-operator-arguments-and-space-selection).
+
+For unit 5, four Core collection tests and eighteen Lie decomposition tests
+passed. The checks cover identity centers, neutral product factors, scalar
+addends, and coefficients near one. Ordinary and graded cases at `f32` and
+`f64` passed the coordinate, binding, and decomposition checks. The Lie
+example printed `I` for the center generator and recovered simple ideals of
+dimensions 3 and 3. The twenty shared Lie integration tests and downstream
+BLAS/LAPACK fixture passed. [Lie decomposition](../../design/lie.md#7-complete-center-and-simple-ideal-decomposition).
+
+The final stable run used Rust 1.99.1. Workspace tests and doctests passed in
+the default (514), all-feature (537), and no-default-feature (513)
+configurations. The Vec, ndarray, and sprs configurations passed in separate
+export and shared-package runs. The all-feature build, all-target
+no-default-feature check, workspace and fixture formatting, Clippy, and
+rustdoc passed. The downstream dependency graph selected the native provider
+only when enabled by the fixture. The Rust 1.85.0 environment could not be
+realized offline because its dependencies failed to build.
 
 On `db16c4d`, 23 tests passed across the `syntaqs-core` integration targets
 `public_api`, `systems`, `spaces`, `fallible_construction`, and

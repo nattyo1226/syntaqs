@@ -686,6 +686,14 @@ where
         if self.product.coefficient.is_zero() {
             return OpExpr::sum(Default::default());
         }
+        let one = C::one();
+        let scale = |expression: OpExpr<I, O, C>, coefficient: &C| {
+            if *coefficient == one {
+                expression
+            } else {
+                expression.scaled(coefficient.clone())
+            }
+        };
         let blocks = self.product.blocks.iter().map(|block| {
             if let &[position] = block.support.as_slice() {
                 let local = LocalOperator::sum(block.terms.iter().map(|term| {
@@ -694,7 +702,11 @@ where
                         &[(_, id)] => self.primitive(id),
                         _ => unreachable!("one-factor block"),
                     };
-                    primitive.scaled(term.coefficient.clone())
+                    if term.coefficient == one {
+                        primitive.clone()
+                    } else {
+                        primitive.scaled(term.coefficient.clone())
+                    }
                 }));
                 return OpExpr::new(OpNode::Local(local, factors[position].clone()));
             }
@@ -709,11 +721,11 @@ where
                                 factors[position].clone(),
                             ))
                         });
-                        OpExpr::product(operands.collect()).scaled(term.coefficient.clone())
+                        scale(OpExpr::product(operands.collect()), &term.coefficient)
                     })
                     .collect(),
             )
         });
-        OpExpr::product(blocks.collect()).scaled(self.product.coefficient.clone())
+        scale(OpExpr::product(blocks.collect()), &self.product.coefficient)
     }
 }

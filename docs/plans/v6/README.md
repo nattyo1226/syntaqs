@@ -66,3 +66,10 @@ builds symmetric adjoint constraints directly to reduce peak memory.
 Scale the input basis coefficients before checking closure or decomposing a
 family to limit roundoff from large intermediate products.
 [Basis scaling guidance](../../design/lie.md#3-projection-and-numerical-scales).
+
+## Lie decomposition generators
+
+Center and simple-ideal generators use collected expressions with neutral
+identity factors and exact unit scales omitted. Scalar addends, ambient
+bindings, and coordinates in the source family are preserved.
+[Lie decomposition](../../design/lie.md#7-complete-center-and-simple-ideal-decomposition).

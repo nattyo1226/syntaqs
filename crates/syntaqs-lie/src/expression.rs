@@ -33,7 +33,7 @@ where
         Ok(Self::sum(operators))
     }
     fn collected_in(&self, _: &()) -> Result<Self, ExpressionError> {
-        Ok(self.collect_terms())
+        Ok(self.collect_terms_compact())
     }
     fn scaled_real(&self, coefficient: R) -> Self {
         self.scaled(Complex::new(coefficient, R::zero()))

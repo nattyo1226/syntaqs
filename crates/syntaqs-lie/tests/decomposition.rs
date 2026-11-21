@@ -34,6 +34,20 @@ macro_rules! precision_tests {
                     "{a} != {b}"
                 );
             }
+            fn check_unit_scales_removed(operator: &impl std::fmt::Display) {
+                let rendered = operator.to_string();
+                assert!(!rendered.contains("(1+0i) *"), "{rendered}");
+                assert!(!rendered.contains("(1-0i) *"), "{rendered}");
+            }
+            fn check_identity_center(operator: &impl std::fmt::Display, weight: R) {
+                close(weight.abs(), 1.);
+                let expected = if weight == 1. {
+                    "I".to_owned()
+                } else {
+                    format!("({}) * I", C::new(weight, 0.))
+                };
+                assert_eq!(operator.to_string(), expected);
+            }
             fn matrix_close(a: &Array2<R>, b: &Array2<R>) {
                 assert_eq!(a.dim(), b.dim());
                 for (&x, &y) in a.iter().zip(b) {
@@ -194,6 +208,7 @@ macro_rules! precision_tests {
                         report.validation().independence()
                     );
                     for (j, operator) in component.family().iter().enumerate() {
+                        check_unit_scales_removed(operator);
                         let coordinates = result
                             .family()
                             .coefficients(operator, result.options())
@@ -222,6 +237,13 @@ macro_rules! precision_tests {
                     assert_eq!(result.options(), &numerical);
                     assert_eq!(result.decomposition_options(), &settings);
                     check_result(&result, &Array2::eye(f.len()), &blocks, &center);
+                    if kind == 5 {
+                        let center = result.center().unwrap();
+                        check_identity_center(
+                            &center.family().operators()[0],
+                            center.coordinates()[(0, 0)],
+                        );
+                    }
                     assert_eq!(result.diagnostics().attempts.is_empty(), blocks.is_empty());
                     assert_eq!(
                         result.diagnostics().semisimple_commutant.is_none(),
@@ -489,11 +511,44 @@ macro_rules! precision_tests {
                     .unwrap();
                 assert_eq!(result.simple_ideals().len(), 1);
                 assert_eq!(result.center().unwrap().family().len(), 1);
+                for component in result.center().into_iter().chain(result.simple_ideals()) {
+                    for operator in component.family().iter() {
+                        check_unit_scales_removed(operator);
+                    }
+                }
                 let c = result.center().unwrap().coordinates();
                 matrix_close(&c.dot(&c.t()), &projector(4, &[3]));
                 let q = result.simple_ideals()[0].coordinates();
                 matrix_close(&q.dot(&q.t()), &projector(4, &[0, 1, 2]));
                 assert!(result.diagnostics().validation.passed());
+            }
+
+            #[test]
+            fn local_decomposition_uses_compact_generators() {
+                let numerical = options();
+                let settings = DecompositionOptions::default();
+                let scalar = OperatorFamily::new([Local::identity()]).unwrap();
+                let result = scalar.decompose(&numerical, &settings).unwrap();
+                let center = result.center().unwrap();
+                check_identity_center(
+                    &center.family().operators()[0],
+                    center.coordinates()[(0, 0)],
+                );
+
+                let paulis = OperatorFamily::new(
+                    [Pauli::Sx, Pauli::Sy, Pauli::Sz, Pauli::I].map(Local::primitive),
+                )
+                .unwrap();
+                let result = paulis.decompose(&numerical, &settings).unwrap();
+                assert!(result.diagnostics().validation.passed());
+                assert_eq!(result.simple_ideals().len(), 1);
+                let ideal = &result.simple_ideals()[0];
+                assert_eq!(ideal.family().len(), 3);
+                for component in result.center().into_iter().chain(result.simple_ideals()) {
+                    for operator in component.family().iter() {
+                        check_unit_scales_removed(operator);
+                    }
+                }
             }
         }
     };

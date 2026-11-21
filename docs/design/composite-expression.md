@@ -177,8 +177,9 @@ collects equal natural terms on the validated space. The result retains the
 selected space, including for zero. Disjoint product blocks stay factored.
 Within a block, equal ordered primitive products share a coefficient and exact
 zeros are removed. Primitive equality matches natural terms. Coefficient
-equality compares internal block weights when extracting common factors. See
-[operator block evaluation](#117-operator-block-evaluation).
+equality compares internal block weights when extracting common factors. The
+result omits neutral identity factors and exact unit scales. A scalar addend
+retains its identity and coefficient. [Operator block evaluation](#117-operator-block-evaluation).
 
 ## 6. Relations preserved by placement and embedding
 
