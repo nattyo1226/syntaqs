@@ -96,7 +96,7 @@ reconstruction, and normalized HS contraction. Collection still gathers
 the ambient leaves to reconstruct explicit placements, and HS allocates
 its component table using the full ambient factor count.
 [Block evaluation](../design/composite-expression.md#117-operator-block-evaluation),
-[collection](../../crates/syntaqs-core/src/evaluate/collect.rs#L73),
+[collection](../../crates/syntaqs-core/src/evaluate/collect.rs#L100),
 [HS alignment](../../crates/syntaqs-core/src/evaluate/operator/contraction.rs#L98).
 
 Measure the leaf gathering and factor alignment separately on a fixed

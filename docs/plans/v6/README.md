@@ -2,19 +2,19 @@
 
 ## Expression and family construction
 
-Construction calls take expression or primitive sequences before the space.
-The following calls migrate from `v0.5.0`.
+When migrating from `v0.5.0`, pass input sequences before the space or family
+context. For operator products from primitives, pass each assignment as
+`(primitive, &factor)`.
 
-| API | v0.5.0 call | v0.6.0 call |
-| --- | --- | --- |
-| `ExpressionFactory` | `tensor_in(&space, states)` | `state_tensor(states, &space)` |
-| `ExpressionFactory` | `try_tensor_in(&space, states)` | `try_state_tensor(states, &space)` |
-| `ExpressionFactory` | `product_state(&space, primitives)` | `state_tensor_from(primitives, &space)` |
-| `ExpressionFactory` | `operator_product_at([(&factor, primitive)])` | `operator_product_from([(primitive, &factor)])` |
-| `ExpressionFactory` | `state_sum(&space, states)` / `try_state_sum(&space, states)` | `state_sum(states, &space)` / `try_state_sum(states, &space)` |
-| `State` | `sum(&space, states)` / `try_sum(&space, states)` | `sum(states, &space)` / `try_sum(states, &space)` |
-| `State` | `tensor_in(&space, states)` / `try_tensor_in(&space, states)` | `tensor_in(states, &space)` / `try_tensor_in(states, &space)` |
-| `OperatorFamily` | `new_in(&context, operators)` | `new_in(operators, &context)` |
+| Operation | v0.6.0 call |
+| --- | --- |
+| Tensor placed states through the factory | `ExpressionFactory::state_tensor(states, &space)` / `ExpressionFactory::try_state_tensor(states, &space)` |
+| Tensor state primitives in leaf order | `ExpressionFactory::state_tensor_from(primitives, &space)` |
+| Multiply placed operator primitives | `ExpressionFactory::operator_product_from([(primitive, &factor)])` |
+| Sum states through the factory | `ExpressionFactory::state_sum(states, &space)` / `ExpressionFactory::try_state_sum(states, &space)` |
+| Sum states directly | `State::sum(states, &space)` / `State::try_sum(states, &space)` |
+| Tensor states directly | `State::tensor_in(states, &space)` / `State::try_tensor_in(states, &space)` |
+| Construct a family in an explicit context | `OperatorFamily::new_in(operators, &context)` |
 
 The factory changes also apply to aliases such as `SpinHalf`, `SpinOne`, and
 `Fermion`. [Expression construction](../../design/expression-construction.md),
@@ -73,3 +73,9 @@ Center and simple-ideal generators use collected expressions with neutral
 identity factors and exact unit scales omitted. Scalar addends, ambient
 bindings, and coordinates in the source family are preserved.
 [Lie decomposition](../../design/lie.md#7-complete-center-and-simple-ideal-decomposition).
+
+## Release verification
+
+- [ ] Run the [Rust 1.85.0 checks](../../design/verification.md#2-common-checks)
+  for the release candidate. The local Rust 1.85.0 run for the public API changes
+  was blocked while building toolchain dependencies.
