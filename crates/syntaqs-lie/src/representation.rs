@@ -243,6 +243,7 @@ where
     /// Reuses this factorization for all ordered pairwise closure checks.
     pub fn closure(&self) -> Result<ClosureReport<'a, E>, LieError<E::Real>> {
         let family = self.family();
+        let mut overlaps = E::prepare_hs_against(family.operators(), family.context())?;
         let n = family.len();
         let mut values = Array3::zeros((n, n, n));
         let mut checks = Vec::new();
@@ -250,7 +251,9 @@ where
             for j in 0..n {
                 let target = family.operators()[i]
                     .closure_bracket_in(&family.operators()[j], family.context())?;
-                let projection = self.project(&target)?;
+                let projection = self.project_with_overlaps(&target, || {
+                    Ok(overlaps(&target)?.into_iter().map(Ok))
+                })?;
                 for (k, &value) in projection.coordinates().values().iter().enumerate() {
                     values[(k, i, j)] = value;
                 }

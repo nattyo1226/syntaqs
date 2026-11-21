@@ -16,11 +16,12 @@ reuse is a follow-up to that change. The dense-constraint work uses direct
 construction of symmetric constraints with the same SVD problem.
 The paired runner, direct HS refactoring, Gram reuse in center extraction,
 exact-zero residual diagnostics, direct symmetric constraint construction,
-and indexed commutator filtering are complete. The results record verification,
-raw data, and reproduction for [stage 1](results/stage-1/README.md),
+indexed commutator filtering, and closure RHS reuse are complete. The results
+record verification, raw data, and reproduction for [stage 1](results/stage-1/README.md),
 [stage 2](results/stage-2/README.md), [stage 3](results/stage-3/README.md),
-[stage 4](results/stage-4/README.md), and [stage 5](results/stage-5/README.md).
-Stage 6 is pending.
+[stage 4](results/stage-4/README.md), [stage 5](results/stage-5/README.md), and
+[stage 6](results/stage-6/README.md#stage-6-prepared-closure-right-hand-sides).
+The stage 6 report includes the combined comparison against the v6 merge.
 
 Preserve ordinary Lie brackets on ordinary and graded spaces, normalized
 HS inner products, and acceptance under the configured tolerances in
@@ -170,7 +171,7 @@ Caching collected expressions in Lie would still require preparing blocks
 on each core HS call. A scoped core operation for repeated HS contractions
 keeps the evaluated blocks and their primitive numbering private.
 Lie analysis continues to own the projection and span diagnostics.
-[RHS construction](../../../crates/syntaqs-lie/src/family/projection.rs#L325).
+[RHS construction](../../../crates/syntaqs-lie/src/family/projection.rs#L349).
 
 Measure the change from repeated bracket evaluation towards at most
 `n²` RHS bracket evaluations across closure. The RHS still requires
@@ -178,6 +179,7 @@ Measure the change from repeated bracket evaluation towards at most
 the resulting closure time on `fermion-4`, `pauli-2-mixed`, and
 `heisenberg-16`. Use the original diagnostics to verify each ordered pair
 and evaluate the full reconstructed residual at its original scale.
+[Stage 6 results and adoption](results/stage-6/README.md).
 
 ## Completion criteria
 

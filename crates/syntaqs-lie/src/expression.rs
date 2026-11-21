@@ -1,6 +1,6 @@
 //! The two supported core expression contexts; the contraction cannot be customized.
 
-use crate::FamilyExpression;
+use crate::{FamilyExpression, HsOverlaps};
 
 use ndarray_linalg::{Lapack, Scalar};
 use num_complex::Complex;
@@ -48,6 +48,19 @@ where
     }
     fn hs_in(&self, rhs: &Self, _: &()) -> Result<Complex<R>, ExpressionError> {
         Ok(self.collect_terms().hs_inner_product(&rhs.collect_terms()))
+    }
+    fn prepare_hs_against<'a>(
+        basis: &'a [Self],
+        _: &'a (),
+    ) -> Result<impl FnMut(&Self) -> HsOverlaps<R> + 'a, ExpressionError> {
+        let basis: Vec<_> = basis.iter().map(Self::collect_terms).collect();
+        Ok(move |target: &Self| {
+            let target = target.collect_terms();
+            Ok(basis
+                .iter()
+                .map(|op| op.hs_inner_product(&target))
+                .collect())
+        })
     }
 }
 
@@ -113,5 +126,11 @@ where
     }
     fn hs_in(&self, rhs: &Self, context: &Self::Context) -> Result<Complex<R>, ExpressionError> {
         self.hs_inner_product_in(rhs, context)
+    }
+    fn prepare_hs_against<'a>(
+        basis: &'a [Self],
+        context: &'a Self::Context,
+    ) -> Result<impl FnMut(&Self) -> HsOverlaps<R> + 'a, ExpressionError> {
+        Self::prepare_hs_against_in(basis, context)
     }
 }

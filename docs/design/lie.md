@@ -141,8 +141,15 @@ No inputs are removed and no pseudoinverse is used.
 For placed closure targets with two overlapping sparse sums, core can collect
 the bracket once using an index of term support. It skips disjoint commuting
 pairs and keeps disjoint odd–odd pairs in a graded space. Other targets
-follow the symbolic evaluation path. The projection still evaluates the
-full difference between the bracket and its reconstruction.
+follow the symbolic evaluation path.
+
+Closure prepares the basis once for the Gram right-hand sides. For each
+ordered bracket it prepares the target once and contracts it against every
+prepared basis operand in family order. Local preparation collects matching
+terms. For placed operators, core retains the evaluated basis blocks within
+the family context and shares their primitive numbering with one target at
+a time. Lie checks the resulting coordinates and evaluates the full residual
+expression against the reconstructed projection.
 
 Only a passing closure report can become `StructureConstants`; otherwise
 `NonClosedPair` records the first failed pair and its effective check. Values

@@ -95,6 +95,8 @@ use num_complex::Complex;
 use num_traits::Float;
 use syntaqs_core::expression::error::ExpressionError;
 
+type HsOverlaps<R> = Result<Vec<Complex<R>>, ExpressionError>;
+
 mod private {
     pub trait Sealed {}
     impl<O, R> Sealed for syntaqs_core::expression::local::LocalOperator<O, num_complex::Complex<R>> {}
@@ -145,6 +147,11 @@ pub trait FamilyExpression: private::Sealed + Clone {
         rhs: &Self,
         context: &Self::Context,
     ) -> Result<Complex<Self::Real>, ExpressionError>;
+    #[doc(hidden)]
+    fn prepare_hs_against<'a>(
+        basis: &'a [Self],
+        context: &'a Self::Context,
+    ) -> Result<impl FnMut(&Self) -> HsOverlaps<Self::Real> + 'a, ExpressionError>;
 }
 
 /// Invalid family context or failed operator-analysis precondition.

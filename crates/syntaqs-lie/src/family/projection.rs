@@ -1,6 +1,7 @@
 //! Gram matrices, coordinates, and projections of operator families.
 
 use super::*;
+use syntaqs_core::expression::error::ExpressionError;
 
 /// Full complex normalized-HS Gram matrix, retaining the originating family.
 pub struct GramMatrix<'a, E: FamilyExpression> {
@@ -322,7 +323,23 @@ where
         &self.independence
     }
 
-    fn solve_target(&self, target: &E) -> Result<TargetCoordinates<'a, E>, LieError<E::Real>> {
+    fn target_overlaps<'b>(
+        &'b self,
+        target: &'b E,
+    ) -> impl Iterator<Item = Result<Complex<E::Real>, ExpressionError>> + 'b {
+        self.family
+            .iter()
+            .map(|operator| operator.hs_in(target, &self.family.context))
+    }
+
+    fn solve_target<Hs>(
+        &self,
+        target: &E,
+        overlaps: impl FnOnce() -> Result<Hs, ExpressionError>,
+    ) -> Result<TargetCoordinates<'a, E>, LieError<E::Real>>
+    where
+        Hs: IntoIterator<Item = Result<Complex<E::Real>, ExpressionError>>,
+    {
         target.in_context(&self.family.context)?;
         let target_norm = norm(target, &self.family.context, E::Real::zero(), &self.options)?;
         let check = hermiticity(target, &self.family.context, target_norm, &self.options)?;
@@ -330,13 +347,12 @@ where
             return Err(LieError::NonHermitianTarget { check });
         }
         let rhs = self
-            .family
+            .norms
             .iter()
-            .zip(&self.norms)
-            .map(|(operator, &operator_norm)| {
-                let value = operator.hs_in(target, &self.family.context)?;
+            .zip(overlaps()?)
+            .map(|(&operator_norm, value)| {
                 Ok(real_coordinate(
-                    value,
+                    value?,
                     operator_norm * target_norm,
                     &self.options,
                 )?)
@@ -358,15 +374,28 @@ where
 
     /// Solves `G c = b` for a new target without refactoring the family Gram matrix.
     pub fn coefficients(&self, target: &E) -> Result<FamilyCoordinates<'a, E>, LieError<E::Real>> {
-        Ok(self.solve_target(target)?.coordinates)
+        Ok(self
+            .solve_target(target, || Ok(self.target_overlaps(target)))?
+            .coordinates)
     }
 
     /// Projects a new target using the retained factorization and settings.
     pub fn project(&self, target: &E) -> Result<Projection<'a, E>, LieError<E::Real>> {
+        self.project_with_overlaps(target, || Ok(self.target_overlaps(target)))
+    }
+
+    pub(crate) fn project_with_overlaps<Hs>(
+        &self,
+        target: &E,
+        overlaps: impl FnOnce() -> Result<Hs, ExpressionError>,
+    ) -> Result<Projection<'a, E>, LieError<E::Real>>
+    where
+        Hs: IntoIterator<Item = Result<Complex<E::Real>, ExpressionError>>,
+    {
         let TargetCoordinates {
             coordinates,
             norm: target_norm,
-        } = self.solve_target(target)?;
+        } = self.solve_target(target, overlaps)?;
         let operator = coordinates.reconstruct()?;
         let projection_norm = norm(
             &operator,

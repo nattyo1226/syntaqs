@@ -7,8 +7,9 @@ remaining closure cost is concentrated in repeated expression evaluation
 for the Gram solve. Dense adjoint constraint SVDs still dominate runtime
 and memory at larger Lie dimension.
 
-The [implementation plan](implementation.md) defines the refactoring stages
-and their verification criteria.
+The [implementation plan](implementation.md) records the completed
+refactoring stages. The [combined results](results/stage-6/README.md#combined-results)
+measure the completed changes against the v6 merge.
 
 ## Public API measurements
 
@@ -120,6 +121,11 @@ one evaluation per ordered bracket after measuring the remaining RHS cost.
 Preserve collection across the entire residual expression so the
 reconstructed projection can cancel against the target.
 [Residual accuracy considerations](../../future-work/evaluation-improvements.md#1-lie-residual-accuracy).
+
+Stage 1 adopted direct composite HS contraction. Stage 6 measured the
+remaining RHS preparation work and adopted reuse of the evaluated basis and
+one target per ordered bracket. [Direct HS results](results/stage-1/README.md),
+[RHS reuse results](results/stage-6/README.md).
 
 ### Skip commuting term pairs in commutators
 

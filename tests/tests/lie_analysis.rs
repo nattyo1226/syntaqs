@@ -363,6 +363,38 @@ macro_rules! precision_tests {
                 ));
             }
             #[test]
+            fn prepared_hs_matches_pairwise_contraction_across_targets() {
+                use syntaqs_fermion::operator::FermionOperator as F;
+                type Op = LocalOperator<F, C>;
+                let sites = [0, 1, 2].map(HilbertSpace::factor);
+                let space = HilbertSpace::tensor_all_g(sites.clone()).unwrap();
+                let at = |op, site: usize| Op::primitive(op).at(&sites[site]).unwrap();
+                let basis = [
+                    (&at(F::Mz, 1) + &at(F::Mx, 0)).unwrap(),
+                    (&at(F::Mx, 0) * &at(F::Mx, 2)).unwrap(),
+                ];
+                let mut overlaps = Operator::prepare_hs_against_in(&basis, &space).unwrap();
+                let targets = [
+                    at(F::Annihilate, 0).scaled(C::new(0.5, 1.0)),
+                    (&at(F::Create, 0) * &at(F::Create, 2)).unwrap(),
+                    at(F::Number, 1),
+                ];
+                let missing = Op::primitive(F::Mx).at(&HilbertSpace::factor(3)).unwrap();
+                for target in &targets {
+                    assert!(matches!(
+                        overlaps(&missing),
+                        Err(syntaqs_core::expression::error::ExpressionError::MissingIndex)
+                    ));
+                    let values = overlaps(target).unwrap();
+                    let expected = basis
+                        .iter()
+                        .map(|left| left.hs_inner_product_in(target, &space).unwrap())
+                        .collect::<Vec<_>>();
+                    assert_eq!(values, expected);
+                    assert!(values.iter().any(|value| *value != C::new(0.0, 0.0)));
+                }
+            }
+            #[test]
             fn custom_three_level_workflow_needs_no_state_basis_or_primitive_clone() {
                 use three_level::{
                     Axis::{A, B},
