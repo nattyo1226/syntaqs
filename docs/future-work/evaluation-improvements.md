@@ -1,6 +1,6 @@
 # Numerical accuracy and expression evaluation improvements
 
-Updated: 2026-11-20
+Updated: 2026-11-21
 
 The aim is to reduce expression-contraction cancellation and query overhead
 while preserving exact-zero rules, small nonzero values, and factored structure.
@@ -13,8 +13,8 @@ in [verification](../design/verification.md).
 ## 1. Lie residual accuracy
 
 Investigate reducing cancellation in projection, closure, and Hermiticity
-residuals for nonorthonormal operator expressions. The current implementation
-uses explicit exact term collection; strict tolerances can still reject some
+residuals for nonorthonormal operator expressions. HS evaluation collects
+matching natural terms exactly. Strict tolerances can still reject some
 mathematically valid families. Any improvement must preserve small positive
 residuals, avoid tolerance-based coefficient pruning, and retain factored local
 sums without global Cartesian expansion. No additional accuracy guarantee or
@@ -89,7 +89,24 @@ error `||δA||²=Σμ |δaμ|²`. This formula does not apply unchanged to
 non-orthonormal bases. Current evaluation, coordinates, and export must not
 silently prune components.
 
-## 6. Setup cost in small operator basis queries
+## 6. Ambient-space setup in operator evaluation
+
+Operator blocks keep spectator identities implicit through collection,
+reconstruction, and normalized HS contraction. Collection still gathers
+the ambient leaves to reconstruct explicit placements, and HS allocates
+its component table using the full ambient factor count.
+[Block evaluation](../design/composite-expression.md#117-operator-block-evaluation),
+[collection](../../crates/syntaqs-core/src/evaluate/collect.rs#L73),
+[HS alignment](../../crates/syntaqs-core/src/evaluate/operator/contraction.rs#L98).
+
+Measure the leaf gathering and factor alignment separately on a fixed
+two-site operator with a growing ambient space. If setup becomes material,
+investigate reconstructing placements by position and allocating alignment
+metadata for the reached support. Preserve validation of the original
+references, ambient order for graded signs, the full trace dimension
+factor, and the identity contribution to normalized HS.
+
+## 7. Setup cost in small operator basis queries
 
 The operator evaluator builds primitive tables, term maps, and support vectors
 before basis conversion. Coordinate queries for first-order Heisenberg sums
@@ -102,7 +119,7 @@ bytes as well as time. Preserve block-local cancellation and graded factor
 order.
 [Operator evaluator](../../crates/syntaqs-core/src/evaluate/operator.rs)
 
-## 7. Storage for coordinates with dense support
+## 8. Storage for coordinates with dense support
 
 Independent tensor choices can produce exponentially many nonzero coordinates.
 An 18-site product of `|+⟩` factors produces 262,144 entries with 18 digits
@@ -113,7 +130,7 @@ correlations, and access to sparse coordinates when the full dimension
 exceeds `usize`.
 [Coordinate contract](../design/basis.md#72-coordinate-interpretation-and-indices)
 
-## 8. Extreme coefficients in composite Hilbert–Schmidt products
+## 9. Extreme coefficients in composite Hilbert–Schmidt products
 
 Let `Sp` be the spin-1/2 raising operator. With `Complex<f64>`, place
 `1e308·Sp + 1e308·Sp − 1e308·Sp` and `Sp` on the same factor of a

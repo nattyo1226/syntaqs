@@ -325,7 +325,7 @@ macro_rules! precision_tests {
                 for kind in [TensorKind::Ordinary, TensorKind::Graded] {
                     let a = HilbertSpace::factor(0u8);
                     let b = HilbertSpace::factor(1u8);
-                    let full = HilbertSpace::tensor_all_with(kind, [a.clone(), b]).unwrap();
+                    let full = HilbertSpace::tensor_all_with(kind, [a.clone(), b.clone()]).unwrap();
                     let family =
                         OperatorFamily::new_in(&full, [local(Pauli::Sx).at(&a).unwrap()]).unwrap();
                     complex_close(
@@ -350,6 +350,14 @@ macro_rules! precision_tests {
                             .unwrap()
                             .is_compatible_with(&full)
                     );
+
+                    let tiny = options.residual.absolute / 1000.;
+                    let target = (local(Pauli::Sx).at(&a).unwrap()
+                        + local(Pauli::Sy).at(&b).unwrap().scaled(tiny))
+                    .unwrap();
+                    let projection = family.project(&target, &options).unwrap();
+                    close(projection.residual_norm() / tiny, 1.);
+                    assert!(projection.in_span());
                 }
                 let unit = HilbertSpace::unit();
                 let family = OperatorFamily::new_in(&unit, [Placed::identity()]).unwrap();

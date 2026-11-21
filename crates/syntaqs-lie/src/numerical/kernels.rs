@@ -121,6 +121,14 @@ pub(crate) struct RankAnalysis<R> {
     pub nullspace: Array2<R>,
     /// Remaining right singular vectors; orthogonal complement of the nullspace.
     pub complement: Array2<R>,
+    input_is_zero: bool,
+}
+
+impl<R> RankAnalysis<R> {
+    /// Whether the analyzed matrix has no nonzero entries, including empty shapes.
+    pub(crate) fn input_is_zero(&self) -> bool {
+        self.input_is_zero
+    }
 }
 
 pub(crate) fn rank_nullspace<R>(
@@ -142,6 +150,7 @@ where
             threshold: R::zero(),
             nullspace: Array2::eye(n),
             complement: Array2::zeros((n, 0)),
+            input_is_zero: true,
         });
     }
     // gesvd returns the complete n-by-n Vt; an economy SVD would lose the
@@ -169,6 +178,7 @@ where
         threshold,
         nullspace,
         complement,
+        input_is_zero: false,
     })
 }
 

@@ -6,6 +6,7 @@ use num_traits::{Float, One, Zero};
 use crate::{
     FamilyExpression, FamilyValidation, LieError, NumericalError, NumericalOptions, OperatorFamily,
     ToleranceCheck,
+    family::projection::GramMatrix,
     numerical::kernels::{finite, gram_spectrum},
 };
 
@@ -142,17 +143,7 @@ where
         options: &NumericalOptions<E::Real>,
         normalize: bool,
     ) -> Result<FamilyTransform<'_, E>, LieError<E::Real>> {
-        let gram = self.gram(options)?;
-        // Require independent Hermitian inputs, including imaginary Gram checks.
-        gram.factorize()?;
-        let (spectrum, _) = gram_spectrum(&gram.values().mapv(|z| z.re), options)?;
-        let mut matrix = spectrum.vectors;
-        if normalize {
-            for (j, mut column) in matrix.columns_mut().into_iter().enumerate() {
-                let divisor = spectrum.values[j].sqrt();
-                column.mapv_inplace(|x| x / divisor);
-            }
-        }
+        let matrix = self.gram(options)?.orthogonal_transform_matrix(normalize)?;
         let mut result = self.transform(matrix.view())?;
         result.options = Some(*options);
         Ok(result)
@@ -174,5 +165,27 @@ where
         options: &NumericalOptions<E::Real>,
     ) -> Result<FamilyTransform<'_, E>, LieError<E::Real>> {
         self.orthogonal_transform(options, true)
+    }
+}
+
+impl<E: FamilyExpression> GramMatrix<'_, E>
+where
+    NumericalOptions<E::Real>: Default,
+{
+    pub(crate) fn orthogonal_transform_matrix(
+        &self,
+        normalize: bool,
+    ) -> Result<Array2<E::Real>, LieError<E::Real>> {
+        // Require independent Hermitian inputs, including imaginary Gram checks.
+        self.factorize()?;
+        let (spectrum, _) = gram_spectrum(&self.real_matrix(), self.options())?;
+        let mut matrix = spectrum.vectors;
+        if normalize {
+            for (j, mut column) in matrix.columns_mut().into_iter().enumerate() {
+                let divisor = spectrum.values[j].sqrt();
+                column.mapv_inplace(|x| x / divisor);
+            }
+        }
+        Ok(matrix)
     }
 }

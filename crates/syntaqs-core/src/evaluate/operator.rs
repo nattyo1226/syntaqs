@@ -14,6 +14,7 @@ use crate::{
 };
 use core::{borrow::Borrow, cell::OnceCell, ops::Neg};
 
+mod commutator;
 mod contraction;
 
 // Factor positions are in ambient order. Primitive numbers are valid only in
@@ -177,14 +178,18 @@ where
     C: Clone + PartialEq + Zero + One + Conjugate<Output = C> + Neg<Output = C>,
 {
     pub(crate) fn new<I: Ord>(root: &OpExpr<I, O, C>, space: &HilbertSpace<I>) -> Self {
-        let mut result = Self {
+        let mut result = Self::empty(space);
+        result.product = result.evaluate(root, space);
+        result
+    }
+
+    fn empty<I: Ord>(space: &HilbertSpace<I>) -> Self {
+        Self {
             product: Factored::scalar(C::zero()),
             primitives: Vec::new(),
             identity: OnceCell::new(),
             graded: space.effective_kind() == Some(TensorKind::Graded),
-        };
-        result.product = result.evaluate(root, space);
-        result
+        }
     }
 
     fn evaluate<I: Ord>(&mut self, root: &OpExpr<I, O, C>, space: &HilbertSpace<I>) -> Factored<C> {

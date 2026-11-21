@@ -4,10 +4,10 @@ use alloc::{borrow::Cow, collections::BTreeMap, vec::Vec};
 use core::{cell::OnceCell, ops::Neg};
 use num_traits::{One, Zero};
 
-use super::{Block, EvaluatedOperator, OperatorTerm, primitive_value};
+use super::{Block, EvaluatedOperator, Factored, OperatorTerm, primitive_value};
 use crate::{
-    Adjoint, Conjugate, Divide, HilbertSpace, HomogeneousParity, Identity, Product, Trace,
-    evaluate::add_pair, expression::composite::OpExpr,
+    Adjoint, Conjugate, Divide, ExpressionError, HilbertSpace, HomogeneousParity, Identity,
+    Operator, Product, Trace, evaluate::add_pair, expression::composite::OpExpr,
 };
 
 // A block's support belongs to one component. Overlap on either side joins
@@ -239,24 +239,24 @@ where
             (!core::ptr::eq(lhs.node(), rhs.node())).then(|| evaluated.evaluate(rhs, space));
         let left = &evaluated.product;
         let right = other.as_ref().unwrap_or(left);
+        evaluated.contract(left, right, space.factor_count())
+    }
+
+    fn contract(&self, left: &Factored<C>, right: &Factored<C>, factor_count: usize) -> C {
         if left.coefficient.is_zero() || right.coefficient.is_zero() {
             return C::zero();
         }
-        let (groups, negative) = aligned_groups(
-            &left.blocks,
-            &right.blocks,
-            space.factor_count(),
-            evaluated.graded,
-        );
+        let (groups, negative) =
+            aligned_groups(&left.blocks, &right.blocks, factor_count, self.graded);
         let mut contraction = HilbertSchmidt {
-            operator: &evaluated,
-            dimension: primitive_value(evaluated.identity()).trace(),
+            operator: self,
+            dimension: primitive_value(self.identity()).trace(),
             overlaps: BTreeMap::new(),
         };
         let mut value = C::one();
         for group in groups.into_values() {
-            let lhs = evaluated.group_terms(&group.left);
-            let rhs = evaluated.group_terms(&group.right);
+            let lhs = self.group_terms(&group.left);
+            let rhs = self.group_terms(&group.right);
             let part = contraction.sum(&lhs, &rhs);
             if part.is_zero() {
                 return part;
@@ -278,6 +278,55 @@ where
         } else {
             Cow::Owned(self.product_terms(C::one(), blocks).collect())
         }
+    }
+}
+
+impl<I, O, C> Operator<I, O, C>
+where
+    I: Ord,
+    O: PartialEq
+        + Identity
+        + HomogeneousParity
+        + Product<C, Term = O>
+        + Adjoint<C, Term = O>
+        + Trace<C>,
+    C: Clone
+        + PartialEq
+        + Zero
+        + One
+        + Conjugate<Output = C>
+        + Neg<Output = C>
+        + Divide<Output = C>,
+{
+    /// Prepares the left operands of repeated normalized HS contractions.
+    ///
+    /// The returned operation validates and evaluates each right operand once
+    /// and returns the overlaps in the original left-operand order. The
+    /// explicit ambient space overrides existing bindings.
+    #[doc(hidden)]
+    pub fn prepare_hs_against_in<'a>(
+        left: &'a [Self],
+        ambient: &'a HilbertSpace<I>,
+    ) -> Result<impl FnMut(&Self) -> Result<Vec<C>, ExpressionError> + 'a, ExpressionError> {
+        let mut evaluator = EvaluatedOperator::empty(ambient);
+        let mut basis = Vec::with_capacity(left.len());
+        for operand in left {
+            operand.validate(ambient)?;
+            basis.push(evaluator.evaluate(&operand.expression, ambient));
+        }
+        let basis_primitives = evaluator.primitives.len();
+        Ok(move |target: &Self| {
+            target.validate(ambient)?;
+            let right = evaluator.evaluate(&target.expression, ambient);
+            let values = basis
+                .iter()
+                .map(|left| evaluator.contract(left, &right, ambient.factor_count()))
+                .collect();
+            // Basis IDs remain valid. Primitive handles added for this right
+            // operand can be released before preparing the next one.
+            evaluator.primitives.truncate(basis_primitives);
+            Ok(values)
+        })
     }
 }
 
