@@ -47,8 +47,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let a = HilbertSpace::factor("a");
     let b = HilbertSpace::factor("b");
     let space = a.tensor(&b)?;
-    let state = Spin::product_state(&space, [Ket::Plus, Ket::Minus])?;
-    let zz = Spin::operator_product_at([(&a, Op::Sz), (&b, Op::Sz)])?;
+    let state = Spin::state_tensor_from([Ket::Plus, Ket::Minus], &space)?;
+    let zz = Spin::operator_product_from([(Op::Sz, &a), (Op::Sz, &b)])?;
     assert_eq!(state.space().dim::<Ket>()?, 9);
     assert_close(state.expectation(&zz)?, Complex::new(-1.5, 0.0));
 

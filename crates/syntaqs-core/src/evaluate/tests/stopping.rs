@@ -206,7 +206,6 @@ fn sites() -> Vec<H<u8>> {
 }
 fn product<C>(space: &H<u8>, sites: &[H<u8>], labels: &[u8]) -> State<u8, Ket, Op, C> {
     State::tensor_in(
-        space,
         sites
             .iter()
             .zip(labels)
@@ -219,6 +218,7 @@ fn product<C>(space: &H<u8>, sites: &[H<u8>], labels: &[u8]) -> State<u8, Ket, O
                 .at(factor)
                 .unwrap()
             }),
+        space,
     )
     .unwrap()
 }
@@ -393,22 +393,22 @@ fn local_action_on_tensor_of_sums_preserves_prefix_sign_and_splices_collapsed_bl
         let right = H::tensor_all_with(kind, f[2..].iter().cloned()).unwrap();
         let space = left.tensor_with(kind, &right).unwrap();
         let prefix = State::sum(
-            &left,
             [
                 product::<f64>(&left, &f[..2], &[1, 0]),
                 product(&left, &f[..2], &[0, 1]).scaled(2.0),
             ],
+            &left,
         )
         .unwrap();
         let block = State::sum(
-            &right,
             [
                 product::<f64>(&right, &f[2..], &[0, 1]),
                 product(&right, &f[2..], &[1, 0]).scaled(3.0),
             ],
+            &right,
         )
         .unwrap();
-        let state = State::tensor_in(&space, [prefix.clone(), block]).unwrap();
+        let state = State::tensor_in([prefix.clone(), block], &space).unwrap();
         let op = LocalOperator::primitive(Op {
             matrix: [[0.0, 1.0], [0.0, 0.0]],
             site: Some(2),
@@ -416,7 +416,7 @@ fn local_action_on_tensor_of_sums_preserves_prefix_sign_and_splices_collapsed_bl
         .at(&f[2])
         .unwrap();
         let actual = state.act(&op).unwrap().evaluate().unwrap();
-        let expected = State::tensor_in(&space, [prefix, product(&right, &f[2..], &[0, 0])])
+        let expected = State::tensor_in([prefix, product(&right, &f[2..], &[0, 0])], &space)
             .unwrap()
             .scaled(parity_sign * 3.0);
         assert_eq!(actual.inner_product(&expected).unwrap(), 45.0);
@@ -444,27 +444,27 @@ fn sum_branches_continue_through_zero_terms_and_zero_partial_sums() {
     // Overlaps with |00> are 1,-1,1. All shapes survive state collection.
     let parts = [(2, 1.0), (0, -1.0), (3, 1.0)]
         .map(|(label, c)| product::<f64>(&pair, &f[..2], &[label, 0]).scaled(c));
-    let sum = State::sum(&pair, parts).unwrap();
-    let lhs = State::tensor_in(&space, [sum, tail.clone()]).unwrap();
+    let sum = State::sum(parts, &pair).unwrap();
+    let lhs = State::tensor_in([sum, tail.clone()], &space).unwrap();
     reset();
     assert_eq!(lhs.inner_product(&rhs).unwrap(), 1.0);
     COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 1, 0, 1, 0, 1, 2]));
     let sum = State::sum(
-        &pair,
         [
             product::<f64>(&pair, &f[..2], &[2, 0]),
             product::<f64>(&pair, &f[..2], &[0, 0]).scaled(-1.0),
         ],
+        &pair,
     )
     .unwrap();
-    let lhs = State::tensor_in(&space, [sum, tail.clone()]).unwrap();
+    let lhs = State::tensor_in([sum, tail.clone()], &space).unwrap();
     reset();
     assert_eq!(lhs.inner_product(&rhs).unwrap(), 0.0);
     COUNTS.with(|c| assert_eq!(c.borrow().inner, [0, 1, 0, 1]));
     // The first pair vanishes at its first local factor, but the next pair runs.
     let lhs = State::sum(
-        &space,
         [product::<f64>(&space, &f[..3], &[1, 0, 0]), rhs.clone()],
+        &space,
     )
     .unwrap();
     reset();
@@ -479,11 +479,11 @@ fn matching_nested_sums_use_symmetry_with_distinct_outer_scales() {
     let space = pair.tensor(&f[2]).unwrap();
     let state = |c: Complex64, tail, scale| {
         let block = State::sum(
-            &pair,
             [
                 product::<Complex64>(&pair, &f[..2], &[0, 0]),
                 product::<Complex64>(&pair, &f[..2], &[2, 0]).scaled(c),
             ],
+            &pair,
         )
         .unwrap()
         .scaled(scale);
@@ -493,7 +493,7 @@ fn matching_nested_sums_use_symmetry_with_distinct_outer_scales() {
         })
         .at(&f[2])
         .unwrap();
-        State::tensor_in(&space, [block, tail]).unwrap()
+        State::tensor_in([block, tail], &space).unwrap()
     };
     let c = Complex64::new(0.5, 1.0);
     let lhs = state(c, 0, Complex64::new(2.0, 1.0));
@@ -517,11 +517,11 @@ fn shared_nonreflexive_shapes_contract_all_pairs() {
     let space = f[0].tensor(&f[1]).unwrap();
     let run = |label, coefficient| {
         let sum = State::sum(
-            &space,
             [
                 product::<f64>(&space, &f[..2], &[0, 0]),
                 product::<f64>(&space, &f[..2], &[label, 0]).scaled(coefficient),
             ],
+            &space,
         )
         .unwrap();
         reset();
@@ -561,7 +561,7 @@ fn zero_contractions_skip_remaining_arithmetic_without_coefficient_equality() {
     assert_eq!(a.evaluated_inner_product(&b).0, 0.0);
     COUNTS.with(|c| assert_eq!(c.borrow().conjugate, 0));
     let a = product::<Scalar>(&f[0], &f[..1], &[0]);
-    let sum = State::sum(&f[0], [a.clone(), a]).unwrap();
+    let sum = State::sum([a.clone(), a], &f[0]).unwrap();
     let b = product::<Scalar>(&f[0], &f[..1], &[1]);
     reset();
     assert_eq!(contract(&sum.expression, &b.expression).0, 0.0);

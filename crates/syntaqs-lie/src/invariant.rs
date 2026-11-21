@@ -266,7 +266,7 @@ fn reconstruct_component<E: FamilyExpression>(
         .into_iter()
         .map(|v| family.reconstruct(v))
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(Some(OperatorFamily::new_in(family.context(), operators)?))
+    Ok(Some(OperatorFamily::new_in(operators, family.context())?))
 }
 
 impl<'a, E: FamilyExpression> AdjointRepresentation<'a, E>

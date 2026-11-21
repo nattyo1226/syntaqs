@@ -48,7 +48,7 @@ fn all_system_builders_accept_non_clone_primitives_coefficients_and_indices() {
     let a = HilbertSpace::factor(Index(3));
     let b = HilbertSpace::factor(Index(1));
     let space = a.tensor(&b).unwrap();
-    let tensor = System::product_state(&space, [Ket, Ket]).unwrap();
+    let tensor = System::state_tensor_from([Ket, Ket], &space).unwrap();
     assert_eq!(
         tensor.space().indices().map(|i| i.0).collect::<Vec<_>>(),
         [3, 1]
@@ -60,22 +60,22 @@ fn all_system_builders_accept_non_clone_primitives_coefficients_and_indices() {
         ]
     };
     assert!(
-        System::tensor_in(&space, parts())
+        System::state_tensor(parts(), &space)
             .unwrap()
             .space()
             .is_compatible_with(&space)
     );
     assert!(
-        System::try_tensor_in(&space, parts().map(Ok))
+        System::try_state_tensor(parts().map(Ok), &space)
             .unwrap()
             .space()
             .is_compatible_with(&space)
     );
-    let sum = System::state_sum(&space, [tensor.clone(), tensor.clone()]).unwrap();
+    let sum = System::state_sum([tensor.clone(), tensor.clone()], &space).unwrap();
     assert!(sum.space().shares_node_with(&space));
-    let sum = System::try_state_sum(&space, [Ok(tensor)]).unwrap();
+    let sum = System::try_state_sum([Ok(tensor)], &space).unwrap();
     assert!(sum.space().shares_node_with(&space));
-    let op = System::operator_product_at([(&a, Op), (&a, Op), (&b, Op)]).unwrap();
+    let op = System::operator_product_from([(Op, &a), (Op, &a), (Op, &b)]).unwrap();
     assert!(op.space().is_none());
     for constructed in [
         System::operator_sum([op.clone(), op.clone()]),
@@ -99,16 +99,16 @@ fn all_system_builders_accept_non_clone_primitives_coefficients_and_indices() {
 fn empty_system_builders_keep_the_existing_space_contracts() {
     let space = HilbertSpace::factor(0);
     for zero in [
-        System::state_sum(&space, []),
-        System::try_state_sum(&space, []),
+        System::state_sum([], &space),
+        System::try_state_sum([], &space),
     ] {
         assert!(zero.unwrap().space().shares_node_with(&space));
     }
     let unit_space = HilbertSpace::<u8>::tensor_all_g([HilbertSpace::unit()]).unwrap();
     for unit in [
-        System::tensor_in(&unit_space, []),
-        System::try_tensor_in(&unit_space, []),
-        System::product_state(&unit_space, []),
+        System::state_tensor([], &unit_space),
+        System::try_state_tensor([], &unit_space),
+        System::state_tensor_from([], &unit_space),
     ] {
         assert!(unit.unwrap().space().shares_node_with(&unit_space));
     }
@@ -117,7 +117,7 @@ fn empty_system_builders_keep_the_existing_space_contracts() {
         System::try_operator_sum::<u8>([]),
         System::operator_product::<u8>([]),
         System::try_operator_product::<u8>([]),
-        System::operator_product_at::<u8>([]),
+        System::operator_product_from::<u8>([]),
     ] {
         assert!(op.unwrap().space().is_none());
     }
@@ -129,37 +129,37 @@ fn explicit_builders_validate_counts_and_operators_still_validate_placement() {
     let a = HilbertSpace::factor(0);
     for states in [vec![], vec![Ket, Ket]] {
         assert_eq!(
-            System::product_state(&a, states).err(),
+            System::state_tensor_from(states, &a).err(),
             Some(E::IncompatibleSpaces)
         );
     }
     assert_eq!(
-        System::tensor_in(
-            &a,
+        System::state_tensor(
             [
                 System::state(Ket).at(&a).unwrap(),
                 System::state(Ket).at(&a).unwrap()
-            ]
+            ],
+            &a
         )
         .err(),
         Some(E::IncompatibleSpaces)
     );
-    assert!(System::operator_product_at([(&a, Op), (&a, Op)]).is_ok());
+    assert!(System::operator_product_from([(Op, &a), (Op, &a)]).is_ok());
     for nonleaf in [
         HilbertSpace::unit(),
         HilbertSpace::tensor_all([a.clone()]).unwrap(),
     ] {
         assert_eq!(
-            System::operator_product_at([(&nonleaf, Op)]).err(),
+            System::operator_product_from([(Op, &nonleaf)]).err(),
             Some(E::NotAFactor)
         );
     }
     let unit = HilbertSpace::unit();
     let pulls = core::cell::Cell::new(0);
     assert_eq!(
-        System::operator_product_at([&a, &unit, &a].into_iter().map(|factor| {
+        System::operator_product_from([&a, &unit, &a].into_iter().map(|factor| {
             pulls.set(pulls.get() + 1);
-            (factor, Op)
+            (Op, factor)
         }))
         .err(),
         Some(E::NotAFactor)
@@ -176,8 +176,8 @@ fn builders_share_spaces_without_borrowing_assignment_storage() {
         let a = HilbertSpace::factor(BorrowedIndex(&names[0]));
         let b = HilbertSpace::factor(BorrowedIndex(&names[1]));
         let space = a.tensor(&b).unwrap();
-        let state = System::product_state(&space, [Ket, Ket]).unwrap();
-        let op = System::operator_product_at([(&a, Op), (&b, Op)])
+        let state = System::state_tensor_from([Ket, Ket], &space).unwrap();
+        let op = System::operator_product_from([(Op, &a), (Op, &b)])
             .unwrap()
             .bind(&space)
             .unwrap();

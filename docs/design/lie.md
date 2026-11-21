@@ -30,7 +30,7 @@ The metric is fixed normalized HS, `Tr(A†B)/D`.
 `new(inputs)` rejects empty input and preserves order and original expression
 handles. Local context is `()`. For placed operators it selects the first
 available binding, requires all existing bindings to agree, and validates every
-referenced factor. Entirely unbound placed inputs require `new_in(&space, inputs)`.
+referenced factor. Entirely unbound placed inputs require `new_in(inputs, &space)`.
 The explicit family context also rejects conflicting old bindings. Rebind in
 core before construction if replacement is intended. Zero and zero coefficients
 do not bypass context checks. Targets obey the same checks.

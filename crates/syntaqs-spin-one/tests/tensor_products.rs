@@ -140,7 +140,7 @@ fn check<T: Real>() {
         let first = (local(O::Sp).at(&a).unwrap().bind(&space).unwrap().clone()
             + &local(O::Qyz).at(&b).unwrap().bind(&space).unwrap())
             .unwrap();
-        let second = SpinOne::<Complex<T>>::operator_product_at([(&a, O::Qzx), (&b, O::Sy)])
+        let second = SpinOne::<Complex<T>>::operator_product_from([(O::Qzx, &a), (O::Sy, &b)])
             .unwrap()
             .bind(&space)
             .unwrap();

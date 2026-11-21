@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     operators.push(Placed::identity());
-    let family = OperatorFamily::new_in(&space, operators)?;
+    let family = OperatorFamily::new_in(operators, &space)?;
 
     // Overrides are explicit. They do not change independent rank/Gram settings.
     let options = NumericalOptions {

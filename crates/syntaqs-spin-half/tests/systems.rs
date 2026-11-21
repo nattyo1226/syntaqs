@@ -19,7 +19,7 @@ fn product_state<C, I: Ord>(sites: &[H<I>], orientations: &[Ket]) -> StateOf<Spi
             site.leaves()
                 .map(move |leaf| SpinHalf::<C>::state(orientation).at(leaf).unwrap())
         });
-    State::tensor_in(&space, states).unwrap()
+    State::tensor_in(states, &space).unwrap()
 }
 
 #[test]
@@ -29,8 +29,8 @@ fn local_and_composite_expressions_connect_to_existing_types() {
     let up: syntaqs_core::system::LocalStateOf<Spin> = Spin::state(Ket::Up);
     let sz: syntaqs_core::system::LocalOperatorOf<Spin> = Spin::operator(Op::Sz);
     let psi: StateOf<Spin, _> = State::tensor_in(
-        &a.tensor(&b).unwrap(),
         [up.at(&a).unwrap(), Spin::state(Ket::Down).at(&b).unwrap()],
+        &a.tensor(&b).unwrap(),
     )
     .unwrap();
     let zz: syntaqs_core::system::OperatorOf<Spin, _> =
@@ -70,12 +70,12 @@ fn models_accept_multiple_leaves_per_site() {
         .unwrap();
     let psi = product_state::<Complex<f64>, _>(&sites, &[Ket::Up, Ket::Down]);
     let expected = State::tensor_in(
-        psi.space(),
         [
             Spin::state(Ket::Up).at(&a).unwrap(),
             Spin::state(Ket::Up).at(&b).unwrap(),
             Spin::state(Ket::Down).at(&c).unwrap(),
         ],
+        psi.space(),
     )
     .unwrap();
     assert_eq!(psi.inner_product(&expected).unwrap(), Complex::new(1., 0.));
@@ -96,7 +96,6 @@ fn models_accept_multiple_leaves_per_site() {
     let basis: Vec<_> = (0..8)
         .map(|bits| {
             State::tensor_in(
-                psi.space(),
                 [&a, &b, &c].into_iter().enumerate().map(|(i, leaf)| {
                     Spin::state(if bits >> (2 - i) & 1 == 0 {
                         Ket::Up
@@ -106,6 +105,7 @@ fn models_accept_multiple_leaves_per_site() {
                     .at(leaf)
                     .unwrap()
                 }),
+                psi.space(),
             )
             .unwrap()
         })
@@ -135,11 +135,11 @@ fn empty_sites_keep_edges_and_all_empty_inputs_give_units() {
     let chain = Chain::new(3, Boundary::Open);
     let psi = product_state::<Complex<f64>, _>(&sites, &[Ket::Up, Ket::Up, Ket::Up]);
     let expected = State::tensor_in(
-        psi.space(),
         [
             Spin::state(Ket::Up).at(&sites[0]).unwrap(),
             Spin::state(Ket::Up).at(&sites[2]).unwrap(),
         ],
+        psi.space(),
     )
     .unwrap();
     assert_eq!(psi.inner_product(&expected).unwrap(), Complex::new(1., 0.));
@@ -374,22 +374,22 @@ macro_rules! construction_precision {
             let a = H::factor(0u8);
             let b = H::factor(1);
             let space = a.tensor(&b).unwrap();
-            let state = Q::product_state(
-                &syntaqs_core::space::HilbertSpace::tensor_all([(a).clone(), (b).clone()]).unwrap(),
+            let state = Q::state_tensor_from(
                 [Ket::Up, Ket::Down],
+                &syntaqs_core::space::HilbertSpace::tensor_all([(a).clone(), (b).clone()]).unwrap(),
             )
             .unwrap();
-            let explicit = Q::tensor_in(
-                &space,
+            let explicit = Q::state_tensor(
                 [
                     Q::state(Ket::Up).at(&a).unwrap(),
                     Q::state(Ket::Down).at(&b).unwrap(),
                 ],
+                &space,
             )
             .unwrap();
-            let fallible = Q::try_tensor_in(
-                &space,
+            let fallible = Q::try_state_tensor(
                 [Q::state(Ket::Up).at(&a), Q::state(Ket::Down).at(&b)],
+                &space,
             )
             .unwrap();
             assert_eq!(
@@ -403,14 +403,14 @@ macro_rules! construction_precision {
             let h = Q::try_operator_sum(
                 [Op::Sx, Op::Sy, Op::Sz]
                     .into_iter()
-                    .map(|axis| Q::operator_product_at([(&a, axis), (&b, axis)])),
+                    .map(|axis| Q::operator_product_from([(axis, &a), (axis, &b)])),
             )
             .unwrap()
             .bind(&space)
             .unwrap();
             assert_eq!(state.expectation(&h).unwrap(), Complex::new(-1.0, 0.));
-            let sum = Q::state_sum(&space, [state.scaled(2.0), state.scaled(-1.0)]).unwrap();
-            let tried = Q::try_state_sum(&space, [Ok(sum)]).unwrap();
+            let sum = Q::state_sum([state.scaled(2.0), state.scaled(-1.0)], &space).unwrap();
+            let tried = Q::try_state_sum([Ok(sum)], &space).unwrap();
             assert_eq!(state.inner_product(&tried).unwrap(), Complex::new(1., 0.));
             // Both scalar input forms retain the precision selected by Q.
             let half = Q::state(Ket::Up).scaled(0.5);
@@ -435,8 +435,8 @@ macro_rules! construction_precision {
             );
             // Same-index products preserve order: Sx Sy = i Sz.
             let up = Q::state(Ket::Up).at(&a).unwrap();
-            let xy = Q::operator_product_at([(&a, Op::Sx), (&a, Op::Sy)]).unwrap();
-            let yx = Q::operator_product_at([(&a, Op::Sy), (&a, Op::Sx)]).unwrap();
+            let xy = Q::operator_product_from([(Op::Sx, &a), (Op::Sy, &a)]).unwrap();
+            let yx = Q::operator_product_from([(Op::Sy, &a), (Op::Sx, &a)]).unwrap();
             assert_eq!(up.expectation(&xy).unwrap(), Complex::new(0., 1.0));
             assert_eq!(up.expectation(&yx).unwrap(), Complex::new(0., -1.0));
             let explicit = Q::operator_product([
@@ -456,14 +456,14 @@ macro_rules! construction_precision {
                 up.expectation(&xy).unwrap()
             );
             for unit in [
-                Q::tensor_in(&H::<u8>::unit(), []),
-                Q::try_tensor_in(&H::<u8>::unit(), []),
-                Q::product_state(&H::<u8>::unit(), []),
+                Q::state_tensor([], &H::<u8>::unit()),
+                Q::try_state_tensor([], &H::<u8>::unit()),
+                Q::state_tensor_from([], &H::<u8>::unit()),
             ] {
                 let unit = unit.unwrap();
                 assert_eq!(unit.inner_product(&unit).unwrap(), Complex::new(1., 0.));
             }
-            for zero in [Q::state_sum(&space, []), Q::try_state_sum(&space, [])] {
+            for zero in [Q::state_sum([], &space), Q::try_state_sum([], &space)] {
                 assert_eq!(zero.unwrap().norm_squared().unwrap(), 0.);
             }
             for zero in [Q::operator_sum::<u8>([]), Q::try_operator_sum::<u8>([])] {
@@ -475,7 +475,7 @@ macro_rules! construction_precision {
             for identity in [
                 Q::operator_product::<u8>([]),
                 Q::try_operator_product::<u8>([]),
-                Q::operator_product_at::<u8>([]),
+                Q::operator_product_from::<u8>([]),
             ] {
                 assert_eq!(
                     identity.unwrap().bind(&space).unwrap().trace().unwrap(),

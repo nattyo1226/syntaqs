@@ -833,7 +833,6 @@ fn dense_dot(a: &[Complex<f64>], b: &[Complex<f64>]) -> Complex<f64> {
 
 fn global_basis<T: Real>(factors: &[GlobalSpace; 3], n: usize) -> GlobalState<T> {
     syntaqs_core::expression::composite::State::tensor_in(
-        &GlobalSpace::tensor_all(factors.iter().cloned()).unwrap(),
         factors.iter().enumerate().map(|(k, factor)| {
             syntaqs_core::expression::local::LocalState::primitive(if (n >> (2 - k)) & 1 == 0 {
                 Up
@@ -843,6 +842,7 @@ fn global_basis<T: Real>(factors: &[GlobalSpace; 3], n: usize) -> GlobalState<T>
             .at(factor)
             .unwrap()
         }),
+        &GlobalSpace::tensor_all(factors.iter().cloned()).unwrap(),
     )
     .unwrap()
 }
@@ -885,24 +885,24 @@ fn check_composite_expressions<T: Real>() {
     let s1 = LS::primitive(Down).at(b).unwrap();
     let s2 = LS::primitive(Up).at(d).unwrap();
     let left = syntaqs_core::expression::composite::State::tensor_in(
-        &h,
         [
             syntaqs_core::expression::composite::State::tensor_in(
-                &a.tensor(b).unwrap(),
                 [s0.clone(), s1.clone()],
+                &a.tensor(b).unwrap(),
             )
             .unwrap(),
             s2.clone(),
         ],
+        &h,
     )
     .unwrap();
     let right = syntaqs_core::expression::composite::State::tensor_in(
-        &h,
         [
             s0,
-            syntaqs_core::expression::composite::State::tensor_in(&b.tensor(d).unwrap(), [s1, s2])
+            syntaqs_core::expression::composite::State::tensor_in([s1, s2], &b.tensor(d).unwrap())
                 .unwrap(),
         ],
+        &h,
     )
     .unwrap();
     assert!(left.space().is_compatible_with(right.space()));
@@ -1016,49 +1016,49 @@ fn check_subsystem_contractions<T: Real>() {
         .unwrap()
     };
     let ab = (syntaqs_core::expression::composite::State::tensor_in(
-        &GlobalSpace::tensor_all([factors[0].clone(), factors[1].clone()]).unwrap(),
         [ket(0, Up), ket(1, Up)],
+        &GlobalSpace::tensor_all([factors[0].clone(), factors[1].clone()]).unwrap(),
     )
     .unwrap()
     .clone()
         + &syntaqs_core::expression::composite::State::tensor_in(
-            &GlobalSpace::tensor_all([factors[0].clone(), factors[1].clone()]).unwrap(),
             [ket(0, Down), ket(1, Down)],
+            &GlobalSpace::tensor_all([factors[0].clone(), factors[1].clone()]).unwrap(),
         )
         .unwrap()
         .scaled(c(0.7, 0.2)))
         .unwrap();
     let last = (ket(2, Up).clone() + &ket(2, Down).scaled(c(-0.3, 0.5))).unwrap();
     let lhs = syntaqs_core::expression::composite::State::tensor_in(
-        &GlobalSpace::tensor_all(factors.iter().cloned()).unwrap(),
         [ab, last],
+        &GlobalSpace::tensor_all(factors.iter().cloned()).unwrap(),
     )
     .unwrap();
     let first = (ket(0, Up).clone() + &ket(0, Down).scaled(c(0.4, -0.6))).unwrap();
     let bc = (syntaqs_core::expression::composite::State::tensor_in(
-        &GlobalSpace::tensor_all([factors[1].clone(), factors[2].clone()]).unwrap(),
         [ket(1, Up), ket(2, Up)],
+        &GlobalSpace::tensor_all([factors[1].clone(), factors[2].clone()]).unwrap(),
     )
     .unwrap()
     .clone()
         + &syntaqs_core::expression::composite::State::tensor_in(
-            &GlobalSpace::tensor_all([factors[1].clone(), factors[2].clone()]).unwrap(),
             [ket(1, Down), ket(2, Down)],
+            &GlobalSpace::tensor_all([factors[1].clone(), factors[2].clone()]).unwrap(),
         )
         .unwrap()
         .scaled(c(-0.2, 0.8)))
         .unwrap();
     let rhs = syntaqs_core::expression::composite::State::tensor_in(
-        lhs.space(),
         [
             syntaqs_core::expression::composite::State::unit(),
             first,
             syntaqs_core::expression::composite::State::tensor_in(
-                &GlobalSpace::tensor_all(factors[1..].iter().cloned()).unwrap(),
                 [bc],
+                &GlobalSpace::tensor_all(factors[1..].iter().cloned()).unwrap(),
             )
             .unwrap(),
         ],
+        lhs.space(),
     )
     .unwrap();
 
@@ -1132,8 +1132,8 @@ fn composite_empty_zero_spectator_and_overflow_contracts() {
         .collect();
     let space = syntaqs_core::space::HilbertSpace::tensor_all(factors.iter().cloned()).unwrap();
     let state = Ket::tensor_in(
-        &space,
         factors.iter().map(|f| LS::primitive(Up).at(f).unwrap()),
+        &space,
     )
     .unwrap();
     assert!(space.dim::<State>().is_err());
@@ -1198,9 +1198,9 @@ fn spin_half_has_trivial_grading_in_both_tensor_kinds() {
     let a = HilbertSpace::factor(0);
     let b = HilbertSpace::factor(1);
     let ordinary =
-        SpinHalf::<Complex<f64>>::product_state(&a.tensor(&b).unwrap(), [Up, Down]).unwrap();
+        SpinHalf::<Complex<f64>>::state_tensor_from([Up, Down], &a.tensor(&b).unwrap()).unwrap();
     let graded =
-        SpinHalf::<Complex<f64>>::product_state(&a.tensor_g(&b).unwrap(), [Up, Down]).unwrap();
+        SpinHalf::<Complex<f64>>::state_tensor_from([Up, Down], &a.tensor_g(&b).unwrap()).unwrap();
     for primitive in OPS {
         let op = SpinHalf::operator(primitive).at(&b).unwrap();
         let left = ordinary.act(&op).unwrap().coordinates(&SzBasis).unwrap();

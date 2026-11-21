@@ -115,7 +115,7 @@ macro_rules! precision_tests {
                     _ => unreachable!(),
                 };
                 (
-                    OperatorFamily::new_in(&space, operators).unwrap(),
+                    OperatorFamily::new_in(operators, &space).unwrap(),
                     blocks,
                     center,
                 )
@@ -483,7 +483,7 @@ macro_rules! precision_tests {
                     .bind(&space)
                     .unwrap();
                 let z = lie_bracket(&x, &y).unwrap().scaled(0.5);
-                let f = OperatorFamily::new_in(&space, [x, y, z, Operator::identity()]).unwrap();
+                let f = OperatorFamily::new_in([x, y, z, Operator::identity()], &space).unwrap();
                 let result = f
                     .decompose(&options(), &DecompositionOptions::default())
                     .unwrap();

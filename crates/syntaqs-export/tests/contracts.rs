@@ -91,13 +91,13 @@ fn exports_need_neither_primitive_cloning_nor_operator_products_or_index_cloning
     assert_eq!(matrix.data()[7], 1.);
     assert_eq!(matrix.data().iter().sum::<f64>(), 4.);
     let state = syntaqs_core::expression::composite::State::tensor_in(
-        &space,
         [
             LocalState::<Ket, Op, f64>::primitive(Ket(1))
                 .at(&a)
                 .unwrap(),
             LocalState::primitive(Ket(0)).at(&b).unwrap(),
         ],
+        &space,
     )
     .unwrap();
     let v: Exported<Vec<_>, VectorMetadata<'_, _, _, Ket>> = (&state).export(&Ordered).unwrap();

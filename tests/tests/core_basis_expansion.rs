@@ -118,14 +118,14 @@ fn check_three_level<T: Real>(kind: syntaqs_core::space::TensorKind) {
     let a = Ls::<T>::primitive(Ket::Phase).at(&f).unwrap();
     let b = Ls::<T>::primitive(Ket::Sum).at(&g).unwrap();
     let other = syntaqs_core::expression::composite::State::tensor_in(
-        &space,
         [
             Ls::<T>::primitive(Ket::Unit(Axis::B)).at(&f).unwrap(),
             Ls::primitive(Ket::Unit(Axis::C)).at(&g).unwrap(),
         ],
+        &space,
     )
     .unwrap();
-    let state = (syntaqs_core::expression::composite::State::tensor_in(&space, [a, b])
+    let state = (syntaqs_core::expression::composite::State::tensor_in([a, b], &space)
         .unwrap()
         .scaled(c(0.3, -0.7))
         .clone()
@@ -287,11 +287,11 @@ fn zero_state_factor_is_removed_before_basis_expansion() {
     let a = HilbertSpace::factor(0u8);
     let b = HilbertSpace::factor(1u8);
     let state = syntaqs_core::expression::composite::State::tensor_in(
-        &a.tensor(&b).unwrap(),
         [
             syntaqs_core::expression::composite::State::<_, Ket, Operator, Complex<f64>>::zero(&a),
             Ls::<f64>::primitive(Ket::Phase).at(&b).unwrap(),
         ],
+        &a.tensor(&b).unwrap(),
     )
     .unwrap();
     assert_eq!(

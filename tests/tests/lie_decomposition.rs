@@ -63,7 +63,7 @@ macro_rules! precision_tests {
                     operators[0] = (&x + &y).unwrap();
                     operators[8] = (&x - &y).unwrap();
                 }
-                let family = OperatorFamily::new_in(&space, operators).unwrap();
+                let family = OperatorFamily::new_in(operators, &space).unwrap();
                 let options = NumericalOptions::<R>::default();
                 let result = family
                     .decompose(

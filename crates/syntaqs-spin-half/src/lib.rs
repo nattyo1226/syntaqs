@@ -79,7 +79,7 @@
 //! let h = a.tensor(&b)?;
 //! let up = Spin::state(Ket::Up).at(&a)?;
 //! let down = Spin::state(Ket::Down).at(&b)?;
-//! let state = syntaqs_core::expression::composite::State::tensor_in(&h, [up, down])?;
+//! let state = syntaqs_core::expression::composite::State::tensor_in([up, down], &h)?;
 //! let sz = Spin::operator(Op::Sz);
 //! let zz = (sz.at(&a)?.clone() * &sz.at(&b)?)?.bind(&h)?;
 //! assert_eq!(state.expectation(&zz)?, Complex::new(-1.0, 0.0));

@@ -374,7 +374,7 @@ macro_rules! precision_tests {
                 let a = HilbertSpace::factor(0u8);
                 let b = HilbertSpace::factor(1u8);
                 let space = HilbertSpace::tensor_all([a.clone(), b.clone()]).unwrap();
-                let f = OperatorFamily::new_in(&space, family().iter().map(|x| x.at(&a).unwrap()))
+                let f = OperatorFamily::new_in(family().iter().map(|x| x.at(&a).unwrap()), &space)
                     .unwrap();
                 let bracket = f.bracket(0, 1).unwrap();
                 assert!(bracket.space().unwrap().is_compatible_with(&space));

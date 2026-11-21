@@ -127,7 +127,7 @@ impl<C> FermionModels<Fermion<C>> {
         let minus_t = -t;
         for [up, down] in &modes {
             terms.push(
-                Fermion::<C>::operator_product_at([(*up, interaction), (*down, interaction)])?
+                Fermion::<C>::operator_product_from([(interaction, *up), (interaction, *down)])?
                     .scaled(u.clone()),
             );
         }
@@ -142,9 +142,9 @@ impl<C> FermionModels<Fermion<C>> {
             for spin in 0..2 {
                 for (from, to) in [(left[spin], right[spin]), (right[spin], left[spin])] {
                     terms.push(
-                        Fermion::<C>::operator_product_at([
-                            (to, O::Create),
-                            (from, O::Annihilate),
+                        Fermion::<C>::operator_product_from([
+                            (O::Create, to),
+                            (O::Annihilate, from),
                         ])?
                         .scaled(minus_t.clone()),
                     );

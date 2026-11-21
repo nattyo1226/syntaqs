@@ -74,8 +74,8 @@ pub(crate) use state::SpinOneState;
 /// let a = HilbertSpace::factor("a");
 /// let b = HilbertSpace::factor("b");
 /// let space = a.tensor(&b)?;
-/// let psi = Spin::product_state(&space, [Ket::Plus, Ket::Minus])?;
-/// let zz = Spin::operator_product_at([(&a, Op::Sz), (&b, Op::Sz)])?;
+/// let psi = Spin::state_tensor_from([Ket::Plus, Ket::Minus], &space)?;
+/// let zz = Spin::operator_product_from([(Op::Sz, &a), (Op::Sz, &b)])?;
 /// assert!((psi.expectation(&zz)?.re + 1.5).abs() < 1e-5);
 /// # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())
 /// ```

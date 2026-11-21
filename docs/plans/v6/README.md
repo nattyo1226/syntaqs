@@ -1,5 +1,25 @@
 # Updates with version 0.6.0
 
+## Expression and family construction
+
+Construction calls take expression or primitive sequences before the space.
+The following calls migrate from `v0.5.0`.
+
+| API | v0.5.0 call | v0.6.0 call |
+| --- | --- | --- |
+| `ExpressionFactory` | `tensor_in(&space, states)` | `state_tensor(states, &space)` |
+| `ExpressionFactory` | `try_tensor_in(&space, states)` | `try_state_tensor(states, &space)` |
+| `ExpressionFactory` | `product_state(&space, primitives)` | `state_tensor_from(primitives, &space)` |
+| `ExpressionFactory` | `operator_product_at([(&factor, primitive)])` | `operator_product_from([(primitive, &factor)])` |
+| `ExpressionFactory` | `state_sum(&space, states)` / `try_state_sum(&space, states)` | `state_sum(states, &space)` / `try_state_sum(states, &space)` |
+| `State` | `sum(&space, states)` / `try_sum(&space, states)` | `sum(states, &space)` / `try_sum(states, &space)` |
+| `State` | `tensor_in(&space, states)` / `try_tensor_in(&space, states)` | `tensor_in(states, &space)` / `try_tensor_in(states, &space)` |
+| `OperatorFamily` | `new_in(&context, operators)` | `new_in(operators, &context)` |
+
+The factory changes also apply to aliases such as `SpinHalf`, `SpinOne`, and
+`Fermion`. [Expression construction](../../design/expression-construction.md),
+[Lie family contexts](../../design/lie.md#1-scope-and-contexts).
+
 ## Core expression performance
 
 Space binding reuses factor positions stored on each Hilbert space. State

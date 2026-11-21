@@ -234,15 +234,15 @@ fn storage_identity_placement_and_delayed_operations_need_no_numbers() {
     let _ = syntaqs_core::expression::local::LocalOperator::<O, Opaque>::identity();
     let a = HilbertSpace::factor("a");
     let b = HilbertSpace::factor("b");
-    let psi = Spin::product_state(
-        &syntaqs_core::space::HilbertSpace::tensor_all([(a).clone(), (b).clone()]).unwrap(),
+    let psi = Spin::state_tensor_from(
         [S::Plus, S::Minus],
+        &syntaqs_core::space::HilbertSpace::tensor_all([(a).clone(), (b).clone()]).unwrap(),
     )
     .unwrap();
     let _ = psi.act(&op.at(&a).unwrap()).unwrap();
-    let _ = Spin::product_state(
-        &syntaqs_core::space::HilbertSpace::tensor_all_g([(a).clone(), (b).clone()]).unwrap(),
+    let _ = Spin::state_tensor_from(
         [S::Zero, S::Minus],
+        &syntaqs_core::space::HilbertSpace::tensor_all_g([(a).clone(), (b).clone()]).unwrap(),
     )
     .unwrap();
 }

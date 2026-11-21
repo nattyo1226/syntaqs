@@ -206,13 +206,13 @@ fn cancellations_stay_sparse_through_tensor_expansion() {
     let basis = CountingBasis::new();
     let space = HilbertSpace::tensor_all((0..FACTORS).map(HilbertSpace::factor)).unwrap();
     let state = State::tensor_in(
-        &space,
         (0..FACTORS).map(|index| {
             let factor = HilbertSpace::factor(index);
             let zero = S::primitive(Ket(false)).at(&factor).unwrap();
             let one = S::primitive(Ket(true)).at(&factor).unwrap();
-            State::sum(&factor, [zero.clone(), zero.scaled(Counted(-1.0)), one]).unwrap()
+            State::sum([zero.clone(), zero.scaled(Counted(-1.0)), one], &factor).unwrap()
         }),
+        &space,
     )
     .unwrap();
 
@@ -240,7 +240,7 @@ fn cancellations_stay_sparse_through_tensor_expansion() {
     let factor = HilbertSpace::factor(0usize);
     let zero = S::primitive(Ket(false)).at(&factor).unwrap();
     let one = S::primitive(Ket(true)).at(&factor).unwrap();
-    let mut scaled = State::sum(&factor, [zero, one])
+    let mut scaled = State::sum([zero, one], &factor)
         .unwrap()
         .scaled(Counted(0.0));
     for _ in 0..100 {
@@ -260,13 +260,13 @@ fn underflowed_tensor_coefficients_do_not_keep_expanding() {
     let basis = CountingBasis::new();
     let space = HilbertSpace::tensor_all((0..FACTORS).map(HilbertSpace::factor)).unwrap();
     let state = State::tensor_in(
-        &space,
         (0..FACTORS).map(|index| {
             let factor = HilbertSpace::factor(index);
             let small = S::primitive(Ket(false)).at(&factor).unwrap();
             let one = S::primitive(Ket(true)).at(&factor).unwrap();
-            State::sum(&factor, [small.scaled(Counted(1e-200)), one]).unwrap()
+            State::sum([small.scaled(Counted(1e-200)), one], &factor).unwrap()
         }),
+        &space,
     )
     .unwrap();
     reset_multiplications();
@@ -291,14 +291,14 @@ fn tensor_basis_choices_preserve_correlated_block_digits() {
     let abc = ab.tensor(&factors[2]).unwrap();
     let ket = |value, factor| Local::primitive(Ket(value)).at(factor).unwrap();
     let pair =
-        |value| State::tensor_in(&ab, [ket(value, &factors[0]), ket(value, &factors[1])]).unwrap();
-    let correlated = State::sum(&ab, [pair(false), pair(true).scaled(2.0)]).unwrap();
+        |value| State::tensor_in([ket(value, &factors[0]), ket(value, &factors[1])], &ab).unwrap();
+    let correlated = State::sum([pair(false), pair(true).scaled(2.0)], &ab).unwrap();
     let last = State::sum(
-        &factors[2],
         [ket(false, &factors[2]), ket(true, &factors[2]).scaled(3.0)],
+        &factors[2],
     )
     .unwrap();
-    let state = State::tensor_in(&abc, [correlated, last]).unwrap();
+    let state = State::tensor_in([correlated, last], &abc).unwrap();
     let basis = CountingBasis::new();
     let coordinates = state.coordinates(&basis).unwrap();
     assert_eq!(basis.expansions.get(), 2);
@@ -320,12 +320,12 @@ fn composite_expansion_retains_tiny_and_nan_coefficients() {
     let factor = HilbertSpace::factor(0u8);
     let zero = S::primitive(Ket(false)).at(&factor).unwrap();
     let one = S::primitive(Ket(true)).at(&factor).unwrap();
-    let zero_branch = State::sum(&factor, [zero.clone(), one.clone()])
+    let zero_branch = State::sum([zero.clone(), one.clone()], &factor)
         .unwrap()
         .scaled(0.0);
     let state = State::sum(
-        &factor,
         [zero_branch, zero.scaled(1e-300), one.scaled(f64::NAN)],
+        &factor,
     )
     .unwrap();
     let basis = CountingBasis::new();
@@ -394,11 +394,11 @@ fn placed_expansion_shares_nonclone_indices_and_does_not_enumerate_all_basis_ele
     let a = HilbertSpace::factor(Index(11));
     let b = HilbertSpace::factor(Index(7));
     let state = State::tensor_in(
-        &a.tensor(&b).unwrap(),
         [
             S::primitive(Ket(true)).at(&a).unwrap(),
             S::primitive(Ket(false)).at(&b).unwrap(),
         ],
+        &a.tensor(&b).unwrap(),
     )
     .unwrap();
     let op = syntaqs_core::expression::local::LocalOperator::primitive(Action)

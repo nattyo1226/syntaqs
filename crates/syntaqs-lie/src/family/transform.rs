@@ -91,7 +91,7 @@ impl<E: FamilyExpression> OperatorFamily<E> {
             .collect::<Result<Vec<_>, _>>()?;
         Ok(FamilyTransform {
             source: self,
-            family: Self::new_in(self.context(), operators)?,
+            family: Self::new_in(operators, self.context())?,
             matrix: matrix.to_owned(),
             options: None,
         })

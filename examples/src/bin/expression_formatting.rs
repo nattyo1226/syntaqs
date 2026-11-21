@@ -21,14 +21,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let h = HilbertSpace::tensor_all([a.clone(), b.clone(), c.clone()])?;
     let up = LocalKet::primitive(S::Up);
     let down = LocalKet::primitive(S::Down);
-    let state = State::tensor_in(&h, [up.at(&a)?, down.at(&b)?, up.at(&c)?])?;
+    let state = State::tensor_in([up.at(&a)?, down.at(&b)?, up.at(&c)?], &h)?;
     assert_eq!(state.to_string(), "|up[a],down[b],up[c]>");
     println!("product: {state}");
     println!("multiline:\n{state:#}");
 
     // A local superposition keeps the index on each primitive ket.
     let local = LocalKet::sum([up.clone(), down]);
-    let mixed = State::tensor_in(&h, [local.at(&a)?, up.at(&b)?, up.at(&c)?])?;
+    let mixed = State::tensor_in([local.at(&a)?, up.at(&b)?, up.at(&c)?], &h)?;
     assert_eq!(
         mixed.to_string(),
         "(|up[a]> + |down[a]>) ⊗ |up[b]> ⊗ |up[c]>"
@@ -46,11 +46,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // An entangled state, not a tensor product of three local states:
     // |GHZ> = (|up,up,up> + |down,down,down>) / sqrt(2).
     let ghz = Spin::state_sum(
-        &h,
         [
-            Spin::product_state(&h, [S::Up, S::Up, S::Up])?,
-            Spin::product_state(&h, [S::Down, S::Down, S::Down])?,
+            Spin::state_tensor_from([S::Up, S::Up, S::Up], &h)?,
+            Spin::state_tensor_from([S::Down, S::Down, S::Down], &h)?,
         ],
+        &h,
     )?
     .scaled(1.0 / 2.0_f64.sqrt());
     println!("\nGHZ state: {ghz}");

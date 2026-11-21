@@ -169,12 +169,12 @@ fn composite_operator_and_state_variants_use_the_same_syntax() {
     }
     let up = LS::primitive("up").at(&h).unwrap();
     let down = LS::primitive("down").at(&h).unwrap();
-    let states = S::sum(&h, [up.clone(), down]).unwrap();
+    let states = S::sum([up.clone(), down], &h).unwrap();
     let cases = [
         (S::zero(&h), "0"),
-        (S::sum(&h, []).unwrap(), "0"),
+        (S::sum([], &h).unwrap(), "0"),
         (S::unit(), "unit"),
-        (S::tensor_in(&HilbertSpace::unit(), []).unwrap(), "unit"),
+        (S::tensor_in([], &HilbertSpace::unit()).unwrap(), "unit"),
         (up.scaled("1"), "(1) * |up[a]>"),
         (states.clone(), "|up[a]> + |down[a]>"),
         (states.scaled("2"), "(2) * (|up[a]> + |down[a]>)"),
@@ -203,39 +203,39 @@ fn tensors_compress_only_primitive_factors_and_keep_source_grouping() {
         let sa = up.at(&a).unwrap();
         let sb = down.at(&b).unwrap();
         let sc = up.at(&c).unwrap();
-        let flat = S::tensor_in(&h, [sa.clone(), sb.clone(), sc.clone()]).unwrap();
-        let pair = S::tensor_in(&ab, [sa.clone(), sb.clone()]).unwrap();
-        let nested = S::tensor_in(&h, [pair, sc.clone()]).unwrap();
+        let flat = S::tensor_in([sa.clone(), sb.clone(), sc.clone()], &h).unwrap();
+        let pair = S::tensor_in([sa.clone(), sb.clone()], &ab).unwrap();
+        let nested = S::tensor_in([pair, sc.clone()], &h).unwrap();
         assert_eq!(flat.to_string(), "|up[a],down[b],up[c]>");
         assert_eq!(nested.to_string(), flat.to_string());
         assert_ne!(format!("{flat:?}"), format!("{nested:?}"));
         assert!(nested.space().is_compatible_with(&h));
         let sum = LS::sum([up.clone(), down.clone()]).at(&a).unwrap();
         let mixed = S::tensor_in(
-            &h,
             [
                 sum,
                 S::tensor_in(
-                    &HilbertSpace::tensor_all_with(kind, [b.clone(), c.clone()]).unwrap(),
                     [sb.clone(), sc.clone()],
+                    &HilbertSpace::tensor_all_with(kind, [b.clone(), c.clone()]).unwrap(),
                 )
                 .unwrap(),
             ],
+            &h,
         )
         .unwrap();
         assert_eq!(mixed.to_string(), "(|up[a]> + |down[a]>) ⊗ |down[b],up[c]>");
-        let with_unit = S::tensor_in(&h, [S::unit(), flat.clone()]).unwrap();
+        let with_unit = S::tensor_in([S::unit(), flat.clone()], &h).unwrap();
         assert_eq!(with_unit.to_string(), "unit ⊗ |up[a],down[b],up[c]>");
         assert_eq!(
             with_unit.scaled("2").to_string(),
             "(2) * (unit ⊗ |up[a],down[b],up[c]>)"
         );
-        let grouped = S::tensor_in(&h, [S::unit(), with_unit]).unwrap();
+        let grouped = S::tensor_in([S::unit(), with_unit], &h).unwrap();
         assert_eq!(grouped.to_string(), "unit ⊗ (unit ⊗ |up[a],down[b],up[c]>)");
-        let scaled = S::tensor_in(&ab, [sa.scaled("2"), sb.clone()]).unwrap();
+        let scaled = S::tensor_in([sa.scaled("2"), sb.clone()], &ab).unwrap();
         assert_eq!(scaled.to_string(), "((2) * |up[a]>) ⊗ |down[b]>");
         let op = LO::primitive("a†").at(&b).unwrap();
-        let acting = S::tensor_in(&ab, [sa.clone(), sb.act(&op).unwrap()]).unwrap();
+        let acting = S::tensor_in([sa.clone(), sb.act(&op).unwrap()], &ab).unwrap();
         assert_eq!(acting.to_string(), "|up[a]> ⊗ (a†[b] |down[b]>)");
         assert_eq!(
             flat.act(&op).unwrap().to_string(),
@@ -261,12 +261,12 @@ fn pretty_layout_and_outer_flags_do_not_change_leaf_content() {
     let [a, b, c] = ["a", "b", "c"].map(HilbertSpace::factor);
     let h = HilbertSpace::tensor_all([a.clone(), b.clone(), c.clone()]).unwrap();
     let state = S::tensor_in(
-        &h,
         [
             LS::primitive("up").at(&a).unwrap(),
             LS::primitive("down").at(&b).unwrap(),
             LS::primitive("up").at(&c).unwrap(),
         ],
+        &h,
     )
     .unwrap();
     let op = LO::sum([LO::primitive("A"), LO::primitive("B"), LO::primitive("C")]);
@@ -294,7 +294,7 @@ fn pretty_layout_and_outer_flags_do_not_change_leaf_content() {
     assert_eq!(format!("{:#}", S::zero(&h)), "0");
     assert_eq!(format!("{:#}", S::unit()), "unit");
     let sum = LS::sum([LS::primitive("up"), LS::primitive("down")]);
-    let mixed = S::tensor_in(&a, [S::unit(), sum.at(&a).unwrap()]).unwrap();
+    let mixed = S::tensor_in([S::unit(), sum.at(&a).unwrap()], &a).unwrap();
     assert_eq!(
         format!("{:#}", mixed.scaled("2")),
         "(2) * (\n    unit\n  ⊗ (\n        | up[a] >\n      + | down[a] >\n    )\n)"
@@ -316,19 +316,19 @@ fn leading_operators_align_nested_brackets_and_multiline_operands() {
     let b = HilbertSpace::factor("b");
     let space = a.tensor(&b).unwrap();
     let ket = S::tensor_in(
-        &space,
         [
             LS::primitive("up").at(&a).unwrap(),
             LS::primitive("down").at(&b).unwrap(),
         ],
+        &space,
     )
     .unwrap();
-    let sum = S::sum(&space, [ket.clone(), ket.clone()]).unwrap();
+    let sum = S::sum([ket.clone(), ket.clone()], &space).unwrap();
     assert_eq!(
         format!("{sum:#}"),
         "  | up[a],\n    down[b] >\n+ | up[a],\n    down[b] >"
     );
-    let tensor = S::tensor_in(&space, [S::unit(), ket]).unwrap();
+    let tensor = S::tensor_in([S::unit(), ket], &space).unwrap();
     assert_eq!(format!("{tensor:#}"), "  unit\n⊗ | up[a],\n    down[b] >");
 }
 
@@ -338,11 +338,11 @@ fn ket_continuations_follow_the_actual_column_after_actions_and_scales() {
     let b = HilbertSpace::factor("b");
     let space = a.tensor(&b).unwrap();
     let ket = S::tensor_in(
-        &space,
         [
             LS::primitive("up").at(&a).unwrap(),
             LS::primitive("down").at(&b).unwrap(),
         ],
+        &space,
     )
     .unwrap();
     for (label, indent) in [
@@ -535,12 +535,12 @@ fn deep_local_and_composite_syntax_formats_and_drops_on_a_small_stack() {
                 local_op_sum = LO::sum([local_op_sum, LO::zero()]);
                 action = action.act(&op).unwrap();
                 scale = scale.scaled("1");
-                sum = S::sum(&h, [sum, S::zero(&h)]).unwrap();
+                sum = S::sum([sum, S::zero(&h)], &h).unwrap();
                 product = O::product([product, op.clone(), op.clone()]).unwrap();
                 adjoint = adjoint.adjoint();
                 op_scale = op_scale.scaled("1");
                 op_sum = O::sum([op_sum, O::zero()]).unwrap();
-                tensor = S::tensor_in(&h, [S::unit(), tensor]).unwrap();
+                tensor = S::tensor_in([S::unit(), tensor], &h).unwrap();
             }
             assert_eq!(length(&local_action), 4 * DEPTH + 2);
             assert_eq!(length(&local_scale), 8 * DEPTH + 2);

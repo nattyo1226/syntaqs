@@ -22,9 +22,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Result<_, _>>()?;
     let h = Models::hubbard(&chain, &sites, 1., 4.)?;
     let symmetric = Models::symmetric_hubbard(&chain, &sites, 1., 4.)?;
-    let psi = F::product_state(
-        h.space().expect("model is bound"),
+    let psi = F::state_tensor_from(
         [S::Occupied, S::Empty, S::Empty, S::Occupied],
+        h.space().expect("model is bound"),
     )?;
     assert!((psi.norm_squared()? - 1.).abs() < 1e-12);
     let energy = psi.expectation(&h)?;

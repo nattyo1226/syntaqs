@@ -36,8 +36,8 @@ type FactoryMarker<S, O, C> = core::marker::PhantomData<fn() -> (S, O, C)>;
 /// let a = syntaqs_core::space::HilbertSpace::factor("a");
 /// let b = syntaqs_core::space::HilbertSpace::factor("b");
 /// let space = a.tensor(&b)?;
-/// let state = Custom::product_state(&space, [Ket, Ket])?;
-/// let operator = Custom::try_operator_sum([Custom::operator_product_at([(&a, Op)])])?;
+/// let state = Custom::state_tensor_from([Ket, Ket], &space)?;
+/// let operator = Custom::try_operator_sum([Custom::operator_product_from([(Op, &a)])])?;
 /// let delayed = state.act(&operator)?;
 /// # Ok::<(), syntaqs_core::expression::error::ExpressionError>(())
 /// ```
@@ -70,37 +70,37 @@ impl<S, O, C> ExpressionFactory<S, O, C> {
     }
 
     /// Tensors placed states on an existing space without creating a new space.
-    pub fn tensor_in<I: Eq>(
-        space: &HilbertSpace<I>,
+    pub fn state_tensor<I: Eq>(
         states: impl IntoIterator<Item = StateOf<Self, I>>,
+        space: &HilbertSpace<I>,
     ) -> Result<StateOf<Self, I>, ExpressionError> {
-        State::tensor_in(space, states)
+        State::tensor_in(states, space)
     }
 
     /// Collects fallible states before validating their explicit target space.
-    pub fn try_tensor_in<I: Eq>(
-        space: &HilbertSpace<I>,
+    pub fn try_state_tensor<I: Eq>(
         states: impl IntoIterator<Item = Result<StateOf<Self, I>, ExpressionError>>,
+        space: &HilbertSpace<I>,
     ) -> Result<StateOf<Self, I>, ExpressionError> {
-        State::try_tensor_in(space, states)
+        State::try_tensor_in(states, space)
     }
 
-    /// Places one primitive per leaf in the space's order and forms a product state.
-    /// Too few or too many primitives return `IncompatibleSpaces`.
+    /// Builds a tensor product from state primitives in the space's leaf order.
+    /// A count other than one primitive per leaf returns `IncompatibleSpaces`.
     /// No coefficient arithmetic, evaluation or primitive cloning is required.
-    pub fn product_state<I: Eq>(
-        space: &HilbertSpace<I>,
+    pub fn state_tensor_from<I: Eq>(
         primitives: impl IntoIterator<Item = S>,
+        space: &HilbertSpace<I>,
     ) -> Result<StateOf<Self, I>, ExpressionError> {
         let mut primitives = primitives.into_iter();
-        let state = Self::try_tensor_in(
-            space,
+        let state = Self::try_state_tensor(
             space.leaves().map(|factor| {
                 let primitive = primitives
                     .next()
                     .ok_or(ExpressionError::IncompatibleSpaces)?;
                 Self::state(primitive).at(factor)
             }),
+            space,
         )?;
         if primitives.next().is_some() {
             return Err(ExpressionError::IncompatibleSpaces);
@@ -108,36 +108,36 @@ impl<S, O, C> ExpressionFactory<S, O, C> {
         Ok(state)
     }
 
-    /// Places primitives on leaves and multiplies them in input order.
+    /// Places the primitives in `(primitive, &factor)` pairs and multiplies them in input order.
     ///
     /// Repeated indices are allowed. The rightmost operator acts first.
     /// The result is unbound, including identity for empty input; use `bind`
     /// to select an ambient space. The first placement error stops iteration.
-    pub fn operator_product_at<'a, I: Eq + 'a>(
-        assignments: impl IntoIterator<Item = (&'a HilbertSpace<I>, O)>,
+    pub fn operator_product_from<'a, I: Eq + 'a>(
+        assignments: impl IntoIterator<Item = (O, &'a HilbertSpace<I>)>,
     ) -> Result<OperatorOf<Self, I>, ExpressionError> {
         Self::try_operator_product(
             assignments
                 .into_iter()
-                .map(|(factor, primitive)| Self::operator(primitive).at(factor)),
+                .map(|(primitive, factor)| Self::operator(primitive).at(factor)),
         )
     }
 
     /// Sums placed states on `space`, including zero for empty input.
     pub fn state_sum<I: Eq>(
-        space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = StateOf<Self, I>>,
+        space: &HilbertSpace<I>,
     ) -> Result<StateOf<Self, I>, ExpressionError> {
-        State::sum(space, states)
+        State::sum(states, space)
     }
 
     /// Sums fallible states; the first input error precedes space validation.
     /// Later inputs are not pulled after an error. Empty input is zero on `space`.
     pub fn try_state_sum<I: Eq>(
-        space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Result<StateOf<Self, I>, ExpressionError>>,
+        space: &HilbertSpace<I>,
     ) -> Result<StateOf<Self, I>, ExpressionError> {
-        State::try_sum(space, states)
+        State::try_sum(states, space)
     }
 
     /// Sums operators, validating bindings only if every operand is bound.
@@ -185,7 +185,7 @@ pub type LocalOperatorOf<Q> =
     LocalOperator<<Q as QuantumSystem>::Operator, <Q as QuantumSystem>::Coeff>;
 
 /// A composite state type annotation for `Q` and independent index `I`.
-/// Construct it with methods such as [`ExpressionFactory::product_state`].
+/// Construct it with methods such as [`ExpressionFactory::state_tensor_from`].
 pub type StateOf<Q, I> = State<
     I,
     <Q as QuantumSystem>::State,
@@ -194,6 +194,6 @@ pub type StateOf<Q, I> = State<
 >;
 
 /// A composite operator type annotation for `Q` and independent index `I`.
-/// Construct it with methods such as [`ExpressionFactory::operator_product_at`].
+/// Construct it with methods such as [`ExpressionFactory::operator_product_from`].
 pub type OperatorOf<Q, I> =
     Operator<I, <Q as QuantumSystem>::Operator, <Q as QuantumSystem>::Coeff>;

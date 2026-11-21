@@ -18,7 +18,7 @@ use crate::{ExpressionError, HilbertSpace, Identity, LocalOperator, LocalState};
 /// let left = LocalState::<u8, (), ()>::primitive(0).at(&a).unwrap();
 /// let right = LocalState::<u16, (), ()>::primitive(0).at(&b).unwrap();
 /// let h = a.tensor(&b).unwrap();
-/// let _ = syntaqs_core::expression::composite::State::tensor_in(&h, [left, right]);
+/// let _ = syntaqs_core::expression::composite::State::tensor_in([left, right], &h);
 /// ```
 ///
 /// Composite action also requires matching operator primitives:
@@ -261,8 +261,8 @@ impl<I, S, O, C> State<I, S, O, C> {
 impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// Constructs an ordered sum on an explicit space, including an empty sum.
     pub fn sum(
-        space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Self>,
+        space: &HilbertSpace<I>,
     ) -> Result<Self, ExpressionError> {
         let expressions = states
             .into_iter()
@@ -284,11 +284,11 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// errors in earlier successful operands. Empty input is zero on `space`.
     /// Errors do not roll back work already performed by the input producer.
     pub fn try_sum(
-        space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Result<Self, ExpressionError>>,
+        space: &HilbertSpace<I>,
     ) -> Result<Self, ExpressionError> {
         let states: Operands<Self> = states.into_iter().collect::<Result<_, _>>()?;
-        Self::sum(space, states)
+        Self::sum(states, space)
     }
     pub(crate) fn into_add(self, rhs: Self) -> Result<Self, ExpressionError> {
         if !self.space.is_compatible_with(&rhs.space) {
@@ -305,15 +305,15 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// must have a compatible tensor kind; grouping may differ. Empty input is
     /// accepted only on a unit space. No primitive evaluation is performed.
     pub fn tensor_in(
-        space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Self>,
+        space: &HilbertSpace<I>,
     ) -> Result<Self, ExpressionError> {
-        Self::tensor_collected(space, states.into_iter().collect())
+        Self::tensor_collected(states.into_iter().collect(), space)
     }
 
     fn tensor_collected(
-        space: &HilbertSpace<I>,
         states: Operands<Self>,
+        space: &HilbertSpace<I>,
     ) -> Result<Self, ExpressionError> {
         if states.iter().any(|s| {
             s.space
@@ -335,11 +335,11 @@ impl<I: Eq, S, O, C> State<I, S, O, C> {
     /// Collects fallible inputs before validating coverage of the explicit space.
     /// The first input error stops consumption and precedes all space errors.
     pub fn try_tensor_in(
-        space: &HilbertSpace<I>,
         states: impl IntoIterator<Item = Result<Self, ExpressionError>>,
+        space: &HilbertSpace<I>,
     ) -> Result<Self, ExpressionError> {
         let states: Operands<Self> = states.into_iter().collect::<Result<_, _>>()?;
-        Self::tensor_collected(space, states)
+        Self::tensor_collected(states, space)
     }
 }
 

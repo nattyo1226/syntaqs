@@ -48,12 +48,12 @@ fn every_try_collection_stops_at_the_first_input_error() {
             || LocalOperator::primitive(())
         )));
         check!(State::<_, (), (), ()>::try_sum(
+            failing_at(position, &pulls, || System::state(()).at(&a).unwrap()),
             &a,
-            failing_at(position, &pulls, || System::state(()).at(&a).unwrap())
         ));
         check!(State::<_, (), (), ()>::try_tensor_in(
-            &a,
-            failing_at(position, &pulls, || System::state(()).at(&a).unwrap())
+            failing_at(position, &pulls, || System::state(()).at(&a).unwrap()),
+            &a
         ));
         check!(Operator::<_, (), ()>::try_sum(failing_at(
             position,
@@ -66,12 +66,12 @@ fn every_try_collection_stops_at_the_first_input_error() {
             || System::operator(()).at(&a).unwrap()
         )));
         check!(System::try_state_sum(
-            &a,
-            failing_at(position, &pulls, || System::state(()).at(&a).unwrap())
+            failing_at(position, &pulls, || System::state(()).at(&a).unwrap()),
+            &a
         ));
-        check!(System::try_tensor_in(
-            &a,
-            failing_at(position, &pulls, || System::state(()).at(&a).unwrap())
+        check!(System::try_state_tensor(
+            failing_at(position, &pulls, || System::state(()).at(&a).unwrap()),
+            &a
         ));
         check!(System::try_operator_sum(failing_at(
             position,
@@ -92,19 +92,19 @@ fn input_errors_precede_space_and_duplicate_errors() {
     let b = H::factor(1);
     let state = || System::state(()).at(&a).unwrap();
     assert_eq!(
-        System::try_state_sum(&b, [Ok(state()), Err(E::MissingIndex)]).err(),
+        System::try_state_sum([Ok(state()), Err(E::MissingIndex)], &b).err(),
         Some(E::MissingIndex)
     );
     assert_eq!(
-        System::try_tensor_in(&a, [Ok(state()), Ok(state()), Err(E::MissingIndex)]).err(),
+        System::try_state_tensor([Ok(state()), Ok(state()), Err(E::MissingIndex)], &a).err(),
         Some(E::MissingIndex)
     );
     assert_eq!(
-        System::try_state_sum(&b, [Ok(state())]).err(),
+        System::try_state_sum([Ok(state())], &b).err(),
         Some(E::IncompatibleSpaces)
     );
     assert_eq!(
-        System::try_tensor_in(&a, [Ok(state()), Ok(state())]).err(),
+        System::try_state_tensor([Ok(state()), Ok(state())], &a).err(),
         Some(E::IncompatibleSpaces)
     );
     let left = || Operator::<_, (), ()>::identity().bind(&a).unwrap();
@@ -159,7 +159,7 @@ fn eager_inputs_are_not_rolled_back_and_successful_inputs_are_fully_consumed() {
             }
         })
         .collect();
-    assert_eq!(System::try_state_sum(&a, eager).err(), Some(E::NotAFactor));
+    assert_eq!(System::try_state_sum(eager, &a).err(), Some(E::NotAFactor));
     assert_eq!(pulls.get(), 3);
     pulls.set(0);
     let all_ok = (0..3).map(|_| {
@@ -167,7 +167,7 @@ fn eager_inputs_are_not_rolled_back_and_successful_inputs_are_fully_consumed() {
         Ok(System::state(()).at(&a).unwrap())
     });
     assert_eq!(
-        System::try_state_sum(&b, all_ok).err(),
+        System::try_state_sum(all_ok, &b).err(),
         Some(E::IncompatibleSpaces)
     );
     assert_eq!(pulls.get(), 3);

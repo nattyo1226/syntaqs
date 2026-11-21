@@ -7,7 +7,9 @@ full matrices, and choose a basis when you need numerical output.
 ## Quick start
 
 Use Rust 1.85 or newer. Version-tagged Git dependencies are recommended; select
-the same tag for all syntaqs crates. Add these to `Cargo.toml`:
+the same tag for all syntaqs crates. This quick start uses `v0.5.0`.
+The [runnable examples](examples/README.md) use the current checkout.
+Add these to `Cargo.toml`:
 
 ```toml
 [dependencies]

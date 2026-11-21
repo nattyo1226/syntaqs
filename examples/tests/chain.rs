@@ -48,7 +48,6 @@ fn basis<T: Real>(
     bits: usize,
 ) -> syntaqs_core::system::StateOf<SpinHalf<Complex<T>>, Id128> {
     State::tensor_in(
-        &HilbertSpace::tensor_all(factors.iter().cloned()).unwrap(),
         factors.iter().enumerate().map(|(i, factor)| {
             // Independent equal-index handles need not share the original nodes.
             LocalState::primitive(if (bits >> (factors.len() - 1 - i)) & 1 == 0 {
@@ -59,6 +58,7 @@ fn basis<T: Real>(
             .at(&HilbertSpace::factor(*factor.factor_index().unwrap()))
             .unwrap()
         }),
+        &HilbertSpace::tensor_all(factors.iter().cloned()).unwrap(),
     )
     .unwrap()
 }

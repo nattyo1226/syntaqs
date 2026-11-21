@@ -13,9 +13,9 @@ defines their order and verification.
 
 The two-spin example selects primitives and coefficients through
 `SpinHalf<Complex<f64>>`, constructs a `HilbertSpace`, and builds a product
-state in leaf order. It places and multiplies local operators through
-`operator_product_at`, binds the result to the full space, and calls
-`State::expectation`. [Two-spin example](../../../examples/src/bin/two_spins.rs).
+state in leaf order with `state_tensor_from`. It places and multiplies local
+operators through `operator_product_from`, binds the result to the full space,
+and calls `State::expectation`. [Two-spin example](../../../examples/src/bin/two_spins.rs).
 
 | Workflow | Current entry points and responsibilities |
 | --- | --- |
@@ -40,8 +40,15 @@ default implementation.
 - [x] Review representative callers and record the agreed API, capability, and
   generator expression changes.
 - [x] Organize the changes into implementation units and define their checks.
-- [ ] Implement the agreed changes, update affected callers and documentation,
-  and run the applicable [verification checks](../../design/verification.md).
+- [x] Implement and verify [unit 1](implementation.md#1-public-construction-calls),
+  including caller migration and the [v0.6.0 migration table](../v6/README.md#expression-and-family-construction).
+- [ ] Implement units 2–5 and run the final [verification matrix](../../design/verification.md#2-common-checks).
+
+For unit 1, workspace all-target checks with all and no default features passed,
+as did all-feature tests and doctests, Clippy, rustdoc, and formatting. An
+external crate compiled 11 current public call forms and verified compiler
+errors for 15 previous forms. The `two_spins` and Lie-only `lie_algebra` examples
+passed. The root quick start also ran against its declared `v0.5.0` source.
 
 On `db16c4d`, 23 tests passed across the `syntaqs-core` integration targets
 `public_api`, `systems`, `spaces`, `fallible_construction`, and

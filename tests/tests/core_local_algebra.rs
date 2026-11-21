@@ -378,8 +378,8 @@ fn composite_coordinates<T: Real>(
             .at(&factors[1])
             .unwrap();
         syntaqs_core::expression::composite::State::tensor_in(
-            &CompositeSpace::tensor_all(factors.iter().cloned()).unwrap(),
             [left, right],
+            &CompositeSpace::tensor_all(factors.iter().cloned()).unwrap(),
         )
         .unwrap()
         .inner_product(&evaluated)
@@ -413,16 +413,16 @@ fn check_three_level_composites<T: Real>() {
     let left = local.at(a).unwrap();
     let right = S::primitive(Ket::Sum).at(b).unwrap();
     let first = syntaqs_core::expression::composite::State::tensor_in(
-        &CompositeSpace::tensor_all(factors.iter().cloned()).unwrap(),
         [left, right],
+        &CompositeSpace::tensor_all(factors.iter().cloned()).unwrap(),
     )
     .unwrap();
     let second = syntaqs_core::expression::composite::State::tensor_in(
-        &h,
         [
             S::primitive(Ket::Unit(Axis::C)).at(a).unwrap(),
             S::primitive(Ket::Phase).at(b).unwrap(),
         ],
+        &h,
     )
     .unwrap();
     let state = (first.clone() + &second.scaled(c(-0.2, 0.3))).unwrap();
@@ -563,13 +563,13 @@ fn check_inner_products_and_squared_norms<T: Real>() {
     let b = CompositeSpace::factor(7);
     let h = a.tensor(&b).unwrap();
     let first = syntaqs_core::expression::composite::State::tensor_in(
-        &h,
         [x.at(&a).unwrap(), y.at(&b).unwrap()],
+        &h,
     )
     .unwrap();
     let second = syntaqs_core::expression::composite::State::tensor_in(
-        &h,
         [y.at(&a).unwrap(), z.at(&b).unwrap()],
+        &h,
     )
     .unwrap();
     assert_complex(
