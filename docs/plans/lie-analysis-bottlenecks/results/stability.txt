@@ -1,0 +1,5 @@
+orthonormal returned simple ideals of sizes [3, 3]
+nonorthonormal returned simple ideals of sizes [3, 3]
+abelian input returned a center of dimension 2
+nonclosed input returned NonClosedPair { left: 0, right: 1, check: ToleranceCheck { measured: 1.4142135623730951, scale: 2.0, tolerance: Tolerance { absolute: 1e-12, relative: 1e-12 }, threshold: 3e-12 } }
+ill-conditioned basis classified as rank 2, Gram eigenvalues [4.9960036108132044e-15, 1.0, 2.000000000000005], shape=[3], strides=[1], layout=CFcf (0xf), const ndim=1, cutoff 0.000000000002000000000000005

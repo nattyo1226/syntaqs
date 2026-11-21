@@ -1,380 +1,218 @@
-# Lie analysis bottlenecks
+# Lie analysis bottlenecks after the v6 merge
 
-Measured on 2026-11-18 at revision `690b7b4ca6a59f88c48d0310d9faa80ab258aff1`.
+Closure became faster in all 15 primary workloads after the v6 merge.
+The median of the per-case speedups was 1.28×. At fixed Lie dimension,
+closure on the 16-site Heisenberg chain fell from 1.82 s to 63.9 ms. The
+remaining closure cost is concentrated in repeated expression evaluation
+for the Gram solve. Dense adjoint constraint SVDs still dominate runtime
+and memory at larger Lie dimension.
 
-## Findings
+## Public API measurements
 
-- The [comparison with LieAlgebra.jl](comparison.md) explains how the two
-  implementations scale and records stability checks on the same small bases.
-- The [internal profiles](hotspots.md) locate the cost within closure,
-  the full adjoint commutant, and decomposition.
-- [Site-count scaling](#site-count-scaling-at-fixed-lie-dimension) compares
-  active chains, spectator extensions, and graded site placement at fixed Lie
-  dimension.
-- **Closure follows expression cost.** The Heisenberg family has `n=5`
-  throughout, and its closure time grows from 3.36 ms on two sites to 136 ms
-  on eight. At fixed `D=4` and `n=15`, mixing pairs of Pauli strings raises
-  closure time from 29.58 to 77.18 ms. Term collection and HS contraction
-  account for most of the profiled closure time in both comparisons.
-- **Dense adjoint constraints are the largest memory cost.** At `n=28`, the
-  four-mode Majorana family takes 1.21 s for the full adjoint commutant and
-  1.92 s for decomposition. Separate runs through these stages peak at 275
-  and 280 MiB, respectively.
-- **Decomposition can also be expression-bound.** For three Majorana modes
-  (`n=15`), the output component's orthonormality check takes about 70 ms of
-  a 100 ms instrumented split. At four modes, the check and the constraint
-  SVDs take about 0.94 and 0.95 s, respectively.
+The comparison uses the merge's first parent `3cadca3` and the merge
+`c26ea49`, which incorporates `v6` at `89b4835`. Each input is a complete
+Hermitian basis of a known Lie algebra. Let `D` be the physical Hilbert-space
+dimension and `n` the real Lie dimension. The driver builds ordinary spin
+and graded Majorana families, including mixed Pauli bases, abelian Pauli
+strings, and collective spin operators with a Heisenberg Hamiltonian.
+[Workload definitions](probe/benchmark.rs).
 
-## Objective and scope
+Times are medians in milliseconds across five fresh processes per revision
+and case. Closure starts from a retained Gram factorization. The full
+adjoint commutant and decomposition each start from the retained adjoint
+representation. Decomposition includes its own center split. The CSV also
+records Gram, factorization, adjoint, Killing form, and center timings.
+[Public API samples](results/timings.csv).
 
-The investigation measures existing `syntaqs-lie` APIs on known closed operator
-families from the spin-half, spin-one, and fermion crates. It varies the physical
-Hilbert-space dimension `D`, the real Lie algebra dimension `n`, and the operator
-expressions used as a basis. Each workload supplies a complete basis for closure
-verification. The timings start at Gram evaluation after input construction.
-
-The investigation is complete. It inspected source paths, measured eight public
-stages for 15 families, measured peak RSS for selected endpoints, and instrumented
-the dominant stages in a temporary copy. The driver checks closure and the
-expected center, full adjoint commutant, and simple-ideal dimensions on each full
-run.
-
-## Pending fixes
-
-- [ ] **Reuse collected operators when building the closure right-hand side.**
-  Collect each basis operator once per closure evaluation and each bracket once
-  per ordered pair. Contract the collected operands directly in the family's
-  context. Collect the full residual expression after subtracting the projection
-  so terms can cancel across the difference. Verify that right-hand-side
-  bracket collections fall from `n³` to at most `n²`, and compare pairwise
-  closure diagnostics and structure constants on ordinary and graded families.
-
-  After implementing reuse, rerun the same workloads and compare total closure
-  time and time spent in `merge_tensor` against the recorded baseline. Revisit
-  indexing merge candidates by all but one factor if `merge_tensor` still
-  materially limits closure performance. [Closure profile](hotspots.md#closure-and-projection).
-
-## Workloads
-
-| Case | Construction | Lie algebra |
-| --- | --- | --- |
-| `spin-half-1`, `spin-half-2`, `spin-half-4` | `Sx`, `Sy`, `Sz` on each of 1, 2, or 4 sites | One copy of `su(2)` per site |
-| `spin-half-2-in-8` | The `spin-half-2` operators on the first two sites with six spectator factors | `su(2) ⊕ su(2)` |
-| `pauli-2`, `pauli-2-mixed` | All 15 nonidentity two-site Pauli strings. The mixed basis replaces adjacent pairs by their sum and difference, leaving the final string on its own | `su(4)` |
-| `spin-one-dipole`, `spin-one-cartesian` | One spin-1 site. Three dipoles, or those dipoles together with five Cartesian quadrupoles | `su(2)`, `su(3)` |
-| `heisenberg-2`, `heisenberg-4`, `heisenberg-8` | The isotropic, open-chain Heisenberg Hamiltonian at coupling `1`, the three total Pauli components, and identity | `su(2) ⊕ u(1) ⊕ u(1)` |
-| `pauli-z-4` | All 15 nonidentity strings of `I` and `Sz` on four sites | `u(1)^15` |
-| `fermion-2`, `fermion-3`, `fermion-4` | All Hermitian Majorana bilinears `-i γ_a γ_b` for `a < b`, on 2, 3, or 4 graded modes | `so(4)`, `so(6)`, `so(8)` |
-
-The workload definitions and checks are in the [benchmark driver](benchmark.rs).
-
-## Public API timings
-
-Values are median wall times in milliseconds across five runs per case. `Factor`
-includes Hermiticity and independence checks and real LU factorization on the
-retained Gram matrix. `Closure` uses that factorization. `Adjoint` includes
-converting the closure report to structure constants. Killing form, full adjoint
-commutant, center split, and decomposition each start from the same retained
-adjoint representation. Decomposition includes its own center split. Times are
-rounded to 0.001 ms. [Timing samples](timings.csv).
-
-| Case | `D` | `n` | Gram | Factor | Closure | Adjoint | Killing | Commutant | Center | Decompose |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `spin-half-1` | 2 | 3 | 0.056 | 0.078 | 0.277 | 0.001 | 0.000 | 0.056 | 0.061 | 0.165 |
-| `spin-half-2` | 4 | 6 | 0.141 | 0.071 | 1.819 | 0.001 | 0.001 | 0.208 | 0.263 | 0.783 |
-| `spin-half-4` | 16 | 12 | 0.761 | 0.100 | 16.210 | 0.003 | 0.015 | 7.306 | 1.579 | 7.704 |
-| `spin-half-2-in-8` | 256 | 6 | 0.326 | 0.083 | 3.495 | 0.001 | 0.001 | 0.200 | 0.640 | 1.611 |
-| `pauli-2` | 4 | 15 | 0.718 | 0.112 | 29.577 | 0.003 | 0.035 | 27.888 | 1.694 | 34.824 |
-| `pauli-2-mixed` | 4 | 15 | 1.421 | 0.158 | 77.175 | 0.003 | 0.035 | 28.132 | 3.200 | 36.880 |
-| `spin-one-dipole` | 3 | 3 | 0.034 | 0.055 | 0.142 | 0.001 | 0.000 | 0.053 | 0.033 | 0.114 |
-| `spin-one-cartesian` | 3 | 8 | 0.071 | 0.060 | 1.359 | 0.002 | 0.003 | 0.872 | 0.150 | 2.017 |
-| `heisenberg-2` | 4 | 5 | 0.226 | 0.076 | 3.364 | 0.001 | 0.001 | 0.102 | 0.464 | 0.727 |
-| `heisenberg-4` | 16 | 5 | 0.950 | 0.116 | 17.763 | 0.001 | 0.001 | 0.102 | 1.922 | 2.907 |
-| `heisenberg-8` | 256 | 5 | 4.920 | 0.245 | 136.003 | 0.001 | 0.001 | 0.108 | 10.082 | 14.072 |
-| `pauli-z-4` | 16 | 15 | 1.117 | 0.126 | 31.980 | 0.003 | 0.035 | 9.804 | 2.507 | 4.086 |
-| `fermion-2` | 4 | 6 | 0.243 | 0.086 | 4.051 | 0.001 | 0.001 | 0.255 | 0.475 | 1.790 |
-| `fermion-3` | 8 | 15 | 1.661 | 0.144 | 53.030 | 0.003 | 0.035 | 27.600 | 3.583 | 99.137 |
-| `fermion-4` | 16 | 28 | 7.026 | 0.274 | 335.538 | 0.022 | 0.421 | 1213.329 | 15.799 | 1922.868 |
-
-## Expression evaluation and closure
-
-Closure checks every ordered pair, including the diagonal. For each pair it
-constructs the bracket, computes its norm and Hermiticity defect, contracts it
-against each basis operator, solves for coefficients using the existing LU,
-and evaluates the projection and residual norms. The result stores `n³` real
-coefficients. The current path therefore makes `n²(n+4)` normalized
-Hilbert–Schmidt (HS) contractions through the family adapter. Each adapter call
-collects the natural terms of both operands before contraction. [Closure](../../../crates/syntaqs-lie/src/representation.rs#L240),
-[projection](../../../crates/syntaqs-lie/src/family/projection.rs#L325),
-[expression adapter](../../../crates/syntaqs-lie/src/expression.rs#L103).
-
-The composite evaluator traverses tensor factors and term products. It groups
-local expressions, supplies spectator identities during collection, and merges
-compatible tensor terms. HS uses normalized local traces. The amount of work
-depends on factor count, terms in sums and products, and cancellations. Dense
-numeric arrays use family coordinates. [Term collection](../../../crates/syntaqs-core/src/evaluate/collect.rs#L142),
-[HS contraction](../../../crates/syntaqs-core/src/evaluate/trace.rs#L193).
-
-The spectator control increases `D` by 64× at fixed `n=6` and increases closure
-time by 1.9×. In the Heisenberg series, each total spin axis grows from 2 to 8
-terms and the Hamiltonian grows from 3 to 21 bond terms. Closure increases by
-about 40× while the full commutant stays close to 0.1 ms. At fixed physical
-dimension `D=3`, the spin-1 Cartesian basis increases `n` from 3 to 8 and
-increases decomposition time from 0.11 to 2.02 ms.
-
-Instrumented closure medians across three runs per case show the cost of
-collecting both operands of every HS call. `HS calls` counts calls to the
-family adapter. `LU solve` sums all retained-factor solves in the stage.
-[Substage samples](profile.csv).
-
-| Case | HS calls | Collection (ms) | HS contraction (ms) | LU solve (ms) | Closure (ms) |
+| Case | D | n | Closure before → after | Full commutant before → after | Decompose before → after |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `heisenberg-8` | 225 | 96.19 | 35.71 | 0.018 | 133.94 |
-| `pauli-2` | 4275 | 22.46 | 6.58 | 0.118 | 31.92 |
-| `pauli-2-mixed` | 4275 | 61.04 | 12.61 | 0.107 | 77.82 |
-| `fermion-4` | 25088 | 260.82 | 78.70 | 0.867 | 358.56 |
+| `spin-half-1` | 2 | 3 | 0.260 → 0.248 | 0.052 → 0.053 | 0.164 → 0.144 |
+| `spin-half-2` | 4 | 6 | 1.791 → 1.463 | 0.205 → 0.201 | 0.813 → 0.736 |
+| `spin-half-4` | 16 | 12 | 15.211 → 8.809 | 7.365 → 7.245 | 7.454 → 5.579 |
+| `spin-half-2-in-8` | 256 | 6 | 3.483 → 1.466 | 0.198 → 0.199 | 1.597 → 0.732 |
+| `pauli-2` | 4 | 15 | 29.580 → 28.295 | 27.709 → 27.798 | 34.722 → 37.617 |
+| `pauli-2-mixed` | 4 | 15 | 76.353 → 64.871 | 28.067 → 28.116 | 36.918 → 39.420 |
+| `spin-one-dipole` | 3 | 3 | 0.141 → 0.137 | 0.048 → 0.051 | 0.117 → 0.108 |
+| `spin-one-cartesian` | 3 | 8 | 1.403 → 1.330 | 0.868 → 0.863 | 2.027 → 1.954 |
+| `heisenberg-2` | 4 | 5 | 3.330 → 2.593 | 0.100 → 0.101 | 0.722 → 0.615 |
+| `heisenberg-4` | 16 | 5 | 17.339 → 6.378 | 0.102 → 0.102 | 2.856 → 1.154 |
+| `heisenberg-8` | 256 | 5 | 134.734 → 17.724 | 0.104 → 0.098 | 14.208 → 2.239 |
+| `pauli-z-4` | 16 | 15 | 32.176 → 26.285 | 9.893 → 9.927 | 4.106 → 2.968 |
+| `fermion-2` | 4 | 6 | 4.101 → 2.691 | 0.257 → 0.248 | 1.825 → 0.950 |
+| `fermion-3` | 8 | 15 | 52.929 → 30.209 | 27.433 → 27.529 | 99.225 → 39.288 |
+| `fermion-4` | 16 | 28 | 335.508 → 168.748 | 1,223.768 → 1,229.332 | 1,918.677 → 1,070.923 |
 
-## Site-count scaling at fixed Lie dimension
+### Site scaling at fixed Lie dimension
 
-The site-count sweep used 22 workloads at revision `e1e2ebd`. The tables
-report medians in milliseconds across three fresh processes per case with
-`f64` and one OpenBLAS thread. Closure starts with a retained Gram
-factorization. Decomposition starts with the retained adjoint. [Raw runs](site-scaling.csv).
+The active Heisenberg chain adds interaction terms as the site count grows.
+The control holds the active chain at two sites and adds spectators. The
+graded control places two adjacent active modes at the front or tail of the
+ordered space. The table shows selected medians in milliseconds from the
+22-case sweep, with three fresh processes per revision and case.
+[Site scaling samples](results/site-scaling.csv).
 
-### Ordinary spins
-
-The active-chain family contains the three collective Pauli components, the
-open Heisenberg Hamiltonian, and identity (`n=5`). The control retains that
-family on the first two sites and extends the bound space with spectators.
-
-| Sites | Active-chain closure | Two-site closure | Active-chain decomposition | Two-site decomposition |
-| ---: | ---: | ---: | ---: | ---: |
-| 2 | 3.28 | 3.28 | 0.74 | 0.74 |
-| 4 | 17.14 | 4.46 | 2.80 | 1.04 |
-| 8 | 134.15 | 6.86 | 14.19 | 1.59 |
-| 12 | 588.97 | 9.28 | 40.48 | 2.31 |
-| 16 | 1830.79 | 11.72 | 87.97 | 2.94 |
-| 32 | — | 22.06 | — | 5.85 |
-| 64 | — | 43.55 | — | 12.64 |
-
-Each case makes 125 right-hand-side HS calls during closure. The two-site
-and 16-site active chains visit 1,250 and 90,710 intrinsic tensor terms,
-respectively, while collecting the RHS operands. On the 16-site chain the
-instrumented RHS phase takes 736 ms, including 472 ms in `merge_tensor`,
-and the residual norm takes another 306 ms. The spectator series retains
-the same 1,250 intrinsic terms across sizes. Collection, reconstruction, and
-trace traversal visit the ambient factors, so the work per term still grows.
-[Closure details](site-scaling.md#ordinary-spins).
-
-### Graded fermions
-
-The same six Majorana bilinears (`n=6`) act on two adjacent modes at the front
-or tail of the ordered graded space.
-
-| Sites | Front closure | Tail closure | Front decomposition | Tail decomposition |
-| ---: | ---: | ---: | ---: | ---: |
-| 2 | 4.04 | 4.04 | 1.79 | 1.79 |
-| 4 | 5.12 | 5.48 | 2.75 | 3.20 |
-| 8 | 7.52 | 8.44 | 5.01 | 6.18 |
-| 16 | 12.68 | 14.92 | 10.24 | 13.21 |
-| 32 | 24.14 | 28.52 | 23.26 | 29.51 |
-| 64 | 55.02 | 64.83 | 58.49 | 72.13 |
-
-The orthonormality checks after the split visit 288 tensor terms at every
-size and either position. On 64 sites, moving the active modes to the tail
-raises parity-factor insertions from 288 to 36,000. The local trace reduction
-within those checks rises from 1.52 to 9.39 ms. At the front, grading-aware
-term enumeration inside the same checks rises from 0.36 ms on two sites to
-24.76 ms on 64 sites as it processes additional spectator placements.
-[Graded traversal details](site-scaling.md#graded-fermions).
-
-The full adjoint commutant stays below 0.26 ms across the sweep. Each family
-series retains its constraint shape, `125 × 25` for Heisenberg and
-`216 × 36` for the Majorana bilinears. All 22 cases pass closure and the
-expected center, commutant, and ideal dimension checks. [Reproduction](site-scaling.md#reproduction).
-
-### Improvement candidates
-
-1. **Skip commuting term pairs before building bracket products.** Prepare
-   the support of each term as the sites where it may act nontrivially.
-   Enumerate overlapping pairs via a site-to-term index and process each pair
-   once even if it overlaps on multiple sites. For an ordinary tensor product,
-   disjoint terms commute. In a graded product, skip disjoint pairs with an
-   even homogeneous operand. Two disjoint odd operands anticommute and their
-   ordinary bracket contributes `−2iAB`. Handle mixed parity through the
-   existing homogeneous decomposition. On the raw 16-site Heisenberg sums,
-   a single Hamiltonian/total-spin bracket has `45 × 16 = 720` term pairs,
-   of which 90 overlap. These counts estimate candidate work before local
-   multiplication and collection. Apply the shortcut after space validation
-   and check that it reduces both examined pairs and constructed products.
-   [Graded composition laws](../../design/composite-expression.md#7-ordinary-and-graded-composition-laws).
-2. **Index the compatible tensor terms.** After the pending RHS-reuse change
-   has been measured, use its closure profiles to decide whether to prototype
-   the index. Assign integer IDs to local sums using the existing equality
-   rules. On the current factor representation, index by the omitted position
-   and the IDs of the remaining factors. If the factor representation becomes
-   sparse, look up the exact key and one-factor deletions. Match deletions at
-   the same site for terms with two different explicit factors, and match an
-   exact key against a deletion for one explicit and one implicit factor.
-   Preserve the choice of the earliest retained candidate and reindex the
-   result after each merge. Measure candidate comparisons, ID assignment and
-   index costs, and total collection time. [Tensor merge implementation](../../../crates/syntaqs-core/src/evaluate/collect.rs#L62).
-3. **Keep spectators implicit throughout evaluation.** The deferred
-   identity-elision work starts by omitting exact `1 · I` placements from the
-   rebuilt expression. A later sparse representation would let collection
-   and matching operate on specified factors. In contractions, combine the
-   validated ambient factor order with the surviving nonidentity factors.
-   Include `Tr(I)` for implicit factors in ordinary trace. In normalized HS
-   those factors contribute one after graded lowering. Preserve the validation
-   of input references, and measure both rebuilt tree size and time per
-   contraction on the two-active-site spectator sweep. [Future work on implicit identities](../../future-work/evaluation-improvements.md#6-implicit-identity-factors-in-operator-evaluation).
-4. **Cancel parity prefixes before materializing them.** For a homogeneous
-   term, establish intrinsic site order with the existing crossing signs and
-   preserve product order within each site. Then scan the ordered sites from
-   right to left. At site `i`, multiply the local operator on the right by
-   `P_i` if and only if an odd number of odd factors lie to its right. Store
-   surviving intervals of parity factors until contraction. In particular,
-   the two prefixes on sites preceding an adjacent odd pair cancel before
-   construction. Compare the ordered and explicit-prefix forms on separated
-   sites, mixed-parity sums, adjoints, and repeated placements, then measure
-   the front/tail pair at fixed support. [Ordinary representation of graded terms](../../design/composite-expression.md#111-intrinsic-terms-and-ordinary-representations).
-
-The design checks compared the suffix-parity rule with explicit prefixes for
-97,207 Pauli placement sequences of lengths zero through four. They also
-checked sparse deletion keys against the dense compatibility rule on two to
-four factors. Compare pairwise closure diagnostics and structure constants
-under the same numerical settings when evaluating the candidates. The first
-measurement remains the pending RHS operand reuse. Use that profile to
-choose the next optimization from the remaining costs.
-
-## Adjoint constraints and decomposition
-
-The full adjoint commutant has `n²` unknown matrix entries and `n³` scalar
-constraints. The implementation builds a dense `n³ × n²` array and uses
-`svd(false, true)` to obtain all right singular vectors. The installed
-`ndarray-linalg` copies the constraint array for the destructive LAPACK SVD.
-With `f64`, the input alone takes `8n⁵` bytes. The usual dense tall-SVD work
-estimate is `O(n⁷)` from rows times columns squared. The center kernel uses
-`n² × n` constraints. Its public method also evaluates the Gram matrix during
-orthonormalization and again to form the coordinate inverse. The Killing form
-uses `n⁴` scalar products. [Constraints and center](../../../crates/syntaqs-lie/src/invariant.rs#L189),
-[SVD kernel](../../../crates/syntaqs-lie/src/numerical/kernels.rs#L126),
-[Killing form](../../../crates/syntaqs-lie/src/representation.rs#L121).
-
-For a semisimple complement or a candidate ideal of dimension `d`, the
-symmetric commutant builds `d³ × d²` full constraints and projects them into
-`d³ × d(d+1)/2` symmetric constraints. Both arrays coexist with the SVD input
-copy during factorization. The decomposition solves the semisimple symmetric
-commutant once, then solves each candidate ideal's symmetric commutant during
-verification. A simple algebra of dimension `n` therefore incurs two of the
-largest symmetric solves in an accepted first attempt. Validation can repeat
-per candidate when sampling retries. After the split, the emitted operator
-expressions are reconstructed, collected, and checked for HS orthonormality.
-[Symmetric constraints](../../../crates/syntaqs-lie/src/invariant.rs#L364),
-[spectral decomposition](../../../crates/syntaqs-lie/src/decomposition/spectral.rs).
-
-At `n=15`, the Pauli and three-mode Majorana full commutants both take about
-28 ms. At `n=28`, the full commutant SVD call, including its input copy, takes
-1.16 s of the 1.21 s instrumented stage. The abelian `pauli-z-4` takes the
-all-zero SVD shortcut. It still verifies the entire `n²`-dimensional nullspace
-with dense constraint multiplication and residual checks, taking 9.1 ms of the
-9.9 ms instrumented commutant. Its decomposition skips the symmetric solves
-because the center spans the algebra. [Zero-constraint path](../../../crates/syntaqs-lie/src/numerical/kernels.rs#L134),
-[residual checks](../../../crates/syntaqs-lie/src/invariant.rs#L136),
-[substage samples](profile.csv).
-
-The following decomposition times include the two smaller center kernel SVDs
-in `Constraint SVDs`. The three- and four-mode Majorana outputs have one simple
-ideal and all `n²` source-coordinate coefficients are nonzero in the measured
-runs. Their HS rechecks therefore receive dense linear combinations of graded
-bilinears. The two-site Pauli case has a dense reconstructed basis and its
-recheck takes 7.63 ms. The comparison varies the physical representation and
-grading as well as the resulting expressions. [Timing samples and coordinate
-counts](timings.csv), [substage samples](profile.csv).
-
-| Case | Constraint SVDs (ms) | Building symmetric constraints (ms) | Component orthonormality (ms) | Decomposition (ms) |
-| --- | ---: | ---: | ---: | ---: |
-| `pauli-2` | 20.76 | 1.95 | 7.63 | 35.53 |
-| `fermion-3` | 21.26 | 1.90 | 69.93 | 99.81 |
-| `fermion-4` | 948.80 | 51.93 | 936.09 | 2013.05 |
-
-## Peak resident memory
-
-Values are median process peak RSS in MiB across three fresh processes per
-endpoint. All three modes compute Gram, factorization, and closure. Commutant
-and decomposition each add the adjoint and their respective computation.
-[RSS samples](memory.csv).
-
-| Case | Through closure | Through commutant | Through decomposition |
+| Case | n | Closure before → after | Decompose before → after |
 | --- | ---: | ---: | ---: |
-| `spin-half-2` | 4.36 | 4.86 | 4.92 |
-| `pauli-2` | 4.42 | 17.97 | 17.38 |
-| `pauli-z-4` | 4.42 | 17.41 | 4.70 |
-| `heisenberg-8` | 4.67 | 5.03 | 5.09 |
-| `fermion-4` | 4.80 | 275.00 | 279.50 |
+| `heisenberg-2` | 5 | 3.264 → 2.578 | 0.711 → 0.616 |
+| `heisenberg-16` | 5 | 1,823.796 → 63.855 | 87.879 → 4.634 |
+| `heisenberg-2-in-64` | 5 | 44.946 → 2.693 | 12.774 → 0.653 |
+| `fermion-front-2` | 6 | 4.075 → 2.693 | 1.801 → 0.952 |
+| `fermion-front-64` | 6 | 54.797 → 2.984 | 59.132 → 1.056 |
+| `fermion-tail-64` | 6 | 64.244 → 2.920 | 71.577 → 1.004 |
 
-At `n=28` the full commutant constraint is `21,952 × 784` (131.3 MiB). Its
-symmetric counterpart is `21,952 × 406` (68.0 MiB). The full matrix, symmetric
-matrix, and SVD input copy account for about 267.3 MiB of array payload
-during a symmetric solve. Peak RSS includes the program, BLAS/LAPACK workspace,
-and other allocations. By shape alone, the full traceless Pauli algebra on three
-spins would have `D=8`, `n=63`, and a `250,047 × 3,969` full commutant constraint
-of about 7.39 GiB per array. The three-spin full Pauli calculation is a size
-estimate.
+The core evaluator preserves disjoint support blocks, leaves spectator
+identities implicit, and contracts graded operators using local parity
+selection without materializing parity prefixes. This accounts for the
+reduced spectator and placement costs. Growth with active support persists.
+At `n=5`, post-merge closure takes about 64 ms with 16 active sites and
+2.7 ms with two active sites embedded in 64. The full commutant remains near
+0.1 ms in both because the adjoint constraint shape is the same.
+[Evaluation model](../../design/composite-expression.md#11-storage-and-evaluation-implementation).
+
+## Closure and Hilbert–Schmidt evaluation
+
+The closure path projects every ordered bracket. For each bracket it checks
+the norm and Hermiticity, computes the `n` right-hand-side entries of the
+Gram system, solves using the retained LU, and checks the projection and
+residual norms. The `n³` right-hand-side Hilbert–Schmidt (HS) calls still
+collect both operands through the Lie adapter. The core HS contraction
+then evaluates the rebuilt expressions before contracting the aligned blocks.
+[Closure](../../../crates/syntaqs-lie/src/representation.rs#L244),
+[Gram solve](../../../crates/syntaqs-lie/src/family/projection.rs#L325),
+[Lie HS adapter](../../../crates/syntaqs-lie/src/expression.rs#L103),
+[core HS contraction](../../../crates/syntaqs-core/src/evaluate/operator/contraction.rs#L232).
+
+In the instrumented `fermion-4` run, right-hand-side construction takes
+143.0 ms of a 196.2 ms closure. Across 21,952 HS calls in that phase, collecting
+the bracket takes 75.7 ms, collecting the basis operand takes 23.8 ms, and
+the core HS call takes 35.1 ms. LU solves take about 0.8 ms across closure.
+On `heisenberg-16`, the right-hand side takes 25.5 ms of a 64.4 ms closure.
+The two bracket norm and Hermiticity phases take another 28.9 ms together.
+The old tensor-term merge scan is absent from the new evaluator.
+[Internal profiles](results/hotspots.csv.gz).
+
+### Direct core HS probe
+
+The experimental patch passes composite expressions straight to core HS.
+It keeps the Lie adapter's local-operator path and the decomposition
+reconstruction path. Across ten selected workloads, this makes closure
+1.43–1.81× faster. The test uses the decomposition endpoint, with times
+measured per stage. Values below are medians in milliseconds over five
+paired runs. [Experimental patch](probe/direct-hs.patch),
+[direct HS samples](results/direct-hs.csv).
+
+| Case | Closure current → direct HS | Decompose current → direct HS |
+| --- | ---: | ---: |
+| `heisenberg-16` | 64.39 → 44.89 | 4.66 → 2.12 |
+| `pauli-2` | 28.16 → 17.39 | 38.24 → 31.58 |
+| `pauli-2-mixed` | 64.80 → 42.74 | 40.37 → 33.23 |
+| `fermion-4` | 169.12 → 107.18 | 1,048.16 → 1,021.50 |
+
+The patch establishes a measured optimization candidate for these inputs.
+Preserve the numerical behavior of general nonorthogonal projections,
+cancellation-sensitive residuals, and both supported precisions when
+evaluating it for adoption. Consider reuse of evaluated basis operands and
+one evaluation per ordered bracket after measuring the remaining RHS cost.
+Preserve collection across the entire residual expression so the
+reconstructed projection can cancel against the target.
+[Residual accuracy considerations](../../future-work/evaluation-improvements.md#1-lie-residual-accuracy).
+
+## Dense adjoint constraints
+
+For Lie dimension `n`, the full adjoint commutant builds a dense
+`n³ × n²` constraint matrix and uses SVD with all right singular vectors.
+With `f64`, the constraint input alone occupies `8n⁵` bytes. The usual
+tall dense SVD work estimate is `O(n⁷)`. For a semisimple complement or
+candidate ideal of dimension `d`, the symmetric solve projects a full
+`d³ × d²` intermediate into `d³ × d(d+1)/2` constraints. The solver also
+makes a working copy. An accepted split of a simple algebra solves the
+largest symmetric problem once for the whole semisimple part and again
+for the candidate ideal's verification.
+[Full constraints](../../../crates/syntaqs-lie/src/invariant.rs#L195),
+[symmetric constraints](../../../crates/syntaqs-lie/src/invariant.rs#L364),
+[ideal validation](../../../crates/syntaqs-lie/src/decomposition/spectral.rs#L122),
+[SVD kernel](../../../crates/syntaqs-lie/src/numerical/kernels.rs#L126).
+
+- At `n=28`, `fermion-4` takes 1.23 s for the full commutant. Its SVD driver
+  takes 1.15 s of the 1.21 s instrumented stage. The full constraint matrix
+  is `21,952 × 784` (131.3 MiB), and the symmetric matrix is
+  `21,952 × 406` (68.0 MiB). Peak process RSS after the merge is
+  274.7 MiB through the full commutant and 279.0 MiB through decomposition,
+  within 0.3 MiB of the corresponding pre-merge medians.
+- In `fermion-4` decomposition, the component orthonormality check falls
+  from 941.1 ms to 66.7 ms, while the combined SVD driver time is 860.8 ms
+  after the merge. In `pauli-2` and `pauli-2-mixed`, the check grows from
+  about 7.9 ms to 10.5–10.6 ms because the two operand collections increase
+  from about 2.4 ms to 5.1 ms. This accounts for the measured 7–8% increase
+  in those public decomposition timings.
+- The abelian `pauli-z-4` uses the all-zero SVD shortcut. Dense residual
+  validation still takes 9.1 ms of its 9.9 ms instrumented full commutant,
+  with 6.7 ms in the constraint-by-nullspace multiplication.
+  [Residual validation](../../../crates/syntaqs-lie/src/invariant.rs#L136).
+
+Constructing the symmetric constraints directly is a memory optimization
+candidate. At `d=28` it would remove the 131.3 MiB full intermediate while
+retaining the same right singular problem. Changing the constraint rows or
+eliminating per-ideal checks would require verifying rank decisions and
+residual acceptance. A normal-equation solve would square the constraint
+singular values and can impair numerical nullspace separation.
+[Decomposition acceptance criteria](../../design/lie.md#7-complete-center-and-simple-ideal-decomposition).
 
 ## Measurement and reproduction
 
-- Apple M4, 24 GB, macOS 15.8.1 arm64, Rust 1.99.1, Cargo 1.99.1,
-  `ndarray` 0.17.2, `ndarray-linalg` and `lax` 0.18.1, system OpenBLAS 0.3.33
-  with `OPENBLAS_NUM_THREADS=1`. The binary linked to OpenBLAS as checked
-  with `otool -L`.
-- Cargo release profile, `f64` coefficients. The residual absolute and relative
-  tolerances were both `1e-10`. Other numerical options used defaults. The
-  decomposition seed was `816`, with up to 16 attempts. `pauli-z-4` took
-  zero sampling attempts. Every other measured split took one.
-- Each sample used a fresh process. Stage times use `Instant`. Input creation,
-  correctness assertions, logging, and final result destruction are outside
-  the stage intervals. Peak RSS is `wait4`'s `ru_maxrss` for the entire process.
-  Substage timings come from a separate build with timers around selected calls.
-  The timers add overhead. The component orthonormality timer includes its
-  own HS work, so these measurements overlap. The `coordinate_tiny` column
-  counts nonzero source-coordinate coefficients of magnitude at most `1e-12`.
-- The timings characterize these inputs and this host. Thread count, BLAS
-  backend, precision, basis structure, and sampling outcomes can affect the
-  results. The study used supplied closed bases and one decomposition seed.
+The reference runs took place on 2026-11-21 on Apple M4 with 24 GB of memory,
+macOS 15.8.1 arm64, Rust and Cargo 1.99.1, and OpenBLAS 0.3.33. Both
+revisions use the [same lockfile](probe/dependencies.lock) with
+`ndarray` 0.17.2 and `ndarray-linalg` and `lax` 0.18.1. The release driver
+uses `f64`, OpenBLAS with one thread, residual absolute and relative
+tolerances of `1e-10`, and decomposition seed `816` with up to 16
+attempts. The runner rotates revision order across cases and trials.
+The timings characterize this host, backend, seed, and input families.
 
-From the repository root, with Rust, Python 3, pkg-config, and OpenBLAS available,
-build the driver against a temporary copy of the measured source. The commands
-use a local `Cargo.lock` because the workspace ignores that file. The measured
-lockfile SHA-256 was
-`915aa770e0ec140f6766d8c429d184b0acc80eb6b27829c7c42ce3f86d0fd4cd`.
-With a different lockfile, record its dependency versions with the measurements.
+Public stages use wall time from `Instant`. Input construction, logging,
+and stage-result assertions run outside their timers. The endpoint RSS
+samples use three fresh processes per case, endpoint, and revision.
+Each endpoint includes Gram, factorization, and closure, followed by the
+requested commutant or decomposition where applicable. RSS covers the
+entire process and comes from `wait4`. The internal profiles cover 27
+cases with three runs per revision. Nested profile timers overlap and
+add overhead. The pre- and post-merge patches follow their respective
+evaluation paths and record common phase boundaries.
+[Peak RSS samples](results/memory.csv), [pre-merge patch](probe/hotspots-pre.patch),
+[post-merge patch](probe/hotspots-post.patch).
+
+From the repository root, use Bash, Cargo, pkg-config, OpenBLAS, and
+Python 3.9 or later on macOS or Linux. Keep the measured revisions
+available in Git history. Build in a fresh temporary directory and write
+a separate set of measurements there.
 
 ```sh
+probe="$PWD/docs/plans/lie-analysis-bottlenecks/probe"
 work=$(mktemp -d)
-plan="$PWD/docs/plans/lie-analysis-bottlenecks"
-git archive 690b7b4ca6a59f88c48d0310d9faa80ab258aff1 | tar -x -C "$work"
-cp Cargo.lock "$work/"
-cp "$plan/benchmark.rs" "$work/examples/src/bin/lie_analysis_bench.rs"
-cargo build --locked --release --manifest-path "$work/Cargo.toml" \
-  -p examples --no-default-features --features lie --bin lie_analysis_bench
-bench="$work/target/release/lie_analysis_bench"
-python3 "$plan/measure.py" "$bench" "$work/results"
+bash "$probe/build.sh" "$work"
+python3 "$probe/measure.py" "$work/bin" "$work/results"
+OPENBLAS_NUM_THREADS=1 "$work/bin/lie-stability"
 ```
 
-To collect the substage timings, apply the [instrumentation patch](profile.patch)
-to that temporary copy and rebuild.
+Use `--suite timings`, `--suite memory`, `--suite site-scaling`,
+`--suite hotspots`, `--suite direct-hs`, or `--suite diagnostics` to select
+individual runs. The archived internal profile is stored as
+`results/hotspots.csv.gz` and can be read with `gzip -dc`.
 
-```sh
-git -C "$work" apply "$plan/profile.patch"
-cargo build --locked --release --manifest-path "$work/Cargo.toml" \
-  -p examples --no-default-features --features lie --bin lie_analysis_bench
-python3 "$plan/measure.py" "$bench" "$work/results" --profile
-```
+## Verification and completion criteria
 
-## Verification
+All workload assertions for closure, center, full commutant, and ideal
+dimensions passed on both merge revisions. Across the 34 distinct workloads,
+all 42,145 structure constants and 2,689 ordered bracket diagnostics
+matched numerically between revisions and between the merge and direct-HS
+builds. The merge passed 341 release tests and doctests across
+`syntaqs-core`, `syntaqs-lie`, and `syntaqs-tests` with the integration
+crate's `lie` feature enabled. The [numerical stability probe](probe/stability_probe.rs)
+also passed. [Diagnostic comparison](results/diagnostics.csv),
+[stability probe output](results/stability.txt),
+[numerical stability cases](comparison.md).
 
-All 111 [Lie crate tests](../../../crates/syntaqs-lie/Cargo.toml), including
-doctests, passed in release. The 14 shared `lie_analysis` and `lie_decomposition`
-integration tests passed with the `lie` feature enabled and default features
-disabled.
+For a subsequent optimization, repeat the paired timings, RSS endpoints,
+and numerical comparisons. Include ordinary, mixed-basis, graded, and
+nonclosed inputs. Record the constraint dimensions and effective
+tolerances for changes to the dense solver path.
