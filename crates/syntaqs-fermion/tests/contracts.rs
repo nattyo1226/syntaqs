@@ -2,9 +2,17 @@ mod common;
 use common::*;
 use num_complex::Complex;
 use syntaqs_core::{
-    algebra::Act, algebra::Adjoint, algebra::HomogeneousParity, algebra::Identity,
-    algebra::InnerProduct, algebra::Parity, algebra::ParityOperator, algebra::Product,
-    algebra::Trace, basis::Basis, expression::parts::linear_combination::LinearCombination,
+    algebra::Act,
+    algebra::Adjoint,
+    algebra::HomogeneousParity,
+    algebra::Identity,
+    algebra::InnerProduct,
+    algebra::Parity,
+    algebra::ParityOperator,
+    algebra::Product,
+    algebra::Trace,
+    basis::{Basis, BasisElements},
+    expression::parts::linear_combination::LinearCombination,
     space::Dimension,
 };
 use syntaqs_fermion::{
@@ -160,14 +168,10 @@ fn bases<T: Real>() {
     }
     check::<T, _>(LadderBasis, &[O::I, O::Annihilate, O::Create, O::Number]);
     check::<T, _>(MajoranaBasis, &[O::I, O::Mx, O::My, O::Mz]);
-    let states: Vec<_> =
-        <OccupationBasis as Basis<S, Complex<T>>>::elements(&OccupationBasis).collect();
+    let states: Vec<_> = OccupationBasis.elements().collect();
     assert_eq!(states, STATES);
     for (j, state) in states.iter().enumerate() {
-        assert_eq!(
-            <OccupationBasis as Basis<S, Complex<T>>>::index(&OccupationBasis, state),
-            Some(j)
-        );
+        assert_eq!(OccupationBasis.index(state), Some(j));
         let expanded =
             <OccupationBasis as Basis<S, Complex<T>>>::expand(&OccupationBasis, state).unwrap();
         assert_eq!(expanded.into_iter().next().unwrap().operand, *state);

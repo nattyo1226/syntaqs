@@ -20,6 +20,23 @@ The factory changes also apply to aliases such as `SpinHalf`, `SpinOne`, and
 `Fermion`. [Expression construction](../../design/expression-construction.md),
 [Lie family contexts](../../design/lie.md#1-scope-and-contexts).
 
+## Local basis traits
+
+Import `BasisElements` for `element`, `index`, and `elements`. Built-in
+bases such as `SzBasis` support these calls without selecting a coefficient
+type. The same trait suffices for `HilbertSpace::basis_states` and
+`HilbertSpace::basis_operators`. Select the coefficient type of the returned
+expressions through their type context or generic arguments.
+
+For a custom basis, implement zero-based `element` and `index` in
+`BasisElements<P>`. Put any `elements` override on that implementation. For
+coordinate queries and expression expansion, implement `Basis<P, C>` by
+returning basis indices with their coefficients from `expand_indices`. Use
+`Basis::expand` to resolve these indices into primitives and handle its
+`Result`. In `v0.5.0`, custom bases supplied `expand` directly and returned a
+primitive combination. [Basis design](../../design/basis.md),
+[custom basis implementation](../../../crates/syntaqs-core/tests/basis.rs).
+
 ## Core expression performance
 
 Space binding reuses factor positions stored on each Hilbert space. State
@@ -30,9 +47,7 @@ The reference workloads and measured trade-offs are recorded in the
 
 Tensor construction and composite evaluation require ordered factor IDs
 (`I: Ord`). `HilbertSpace::flatten()` and `tensor_flatten()` promote one level
-of grouping. Custom bases implement `Basis::expand_indices()` and
-`Basis::element()`. The convenience method `Basis::expand()` returns a
-`Result`.
+of grouping.
 
 ## Lie analysis performance
 

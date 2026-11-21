@@ -33,7 +33,7 @@
 //!
 //! ```
 //! use num_complex::Complex;
-//! use syntaqs_core::{basis::Basis, expression::parts::linear_combination::LinearCombination, algebra::Product};
+//! use syntaqs_core::{basis::{Basis, BasisElements}, expression::parts::linear_combination::LinearCombination, algebra::Product};
 //! use syntaqs_spin_half::{basis::CartesianBasis, operator::SpinHalfOperator as Op};
 //!
 //! let product: LinearCombination<Op, Complex<f64>> = Op::I.product(&Op::Sp);
@@ -41,7 +41,7 @@
 //! let expanded = <CartesianBasis as Basis<Op, Complex<f64>>>::expand(&CartesianBasis, &Op::Sp).unwrap();
 //! assert_eq!(expanded, LinearCombination::term(Complex::new(0.5, 0.0), Op::Sx)
 //!     + LinearCombination::term(Complex::new(0.0, 0.5), Op::Sy));
-//! let elements: Vec<_> = <CartesianBasis as Basis<Op, Complex<f64>>>::elements(&CartesianBasis).collect();
+//! let elements: Vec<_> = CartesianBasis.elements().collect();
 //! assert_eq!(elements, [Op::I, Op::Sx, Op::Sy, Op::Sz]);
 //! ```
 //!

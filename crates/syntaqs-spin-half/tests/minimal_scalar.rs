@@ -4,9 +4,16 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use num_traits::{One, Zero};
 use syntaqs_core::{
-    algebra::Act, algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Product,
-    algebra::Trace, basis::Basis, coefficient::ImaginaryUnit,
-    expression::parts::linear_combination::LinearCombination as Lc, space::Dimension,
+    algebra::Act,
+    algebra::Adjoint,
+    algebra::Identity,
+    algebra::InnerProduct,
+    algebra::Product,
+    algebra::Trace,
+    basis::{Basis, BasisElements},
+    coefficient::ImaginaryUnit,
+    expression::parts::linear_combination::LinearCombination as Lc,
+    space::Dimension,
 };
 use syntaqs_spin_half::{
     basis::CartesianBasis, basis::LadderBasis, basis::SzBasis, operator::SpinHalfOperator as Op,
@@ -90,13 +97,10 @@ fn inner_adjoint_trace_and_state_basis_only_need_zero_and_one() {
         let trace = <Op as Trace<Natural>>::trace(&op);
         assert_eq!(trace.0, if op == I { 2 } else { 0 });
     }
-    let elements: Vec<_> = <SzBasis as Basis<State, Natural>>::elements(&SzBasis).collect();
+    let elements: Vec<_> = SzBasis.elements().collect();
     assert_eq!(elements, [Up, Down]);
     for (i, state) in elements.into_iter().enumerate() {
-        assert_eq!(
-            <SzBasis as Basis<State, Natural>>::index(&SzBasis, &state),
-            Some(i)
-        );
+        assert_eq!(SzBasis.index(&state), Some(i));
         let expanded = <SzBasis as Basis<State, Natural>>::expand(&SzBasis, &state).unwrap();
         let mut terms = expanded.into_terms();
         let term = terms.next().unwrap();
@@ -116,8 +120,7 @@ fn ladder_basis_needs_negation_but_not_division() {
         &[(1, 0, Sp)],
         &[(1, 0, Sm)],
     ];
-    let elements: Vec<_> =
-        <LadderBasis as Basis<Op, Coefficient<Signed>>>::elements(&LadderBasis).collect();
+    let elements: Vec<_> = LadderBasis.elements().collect();
     assert_eq!(elements, [I, Sp, Sm, Sz]);
     for (op, expected) in OPS.into_iter().zip(expected) {
         let expanded =
@@ -128,7 +131,7 @@ fn ladder_basis_needs_negation_but_not_division() {
             .collect();
         assert_eq!(actual, expected);
         assert_eq!(
-            <LadderBasis as Basis<Op, Coefficient<Signed>>>::index(&LadderBasis, &op),
+            LadderBasis.index(&op),
             elements.iter().position(|&p| p == op)
         );
     }
@@ -304,8 +307,7 @@ fn local_metadata_identity_and_bases_accept_minimal_fractional_scalars() {
         ),
         [((0, 1), (-1, 1), Sp), ((0, 1), (1, 1), Sm),]
     );
-    let elements: Vec<_> =
-        <LadderBasis as Basis<Op, Coefficient<Rational>>>::elements(&LadderBasis).collect();
+    let elements: Vec<_> = LadderBasis.elements().collect();
     assert_eq!(elements, [I, Sp, Sm, Sz]);
 }
 

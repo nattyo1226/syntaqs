@@ -4,7 +4,7 @@ use alloc::{collections::BTreeMap, collections::btree_map::Entry, vec::Vec};
 use num_traits::Zero;
 
 use super::enumeration::basis_element;
-use crate::{Basis, BasisError, expression::parts::Operands};
+use crate::{BasisElements, BasisError, expression::parts::Operands};
 
 mod composite;
 mod local;
@@ -30,7 +30,7 @@ fn accumulate<K: Ord, C: Zero>(map: &mut BTreeMap<K, C>, key: K, coefficient: C)
     }
 }
 
-fn reconstruct<P, C, B: Basis<P, C>, L, E: Clone>(
+fn reconstruct<P, C, B: BasisElements<P>, L, E: Clone>(
     terms: Expansion<C>,
     basis: &B,
     dimension: Option<usize>,

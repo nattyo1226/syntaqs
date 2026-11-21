@@ -7,10 +7,17 @@ use std::{
     ops::{Add, Mul},
 };
 use syntaqs_core::{
-    algebra::Act, algebra::Adjoint, basis::Basis, basis::BasisError, coefficient::Conjugate,
-    expression::composite::State, expression::local::LocalState,
-    expression::parts::linear_combination::LinearCombination, space::Dimension,
-    space::DimensionOverflow, space::HilbertSpace,
+    algebra::Act,
+    algebra::Adjoint,
+    basis::BasisError,
+    basis::{Basis, BasisElements},
+    coefficient::Conjugate,
+    expression::composite::State,
+    expression::local::LocalState,
+    expression::parts::linear_combination::LinearCombination,
+    space::Dimension,
+    space::DimensionOverflow,
+    space::HilbertSpace,
 };
 
 // No Clone, Eq, ordering or hashing on either primitive. In particular, the
@@ -59,20 +66,25 @@ impl CountingBasis {
         }
     }
 }
+impl BasisElements<Ket> for CountingBasis {
+    fn index(&self, p: &Ket) -> Option<usize> {
+        Some(usize::from(p.0))
+    }
+
+    fn element(&self, index: usize) -> Option<Ket> {
+        (index < 2).then_some(Ket(index == 1))
+    }
+
+    fn elements(&self) -> impl Iterator<Item = Ket> + '_ {
+        self.enumerations.set(self.enumerations.get() + 1);
+        [Ket(false), Ket(true)].into_iter()
+    }
+}
+
 impl<C: From<i16>> Basis<Ket, C> for CountingBasis {
     fn expand_indices(&self, p: &Ket) -> LinearCombination<usize, C> {
         self.expansions.set(self.expansions.get() + 1);
         LinearCombination::term(1i16.into(), usize::from(p.0))
-    }
-    fn index(&self, p: &Ket) -> Option<usize> {
-        Some(usize::from(p.0))
-    }
-    fn element(&self, index: usize) -> Option<Ket> {
-        (index < 2).then_some(Ket(index == 1))
-    }
-    fn elements(&self) -> impl Iterator<Item = Ket> + '_ {
-        self.enumerations.set(self.enumerations.get() + 1);
-        [Ket(false), Ket(true)].into_iter()
     }
 }
 
@@ -341,11 +353,21 @@ fn composite_expansion_retains_tiny_and_nan_coefficients() {
 }
 
 #[test]
-fn basis_enumeration_needs_no_index_comparison() {
+fn basis_enumeration_uses_only_element_access_without_index_comparison() {
     struct NonComparableIndex;
-    let basis = CountingBasis::new();
+    struct Elements;
+    impl BasisElements<Ket> for Elements {
+        fn element(&self, index: usize) -> Option<Ket> {
+            (index < 2).then_some(Ket(index == 0))
+        }
+
+        fn index(&self, ket: &Ket) -> Option<usize> {
+            Some(usize::from(!ket.0))
+        }
+    }
+    let basis = Elements;
     let single = HilbertSpace::factor(NonComparableIndex);
-    let mut states = single.basis_states::<Ket, Action, f64, _>(&basis).unwrap();
+    let mut states = single.basis_states::<Ket, Action, (), _>(&basis).unwrap();
     for _ in 0..2 {
         assert!(
             states
@@ -357,7 +379,7 @@ fn basis_enumeration_needs_no_index_comparison() {
         );
     }
     assert!(states.next().is_none());
-    let mut operators = single.basis_operators::<Ket, f64, _>(&basis).unwrap();
+    let mut operators = single.basis_operators::<Ket, (), _>(&basis).unwrap();
     for _ in 0..2 {
         assert!(
             operators
@@ -373,13 +395,13 @@ fn basis_enumeration_needs_no_index_comparison() {
 
     let unit = HilbertSpace::<NonComparableIndex>::unit();
     assert_eq!(
-        unit.basis_states::<Ket, Action, f64, _>(&basis)
+        unit.basis_states::<Ket, Action, (), _>(&basis)
             .unwrap()
             .count(),
         1
     );
     assert_eq!(
-        unit.basis_operators::<Ket, f64, _>(&basis).unwrap().count(),
+        unit.basis_operators::<Ket, (), _>(&basis).unwrap().count(),
         1
     );
 }
@@ -437,15 +459,19 @@ impl Act<f64> for Large {
 }
 #[derive(PartialEq)]
 struct LargeBasis;
-impl Basis<Large, f64> for LargeBasis {
-    fn expand_indices(&self, _: &Large) -> LinearCombination<usize, f64> {
-        LinearCombination::term(1.0, 0)
-    }
+impl BasisElements<Large> for LargeBasis {
     fn index(&self, _: &Large) -> Option<usize> {
         Some(0)
     }
+
     fn element(&self, index: usize) -> Option<Large> {
         (index == 0).then_some(Large)
+    }
+}
+
+impl Basis<Large, f64> for LargeBasis {
+    fn expand_indices(&self, _: &Large) -> LinearCombination<usize, f64> {
+        LinearCombination::term(1.0, 0)
     }
 }
 

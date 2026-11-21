@@ -5,8 +5,13 @@ use core::ops::{Add, Div, Mul, Neg};
 use num_complex::Complex;
 use num_traits::One;
 use syntaqs_core::{
-    algebra::Adjoint, algebra::Identity, algebra::InnerProduct, algebra::Trace, basis::Basis,
-    coefficient::ImaginaryUnit, expression::parts::linear_combination::LinearCombination as Lc,
+    algebra::Adjoint,
+    algebra::Identity,
+    algebra::InnerProduct,
+    algebra::Trace,
+    basis::{Basis, BasisElements},
+    coefficient::ImaginaryUnit,
+    expression::parts::linear_combination::LinearCombination as Lc,
     space::HilbertSpace,
 };
 use syntaqs_spin_one::{
@@ -135,14 +140,8 @@ fn basis_conversions_accept_nonclone_exact_coefficients() {
             &exact_value(<LadderBasis as Basis<O, Exact>>::expand(&LadderBasis, &a).unwrap()),
             &matrix(a),
         );
-        assert_eq!(
-            <CartesianBasis as Basis<O, Exact>>::elements(&CartesianBasis).count(),
-            9
-        );
-        assert_eq!(
-            <LadderBasis as Basis<O, Exact>>::elements(&LadderBasis).count(),
-            9
-        );
+        assert_eq!(CartesianBasis.elements().count(), 9);
+        assert_eq!(LadderBasis.elements().count(), 9);
     }
 }
 

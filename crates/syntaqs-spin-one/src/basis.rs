@@ -7,7 +7,8 @@ use crate::{
 use core::ops::{Add, Div, Neg};
 use num_traits::One;
 use syntaqs_core::{
-    basis::Basis, coefficient::ImaginaryUnit,
+    basis::{Basis, BasisElements},
+    coefficient::ImaginaryUnit,
     expression::parts::linear_combination::LinearCombination,
 };
 
@@ -28,12 +29,7 @@ pub struct CartesianBasis;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct LadderBasis;
 
-impl<C: One> Basis<S, C> for SzBasis {
-    fn expand_indices(&self, primitive: &S) -> LinearCombination<usize, C> {
-        LinearCombination::primitive(
-            Basis::<_, C>::index(self, primitive).expect("basis primitive"),
-        )
-    }
+impl BasisElements<S> for SzBasis {
     fn index(&self, primitive: &S) -> Option<usize> {
         Some(match primitive {
             S::Plus => 0,
@@ -41,25 +37,19 @@ impl<C: One> Basis<S, C> for SzBasis {
             S::Minus => 2,
         })
     }
+
     fn element(&self, index: usize) -> Option<S> {
         [S::Plus, S::Zero, S::Minus].get(index).copied()
     }
 }
 
-impl<C: One + Neg<Output = C> + ImaginaryUnit> Basis<O, C> for CartesianBasis {
-    fn expand_indices(&self, primitive: &O) -> LinearCombination<usize, C> {
-        use LinearCombination as Lc;
-        use O::*;
-        match primitive {
-            Sp => Lc::primitive(1) + Lc::term(imaginary(C::one()), 2),
-            Sm => Lc::primitive(1) + Lc::term(imaginary(-C::one()), 2),
-            Q1p => Lc::primitive(8) + Lc::term(imaginary(C::one()), 7),
-            Q1m => Lc::primitive(8) + Lc::term(imaginary(-C::one()), 7),
-            Q2p => Lc::primitive(4) + Lc::term(imaginary(C::one()), 6),
-            Q2m => Lc::primitive(4) + Lc::term(imaginary(-C::one()), 6),
-            _ => Lc::primitive(Basis::<_, C>::index(self, primitive).expect("basis primitive")),
-        }
+impl<C: One> Basis<S, C> for SzBasis {
+    fn expand_indices(&self, primitive: &S) -> LinearCombination<usize, C> {
+        LinearCombination::primitive(self.index(primitive).expect("basis primitive"))
     }
+}
+
+impl BasisElements<O> for CartesianBasis {
     fn index(&self, primitive: &O) -> Option<usize> {
         use O::*;
         match primitive {
@@ -75,9 +65,49 @@ impl<C: One + Neg<Output = C> + ImaginaryUnit> Basis<O, C> for CartesianBasis {
             Sp | Sm | Q1p | Q1m | Q2p | Q2m => None,
         }
     }
+
     fn element(&self, index: usize) -> Option<O> {
         use O::*;
         [I, Sx, Sy, Sz, Dxy, Q0, Qxy, Qyz, Qzx].get(index).copied()
+    }
+}
+
+impl<C: One + Neg<Output = C> + ImaginaryUnit> Basis<O, C> for CartesianBasis {
+    fn expand_indices(&self, primitive: &O) -> LinearCombination<usize, C> {
+        use LinearCombination as Lc;
+        use O::*;
+        match primitive {
+            Sp => Lc::primitive(1) + Lc::term(imaginary(C::one()), 2),
+            Sm => Lc::primitive(1) + Lc::term(imaginary(-C::one()), 2),
+            Q1p => Lc::primitive(8) + Lc::term(imaginary(C::one()), 7),
+            Q1m => Lc::primitive(8) + Lc::term(imaginary(-C::one()), 7),
+            Q2p => Lc::primitive(4) + Lc::term(imaginary(C::one()), 6),
+            Q2m => Lc::primitive(4) + Lc::term(imaginary(-C::one()), 6),
+            _ => Lc::primitive(self.index(primitive).expect("basis primitive")),
+        }
+    }
+}
+
+impl BasisElements<O> for LadderBasis {
+    fn index(&self, primitive: &O) -> Option<usize> {
+        use O::*;
+        match primitive {
+            I => Some(0),
+            Sp => Some(1),
+            Sm => Some(2),
+            Sz => Some(3),
+            Q0 => Some(4),
+            Q1p => Some(5),
+            Q1m => Some(6),
+            Q2p => Some(7),
+            Q2m => Some(8),
+            Sx | Sy | Dxy | Qxy | Qyz | Qzx => None,
+        }
+    }
+
+    fn element(&self, index: usize) -> Option<O> {
+        use O::*;
+        [I, Sp, Sm, Sz, Q0, Q1p, Q1m, Q2p, Q2m].get(index).copied()
     }
 }
 
@@ -95,26 +125,7 @@ where
             Qyz => Lc::term(imaginary(-half::<C>()), 5) + Lc::term(imaginary(half()), 6),
             Dxy => Lc::term(half(), 7) + Lc::term(half(), 8),
             Qxy => Lc::term(imaginary(-half::<C>()), 7) + Lc::term(imaginary(half()), 8),
-            _ => Lc::primitive(Basis::<_, C>::index(self, primitive).expect("basis primitive")),
+            _ => Lc::primitive(self.index(primitive).expect("basis primitive")),
         }
-    }
-    fn index(&self, primitive: &O) -> Option<usize> {
-        use O::*;
-        match primitive {
-            I => Some(0),
-            Sp => Some(1),
-            Sm => Some(2),
-            Sz => Some(3),
-            Q0 => Some(4),
-            Q1p => Some(5),
-            Q1m => Some(6),
-            Q2p => Some(7),
-            Q2m => Some(8),
-            Sx | Sy | Dxy | Qxy | Qyz | Qzx => None,
-        }
-    }
-    fn element(&self, index: usize) -> Option<O> {
-        use O::*;
-        [I, Sp, Sm, Sz, Q0, Q1p, Q1m, Q2p, Q2m].get(index).copied()
     }
 }

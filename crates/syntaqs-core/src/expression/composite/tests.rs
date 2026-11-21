@@ -85,18 +85,22 @@ type O<T = f64> = Operator<Index, Op, Complex<T>>;
 
 #[test]
 fn expanded_state_shares_placed_basis_nodes() {
-    use crate::Basis;
     use crate::expression::local::StateNode as LocalNode;
+    use crate::{Basis, BasisElements};
     struct BinaryBasis<'a>(&'a Counts);
-    impl<'a> Basis<Primitive<'a>, Complex<f64>> for BinaryBasis<'a> {
-        fn expand_indices(&self, primitive: &Primitive<'a>) -> Lc<usize, Complex<f64>> {
-            Lc::primitive(usize::from(primitive.0))
-        }
+    impl<'a> BasisElements<Primitive<'a>> for BinaryBasis<'a> {
         fn element(&self, index: usize) -> Option<Primitive<'a>> {
             (index < 2).then(|| Primitive(index as u8, self.0))
         }
+
         fn index(&self, primitive: &Primitive<'a>) -> Option<usize> {
             Some(usize::from(primitive.0))
+        }
+    }
+
+    impl<'a> Basis<Primitive<'a>, Complex<f64>> for BinaryBasis<'a> {
+        fn expand_indices(&self, primitive: &Primitive<'a>) -> Lc<usize, Complex<f64>> {
+            Lc::primitive(usize::from(primitive.0))
         }
     }
 

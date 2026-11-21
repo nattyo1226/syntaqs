@@ -7,7 +7,8 @@ use crate::{
 use core::ops::{Add, Div, Neg};
 use num_traits::One;
 use syntaqs_core::{
-    basis::Basis, coefficient::ImaginaryUnit,
+    basis::{Basis, BasisElements},
+    coefficient::ImaginaryUnit,
     expression::parts::linear_combination::LinearCombination,
 };
 
@@ -27,22 +28,42 @@ pub struct LadderBasis;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct MajoranaBasis;
 
-impl<C: One> Basis<FermionState, C> for OccupationBasis {
-    fn expand_indices(&self, primitive: &FermionState) -> LinearCombination<usize, C> {
-        LinearCombination::primitive(
-            Basis::<_, C>::index(self, primitive).expect("basis primitive"),
-        )
-    }
+impl BasisElements<FermionState> for OccupationBasis {
     fn index(&self, primitive: &FermionState) -> Option<usize> {
         Some(match primitive {
             FermionState::Empty => 0,
             FermionState::Occupied => 1,
         })
     }
+
     fn element(&self, index: usize) -> Option<FermionState> {
         [FermionState::Empty, FermionState::Occupied]
             .get(index)
             .copied()
+    }
+}
+
+impl<C: One> Basis<FermionState, C> for OccupationBasis {
+    fn expand_indices(&self, primitive: &FermionState) -> LinearCombination<usize, C> {
+        LinearCombination::primitive(self.index(primitive).expect("basis primitive"))
+    }
+}
+
+impl BasisElements<FermionOperator> for LadderBasis {
+    fn index(&self, primitive: &FermionOperator) -> Option<usize> {
+        use FermionOperator::*;
+        match primitive {
+            I => Some(0),
+            Annihilate => Some(1),
+            Create => Some(2),
+            Number => Some(3),
+            _ => None,
+        }
+    }
+
+    fn element(&self, index: usize) -> Option<FermionOperator> {
+        use FermionOperator::*;
+        [I, Annihilate, Create, Number].get(index).copied()
     }
 }
 
@@ -57,22 +78,26 @@ where
             Mx => Lc::primitive(1) + Lc::primitive(2),
             My => Lc::term(imaginary(-C::one()), 1) + Lc::term(imaginary(C::one()), 2),
             Mz => Lc::primitive(0) + Lc::term(-(C::one() + C::one()), 3),
-            _ => Lc::primitive(Basis::<_, C>::index(self, primitive).expect("basis primitive")),
+            _ => Lc::primitive(self.index(primitive).expect("basis primitive")),
         }
     }
+}
+
+impl BasisElements<FermionOperator> for MajoranaBasis {
     fn index(&self, primitive: &FermionOperator) -> Option<usize> {
         use FermionOperator::*;
         match primitive {
             I => Some(0),
-            Annihilate => Some(1),
-            Create => Some(2),
-            Number => Some(3),
+            Mx => Some(1),
+            My => Some(2),
+            Mz => Some(3),
             _ => None,
         }
     }
+
     fn element(&self, index: usize) -> Option<FermionOperator> {
         use FermionOperator::*;
-        [I, Annihilate, Create, Number].get(index).copied()
+        [I, Mx, My, Mz].get(index).copied()
     }
 }
 
@@ -87,21 +112,7 @@ where
             Annihilate => Lc::term(half(), 1) + Lc::term(imaginary(half()), 2),
             Create => Lc::term(half(), 1) + Lc::term(imaginary(-half::<C>()), 2),
             Number => Lc::term(half(), 0) + Lc::term(-half::<C>(), 3),
-            _ => Lc::primitive(Basis::<_, C>::index(self, primitive).expect("basis primitive")),
+            _ => Lc::primitive(self.index(primitive).expect("basis primitive")),
         }
-    }
-    fn index(&self, primitive: &FermionOperator) -> Option<usize> {
-        use FermionOperator::*;
-        match primitive {
-            I => Some(0),
-            Mx => Some(1),
-            My => Some(2),
-            Mz => Some(3),
-            _ => None,
-        }
-    }
-    fn element(&self, index: usize) -> Option<FermionOperator> {
-        use FermionOperator::*;
-        [I, Mx, My, Mz].get(index).copied()
     }
 }

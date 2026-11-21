@@ -1,7 +1,7 @@
 use fixture::*;
 use num_complex::Complex;
 use syntaqs_core::{
-    basis::Basis, expression::local::LocalOperator, expression::local::LocalState,
+    basis::BasisElements, expression::local::LocalOperator, expression::local::LocalState,
     space::HilbertSpace,
 };
 use syntaqs_export::{
@@ -159,7 +159,7 @@ fn check<T: Real>() {
             );
         }
     }
-    let canonical: Vec<_> = <Canonical as Basis<Ket, Complex<T>>>::elements(&Canonical).collect();
+    let canonical: Vec<_> = Canonical.elements().collect();
     assert_eq!(canonical.len(), 3);
 }
 
