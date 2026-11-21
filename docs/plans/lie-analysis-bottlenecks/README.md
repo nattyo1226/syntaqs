@@ -67,7 +67,8 @@ reduced spectator and placement costs. Growth with active support persists.
 At `n=5`, post-merge closure takes about 64 ms with 16 active sites and
 2.7 ms with two active sites embedded in 64. The full commutant remains near
 0.1 ms in both because the adjoint constraint shape is the same.
-[Evaluation model](../../design/composite-expression.md#11-storage-and-evaluation-implementation).
+[Evaluation model](../../design/composite-expression.md#11-storage-and-evaluation-implementation),
+[commutator optimization candidate](#skip-commuting-term-pairs-in-commutators).
 
 ## Closure and Hilbert–Schmidt evaluation
 
@@ -117,6 +118,38 @@ Preserve collection across the entire residual expression so the
 reconstructed projection can cancel against the target.
 [Residual accuracy considerations](../../future-work/evaluation-improvements.md#1-lie-residual-accuracy).
 
+### Skip commuting term pairs in commutators
+
+The bilinearity of the commutator gives
+`[Σᵢ aᵢ, Σⱼ bⱼ] = Σᵢⱼ [aᵢ, bⱼ]`. For an ordinary tensor product,
+`[aᵢ, bⱼ]` vanishes when the two terms have disjoint support. In a
+targeted probe on the v6 evaluator, collecting an isolated disjoint Pauli
+pair gave exact zero after the evaluator factored out the common blocks.
+For the 16-site Heisenberg Hamiltonian and the total `X` component, the
+full commutator also collected to exact zero. Each product in the
+commutator visited all `45 × 16 = 720` term pairs, with 90 pairs sharing
+a site. Each of the other 630 pairs per product still required constructing
+and collecting the product term.
+[Commutator construction](../../../crates/syntaqs-core/src/expression/arithmetic.rs#L205),
+[block multiplication](../../../crates/syntaqs-core/src/evaluate/operator.rs#L527).
+
+For a commutator on a validated space, index the available terms of one
+operand by their support sites. In the ordinary case, enumerate only the
+pairs sharing a site and visit each pair once even when it shares several
+sites. Use the existing local products and preserve independent factored
+blocks. In a graded space, a disjoint pair vanishes if either homogeneous
+term is even. Two disjoint odd terms anticommute and contribute `2ab`
+to `[a, b]`, with the existing grading signs when ordering the product.
+Handle mixed parity component by component.
+[Ordinary and graded composition laws](../../design/composite-expression.md#7-ordinary-and-graded-composition-laws).
+
+Measure the cost of building the support index, the number of visited
+pairs and constructed product terms, and the full closure time. Compare
+structure constants and pairwise closure diagnostics on ordinary and
+graded inputs, including overlapping pairs and disjoint odd pairs. The
+probe established the current work counts. The indexed approach still
+needs a performance measurement.
+
 ## Dense adjoint constraints
 
 For Lie dimension `n`, the full adjoint commutant builds a dense
@@ -157,6 +190,46 @@ eliminating per-ideal checks would require verifying rank decisions and
 residual acceptance. A normal-equation solve would square the constraint
 singular values and can impair numerical nullspace separation.
 [Decomposition acceptance criteria](../../design/lie.md#7-complete-center-and-simple-ideal-decomposition).
+
+### Refactor residual validation for zero constraints
+
+Carry the exact-zero result from rank analysis into residual diagnostics.
+For a verified zero constraint matrix `L` and its computed nullspace basis
+`Q`, the product `LQ` and the Frobenius norm of `L` are both zero. Build
+one diagnostic per column of `Q` with `options.residual.check(0, 0)`.
+This records a zero residual norm and scale with the configured absolute
+tolerance as the threshold, and avoids allocating and multiplying a dense
+residual matrix. Preserve finite-input and tolerance validation.
+[Zero-constraint rank analysis](../../../crates/syntaqs-lie/src/numerical/kernels.rs#L126),
+[residual diagnostics](../../../crates/syntaqs-lie/src/invariant.rs#L168).
+
+Compare the per-column diagnostics and commutant dimension on exact-zero
+constraints in both supported precisions. Include a nonzero constraint with
+a numerical nullspace to cover the general residual path. Rerun the
+`pauli-z-4` profile to measure the effect on residual validation and the
+full adjoint commutant.
+
+## Refactor center extraction to reuse the Gram matrix
+
+Center extraction computes the source family's Gram matrix during
+HS orthonormalization and recomputes it to form the inverse coordinate
+transform. Reuse the first Gram matrix `G` for both the forward transform
+`U` and its inverse `UᵀG` within the same extraction. Preserve the existing
+validation and numerical settings. Both `center()` and `decompose()` use
+this path. [Orthonormalization](../../../crates/syntaqs-lie/src/family/transform.rs#L140),
+[inverse transform](../../../crates/syntaqs-lie/src/invariant.rs#L219),
+[center extraction contract](../../design/lie.md#6-adjoint-commutant-and-center).
+
+In the instrumented `heisenberg-16` decomposition, center extraction takes
+2.72 ms of 4.66 ms, including 1.24 ms for the second Gram evaluation.
+In `pauli-z-4`, it takes 2.14 ms of 3.45 ms, including 0.96 ms for that
+evaluation. [Internal profiles](results/hotspots.csv.gz).
+
+Verify one Gram evaluation per extraction. Compare center and complement
+dimensions, invariant spans, and diagnostics on centerless, mixed,
+and abelian families, including nonorthonormal inputs. Rerun the
+`heisenberg-16` and `pauli-z-4` profiles for center extraction and
+decomposition to measure the effect.
 
 ## Measurement and reproduction
 
