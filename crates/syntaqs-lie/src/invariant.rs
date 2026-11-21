@@ -165,6 +165,7 @@ where
     Ok(checks)
 }
 
+/// Builds diagnostics for the constraints supplied to the rank analysis.
 pub(crate) fn diagnostics<R>(
     constraints: &Array2<R>,
     analysis: &RankAnalysis<R>,
@@ -175,6 +176,12 @@ where
     R: Float + Scalar<Real = R> + Lapack,
     NumericalOptions<R>: Default,
 {
+    let residuals = if analysis.input_is_zero() {
+        let check = options.residual.check(R::zero(), R::zero())?;
+        vec![check; analysis.nullspace.ncols()]
+    } else {
+        constraint_checks(constraints, &analysis.nullspace, options, operation)?
+    };
     Ok(ConstraintDiagnostics {
         rows: constraints.nrows(),
         columns: constraints.ncols(),
@@ -182,7 +189,7 @@ where
         singular_values: analysis.singular_values.clone(),
         relative_cutoff: analysis.relative_cutoff,
         threshold: analysis.threshold,
-        residuals: constraint_checks(constraints, &analysis.nullspace, options, operation)?,
+        residuals,
     })
 }
 

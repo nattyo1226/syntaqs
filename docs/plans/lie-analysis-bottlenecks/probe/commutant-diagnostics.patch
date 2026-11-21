@@ -1,0 +1,8 @@
+--- a/examples/src/bin/lie_analysis_bench.rs
++++ b/examples/src/bin/lie_analysis_bench.rs
+@@ -94,4 +94,5 @@
+         );
+         let constraints = commutant.diagnostics();
++        println!("# invariant commutant diagnostics {constraints:?}");
+         assert_eq!(
+             (constraints.rows, constraints.columns),

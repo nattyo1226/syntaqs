@@ -214,6 +214,8 @@ map `L` and candidate vector `v`, the check measures `||L v||_2` at scale
 `||L||_F ||v||_2`, using the residual tolerance. Matrix unknowns use row-major
 vectorization, so their vector norm is Frobenius. Candidates exceeding this bound
 return `ConstraintResidual`, even if the rank cutoff classified them as null.
+When rank analysis verifies an exact-zero constraint matrix, it derives the
+per-column residual diagnostics directly with zero norms and scales.
 Center diagnostics refer to internal orthonormal coordinates; `centrality()`
 additionally checks the mapped columns against the original stacked adjoints.
 All dimensions and validity claims are relative to the recorded tolerances.
