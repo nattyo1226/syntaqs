@@ -15,10 +15,11 @@ and the orthonormality checks on reconstructed components. Closure RHS
 reuse is a follow-up to that change. The dense-constraint work uses direct
 construction of symmetric constraints with the same SVD problem.
 The paired runner, direct HS refactoring, Gram reuse in center extraction,
-and exact-zero residual diagnostics are complete. The results record
-verification, raw data, and reproduction for
-[stage 1](results/stage-1/README.md), [stage 2](results/stage-2/README.md),
-and [stage 3](results/stage-3/README.md). Stages 4–6 are pending.
+exact-zero residual diagnostics, and direct symmetric constraint
+construction are complete. The results record verification, raw data,
+and reproduction for [stage 1](results/stage-1/README.md),
+[stage 2](results/stage-2/README.md), [stage 3](results/stage-3/README.md),
+and [stage 4](results/stage-4/README.md). Stages 5 and 6 are pending.
 
 Preserve ordinary Lie brackets on ordinary and graded spaces, normalized
 HS inner products, and acceptance under the configured tolerances in
@@ -127,7 +128,7 @@ and both supported precisions. Check ranks, residuals, and ideal
 projectors against the reference. On `fermion-4`, verify the removed
 intermediate and measure peak RSS through decomposition. Record SVD
 time separately from constraint construction.
-[Dense constraint measurements](README.md#dense-adjoint-constraints).
+[Stage 4 results](results/stage-4/README.md).
 
 ### 5. Prototype term-pair filtering for commutators
 

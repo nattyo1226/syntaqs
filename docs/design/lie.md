@@ -222,10 +222,11 @@ All dimensions and validity claims are relative to the recorded tolerances.
 
 The internal `SymmetricCommutant` solves constraints restricted to real symmetric
 matrices in HS-orthonormal coordinates, with Frobenius-orthonormal parameter basis
-`E_aa` and `(E_ab+E_ba)/sqrt(2)`. It is a distinct internal object for
-spectral ideal splitting and is not exposed as the public full commutant. Its
-kernel uses the same rank/residual diagnostics. For a three-dimensional abelian
-algebra its dimension is six, whereas the public full commutant has dimension nine.
+`E_aa` and `(E_ab+E_ba)/sqrt(2)`. It constructs those columns directly with
+one row for each entry of each adjoint commutator. It serves spectral ideal
+splitting and uses the same rank and residual diagnostics as the public full
+commutant. A three-dimensional abelian algebra has symmetric and full
+commutants of dimensions six and nine, respectively.
 
 ## 7. Complete center and simple-ideal decomposition
 

@@ -53,6 +53,42 @@ macro_rules! precision_tests {
             }
 
             #[test]
+            fn direct_symmetric_constraints_match_full_projection() {
+                let large = 1. / R::EPSILON;
+                let weight = 1. / (2. as R).sqrt();
+                for (n, matrices) in [
+                    (0, Vec::new()),
+                    (1, vec![array![[3.]]]),
+                    (
+                        3,
+                        vec![
+                            array![
+                                [large, -0., 3.],
+                                [-5., -large, 0.5],
+                                [0., R::MIN_POSITIVE, large / 2.]
+                            ],
+                            array![[0., -0.125, 4.], [2., 3., 0.], [-1.5, 7., -2.]],
+                        ],
+                    ),
+                ] {
+                    let pairs: Vec<_> =
+                        (0..n).flat_map(|a| (a..n).map(move |b| (a, b))).collect();
+                    let full = commutant_constraints(&matrices, n);
+                    let expected = Array2::from_shape_fn((full.nrows(), pairs.len()), |(row, col)| {
+                        let (a, b) = pairs[col];
+                        let value = full[(row, a * n + b)];
+                        if a == b {
+                            value
+                        } else {
+                            (value + full[(row, b * n + a)]) * weight
+                        }
+                    });
+                    let actual = symmetric_commutant_constraints(&matrices, n, &pairs, weight);
+                    assert_eq!(actual.mapv(R::to_bits), expected.mapv(R::to_bits));
+                }
+            }
+
+            #[test]
             fn orthonormal_adjoint_coordinates_match_independent_transformation() {
                 let original = OperatorFamily::new([
                     Op::primitive(Pauli::Sx),
