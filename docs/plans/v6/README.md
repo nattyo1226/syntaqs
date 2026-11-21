@@ -76,6 +76,5 @@ bindings, and coordinates in the source family are preserved.
 
 ## Release verification
 
-- [ ] Run the [Rust 1.85.0 checks](../../design/verification.md#2-common-checks)
-  for the release candidate. The local Rust 1.85.0 run for the public API changes
-  was blocked while building toolchain dependencies.
+- [x] Run the [Rust 1.85.0 checks](../../design/verification.md#2-common-checks)
+  for the release candidate.

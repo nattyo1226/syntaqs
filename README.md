@@ -15,7 +15,7 @@ cd two-spins
 ```
 
 Add these entries to the `[dependencies]` section of `Cargo.toml` to use the
-local checkout. For a released version, follow the
+local checkout. For installation from the `v0.6.0` Git tag, see the
 [installation guide](docs/installation.md).
 
 ```toml
