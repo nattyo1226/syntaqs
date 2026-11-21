@@ -108,7 +108,7 @@ where
     while let Some(task) = tasks.pop() {
         match task {
             StateTask::Visit(node) => match node.node() {
-                StateNode::Local(_, local) => {
+                StateNode::Local(local, _) => {
                     let terms = local_expansion(LinearTerms::new(local, state_view), |p| {
                         if let Some((_, terms)) = primitive_expansions.iter().find(|(x, _)| *x == p)
                         {
@@ -185,8 +185,8 @@ impl<I: Ord, S, O, C> State<I, S, O, C> {
             basis,
             dimension,
             LocalState::primitive,
-            |position, local| {
-                StateExpr::new(StateNode::Local(factors[position].clone(), local.clone()))
+            |local, position| {
+                StateExpr::new(StateNode::Local(local.clone(), factors[position].clone()))
             },
             |factors, c| StateExpr::tensor(factors).scaled(c),
         )?;
@@ -261,7 +261,7 @@ impl<I: Ord, O, C> Operator<I, O, C> {
             basis,
             dimension,
             LocalOperator::primitive,
-            |position, local| OpExpr::new(OpNode::Local(factors[position].clone(), local.clone())),
+            |local, position| OpExpr::new(OpNode::Local(local.clone(), factors[position].clone())),
             |factors, c| OpExpr::product(factors).scaled(c),
         )?;
         Ok(Self {

@@ -179,7 +179,7 @@ impl<I, S, O, C> PureTensors<I, S, O, C> {
                         continue;
                     }
                     match state.node() {
-                        CompositeState::Local(_, local) => {
+                        CompositeState::Local(local, _) => {
                             self.known
                                 .insert(key, matches!(local.node(), StateNode::Primitive(_)));
                         }
@@ -245,7 +245,7 @@ fn view<'a, I, S, O, C>(
             },
             Expr::PlacedOperator(op, index) => View::PlacedOperator(op, index),
             Expr::State(state) => match state.node() {
-                CompositeState::Local(factor, local) => {
+                CompositeState::Local(local, factor) => {
                     expr = Expr::LocalState(local, factor.factor_index());
                     continue;
                 }
@@ -260,7 +260,7 @@ fn view<'a, I, S, O, C>(
                 }
             },
             Expr::Operator(op) => match op.node() {
-                OpNode::Local(factor, local) => {
+                OpNode::Local(local, factor) => {
                     View::PlacedOperator(local, factor.factor_index().expect("placed factor"))
                 }
                 OpNode::Identity => View::Identity,
@@ -296,7 +296,7 @@ impl<'a, I, S, O, C> Iterator for KetLeaves<'a, I, S, O, C> {
                     CompositeState::Tensor(children) => {
                         self.pending.push(Scan::Children(children.iter()));
                     }
-                    CompositeState::Local(factor, local) => {
+                    CompositeState::Local(local, factor) => {
                         let StateNode::Primitive(p) = local.node() else {
                             unreachable!("classified primitive ket");
                         };
@@ -565,7 +565,7 @@ mod tests {
                 type E = StateExpr<&'static str, &'static str, &'static str, i32>;
                 let factor = HilbertSpace::factor("a");
                 let local = LocalState::primitive("up");
-                let leaf = E::new(CompositeState::Local(factor.clone(), local));
+                let leaf = E::new(CompositeState::Local(local, factor.clone()));
                 let mut grouped = leaf;
                 let mut shared = E::new(CompositeState::Unit);
                 for _ in 0..20_000 {

@@ -76,7 +76,7 @@ fn leaves(state: &StateExpr<Index, Ket<'_>, Gate, f64>) -> usize {
     let mut count = 0;
     while let Some(state) = pending.pop() {
         match state.node() {
-            StateNode::Local(_, s) => count += LinearTerms::new(s, state_view).count(),
+            StateNode::Local(s, _) => count += LinearTerms::new(s, state_view).count(),
             StateNode::Sum(s) | StateNode::Tensor(s) => pending.extend(s.iter()),
             StateNode::Scale(s) => pending.push(&s.operand),
             StateNode::Unit => {}
@@ -156,7 +156,7 @@ fn composite_collection_normalizes_tensor_grouping_scales_units_and_single_facto
     let inside = LocalState::sum([p.clone(), q.clone()]).at(&a).unwrap();
     let outside = sum([p.at(&a).unwrap(), q.at(&a).unwrap()]).unwrap();
     let result = sum([inside, outside]).unwrap().evaluate().unwrap();
-    let StateNode::Local(_, local) = result.expression.node() else {
+    let StateNode::Local(local, _) = result.expression.node() else {
         panic!("one local polynomial")
     };
     assert_eq!(

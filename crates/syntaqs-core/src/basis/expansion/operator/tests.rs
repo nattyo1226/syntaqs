@@ -488,7 +488,7 @@ fn expanded_terms_share_identity_handles_and_keep_aggregated_coefficients() {
     let mut products = 0;
     while let Some(op) = pending.pop() {
         match op.node() {
-            OpNode::Local(factor, local) => {
+            OpNode::Local(local, factor) => {
                 let digit = match local.node() {
                     OperatorNode::Primitive(P::I) => {
                         identities.push(local.node());

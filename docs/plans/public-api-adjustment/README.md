@@ -42,13 +42,28 @@ default implementation.
 - [x] Organize the changes into implementation units and define their checks.
 - [x] Implement and verify [unit 1](implementation.md#1-public-construction-calls),
   including caller migration and the [v0.6.0 migration table](../v6/README.md#expression-and-family-construction).
-- [ ] Implement units 2–5 and run the final [verification matrix](../../design/verification.md#2-common-checks).
+- [x] Implement and verify [unit 2](implementation.md#2-internal-expression-and-space-order).
+- [ ] Implement units 3–5 and run the final [verification matrix](../../design/verification.md#2-common-checks).
 
 For unit 1, workspace all-target checks with all and no default features passed,
 as did all-feature tests and doctests, Clippy, rustdoc, and formatting. An
 external crate compiled 11 current public call forms and verified compiler
 errors for 15 previous forms. The `two_spins` and Lie-only `lie_algebra` examples
 passed. The root quick start also ran against its declared `v0.5.0` source.
+
+For unit 2, placement nodes, evaluator tasks, basis reconstruction, and test
+and example helpers use expression-first order. Derived `Debug` shows the new
+node field order. `Key::Local` in the state evaluator keeps the factor first
+in its derived comparison. Sparse operator term keys keep the ambient factor
+position first for position-based lookup and merging.
+[State shape keys](../../../crates/syntaqs-core/src/evaluate/state_terms.rs),
+[sparse operator terms](../../../crates/syntaqs-core/src/evaluate/operator.rs).
+
+All 95 planned tests passed across Core's unit and formatting tests and the
+shared `core_tensor_products` and `core_evaluation_pipeline` targets.
+Workspace tests and doctests passed with all features. All-target checks passed
+with all features and with default features disabled, as did Clippy and
+formatting. The `pauli_strings` example produced the expected 37 strings.
 
 On `db16c4d`, 23 tests passed across the `syntaqs-core` integration targets
 `public_api`, `systems`, `spaces`, `fallible_construction`, and

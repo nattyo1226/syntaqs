@@ -92,7 +92,7 @@ where
         }
 
         for axes in axis_assignments(support.len()) {
-            let factors = support.iter().zip(axes).map(|(&i, axis)| {
+            let factors = axes.into_iter().zip(support).map(|(axis, &i)| {
                 // Sx, Sy and Sz already use Pauli normalization.
                 SpinHalf::<C>::operator(axis).at(&sites[i])
             });

@@ -60,19 +60,17 @@ fn check_spin_placements<const K: usize>(boundary: Boundary, expected: &[[usize;
         let axes = [S::Sx, S::Sy, S::Sz, S::Sx];
         let leaves = group.leaves_cartesian().next().unwrap();
         let mapped = SpinHalf::<C>::try_operator_product(
-            leaves
-                .iter()
-                .zip(axes)
-                .map(|(leaf, axis)| SpinHalf::<C>::operator(axis).at(leaf)),
+            axes.into_iter()
+                .zip(&leaves)
+                .map(|(axis, leaf)| SpinHalf::<C>::operator(axis).at(leaf)),
         )
         .unwrap()
         .bind(&ambient)
         .unwrap();
         let manual = SpinHalf::<C>::try_operator_product(
-            placement
-                .iter()
-                .zip(axes)
-                .map(|(&i, axis)| SpinHalf::<C>::operator(axis).at(&sites[i])),
+            axes.into_iter()
+                .zip(placement)
+                .map(|(axis, &i)| SpinHalf::<C>::operator(axis).at(&sites[i])),
         )
         .unwrap()
         .bind(&ambient)

@@ -27,8 +27,8 @@ enum Task<'a, I, S, O, C> {
     ),
     Local(
         Ready<C>,
-        HilbertSpace<I>,
         LocalOperator<O, C>,
+        HilbertSpace<I>,
         bool,
         HilbertSpace<I>,
     ),
@@ -44,8 +44,8 @@ enum Task<'a, I, S, O, C> {
     },
     Placed(
         Ready<C>,
-        HilbertSpace<I>,
         LocalOperator<O, C>,
+        HilbertSpace<I>,
         bool,
         HilbertSpace<I>,
     ),
@@ -84,7 +84,7 @@ fn apply_placed_product<I, S, O, C>(
             scope.clone(),
         ));
     }
-    tasks.push(Task::Placed(state, factor, operand, adjoint, scope));
+    tasks.push(Task::Placed(state, operand, factor, adjoint, scope));
 }
 
 // A placement traverses action-free shapes at positions relative to its Act scope.
@@ -154,7 +154,7 @@ where
     ) -> StateExpr<I, S, O, C> {
         // These shapes are intrinsically normalized.
         use crate::expression::local::StateNode as LocalNode;
-        let primitive = |state: &StateExpr<I, S, O, C>| matches!(state.node(), StateNode::Local(_, local) if matches!(local.node(), LocalNode::Primitive(_)));
+        let primitive = |state: &StateExpr<I, S, O, C>| matches!(state.node(), StateNode::Local(local, _) if matches!(local.node(), LocalNode::Primitive(_)));
         if matches!(expression.node(), StateNode::Unit)
             || primitive(expression)
             || matches!(expression.node(), StateNode::Tensor(parts) if parts.len() > 1 && parts.iter().all(primitive))
@@ -182,9 +182,9 @@ where
                     }
                     tasks.push(Task::Remember(state));
                     match state.node() {
-                        StateNode::Local(factor, local) => {
+                        StateNode::Local(local, factor) => {
                             let local = locals.evaluate(local);
-                            values.push(terms.local(factor.clone(), local));
+                            values.push(terms.local(local, factor.clone()));
                         }
                         StateNode::Unit => values.push(terms.unit()),
                         StateNode::Scale(s) => {
@@ -234,10 +234,10 @@ where
                 }
                 Task::Apply(state, op, adjoint, scope) => match op.node() {
                     OpNode::Identity => values.push(state),
-                    OpNode::Local(factor, local) => tasks.push(Task::Placed(
+                    OpNode::Local(local, factor) => tasks.push(Task::Placed(
                         state,
-                        factor.clone(),
                         local.clone(),
+                        factor.clone(),
                         adjoint,
                         scope,
                     )),
@@ -269,7 +269,7 @@ where
                         tasks.push(Task::Apply(state, a.operand.clone(), !adjoint, scope))
                     }
                 },
-                Task::Placed(state, factor, operator, adjoint, scope) => {
+                Task::Placed(state, operator, factor, adjoint, scope) => {
                     // Ordinary (including unit/single-factor) action can retain
                     // a whole local expression without distributing its sums.
                     if scope.effective_kind() != Some(TensorKind::Graded) {
@@ -278,7 +278,7 @@ where
                         } else {
                             operator
                         };
-                        tasks.push(Task::Local(state, factor, operator, false, scope));
+                        tasks.push(Task::Local(state, operator, factor, false, scope));
                         continue;
                     }
                     use crate::expression::local::OperatorNode;
@@ -291,8 +291,8 @@ where
                             }));
                             tasks.push(Task::Placed(
                                 state,
-                                factor,
                                 s.operand.clone(),
+                                factor,
                                 adjoint,
                                 scope,
                             ));
@@ -303,8 +303,8 @@ where
                                 tasks.push(Task::SumAdd);
                                 tasks.push(Task::Placed(
                                     state.clone(),
-                                    factor.clone(),
                                     child.clone(),
+                                    factor.clone(),
                                     adjoint,
                                     scope.clone(),
                                 ));
@@ -322,8 +322,8 @@ where
                         }
                         OperatorNode::Adjoint(a) => tasks.push(Task::Placed(
                             state,
-                            factor,
                             a.operand.clone(),
+                            factor,
                             !adjoint,
                             scope,
                         )),
@@ -331,15 +331,15 @@ where
                             let local = LocalOperator::from_terms(
                                 p.adjoint().map(LocalOperator::primitive),
                             );
-                            tasks.push(Task::Placed(state, factor, local, false, scope));
+                            tasks.push(Task::Placed(state, local, factor, false, scope));
                         }
                         OperatorNode::Primitive(p) => {
                             let odd = p.parity() == Parity::Odd;
-                            tasks.push(Task::Local(state, factor, operator, odd, scope));
+                            tasks.push(Task::Local(state, operator, factor, odd, scope));
                         }
                     }
                 }
-                Task::Local(state, factor, operator, odd, scope) => {
+                Task::Local(state, operator, factor, odd, scope) => {
                     let target = scope
                         .factor_position(factor.factor_index().expect("placed factor"))
                         .expect("validated placement");
@@ -358,7 +358,7 @@ where
                     }
                     match terms.key(state.shape) {
                         Key::Local(..) => {
-                            let (factor, local) = terms.local_parts(state.shape).unwrap();
+                            let (local, factor) = terms.local_parts(state.shape).unwrap();
                             let op = if start == placement.target {
                                 placement.operator.clone()
                             } else {
@@ -366,7 +366,7 @@ where
                                 LocalOperator::primitive(O::parity_operator())
                             };
                             let local = locals.apply(local, op);
-                            let mut ready = terms.local(factor, local);
+                            let mut ready = terms.local(local, factor);
                             if let Some(c) = state.coefficient {
                                 ready = terms.scaled(ready, c);
                             }

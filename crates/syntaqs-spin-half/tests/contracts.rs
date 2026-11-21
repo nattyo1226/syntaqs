@@ -831,7 +831,7 @@ fn dense_dot(a: &[Complex<f64>], b: &[Complex<f64>]) -> Complex<f64> {
         .fold(c(0.0, 0.0), |s, (a, b)| s + a.conj() * b)
 }
 
-fn global_basis<T: Real>(factors: &[GlobalSpace; 3], n: usize) -> GlobalState<T> {
+fn global_basis<T: Real>(n: usize, factors: &[GlobalSpace; 3]) -> GlobalState<T> {
     syntaqs_core::expression::composite::State::tensor_in(
         factors.iter().enumerate().map(|(k, factor)| {
             syntaqs_core::expression::local::LocalState::primitive(if (n >> (2 - k)) & 1 == 0 {
@@ -849,7 +849,7 @@ fn global_basis<T: Real>(factors: &[GlobalSpace; 3], n: usize) -> GlobalState<T>
 fn global_vector<T: Real>(state: &GlobalState<T>, factors: &[GlobalSpace; 3]) -> Vec<Complex<f64>> {
     let state = state.evaluate().unwrap();
     (0..8)
-        .map(|n| complex64(global_basis(factors, n).inner_product(&state).unwrap()))
+        .map(|n| complex64(global_basis(n, factors).inner_product(&state).unwrap()))
         .collect()
 }
 fn assert_dense_vector<T: Real>(a: &[Complex<f64>], b: &[Complex<f64>]) {
@@ -910,7 +910,7 @@ fn check_composite_expressions<T: Real>() {
         &global_vector(&left, &factors),
         &global_vector(&right, &factors),
     );
-    let state = (left.clone() + &global_basis(&factors, 5).scaled(c(-0.4, 0.6))).unwrap();
+    let state = (left.clone() + &global_basis(5, &factors).scaled(c(-0.4, 0.6))).unwrap();
     let mut reference = vec![c(0.0, 0.0); 8];
     reference[2] = c(0.7, 0.2);
     reference[6] = c(-0.3, 0.5);

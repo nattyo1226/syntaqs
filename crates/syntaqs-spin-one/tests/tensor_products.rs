@@ -52,8 +52,8 @@ fn exported<T: Real>(op: &Op<T>) -> Matrix {
 }
 
 fn basis<T: Real, B: Basis<O, Complex<T>>>(
-    space: &HilbertSpace<u8>,
     states: &[Ket<T>],
+    space: &HilbertSpace<u8>,
     basis: &B,
     elements: [O; 9],
 ) {
@@ -118,8 +118,8 @@ fn check<T: Real>() {
             close::<T>(to64(*coefficient), 1.0.into());
         }
         if kind == TensorKind::Ordinary {
-            basis::<T, _>(&space, &states, &CartesianBasis, CART);
-            basis::<T, _>(&space, &states, &LadderBasis, LADDER);
+            basis::<T, _>(&states, &space, &CartesianBasis, CART);
+            basis::<T, _>(&states, &space, &LadderBasis, LADDER);
         }
         let identity = Op::<T>::identity().bind(&space).unwrap();
         let im = kron(&matrix(O::I), &matrix(O::I));

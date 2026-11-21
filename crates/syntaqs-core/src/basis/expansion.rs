@@ -35,7 +35,7 @@ fn reconstruct<P, C, B: Basis<P, C>, L, E: Clone>(
     basis: &B,
     dimension: Option<usize>,
     make_local: impl Fn(P) -> L,
-    place: impl Fn(usize, &L) -> E,
+    place: impl Fn(&L, usize) -> E,
     make_term: impl Fn(Operands<E>, C) -> E,
 ) -> Result<Operands<E>, BasisError> {
     let mut locals = BTreeMap::new();
@@ -62,7 +62,7 @@ fn reconstruct<P, C, B: Basis<P, C>, L, E: Clone>(
                             dimension.expect("local factor"),
                         )?)),
                     };
-                    Ok(slot.insert(place(position, local)).clone())
+                    Ok(slot.insert(place(local, position)).clone())
                 })
                 .collect::<Result<Operands<_>, BasisError>>()?;
             Ok(make_term(factors, coefficient))

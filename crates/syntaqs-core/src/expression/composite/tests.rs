@@ -127,7 +127,7 @@ fn expanded_state_shares_placed_basis_nodes() {
         };
         assert_eq!(operands.len(), factors.len());
         for (operand, expected_factor) in operands.iter().zip(&factors) {
-            let StateNode::Local(factor, local) = operand.node() else {
+            let StateNode::Local(local, factor) = operand.node() else {
                 panic!("placed tensor factor");
             };
             let LocalNode::Primitive(primitive) = local.node() else {
@@ -232,32 +232,32 @@ fn inner_product_contracts_independent_sums_without_global_expansion() {
 fn inner_product_aligns_overlapping_subsystems_and_scalar_factors() {
     let counts = Counts::default();
     let factors = [5, 1, 9, 3].map(|i| H::factor(Index(i)));
-    let ket = |site: usize, value| {
+    let ket = |value, site: usize| {
         LocalState::primitive(Primitive(value, &counts))
             .at(&factors[site])
             .unwrap()
     };
     let ab = (S::tensor_in(
-        [ket(0, 0), ket(1, 0)],
+        [ket(0, 0), ket(0, 1)],
         &H::tensor_all([factors[0].clone(), factors[1].clone()]).unwrap(),
     )
     .unwrap()
     .clone()
         + &S::tensor_in(
-            [ket(0, 1), ket(1, 1)],
+            [ket(1, 0), ket(1, 1)],
             &H::tensor_all([factors[0].clone(), factors[1].clone()]).unwrap(),
         )
         .unwrap()
         .scaled(Complex::new(0.0, 1.0)))
         .unwrap();
     let cd = (S::tensor_in(
-        [ket(2, 0), ket(3, 0)],
+        [ket(0, 2), ket(0, 3)],
         &H::tensor_all([factors[2].clone(), factors[3].clone()]).unwrap(),
     )
     .unwrap()
     .clone()
         + &S::tensor_in(
-            [ket(2, 1), ket(3, 1)],
+            [ket(1, 2), ket(1, 3)],
             &H::tensor_all([factors[2].clone(), factors[3].clone()]).unwrap(),
         )
         .unwrap()
@@ -268,21 +268,21 @@ fn inner_product_aligns_overlapping_subsystems_and_scalar_factors() {
         &H::tensor_all(factors.iter().cloned()).unwrap(),
     )
     .unwrap();
-    let a = (ket(0, 0).clone() + &ket(0, 1).scaled(Complex::new(2.0, 1.0))).unwrap();
+    let a = (ket(0, 0).clone() + &ket(1, 0).scaled(Complex::new(2.0, 1.0))).unwrap();
     let bc = (S::tensor_in(
-        [ket(1, 0), ket(2, 0)],
+        [ket(0, 1), ket(0, 2)],
         &H::tensor_all([factors[1].clone(), factors[2].clone()]).unwrap(),
     )
     .unwrap()
     .clone()
         + &S::tensor_in(
-            [ket(1, 1), ket(2, 1)],
+            [ket(1, 1), ket(1, 2)],
             &H::tensor_all([factors[1].clone(), factors[2].clone()]).unwrap(),
         )
         .unwrap()
         .scaled(Complex::new(2.0, -1.0)))
         .unwrap();
-    let d = (ket(3, 0).clone() + &ket(3, 1).scaled(Complex::new(0.0, 1.0))).unwrap();
+    let d = (ket(0, 3).clone() + &ket(1, 3).scaled(Complex::new(0.0, 1.0))).unwrap();
     let rhs = S::tensor_in(
         [
             a,
@@ -678,13 +678,13 @@ fn all_binary_ownership_forms_preserve_results_and_shared_operands() {
     for sum in forms!(op, +, op) {
         let sum = sum.unwrap();
         assert!(sum.space().unwrap().shares_node_with(&factor));
-        let OpNode::Local(_, local_sum) = sum.expression.node() else {
+        let OpNode::Local(local_sum, _) = sum.expression.node() else {
             panic!("same-factor local sum")
         };
         let crate::expression::local::OperatorNode::Sum(parts) = local_sum.node() else {
             panic!("local sum")
         };
-        let OpNode::Local(_, original_local) = op.expression.node() else {
+        let OpNode::Local(original_local, _) = op.expression.node() else {
             unreachable!()
         };
         assert!(

@@ -44,8 +44,8 @@ fn close<T: Real>(actual: Complex<T>, expected: Complex<T>) {
     }
 }
 fn basis<T: Real>(
-    factors: &[HilbertSpace<Id128>],
     bits: usize,
+    factors: &[HilbertSpace<Id128>],
 ) -> syntaqs_core::system::StateOf<SpinHalf<Complex<T>>, Id128> {
     State::tensor_in(
         factors.iter().enumerate().map(|(i, factor)| {
@@ -128,7 +128,7 @@ fn check<T: Real>() {
                 let bits = (0..n).fold(0, |bits, i| {
                     (bits << 1) | usize::from((i % 2 == 1) == (first == SpinHalfState::Up))
                 });
-                let psi = basis::<T>(&factors, bits);
+                let psi = basis::<T>(bits, &factors);
                 close(
                     Complex::new(psi.norm_squared().unwrap(), T::zero()),
                     c(1.0, 0.0),
@@ -192,8 +192,8 @@ fn check<T: Real>() {
                 let adj = h.adjoint();
                 for row in 0..(1 << n) {
                     for col in 0..(1 << n) {
-                        let left = basis::<T>(&factors, row);
-                        let right = basis::<T>(&factors, col);
+                        let left = basis::<T>(row, &factors);
+                        let right = basis::<T>(col, &factors);
                         let value = left.inner_product(&right.act(&h).unwrap()).unwrap();
                         close(value, matrix_element(n, boundary, row, col, [j; 3]));
                         close(
@@ -234,7 +234,7 @@ fn check_exports<T: Real + num_traits::NumAssign + Default + Send + Sync + 'stat
                 let bits = (0..n).fold(0, |bits, i| {
                     (bits << 1) | usize::from((i % 2 == 1) == (first == SpinHalfState::Up))
                 });
-                let psi = basis::<T>(&factors, bits);
+                let psi = basis::<T>(bits, &factors);
                 let raw: Exported<Vec<Complex<T>>, _> = (&psi).export(&SzBasis).unwrap();
                 let pointer = raw.data().as_ptr();
                 let vector: Exported<Array1<_>, _> = raw.export(()).unwrap();
@@ -332,7 +332,7 @@ fn check_norms<T: Real + Float>() {
             } else {
                 (1 << n) - 1
             };
-            let psi = basis::<T>(&factors, bits);
+            let psi = basis::<T>(bits, &factors);
             close(Complex::new(psi.norm().unwrap(), T::zero()), c(1.0, 0.0));
             let normalized = psi.scaled(c(2.0, -3.0)).normalized().unwrap();
             close(
@@ -376,8 +376,8 @@ fn check_xyz<T: Real>() {
                     .unwrap();
                 for row in 0..(1 << n) {
                     for col in 0..(1 << n) {
-                        let left = basis::<T>(&factors, row);
-                        let right = basis::<T>(&factors, col);
+                        let left = basis::<T>(row, &factors);
+                        let right = basis::<T>(col, &factors);
                         let value = left.inner_product(&right.act(&h).unwrap()).unwrap();
                         close(value, matrix_element(n, boundary, row, col, [jx, jy, jz]));
                         let reverse = right.inner_product(&left.act(&h).unwrap()).unwrap();

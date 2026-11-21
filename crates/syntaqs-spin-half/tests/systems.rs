@@ -9,13 +9,13 @@ use syntaqs_spin_half::{SpinHalf, operator::SpinHalfOperator as Op, state::SpinH
 
 type Spin = SpinHalf<Complex<f64>>;
 
-fn product_state<C, I: Ord>(sites: &[H<I>], orientations: &[Ket]) -> StateOf<SpinHalf<C>, I> {
+fn product_state<C, I: Ord>(orientations: &[Ket], sites: &[H<I>]) -> StateOf<SpinHalf<C>, I> {
     assert_eq!(sites.len(), orientations.len());
     let space = H::tensor_all(sites.iter().cloned()).unwrap();
-    let states = sites
+    let states = orientations
         .iter()
-        .zip(orientations)
-        .flat_map(|(site, &orientation)| {
+        .zip(sites)
+        .flat_map(|(&orientation, site)| {
             site.leaves()
                 .map(move |leaf| SpinHalf::<C>::state(orientation).at(leaf).unwrap())
         });
@@ -51,7 +51,7 @@ fn local_and_composite_expressions_connect_to_existing_types() {
         &chain, &sites, 1.0,
     )
     .unwrap();
-    let psi = product_state::<Complex<f32>, _>(&sites, &[Ket::Up, Ket::Down]);
+    let psi = product_state::<Complex<f32>, _>(&[Ket::Up, Ket::Down], &sites);
     assert_eq!(psi.expectation(&h).unwrap(), Complex::new(0.25_f32, 0.));
 }
 
@@ -68,7 +68,7 @@ fn models_accept_multiple_leaves_per_site() {
         syntaqs_spin_half::models::SpinHalfModels::<Spin>::heisenberg(&chain, &sites, 1.0).unwrap();
     let xyz = syntaqs_spin_half::models::SpinHalfModels::<Spin>::xyz(&chain, &sites, 1.0, 1.0, 1.0)
         .unwrap();
-    let psi = product_state::<Complex<f64>, _>(&sites, &[Ket::Up, Ket::Down]);
+    let psi = product_state::<Complex<f64>, _>(&[Ket::Up, Ket::Down], &sites);
     let expected = State::tensor_in(
         [
             Spin::state(Ket::Up).at(&a).unwrap(),
@@ -133,7 +133,7 @@ fn models_accept_multiple_leaves_per_site() {
 fn empty_sites_keep_edges_and_all_empty_inputs_give_units() {
     let sites = [H::factor(0), H::unit(), H::factor(1)];
     let chain = Chain::new(3, Boundary::Open);
-    let psi = product_state::<Complex<f64>, _>(&sites, &[Ket::Up, Ket::Up, Ket::Up]);
+    let psi = product_state::<Complex<f64>, _>(&[Ket::Up, Ket::Up, Ket::Up], &sites);
     let expected = State::tensor_in(
         [
             Spin::state(Ket::Up).at(&sites[0]).unwrap(),
@@ -167,7 +167,7 @@ fn empty_sites_keep_edges_and_all_empty_inputs_give_units() {
     for count in 0..=3 {
         let sites: Vec<_> = (0..count).map(|_| H::<u8>::unit()).collect();
         let chain = Chain::new(count, Boundary::Periodic);
-        let psi = product_state::<Complex<f64>, _>(&sites, &vec![Ket::Down; count]);
+        let psi = product_state::<Complex<f64>, _>(&vec![Ket::Down; count], &sites);
         let h = syntaqs_spin_half::models::SpinHalfModels::<Spin>::heisenberg(&chain, &sites, 1.0)
             .unwrap();
         assert_eq!(
@@ -312,7 +312,7 @@ fn non_clone_indices_and_deep_site_grouping_are_supported_iteratively() {
             }
             let sites = [first, H::factor(Index(0))];
             let chain = Chain::new(2, Boundary::Periodic);
-            let state = product_state::<Complex<f64>, _>(&sites, &[Ket::Up, Ket::Down]);
+            let state = product_state::<Complex<f64>, _>(&[Ket::Up, Ket::Down], &sites);
             let h =
                 syntaqs_spin_half::models::SpinHalfModels::<Spin>::heisenberg(&chain, &sites, 1.0)
                     .unwrap();

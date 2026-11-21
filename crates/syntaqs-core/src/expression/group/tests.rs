@@ -40,7 +40,7 @@ fn immediate_construction_keeps_opaque_capabilities_and_order() {
         LocalOperator::primitive(NoIdentity).at(&same).unwrap(),
     );
     let sum = Bare::sum([bare(1, &a), bare(2, &same), bare(3, &a)]).unwrap();
-    let OpNode::Local(_, local) = sum.expression.node() else {
+    let OpNode::Local(local, _) = sum.expression.node() else {
         panic!("local sum")
     };
     let OperatorNode::Sum(parts) = local.node() else {
@@ -50,7 +50,7 @@ fn immediate_construction_keeps_opaque_capabilities_and_order() {
         assert!(matches!(child.node(), OperatorNode::Primitive(Primitive(p)) if *p == expected));
     }
     let product = (bare(1, &a) * bare(2, &same)).unwrap();
-    let OpNode::Local(_, local) = product.expression.node() else {
+    let OpNode::Local(local, _) = product.expression.node() else {
         panic!("local product")
     };
     let OperatorNode::Product(p) = local.node() else {
@@ -68,7 +68,7 @@ fn immediate_construction_keeps_opaque_capabilities_and_order() {
     let chain = Bare::product([bare(1, &a), bare(2, &b), bare(3, &a)]).unwrap();
     assert!(matches!(chain.expression.node(), OpNode::Product(parts) if parts.len() == 3));
     let one_factor = Bare::product([bare(1, &a), bare(2, &same), bare(3, &a)]).unwrap();
-    let OpNode::Local(_, local_chain) = one_factor.expression.node() else {
+    let OpNode::Local(local_chain, _) = one_factor.expression.node() else {
         panic!("grouped local product");
     };
     assert!(matches!(local_chain.node(), OperatorNode::Product(parts) if parts.len() == 3));
@@ -155,7 +155,7 @@ fn explicit_grouping_preserves_scalars_binding_references_and_idempotence() {
     };
     assert_eq!(parts.len(), 2);
     assert!(
-        matches!(parts.as_slice()[0].node(), OpNode::Local(_, local) if matches!(local.node(), OperatorNode::Product(_)))
+        matches!(parts.as_slice()[0].node(), OpNode::Local(local, _) if matches!(local.node(), OperatorNode::Product(_)))
     );
     assert!(ptr::eq(
         grouped.expression.node(),

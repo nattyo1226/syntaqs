@@ -15,18 +15,18 @@ fn same_factor<I: Eq>(a: &HilbertSpace<I>, b: &HilbertSpace<I>) -> bool {
 
 fn local_prefix<I: Eq, O, C>(operands: &[OpExpr<I, O, C>]) -> Option<(&HilbertSpace<I>, usize)> {
     let (first, rest) = operands.split_first()?;
-    let OpNode::Local(factor, _) = first.node() else {
+    let OpNode::Local(_, factor) = first.node() else {
         return None;
     };
     let count = 1 + rest
         .iter()
-        .take_while(|op| matches!(op.node(), OpNode::Local(other, _) if same_factor(factor, other)))
+        .take_while(|op| matches!(op.node(), OpNode::Local(_, other) if same_factor(factor, other)))
         .count();
     (count > 1).then_some((factor, count))
 }
 
 fn local_operand<I, O, C>(op: OpExpr<I, O, C>) -> LocalOperator<O, C> {
-    let OpNode::Local(_, local) = op.node() else {
+    let OpNode::Local(local, _) = op.node() else {
         unreachable!("checked local operand");
     };
     local.clone()
@@ -36,9 +36,10 @@ fn local_operand<I, O, C>(op: OpExpr<I, O, C>) -> LocalOperator<O, C> {
 pub(super) fn sum<I: Eq, O, C>(operands: Operands<OpExpr<I, O, C>>) -> OpExpr<I, O, C> {
     if let Some((factor, count)) = local_prefix(operands.as_slice()) {
         if count == operands.len() {
+            let factor = factor.clone();
             return OpExpr::new(OpNode::Local(
-                factor.clone(),
                 LocalOperator::sum_collected(operands.map(local_operand)),
+                factor,
             ));
         }
     }
@@ -60,7 +61,7 @@ pub(super) fn product<I: Eq, O, C>(operands: Operands<OpExpr<I, O, C>>) -> OpExp
         (locals, operands)
     };
     let local = LocalOperator::from_product(locals).expect("nonempty local operands");
-    let grouped = OpExpr::new(OpNode::Local(factor, local));
+    let grouped = OpExpr::new(OpNode::Local(local, factor));
     OpExpr::product(iter::once(grouped).chain(remaining).collect())
 }
 
@@ -204,7 +205,7 @@ fn prepared_on_factor<I, O: Identity, C: Clone>(
         _ => matches!(memo[&ptr::from_ref(child.node())].support, Support::Scalar),
     };
     if scalar {
-        OpExpr::new(OpNode::Local(factor.clone(), scalar_local(child, memo)))
+        OpExpr::new(OpNode::Local(scalar_local(child, memo), factor.clone()))
     } else {
         prepared(child, memo).clone()
     }
@@ -239,7 +240,7 @@ impl<I: Eq, O: Identity, C: Clone> OpExpr<I, O, C> {
             let prefix_len = operands
                 .iter()
                 .take_while(|child| match child.node() {
-                    OpNode::Local(factor, _) => support.include_factor(factor),
+                    OpNode::Local(_, factor) => support.include_factor(factor),
                     OpNode::Identity => true,
                     _ => support.include(&memo[&ptr::from_ref(child.node())].support),
                 })
@@ -274,20 +275,20 @@ impl<I: Eq, O: Identity, C: Clone> OpExpr<I, O, C> {
                         OpNode::Product(_) => product(parts.collect()),
                         OpNode::Scale(s) => {
                             let child = parts.next().expect("scale operand");
-                            let OpNode::Local(_, local) = child.node() else {
+                            let OpNode::Local(local, _) = child.node() else {
                                 unreachable!("single-factor child")
                             };
                             Self::new(OpNode::Local(
-                                factor.clone(),
                                 local.scaled(s.coefficient.clone()),
+                                factor.clone(),
                             ))
                         }
                         OpNode::Adjoint(_) => {
                             let child = parts.next().expect("adjoint operand");
-                            let OpNode::Local(_, local) = child.node() else {
+                            let OpNode::Local(local, _) = child.node() else {
                                 unreachable!("single-factor child")
                             };
-                            Self::new(OpNode::Local(factor.clone(), local.adjoint()))
+                            Self::new(OpNode::Local(local.adjoint(), factor.clone()))
                         }
                         OpNode::Identity | OpNode::Local(_, _) => {
                             unreachable!("container expected")

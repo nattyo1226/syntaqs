@@ -111,8 +111,8 @@ impl<I> HilbertSpace<I> {
                     let primitive =
                         enumerated_element(basis, index, dimension.expect("basis factor"))?;
                     Ok(StateExpr::new(StateNode::Local(
-                        (*factor).clone(),
                         LocalState::primitive(primitive),
+                        (*factor).clone(),
                     )))
                 })
                 .collect::<Result<Operands<_>, BasisError>>()?;
@@ -143,8 +143,8 @@ impl<I> HilbertSpace<I> {
             for (index, factor) in digits.into_iter().zip(&factors) {
                 let primitive = enumerated_element(basis, index, dimension.expect("basis factor"))?;
                 nodes.push(OpExpr::new(OpNode::Local(
-                    (*factor).clone(),
                     LocalOperator::primitive(primitive),
+                    (*factor).clone(),
                 )));
             }
             Ok(Operator {
